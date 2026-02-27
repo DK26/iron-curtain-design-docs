@@ -103,6 +103,7 @@ Browse, search, and preview every asset the engine can load. This is the XCC Mix
 | RA2 / TS      | .mix          | .shp, .vxl (voxels) | .hva (voxel anim) | .pal        | .aud           | .bik       | Community-documented (XCC, Ares, Phobos) |
 | Generals / ZH | .big          | —                   | .w3d (3D meshes)  | —           | —              | .bik       | EA GPL release — fully open              |
 | OpenRA        | .oramap (ZIP) | .png                | —                 | .pal        | .wav/.ogg      | —          | Open source                              |
+| Remastered    | .meg          | .tga+.meta (HD megasheets) | —          | —           | .wav           | .bk2       | EA GPL (C++ DLL) + proprietary HD assets. See [D075](../09c/D075-remastered-format-compat.md) |
 | IC native     | —             | .png, sprite sheets | .glb/.gltf        | .pal, .yaml | .wav/.ogg/.mp3 | .mp4/.webm | Our format                               |
 
 **Minimal reverse engineering required.** RA1/TD and Generals/ZH are fully open-sourced by EA (GPL). RA2/TS formats are not open-sourced but have been community-documented for 20+ years — .vxl, .hva, .csf are thoroughly understood by the XCC, Ares, and Phobos projects. The `FormatRegistry` trait (D018) already anticipates per-module format loaders.
@@ -244,6 +245,11 @@ The Asset Studio understands multiple C&C format families and can convert betwee
 | .wav/.ogg → .aud           | Import        | Convert custom audio recordings to classic Westwood AUD format (IMA ADPCM compressed) for authentic retro sound or OpenRA mod compatibility                | 6a     |
 | .wav/.ogg/.mp3 passthrough | Native        | Modern audio formats play natively — no conversion required. Mod creators can use .wav/.ogg/.mp3 directly for sound effects, music, and EVA lines.         | 3      |
 | Theme YAML ↔ visual        | Bidirectional | Edit themes visually or as YAML — changes sync both ways                                                                                                   | 6a     |
+| .meg → extract             | Export        | Extract Remastered Collection MEG archives (sprites, audio, video, UI)                                                                                     | 2      |
+| .tga+.meta → IC sprites    | Import        | Split Remastered HD megasheets into per-frame IC sprite sheets with chroma-key→remap conversion                                                            | 2/6a   |
+| .bk2 → .webm               | Import        | Convert Remastered Bink2 cutscenes to WebM (VP9) at import time                                                                                            | 6a     |
+
+> **Remastered Collection import:** The "Import Remastered Installation" wizard (D075) provides a guided workflow for importing HD assets from a user's purchased Remastered Collection. See [D075](../09c/D075-remastered-format-compat.md) for format details, import pipeline, and legal model.
 
 **ra-formats write support:** Currently `ra-formats` is read-only (parse .mix, .shp, .pal, .vqa, .aud). The Asset Studio requires write support — generating .shp from frames, writing .pal files, encoding .vqa video, encoding .aud audio, optionally packing .mix archives. This is an additive extension to `ra-formats` (no redesign of existing parsers), but non-trivial engineering: .shp writing requires correct header generation, frame offset tables, and optional LCW/RLE compression; .vqa encoding requires VQ codebook generation and frame differencing; .aud encoding requires IMA ADPCM compression with correct `AUDHeaderType` generation and `IndexTable`/`DiffTable` lookup table application; .mix packing requires building the file index and CRC hash table. All encoders reference the EA GPL source code implementations directly (see `05-FORMATS.md` § Binary Format Codec Reference). Budget accordingly in Phase 6a.
 

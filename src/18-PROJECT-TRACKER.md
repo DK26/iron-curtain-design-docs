@@ -111,7 +111,7 @@ This section is the **immediate execution recommendation** for an implementer st
 
 **Start now (parallel where safe):**
 
-1. **`P002` fixed-point scale decision closure** (planning blocker for serious `M2` sim/path/combat work)
+1. ~~**`P002` fixed-point scale decision closure**~~ **RESOLVED:** Scale factor = 1024 (see `research/fixed-point-math-design.md`)
 2. **`G1` RA asset parsing baseline** (`.mix`, `.shp`, `.pal`)
 3. **`G2` Bevy map/sprite render slice**
 4. **`G3` unit animation playback**
@@ -121,15 +121,15 @@ This section is the **immediate execution recommendation** for an implementer st
 1. `G4` cursor/hit-test
 2. `G5` selection baseline
 3. `G6-G10` deterministic sim + movement/path + combat/death (after `P002`)
-4. `G11-G15` mission-end evaluators/UI/EVA+VO/feel pass (after `P003` for final audio/VO polish)
+4. `G11-G15` mission-end evaluators/UI/EVA+VO/feel pass (~~`P003`~~ ✓ resolved — Kira via `bevy_kira_audio`; see `research/audio-library-music-integration-design.md`)
 5. `G16` widen to local skirmish + frozen `D043` basic AI subset
 
 ### Active Track A Closure Criteria (Before Switching Primary Focus)
 
 - `M3.SP.SKIRMISH_LOCAL_LOOP` validated (local playable skirmish)
 - `G1-G16` evidence artifacts collected and linked
-- `P002` resolved and reflected in implementation assumptions
-- `P003` resolved before finalizing `G13/G15`
+- ~~`P002` resolved and reflected in implementation assumptions~~ ✓ DONE (1024, `research/fixed-point-math-design.md`)
+- ~~`P003` resolved before finalizing `G13/G15`~~ ✓ DONE (Kira, `research/audio-library-music-integration-design.md`)
 - `D043` `M3` basic AI subset frozen/documented
 
 ### Secondary Parallel Track (Allowed, Low-Risk)
@@ -137,7 +137,7 @@ This section is the **immediate execution recommendation** for an implementer st
 These can progress without derailing Active Track A **if resourcing allows**:
 
 - `M8` prep work for `G21.1` design-to-ticket breakdown (CLI/local-overlay workflow planning only)
-- `P003` audio library evaluation spikes (to avoid blocking `G13`)
+- ~~`P003` audio library evaluation spikes~~ ✓ RESOLVED (no longer blocking `G13`)
 - test harness scaffolding for deterministic replay/hash proof artifacts (`G6/G9/G10`)
 
 ### Do Not Pull Forward (Common Failure Modes)
@@ -155,22 +155,19 @@ This subsection answers a narrower question than the full tracker: **do we have 
 ### Milestone-Scoped Readiness Summary
 
 - **`M1` (Resource + Rendering Slice):** implementation-ready enough to start. Main risks are fidelity breadth and file-format quirks, not missing architecture.
-- **`M2` (Deterministic Sim Core):** implementation-ready **after** `P002` (fixed-point scale) is resolved.
-- **`M3` (Local Skirmish):** mostly specified, but depends on `P003` (audio) and a narrow, explicit `D043` AI baseline subset.
+- **`M2` (Deterministic Sim Core):** implementation-ready. P002 (fixed-point scale=1024) is resolved — see `research/fixed-point-math-design.md`.
+- **`M3` (Local Skirmish):** mostly specified; ~~`P003`~~ ✓ resolved (Kira). Remaining dependency: a narrow, explicit `D043` AI baseline subset.
 - **`M4` (Minimal Online Slice):** architecture and fairness path are well specified (`D007/D008/D012/D060` audited), but reconnect remains intentionally "support-or-explicit-defer."
 
 ### M1-M4 Closure Checklist (Before / During Implementation)
 
-1. **Resolve `P002` fixed-point scale before `M2` implementation starts.**
-   - Affects `D009`, `D013`, `D015`, `D045` and downstream tuning.
-   - See pending gate rows and risk watchlist (`P002`) below and in the dependency map.
+1. ~~**Resolve `P002` fixed-point scale before `M2` implementation starts.**~~ ✓ **RESOLVED:** 1024 scale factor (see `research/fixed-point-math-design.md`). Affected decisions: D009, D013, D015, D045.
 
 2. **Freeze an explicit `M3` AI baseline subset (from `D043`) for local skirmish.**
    - `M3.SP.SKIRMISH_LOCAL_LOOP` depends on `D043`, but `D043`'s primary milestone is `M6`.
    - The `M3` slice should define a narrow "dummy/basic AI" contract and defer broader AI preset sophistication to `M6`.
 
-3. **Resolve `P003` audio library + music integration before Phase 3 skirmish polish/feel work.**
-   - `M3.CORE.AUDIO_EVA_MUSIC` is a named hard gate for the "feels like RA" milestone.
+3. ~~**Resolve `P003` audio library + music integration before Phase 3 skirmish polish/feel work.**~~ ✓ **RESOLVED:** Kira via `bevy_kira_audio` (see `research/audio-library-music-integration-design.md`). Four-bus mixer, dynamic music FSM, EVA priority queue. `M3.CORE.AUDIO_EVA_MUSIC` gate is unblocked.
 
 4. **Choose and document the `M4` reconnect stance early (baseline support vs explicit defer).**
    - `M4.NET.RECONNECT_BASELINE` intentionally allows "implement or explicitly defer."
@@ -187,7 +184,7 @@ This subsection answers a narrower question than the full tracker: **do we have 
 - `M3` primary decisions: `3 Integrated`, `2 Decisioned`
 - `M4` primary decisions: `4 Audited`
 
-This supports starting the `M1 -> M4` chain now, while treating `P002`, `P003`, and the `M3`/`M4` scope locks above as mandatory implementation-planning checkpoints.
+This supports starting the `M1 -> M4` chain now. `P002` is resolved (1024); `P003` is resolved (Kira); remaining checkpoint is the `M3`/`M4` scope locks above.
 
 ## Foundational Build Sequence (RA Mission Loop, Implementation Order)
 
@@ -203,7 +200,7 @@ This is the **implementation-order view** of the early milestones based on the g
 
 1. Add cursor + hover hit-test primitives (cells/entities).
 2. Add unit selection (single select, minimum multi-select/box select).
-3. Implement deterministic sim tick + order application skeleton (**after `P002` fixed-point scale is resolved**).
+3. Implement deterministic sim tick + order application skeleton (P002 resolved: scale=1024, see `research/fixed-point-math-design.md`).
 4. Integrate pathfinding + spatial queries so move orders produce actual movement.
 5. Sync render presentation to sim state (movement/facing/animation transitions).
 6. Implement combat baseline (targeting + hit/damage resolution).
@@ -240,7 +237,7 @@ This is the **implementation-order view** of the early milestones based on the g
 3. `M4` full minimal online match loop (play a match online end-to-end, result, disconnect cleanly).
 4. `M4` reconnect baseline decision and implementation **or** explicit defer contract (must be documented and reflected in UX).
 5. `M7` browser/tracking discovery + trust labels + lobby listings.
-6. `M7` signed credentials/results and community-server trust path (`D052`) (**after `P004`** wire details are resolved).
+6. `M7` signed credentials/results and community-server trust path (`D052`) (~~`P004`~~ ✓ resolved — see `research/lobby-matchmaking-wire-protocol-design.md`).
 7. `M7` ranked queue/tiers/seasons (`D055`) + queue degradation/health rules.
 8. `M7` report/block/avoid + moderation evidence attachment + optional review pipeline baseline.
 9. `M7` spectator/tournament basics + signed replay/evidence workflow.
@@ -264,9 +261,9 @@ This is the **implementation-order view** of the early milestones based on the g
 
 ### Dependency Cross-Checks (Early Implementation)
 
-- `P002` must be resolved before serious `M2` sim/path/combat implementation.
-- `P003` must be resolved before mission-end VO/EVA/audio polish in `M3`.
-- `P004` is **not** a blocker for the `M4` minimal online slice, but is a blocker for `M7` multiplayer productization.
+- ~~`P002` must be resolved before serious `M2` sim/path/combat implementation.~~ ✓ RESOLVED (1024).
+- ~~`P003` must be resolved before mission-end VO/EVA/audio polish in `M3`.~~ ✓ RESOLVED (Kira).
+- ~~`P004` is **not** a blocker for the `M4` minimal online slice, but is a blocker for `M7` multiplayer productization.~~ ✓ RESOLVED (lobby/matchmaking wire protocol).
 - `M4` online slice must remain architecture-faithful but feature-minimal (no tracker/ranked/browser assumptions).
 - `M8` creator foundations can parallelize after `M2`, but full visual SDK/editor work (`M9+`) should wait for runtime/network product foundations and stable content schemas.
 - `M11` remains optional/polish-heavy and must not displace unfinished `M7–M10` exit criteria unless a new decision/overlay remap explicitly changes that.
@@ -300,8 +297,8 @@ Use this as the implementation handoff checklist for the **first playable Red Al
 | --- | --- | --- | --- |
 | `G4` | Cursor + hover hit-test primitives for cells/entities in gameplay scene | Manual demo clip + hit-test unit tests (cell/entity under cursor) | Cursor semantics should remain compatible with D059/D065 input profile layering |
 | `G5` | Selection baseline (single select + minimum multi-select/box select + selection markers) | Manual test checklist + screenshot/video for each selection mode | Use sim-derived selection state; avoid render-only authority |
-| `G6` | Deterministic sim tick loop + basic order application (`move`, `stop`, state transitions) | Determinism test (`same inputs -> same hash`) + local replay pass | **Blocked by `P002`** fixed-point scale decision |
-| `G7` | Integrate `Pathfinder` + `SpatialIndex` into movement order execution | Conformance tests (`PathfinderConformanceTest`, `SpatialIndexConformanceTest`) + in-game movement demo | **Blocked by `P002`**; preserve deterministic spatial-query ordering |
+| `G6` | Deterministic sim tick loop + basic order application (`move`, `stop`, state transitions) | Determinism test (`same inputs -> same hash`) + local replay pass | P002 resolved (1024). Use `Fixed(i32)` types from `research/fixed-point-math-design.md` |
+| `G7` | Integrate `Pathfinder` + `SpatialIndex` into movement order execution | Conformance tests (`PathfinderConformanceTest`, `SpatialIndexConformanceTest`) + in-game movement demo | P002 resolved; preserve deterministic spatial-query ordering |
 | `G8` | Render/sim sync for movement/facing/animation transitions | Visual movement correctness capture + replay-repeat visual spot check | Prevent sim/render state drift during motion |
 | `G9` | Combat baseline (targeting + hit/damage resolution or narrow direct-fire first slice) | Deterministic combat replay test + combat demo clip | Prefer narrow deterministic slice over broad weapon feature scope |
 | `G10` | Death/destruction transitions (death state, animation, cleanup/removal) | Deterministic combat replay with death assertions + cleanup checks | Removal timing must remain sim-authoritative |
@@ -312,15 +309,15 @@ Use this as the implementation handoff checklist for the **first playable Red Al
 | --- | --- | --- | --- |
 | `G11` | Sim-authoritative mission-end evaluators (`all enemies dead`, `all player units dead`) | Unit/integration tests for victory/failure triggers + replay-result consistency test | Implement result logic in sim state, not UI heuristics |
 | `G12` | Mission-end UI shell (`Mission Accomplished` / `Mission Failed`) + flow pause/transition | Manual UX walkthrough capture + state-transition assertions | UI consumes authoritative result from `G11` |
-| `G13` | EVA/VO integration for mission-end outcomes | Audio event trace/log + manual verification clip for both result states | **Blocked by `P003`** and `M3.CORE.AUDIO_EVA_MUSIC` baseline |
+| `G13` | EVA/VO integration for mission-end outcomes | Audio event trace/log + manual verification clip for both result states | ~~`P003`~~ ✓ resolved; depends on `M3.CORE.AUDIO_EVA_MUSIC` baseline |
 | `G14` | Restart/exit flow from mission results (replay mission / return to menu) | Manual loop test (`start -> end -> replay`, `start -> end -> exit`) | This closes the first full mission loop |
 | `G15` | “Feels like RA” pass (cursor feedback, selection readability, audio timing, result pacing) | Internal playtest notes + short sign-off checklist | Keep scope to first mission loop polish, not full skirmish parity |
 | `G16` | Widen from fixed mission slice to local skirmish + narrow `D043` basic AI subset | `M3.SP.SKIRMISH_LOCAL_LOOP` validation run + explicit AI subset scope note | Freeze `M3` AI subset before implementation to avoid `M6` scope creep |
 
 ### Required Closure Gates Before Marking `M3` Exit
 
-- `P002` fixed-point scale resolved and reflected in sim/path/combat assumptions (`G6-G10`)
-- `P003` audio library/music integration resolved before finalizing `G13/G15`
+- ~~`P002` fixed-point scale resolved and reflected in sim/path/combat assumptions (`G6-G10`)~~ ✓ DONE
+- ~~`P003` audio library/music integration resolved before finalizing `G13/G15`~~ ✓ DONE (Kira)
 - `D043` **M3 basic AI subset** explicitly frozen (scope boundary vs `M6`)
 - End-to-end mission loop validated:
   - start mission
@@ -392,14 +389,14 @@ Use this checklist to keep the multiplayer path architecture-faithful and staged
 | Step | Work Package (Implementation Bundle) | Suggested Verification / Proof Artifact | Completion Notes |
 | --- | --- | --- | --- |
 | `G20.1` | Tracking/browser discovery + trust labels + lobby listings | Browser/lobby walkthrough captures + trust-label correctness checklist | Trust labels must match actual guarantees (D011/D052/07-CROSS-ENGINE) |
-| `G20.2` | Signed credentials/results + community-server trust path (`D052`) | Credential/result signing tests + server trust path validation | **Blocked by `P004`** wire/integration details |
+| `G20.2` | Signed credentials/results + community-server trust path (`D052`) | Credential/result signing tests + server trust path validation | ~~`P004`~~ ✓ resolved; see `research/lobby-matchmaking-wire-protocol-design.md` |
 | `G20.3` | Ranked queue + tiers/seasons + queue health/degradation rules (`D055`) | Ranked queue test plan + queue fallback/degradation scenarios | Avoid-list guarantees and queue-health messaging must be explicit |
 | `G20.4` | Report/block/avoid UX + moderation evidence attachment + optional review baseline | Report workflow demo + evidence attachment audit + sanctions capability-matrix tests | Keep moderation capabilities granular; avoid coupling failures |
 | `G20.5` | Spectator/tournament basics + signed replay/evidence workflow | Spectator match capture + replay evidence verification + tournament-path checklist | `M7` exit requires browser/ranked/trust/moderation/spectator coherence |
 
 ### Required Closure Gates Before Marking `M7` Exit
 
-- `P004` resolved and reflected in multiplayer/lobby integration details
+- ~~`P004` resolved and reflected in multiplayer/lobby integration details~~ ✓ DONE (see `research/lobby-matchmaking-wire-protocol-design.md`)
 - Trust labels verified against actual host modes and guarantees
 - Ranked, report/avoid, and moderation flows are distinct and understandable
 - Signed replay/evidence workflow exists for moderation/tournament review paths
@@ -500,7 +497,7 @@ This table tracks **every decision row currently indexed in [`src/09-DECISIONS.m
 | `D029` | Cross-Game Component Library (Phase 2 Targets) | Gameplay | `src/decisions/09d-gameplay.md` | `M2` | M3, M6, M10 | `P-Core` | `Decisioned` | `NotStarted` | `SpecReview` | D028, D041, D048; Phase 2 targets with some early-Phase-3 spillover allowed | — | D028 remains the strict Phase 2 exit gate; D029 systems are high-priority targets with phased fallback. | — |
 | `D030` | Workshop Resource Registry & Dependency System | Community | `src/decisions/09e/D030-workshop-registry.md` | `M8` | — | `P-Creator` | `Integrated` | `NotStarted` | `SpecReview` | D049, D034, D052 (later server integration), D068 | — | — | — |
 | `D031` | Observability & Telemetry (OTEL) | Community | `src/decisions/09e/D031-observability.md` | `M2` | M7, M11 | `P-Core` | `Integrated` | `NotStarted` | `SpecReview` | See `tracking/milestone-dependency-map.md` for milestone and feature-cluster dependency edges. | — | — | — |
-| `D032` | Switchable UI Themes | Modding | `src/decisions/09c-modding.md` | `M3` | M6 | `P-Core` | `Decisioned` | `NotStarted` | `SpecReview` | See `tracking/milestone-dependency-map.md` for milestone and feature-cluster dependency edges. | — | Audio theme variants (menu music/click sounds per theme) would depend on P003, but core visual theme switching does not. | — |
+| `D032` | Switchable UI Themes | Modding | `src/decisions/09c-modding.md` | `M3` | M6 | `P-Core` | `Decisioned` | `NotStarted` | `SpecReview` | See `tracking/milestone-dependency-map.md` for milestone and feature-cluster dependency edges. | — | Audio theme variants (menu music/click sounds per theme) can now use Kira (~~P003~~ ✓ resolved); core visual theme switching is independent. | — |
 | `D033` | Toggleable QoL & Gameplay Behavior Presets | Gameplay | `src/decisions/09d/D033-qol-presets.md` | `M3` | M6 | `P-Core` | `Decisioned` | `NotStarted` | `SpecReview` | See `tracking/milestone-dependency-map.md` for milestone and feature-cluster dependency edges. | — | — | — |
 | `D034` | SQLite as Embedded Storage | Community | `src/decisions/09e/D034-sqlite.md` | `M2` | M7, M9 | `P-Core` | `Integrated` | `NotStarted` | `SpecReview` | See `tracking/milestone-dependency-map.md` for milestone and feature-cluster dependency edges. | — | — | — |
 | `D035` | Creator Recognition & Attribution | Community | `src/decisions/09e/D035-creator-attribution.md` | `M9` | M11 | `P-Scale` | `Decisioned` | `NotStarted` | `SpecReview` | See `tracking/milestone-dependency-map.md` for milestone and feature-cluster dependency edges. | — | — | — |
@@ -520,15 +517,15 @@ This table tracks **every decision row currently indexed in [`src/09-DECISIONS.m
 | `D049` | Workshop Asset Formats & P2P Distribution | Community | `src/decisions/09e/D049-workshop-assets.md` | `M9` | M8, M7 | `P-Creator` | `Integrated` | `NotStarted` | `SpecReview` | D030, D034, D068; Workshop transport/CAS and package verification | — | D049 now explicitly separates hash/signature roles (SHA-256 canonical package/manifest digests, optional BLAKE3 internal CAS/chunk acceleration, Ed25519 signed metadata) and phases Workshop ops/admin tooling (`M8` minimal operator panel -> `M9` full admin panel). Freeware/legacy C&C mirror hosting remains policy-gated under D037. Workshop resources explicitly include both **video cutscenes** and **rendered cutscene sequence bundles** (D038 `Cinematic Sequence` content + dependencies) with fallback-safe packaging expectations, plus media language capability metadata/trust labels (`Audio`/`Subs`/`CC`, coverage, translation source) so clients can choose predictable cutscene fallback paths and admins can review mislabeled machine translations. | — |
 | `D050` | Workshop as Cross-Project Reusable Library | Modding | `src/decisions/09c-modding.md` | `M9` | M8 | `P-Creator` | `Decisioned` | `NotStarted` | `SpecReview` | See `tracking/milestone-dependency-map.md` for milestone and feature-cluster dependency edges. | — | — | — |
 | `D051` | Engine License — GPL v3 with Modding Exception | Modding | `src/decisions/09c-modding.md` | `M0` | — | `P-Core` | `Decisioned` | `NotStarted` | `SpecReview` | See `tracking/milestone-dependency-map.md` for milestone and feature-cluster dependency edges. | — | — | — |
-| `D052` | Community Servers with Portable Signed Credentials | Networking | `src/decisions/09b/D052-community-servers.md` | `M7` | M4 | `P-Differentiator` | `Integrated` | `NotStarted` | `SpecReview` | D007, D055, D061, D031; signed credentials and community servers | P004 | Community review / moderation pipeline is optional capability layered on top of signed credential infrastructure. | — |
+| `D052` | Community Servers with Portable Signed Credentials | Networking | `src/decisions/09b/D052-community-servers.md` | `M7` | M4 | `P-Differentiator` | `Integrated` | `NotStarted` | `SpecReview` | D007, D055, D061, D031; signed credentials and community servers | ~~P004~~ ✓ | Community review / moderation pipeline is optional capability layered on top of signed credential infrastructure. | — |
 | `D053` | Player Profile System | Community | `src/decisions/09e/D053-player-profile.md` | `M7` | M6 | `P-Scale` | `Decisioned` | `NotStarted` | `SpecReview` | See `tracking/milestone-dependency-map.md` for milestone and feature-cluster dependency edges. | — | — | — |
 | `D054` | Extended Switchability | Gameplay | `src/decisions/09d/D054-extended-switchability.md` | `M7` | M11 | `P-Differentiator` | `Decisioned` | `NotStarted` | `SpecReview` | See `tracking/milestone-dependency-map.md` for milestone and feature-cluster dependency edges. | — | — | — |
-| `D055` | Ranked Tiers, Seasons & Matchmaking Queue | Networking | `src/decisions/09b/D055-ranked-matchmaking.md` | `M7` | M11 | `P-Differentiator` | `Integrated` | `NotStarted` | `SpecReview` | D052, D053, D059, D060; ranked queue and policy enforcement | P004 | — | — |
+| `D055` | Ranked Tiers, Seasons & Matchmaking Queue | Networking | `src/decisions/09b/D055-ranked-matchmaking.md` | `M7` | M11 | `P-Differentiator` | `Integrated` | `NotStarted` | `SpecReview` | D052, D053, D059, D060; ranked queue and policy enforcement | ~~P004~~ ✓ | — | — |
 | `D056` | Foreign Replay Import | Tools | `src/decisions/09f/D056-replay-import.md` | `M7` | M9 | `P-Differentiator` | `Decisioned` | `NotStarted` | `SpecReview` | See `tracking/milestone-dependency-map.md` for milestone and feature-cluster dependency edges. | — | Foreign replay import improves analysis and cross-engine onboarding but is not a blocker for minimal online slice. | — |
 | `D057` | LLM Skill Library | Tools | `src/decisions/09f/D057-llm-skill-library.md` | `M11` | M9 | `P-Optional` | `Decisioned` | `NotStarted` | `SpecReview` | See `tracking/milestone-dependency-map.md` for milestone and feature-cluster dependency edges. | — | — | — |
 | `D058` | In-Game Command Console | Interaction | `src/decisions/09g/D058-command-console.md` | `M3` | M7, M9 | `P-Core` | `Integrated` | `NotStarted` | `SpecReview` | See `tracking/milestone-dependency-map.md` for milestone and feature-cluster dependency edges. | — | — | — |
-| `D059` | In-Game Communication (Chat, Voice, Pings) | Interaction | `src/decisions/09g/D059-communication.md` | `M7` | M10 | `P-Differentiator` | `Integrated` | `NotStarted` | `SpecReview` | D058, D052, D055, D065; role-aware comms and moderation UX | P004 | Includes explicit colored beacon/ping + tactical marker presentation rules (optional short labels, visibility scope, replay-safe metadata, anti-spam/accessibility constraints) for multiplayer readability and D070 reuse, plus a documented RTL/BiDi support split: legitimate Arabic/Hebrew chat/marker labels render correctly while anti-spoof/control-char sanitization remains relay-/moderation-safe. | — |
-| `D060` | Netcode Parameter Philosophy | Networking | `src/decisions/09b/D060-netcode-params.md` | `M4` | M7 | `P-Core` | `Audited` | `NotStarted` | `SpecReview` | D007, D008, D012; relay policy and parameter automation constraints | P004 | Must stay aligned with `03-NETCODE.md` and `06-SECURITY.md` trust authority policy. | — |
+| `D059` | In-Game Communication (Chat, Voice, Pings) | Interaction | `src/decisions/09g/D059-communication.md` | `M7` | M10 | `P-Differentiator` | `Integrated` | `NotStarted` | `SpecReview` | D058, D052, D055, D065; role-aware comms and moderation UX | ~~P004~~ ✓ | Includes explicit colored beacon/ping + tactical marker presentation rules (optional short labels, visibility scope, replay-safe metadata, anti-spam/accessibility constraints) for multiplayer readability and D070 reuse, plus a documented RTL/BiDi support split: legitimate Arabic/Hebrew chat/marker labels render correctly while anti-spoof/control-char sanitization remains relay-/moderation-safe. | — |
+| `D060` | Netcode Parameter Philosophy | Networking | `src/decisions/09b/D060-netcode-params.md` | `M4` | M7 | `P-Core` | `Audited` | `NotStarted` | `SpecReview` | D007, D008, D012; relay policy and parameter automation constraints | ~~P004~~ ✓ | Must stay aligned with `03-NETCODE.md` and `06-SECURITY.md` trust authority policy. | — |
 | `D065` | Tutorial & New Player Experience | Interaction | `src/decisions/09g/D065-tutorial.md` | `M6` | M3, M7 | `P-Differentiator` | `Integrated` | `NotStarted` | `SpecReview` | D033, D058, D059, D069; onboarding, prompts, quick reference | — | D065 prompt rendering and UI-anchor overlays must remain locale-aware (including RTL/BiDi text rendering and mirrored UI anchors where applicable) and stay aligned with the shared `ic-ui` layout-direction contract. | — |
 | `D069` | Installation & First-Run Setup Wizard | Interaction | `src/decisions/09g/D069-install-wizard.md` | `M3` | M8 | `P-Core` | `Integrated` | `NotStarted` | `SpecReview` | D061, D068, D030, D033, D034, D049, D065; first-run/maintenance wizard | — | `M3` is spec-acceptance/design-integration milestone; implementation delivery targets Phase 4-5. D069 now explicitly includes out-of-the-box owned-install import/extract (including Steam Remastered) into IC-managed storage, with source installs treated as read-only. Offline-first and no-dead-end setup rules must remain intact across platform variants. | — |
 | `D070` | Asymmetric Co-op Mode — Commander & Field Ops | Gameplay | `src/decisions/09d/D070-asymmetric-coop.md` | `M10` | M11 | `P-Differentiator` | `Integrated` | `NotStarted` | `SpecReview` | D038, D059, D065, D021 (campaign runtime), D066 (export warnings) | — | IC-native template/toolkit with PvE-first scope; export compatibility intentionally limited in v1. Includes optional prototype-first pacing layer (`Operational Momentum` / "one more phase") and adjacent experimental variants. | — |
@@ -539,12 +536,18 @@ This table tracks **every decision row currently indexed in [`src/09-DECISIONS.m
 | `D066` | Cross-Engine Export & Editor Extensibility | Modding | `src/decisions/09c-modding.md` | `M9` | M10 | `P-Creator` | `Integrated` | `NotStarted` | `SpecReview` | D023/D025/D026 (compat layer refs), D038, D040, D049 | — | Export fidelity is IC-native-first; target-specific warnings/gating are expected and intentional. | — |
 | `D067` | Configuration Format Split — TOML vs YAML | Foundation | `src/decisions/09a-foundation.md` | `M2` | M7 | `P-Core` | `Decisioned` | `NotStarted` | `SpecReview` | See `tracking/milestone-dependency-map.md` for milestone and feature-cluster dependency edges. | — | — | — |
 | `D068` | Selective Installation & Content Footprints | Modding | `src/decisions/09c-modding.md` | `M8` | M3, M9 | `P-Creator` | `Integrated` | `NotStarted` | `SpecReview` | D030, D049, D061, D069; install profiles and content footprints | — | D068 now explicitly covers mixed install plans across owned proprietary imports (including Remastered via D069), open sources, and Workshop packages; local proprietary imports do not imply redistribution rights. It also defines player-selectable voice-over variant packs/preferences (language/style, per category such as EVA/unit/dialogue/cutscene dubs), media language capability-aware fallback chains (audio/subtitles/CC), and an optional `M11` machine-translated subtitle/CC fallback path (opt-in, labeled, trust-tagged). Player-config packages are explicitly outside gameplay/presentation compatibility fingerprints. | — |
+| `D071` | External Tool API — IC Remote Protocol (ICRP) | Tools | `src/decisions/09f/D071-external-tool-api.md` | `M5` | M2, M3, M8, M9 | `P-Differentiator` | `Decisioned` | `NotStarted` | `SpecReview` | D006, D010, D012, D058; external tool API and protocol | — | Multi-phase: Phase 2 (observer tier + HTTP), Phase 3 (WebSocket + auth + admin tier), Phase 5 (relay server API), Phase 6a (mod tier + MCP + LSP + Workshop tool packages). Enables community ecosystem tooling (overlays, coaching, tournament tools). | — |
+| `D072` | Dedicated Server Management | Networking | `src/decisions/09b/D072-server-management.md` | `M5` | M2, M8, M9 | `P-Core` | `Decisioned` | `NotStarted` | `SpecReview` | D007, D064, D071; server management interfaces and ops | — | Multi-phase: Phase 2 (`/health` + logging), Phase 5 (full CLI + web dashboard + in-game admin + scaling), Phase 6a (self-update + advanced monitoring). Binary naming superseded by D074 (`ic-server`). | — |
+| `D073` | LLM Exhibition Matches & Prompt-Coached Modes | Gameplay | `src/decisions/09d/D073-llm-exhibition-modes.md` | `M11` | — | `P-Optional` | `Decisioned` | `NotStarted` | `SpecReview` | D044, D010, D059; LLM exhibition and spectator modes | — | Phase 7 content. Never part of ranked matchmaking (D055). Custom/local exhibition + prompt-coached modes + replay metadata/overlay. Document's feature cluster tag reads `M7.LLM` but Phase 7 maps to M11 per roadmap overlay. | — |
+| `D074` | Community Server — Unified Binary with Capability Flags | Networking | `src/decisions/09b/D074-community-server-bundle.md` | `M5` | M2, M3, M8, M9 | `P-Core` | `Decisioned` | `NotStarted` | `SpecReview` | D007, D030, D034, D049, D052, D055, D072; unified server binary and capability packaging | — | Multi-phase: Phase 2 (health + logging), Phase 4 (Workshop seeding), Phase 5 (full community server with all capabilities), Phase 6a (federation, self-update). Consolidates D007+D030+D049+D052+D072 packaging. Binary is `ic-server`. | — |
+| `D075` | Remastered Collection Format Compatibility | Modding | `src/decisions/09c/D075-remastered-format-compat.md` | `M2` | M8, M9 | `P-Differentiator` | `Decisioned` | `NotStarted` | `SpecReview` | D040, D048; Remastered format parsers and Asset Studio wizard | — | Phase 2 (format parsers in `ra-formats`: MEG, TGA+META, DDS), Phase 6a (Asset Studio import wizard). CLI fallback `ic asset import-remastered` available Phase 2. No runtime Bink2 decoder — BK2→WebM at import time. | — |
+| `D076` | Standalone MIT/Apache-Licensed Crate Extraction Strategy | Foundation | `src/decisions/09a/D076-standalone-crates.md` | `M0` | M1, M2, M5, M8, M9 | `P-Core` | `Decisioned` | `NotStarted` | `SpecReview` | D009, D050, D051; crate extraction licensing and repo strategy | — | Tier 1 crates (`cnc-formats`, `fixed-game-math`, `deterministic-rng`) are Phase 0 / M0–M1 deliverables — separate repos before any GPL code exists. Tier 2–3 extraction follows IC implementation timeline (M2 for `glicko2-rts`, M5 for `lockstep-relay`, M8–M9 for `workshop-core`/`lua-sandbox`/`p2p-distribute`). `ra-formats` stays GPL (wraps `cnc-formats` + EA-derived code). | — |
 
 ## Feature Cluster Coverage Summary
 
 | Source | Coverage Goal | Baseline Coverage in This Overlay | Notes |
 | --- | --- | --- | --- |
-| `src/09-DECISIONS.md` | Every indexed `Dxxx` row mapped to milestone(s) and statuses | `70/70` decision rows mapped | Tracker is keyed to the decision index; legacy D063/D064 are indexed via D067 carry-forward notes in Foundation. |
+| `src/09-DECISIONS.md` | Every indexed `Dxxx` row mapped to milestone(s) and statuses | `76/76` decision rows mapped | Tracker is keyed to the decision index; legacy D063/D064 are indexed via D067 carry-forward notes in Foundation. |
 | `src/08-ROADMAP.md` | All phases covered by overlay milestones | `Phase 0`–`Phase 7` mapped into `M1`–`M11` (plus `M0` tracker bootstrap) | Roadmap remains canonical; overlay adds dependency/execution view. |
 | `src/11-OPENRA-FEATURES.md` | Gameplay priority triage (`P0`–`P3`) reflected in ordering | `P0`→`M2`, `P1/P2`→`M3`, `P3`→`M6+`/deferred clusters | Priority tables used as canonical sub-priority for gameplay familiarity implementation. |
 | `src/17-PLAYER-FLOW.md` | Milestone-gating UX surfaces represented | Setup, main menu/skirmish, lobby/MP, campaign flow, moderation/review, SDK entry flows mapped | Prevents backend-only milestone definitions; includes post-play feedback prompt + creator-feedback inbox/helpful-recognition surfaces and SDK authoring-manual/context-help surfaces mapped via `M7`/`M10` and `M9` creator-doc clusters. |
@@ -564,9 +567,9 @@ This table tracks **every decision row currently indexed in [`src/09-DECISIONS.m
 | Risk | Why It Matters | Affected Milestones | Mitigation / Tracker Rule |
 | --- | --- | --- | --- |
 | Decision index drift (`src/09-DECISIONS.md` vs referenced `D0xx` elsewhere) | The tracker is Dxxx-index keyed; future non-indexed decisions can become invisible | `M1`–`M11` (cross-cutting) | Add index rows in the same change as new `Dxxx` references and update tracker row count/coverage summary immediately. |
-| `P002` fixed-point scale unresolved | Blocks final numeric tuning and can ripple through pathfinding/perf assumptions | `M2`, `M3` | Resolve before `M2` implementation starts; mark affected D rows with `P002`. |
-| `P003` audio library + music integration design unresolved | Blocks final audio/music implementation choices for skirmish “feel” milestone | `M3`, `M6` | Resolve before Phase 3 implementation; keep audio cluster explicitly gated. |
-| `P004` lobby/matchmaking wire details unresolved | Multiplayer productization details can churn if not locked | `M4`, `M7` | Minimal online slice (`M4`) uses planned architecture and can defer tracker/ranked wire specifics; lock before `M7`. |
+| ~~`P002` fixed-point scale~~ | ~~Blocks final numeric tuning~~ **RESOLVED** (1024, see `research/fixed-point-math-design.md`) | `M2`, `M3` | Resolved. Affected D rows (D009, D013, D015, D028, D045) can proceed. |
+| ~~`P003` audio library + music integration design~~ | ~~Blocks final audio/music implementation choices~~ **RESOLVED** (Kira via `bevy_kira_audio`, see `research/audio-library-music-integration-design.md`) | `M3`, `M6` | Resolved. `M3` audio cluster gate is unblocked. |
+| ~~`P004` lobby/matchmaking wire details~~ | ~~Multiplayer productization details can churn if not locked~~ **RESOLVED** (see `research/lobby-matchmaking-wire-protocol-design.md`) | `M4`, `M7` | Resolved. D052/D055/D059/D060 integration details are specified. |
 | Legal/ops gates for community infrastructure (entity + DMCA agent) | Workshop/ranked/community infra risk if omitted | `M7`, `M9` | Treat as `policy_gate` nodes in dependency map; do not mark affected milestones validated without them. |
 | Scope pressure from advanced modes and optional AI (D070, survival variant, D016/D047/D057) | Can steal bandwidth from core runtime/campaign/multiplayer milestones | `M7`–`M11` | Keep `P-Optional` and experimental features gated; no promotion to core milestones without playtest evidence. |
 | Feedback-reward farming / positivity bias in creator review recognition | Can distort review quality and create social abuse incentives if rewards are treated as gameplay, popularity, or review volume | `M7`, `M10`, `M11` | Keep rewards profile-only, sampled prompts, creator helpful-mark auditability, and D037/D052 anti-collusion enforcement; emphasize "helpful/actionable" over positive sentiment; see `M7.UX.POST_PLAY_FEEDBACK_PROMPTS` + `M10.COM.CREATOR_FEEDBACK_HELPFUL_RECOGNITION`. |
@@ -595,9 +598,9 @@ This table tracks **every decision row currently indexed in [`src/09-DECISIONS.m
 
 | Gate | Type | Needs Resolution By | Affects | Current Handling in Overlay |
 | --- | --- | --- | --- | --- |
-| `P002` Fixed-point scale | Pending decision | `M2` start | D009, D013, D015, D045 and downstream balance/pathfinding tuning | Explicit blocker on affected D rows and `M2` risk watchlist item. |
-| `P003` Audio library + music integration | Pending decision | `M3` start | Audio/EVA/music implementation and “feels like RA” polish | `M3` audio cluster is a named gate in dependency map. |
-| `P004` Lobby/matchmaking wire details | Pending decision | `M7` productization (architecture already resolved) | D052/D055/D059/D060 integration details | `M4` vertical slice intentionally avoids full tracker/ranked dependency. |
+| ~~`P002` Fixed-point scale~~ | **Resolved** | — | D009, D013, D015, D045 | Resolved: 1024 scale factor. See `research/fixed-point-math-design.md`. |
+| ~~`P003` Audio library + music integration~~ | **Resolved** | — | Audio/EVA/music implementation | Resolved: Kira via `bevy_kira_audio`. See `research/audio-library-music-integration-design.md`. |
+| ~~`P004` Lobby/matchmaking wire details~~ | **Resolved** | — | D052/D055/D059/D060 integration details | Resolved: complete CBOR wire protocol. See `research/lobby-matchmaking-wire-protocol-design.md`. |
 | Legal entity formation | External/policy gate | Before public server infra | Community servers, Workshop, ranked ops | Modeled as `policy_gate` for `M7`/`M9`; tracked in dependency map. |
 | DMCA designated agent registration | External/policy gate | Before accepting user uploads | Workshop moderation/takedown process | Modeled as `policy_gate` for Workshop production-readiness. |
 | Trademark registration (optional) | External/policy (optional) | Before broad commercialization/branding push | Community/platform polish (`M11`) | Not a blocker for core engine milestones; track as optional ops item. |

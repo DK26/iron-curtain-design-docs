@@ -76,3 +76,7 @@ Settings → Mod Profiles
 ```
 
 One-click profile switching reconfigures mods AND experience settings (D062).
+
+### Feature Smart Tips (D065 Layer 2)
+
+First-visit and contextual tips appear on Workshop screens via the `feature_discovery` hint category. Tips cover: what the Workshop is (first visit), what categories mean, how to install content, what mod profiles and fingerprints do, how dependencies work, and how My Content disk management works. See D065 § Feature Smart Tips (`hints/feature-tips.yaml`) for the full hint catalog and trigger definitions.

@@ -134,9 +134,82 @@ impl AiStrategy for LlmOrchestratorAi {
 }
 ```
 
+**`StrategicPlan` — the LLM's output structure:**
+
+```rust
+/// The structured output the LLM returns from each consultation.
+/// Parsed from JSON/YAML, validated, then translated into set_parameter() calls.
+pub struct StrategicPlan {
+    pub priority_targets: Vec<StrategicTarget>,
+    pub build_focus: BuildFocus,
+    pub economic_guidance: EconomicGuidance,
+    pub risk_assessment: RiskAssessment,
+    pub confidence: u16,             // 0-1000 (fixed-point), LLM's self-assessed confidence
+    pub reasoning: String,           // LLM's explanation (for debug overlay / spectator)
+}
+
+pub struct StrategicTarget {
+    pub target_type: TargetType,
+    pub position: Option<WorldPos>,  // approximate target location, if known
+    pub priority: u8,                // 1-10 (10 = highest)
+    pub description: String,         // "Destroy enemy expansion at [80,30]"
+}
+
+pub enum TargetType {
+    Attack,       // assault enemy position
+    Defend,       // fortify own position
+    Scout,        // explore unknown area
+    Expand,       // build new base/expansion
+    Harass,       // hit-and-run on enemy economy
+    Retreat,      // pull back from untenable position
+}
+
+pub enum BuildFocus {
+    AntiArmor,    // prioritize anti-tank units
+    AntiAir,      // prioritize AA capability
+    Naval,        // prioritize naval forces
+    Economy,      // prioritize harvesters, refineries, expansion
+    Tech,         // prioritize tech tree advancement
+    Mixed,        // balanced production
+    Infantry,     // prioritize infantry mass
+    AirPower,     // prioritize aircraft
+}
+
+pub struct EconomicGuidance {
+    pub expand: bool,                // should we build a new expansion?
+    pub harvester_target: u8,        // desired number of active harvesters
+    pub sell_structures: Vec<String>,// structures to sell for emergency funds
+    pub priority_builds: Vec<String>,// structures to build next, in order
+}
+
+pub struct RiskAssessment {
+    pub threat_level: ThreatLevel,
+    pub expected_attack_direction: Option<String>, // "north", "east", etc.
+    pub recommended_defense: Option<String>,       // "build SAM sites", "add pillboxes at choke"
+    pub time_pressure: TimePressure,               // how urgent is action?
+}
+
+pub enum ThreatLevel { Low, Medium, High, Critical }
+pub enum TimePressure { None, Low, Medium, Urgent, Immediate }
+```
+
+**StrategicPlan → `set_parameter()` mapping:**
+
+| StrategicPlan field | Inner AI parameter | Example value |
+|---|---|---|
+| `build_focus: AntiAir` | `tech_priority_aa` | 80 |
+| `build_focus: Economy` | `expansion_priority` | 90 |
+| `risk_assessment.threat_level: Critical` | `aggression` | 20 (defensive) |
+| `risk_assessment.threat_level: Low` | `aggression` | 75 (aggressive) |
+| `economic_guidance.expand: true` | `expansion_priority` | 85 |
+| `economic_guidance.harvester_target: 6` | `harvester_count_target` | 6 |
+| `priority_targets[0].target_type: Attack` | `attack_target_x`, `attack_target_y` | WorldPos coords |
+| `priority_targets[0].target_type: Scout` | `scout_priority` | 80 |
+| `time_pressure: Immediate` | `reaction_urgency` | 100 |
+
 **How StrategicPlan reaches the inner AI:**
 
-The orchestrator translates `StrategicPlan` fields into `set_parameter()` calls on the inner AI (D041). For example:
+The orchestrator translates `StrategicPlan` fields into `set_parameter()` calls on the inner AI (D041) using the mapping table above. For example:
 - "Switch to anti-air production" → `set_parameter("tech_priority_aa", 80)`
 - "Be more aggressive" → `set_parameter("aggression", 75)`
 - "Expand to second ore field" → `set_parameter("expansion_priority", 90)`
@@ -241,6 +314,8 @@ The current `LlmPlayerAi` is limited by latency (LLM responses take 100-500ms vs
 - The `AiStrategy` trait, `AiEventLog`, and `FogFilteredView` infrastructure are all model-agnostic — they serve whatever LLM capability exists at runtime
 
 The architecture is deliberately designed not to stand in the way of full LLM control becoming practical. Every piece needed for "LLM makes every small decision" already exists in the trait design — the only bottleneck is LLM speed and quality, which are external constraints that improve over time.
+
+> **Prompt and schema specification:** For the concrete game state → prompt serialization format, orchestrator response schema, coaching prompt template, prompt strategy profile integration (D047), and error recovery prompts, see `research/llm-generation-schemas.md`.
 
 ### Crate Boundaries
 

@@ -329,6 +329,7 @@ pub struct PromptExecutionPlan {
 - **D030 (Workshop):** LLM configurations become another shareable resource type.
 - **D034 (SQLite):** Provider configurations stored locally, encrypted API keys.
 - **D044 (LLM AI):** The task routing table directly determines which provider the orchestrator and LLM player use.
+- **Player Flow (BYOLLM Feature Discovery):** A one-time GUI prompt lists all features unlocked by configuring an LLM provider, with direct links to D047's LLM Manager and community configs. See `player-flow/settings.md` § BYOLLM Feature Discovery Prompt.
 
 ### Alternatives Considered
 

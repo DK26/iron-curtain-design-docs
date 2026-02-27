@@ -67,6 +67,7 @@ New players see a clean, unintimidating interface. Advanced features reveal them
 - Developer console requires a deliberate action (tilde key) — it never appears uninvited
 - Simple/Advanced toggle in the SDK hides ~15 features without data loss
 - Experience profiles bundle 6 complexity axes into one-click presets
+- BYOLLM feature discovery prompt appears once at a natural moment (first LLM settings visit, first LLM-gated feature encounter, or after early gameplay engagement), listing all optional AI-extended features with setup links — see [Settings § BYOLLM Feature Discovery Prompt](player-flow/settings.md#byollm-feature-discovery-prompt-settings--llm-and-contextual)
 
 ### 6. The One-Second Rule
 

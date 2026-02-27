@@ -232,6 +232,8 @@ Community Workshop servers can replicate from the official server (pull replicat
 
 ### Dependency Resolution
 
+> **Algorithm specification:** For the PubGrub algorithm choice, version range semantics, registry index format, diamond dependency handling, lock file TOML format, error reporting, and performance analysis, see `research/dependency-resolution-design.md`.
+
 Cargo-inspired version solving:
 
 - **Semver ranges:** `^1.2` (>=1.2.0, <2.0.0), `~1.2` (>=1.2.0, <1.3.0), `>=1.0, <3.0`, exact `=1.2.3`

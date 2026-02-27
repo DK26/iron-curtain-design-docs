@@ -8,7 +8,7 @@ The directory structure — both the shipped product and the source repository �
 
 2. **Same vocabulary, same directories.** OpenRA uses `rules/`, `sequences/`, `chrome/`, `maps/`, `audio/`, `scripts/`. IC uses the same directory names for the same purposes. An OpenRA modder opening IC's `mods/ra/` directory knows where everything is.
 
-3. **Separate binaries for separate roles.** Game client, dedicated server, CLI tool, and SDK editor are separate executables — like OpenRA ships `OpenRA.exe`, `OpenRA.Server.exe`, and `OpenRA.Utility.exe`. A server operator never needs the renderer. A modder using the SDK never needs the multiplayer client. Each has its own binary, sharing library crates underneath.
+3. **Separate binaries for separate roles, GUI-first for players.** Game client and SDK editor are **GUI applications** — players and modders interact through windowed interfaces, never through a terminal. The dedicated server is a **CLI daemon** for headless operation. The `ic` utility is a **developer CLI** for automation and CI/CD. Like OpenRA ships `OpenRA.exe`, `OpenRA.Server.exe`, and `OpenRA.Utility.exe` — each role gets the interface natural to its audience. See `crate-graph.md` § "Binary Architecture: GUI-First Design" for the full breakdown.
 
 4. **Flat and scannable.** No deep nesting for its own sake. A modder looking at `mods/ra/` should see the high-level structure in a single `ls`. Subdirectories within `rules/` organize by category (units, structures, weapons) — the same pattern OpenRA uses.
 
@@ -20,10 +20,10 @@ What an end user sees after installing Iron Curtain:
 
 ```
 iron-curtain/
-├── iron-curtain[.exe]              # Game client (ic-game binary)
-├── ic-server[.exe]                 # Relay / dedicated server (ic-net binary)
-├── ic[.exe]                        # CLI tool (mod, backup, export, profile, server commands)
-├── ic-editor[.exe]                 # SDK: scenario editor, asset studio, campaign editor (D038+D040)
+├── iron-curtain[.exe]              # Game client — GUI application (ic-game binary)
+├── ic-server[.exe]                 # Relay / dedicated server — CLI daemon (ic-net binary)
+├── ic[.exe]                        # Developer/modder utility — CLI tool (mod, CI/CD, diagnostics)
+├── ic-editor[.exe]                 # SDK — GUI application: scenario editor, asset studio (D038+D040)
 ├── mods/                           # Game modules + content — the heart of the project
 │   ├── common/                     # Shared resources used by all C&C-family modules
 │   │   ├── mod.yaml                #   manifest (declares shared chrome, cursors, etc.)
@@ -61,7 +61,7 @@ iron-curtain/
 - **`mods/common/`** is directly analogous to OpenRA's `mods/common/`. Shared assets, chrome, and cursor definitions used across all C&C-family game modules. Community game modules (Dune 2000, RA2) can depend on it or provide their own.
 - **`mods/ra/`** is a mod. It uses the same `mod.yaml` schema, the same `rules/` structure, and the same `sequences/` format as a community mod. There is no "privileged" version of this directory — the engine treats it identically to `<data_dir>/mods/my-total-conversion/`. This means every modder can read the game's own data as a working example.
 - **Every YAML file in `mods/ra/rules/` is editable.** Want to change tank cost? Open `rules/units/vehicles.yaml`, find `medium_tank`, change `cost: 800` to `cost: 750`. The same workflow as OpenRA — except the YAML is standard-compliant and serde-typed.
-- **The CLI (`ic`) is the Swiss Army knife.** `ic mod init`, `ic mod check`, `ic mod test`, `ic mod publish`, `ic backup create`, `ic export`, `ic server validate-config`. One binary, consistent subcommands — no separate tools to discover.
+- **The CLI (`ic`) is the modder/operator Swiss Army knife.** `ic mod init`, `ic mod check`, `ic mod test`, `ic mod publish`, `ic backup create`, `ic export`, `ic server validate-config`. One binary, consistent subcommands — aimed at modders, server operators, and CI/CD pipelines. Players never need it — every player-facing action has a GUI equivalent in the game client or SDK editor.
 
 ### Source Repository (Contributor Layout)
 

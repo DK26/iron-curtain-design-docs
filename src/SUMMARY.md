@@ -3,6 +3,7 @@
 [Introduction](00-INDEX.md)
 [Foreword — Why I'm Building This](FOREWORD.md)
 [What Iron Curtain Offers](OVERVIEW.md)
+[Platform Capabilities](CAPABILITIES.md)
 [LLM / RAG Retrieval Index](LLM-INDEX.md)
 
 ---
@@ -41,6 +42,8 @@
   - [External Code Project Bootstrap (Design-Aligned)](tracking/external-code-project-bootstrap.md)
   - [External Project `AGENTS.md` Template](tracking/external-project-agents-template.md)
   - [Source Code Index Template (Human + LLM)](tracking/source-code-index-template.md)
+  - [IC Engine AGENTS.md (Filled-In)](tracking/ic-engine-agents.md)
+  - [IC Engine CODE-INDEX.md (Filled-In)](tracking/ic-engine-code-index.md)
   - [RTL / BiDi QA Corpus (Chat, Markers, UI, Subtitles)](tracking/rtl-bidi-qa-corpus.md)
   - [Testing Strategy & CI/CD Pipeline](tracking/testing-strategy.md)
 - [Decision Log](09-DECISIONS.md)

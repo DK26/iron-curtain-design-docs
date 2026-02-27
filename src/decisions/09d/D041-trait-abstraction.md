@@ -106,6 +106,118 @@ pub struct ParameterSpec {
 }
 ```
 
+**`FogFilteredView` — the AI's window into the game:**
+
+```rust
+/// Everything an AI player is allowed to see. Constructed by the engine from
+/// FogProvider (this decision) and passed to AiStrategy::decide() each tick.
+/// This is the ONLY game state interface available to AI — no back-door access
+/// to the full sim state.
+pub struct FogFilteredView {
+    // --- Own forces ---
+    pub own_units: Vec<AiUnitInfo>,
+    pub own_structures: Vec<AiStructureInfo>,
+    pub own_production_queues: Vec<AiProductionQueue>,
+
+    // --- Visible enemies (currently in line of sight) ---
+    pub visible_enemies: Vec<AiUnitInfo>,
+    pub visible_enemy_structures: Vec<AiStructureInfo>,
+
+    // --- Explored-but-not-visible enemies (last known state) ---
+    pub known_enemy_structures: Vec<AiLastKnownInfo>,
+
+    // --- Neutrals ---
+    pub visible_neutrals: Vec<AiUnitInfo>,
+
+    // --- Economy ---
+    pub resources: AiResourceInfo,
+    pub power: AiPowerInfo,
+
+    // --- Map knowledge ---
+    pub map_bounds: (u32, u32),          // map dimensions in cells
+    pub current_tick: u64,
+    pub explored_fraction_permille: u16, // 0-1000, how much map is explored
+    pub terrain_passability: &TerrainData, // for pathfinding queries
+}
+
+pub struct AiUnitInfo {
+    pub entity: EntityId,
+    pub unit_type: String,
+    pub owner: PlayerId,
+    pub position: WorldPos,
+    pub health_permille: u16,    // 0-1000 (current/max × 1000)
+    pub facing: WAngle,
+    pub veterancy: u8,           // 0-3
+    pub is_idle: bool,
+    pub current_order: Option<String>,  // "move", "attack", "harvest", etc.
+}
+
+pub struct AiStructureInfo {
+    pub entity: EntityId,
+    pub structure_type: String,
+    pub owner: PlayerId,
+    pub position: WorldPos,
+    pub health_permille: u16,
+    pub is_powered: bool,
+    pub is_producing: bool,
+}
+
+pub struct AiLastKnownInfo {
+    pub entity: EntityId,
+    pub structure_type: String,
+    pub owner: PlayerId,
+    pub position: WorldPos,
+    pub last_seen_tick: u64,     // when this was last visible
+}
+
+pub struct AiResourceInfo {
+    pub credits: i32,
+    pub credits_per_tick: i32,       // current income rate (fixed-point, 1024 scale)
+    pub ore_fields_known: u16,       // number of ore patches the AI has explored
+    pub harvesters_active: u8,
+    pub refineries_count: u8,
+    pub storage_capacity: i32,       // max credits before overflow
+}
+
+pub struct AiPowerInfo {
+    pub power_generated: i32,
+    pub power_consumed: i32,
+    pub is_low_power: bool,          // consumed > generated
+    pub surplus: i32,                // generated - consumed (negative = deficit)
+}
+
+pub struct AiProductionQueue {
+    pub queue_type: String,          // "infantry", "vehicle", "aircraft", "building", "naval"
+    pub current_item: Option<String>,
+    pub progress_permille: u16,      // 0-1000
+    pub queue_length: u8,
+    pub can_produce: Vec<String>,    // unit/structure types available given current tech
+}
+```
+
+**`EventSummary` — structured digest of recent events:**
+
+```rust
+/// Returned by AiEventLog::summary(). Provides aggregate statistics
+/// about recent events for AIs that prefer structured data over narrative.
+pub struct EventSummary {
+    pub total_events: u32,
+    pub events_by_type: HashMap<AiEventType, u32>,
+    pub most_recent_threat: Option<ThreatSummary>,
+    pub units_lost_since: u32,       // units lost since last summary request
+    pub units_gained_since: u32,     // units created since last summary request
+    pub enemies_spotted_since: u32,
+    pub last_attack_tick: Option<u64>,
+}
+
+pub struct ThreatSummary {
+    pub direction: WAngle,           // approximate compass direction of most recent threat
+    pub estimated_strength: u16,     // rough unit count of visible enemy forces
+    pub threat_type: String,         // "armor", "air", "infantry", "mixed"
+    pub last_spotted_tick: u64,
+}
+```
+
 **Key design points:**
 - `FogFilteredView` ensures AI honesty — no maphack by default. Campaign scripts can provide an omniscient view for specific AI players via conditions.
 - `AiPersonality` becomes the configuration for the *default* `AiStrategy` implementation (`PersonalityDrivenAi`), not the only way to configure AI.

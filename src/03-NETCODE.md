@@ -469,6 +469,8 @@ Unlike TCP's Nagle algorithm (which flushes on receiving an ACK — coupling sen
 
 ### Wire Format: Delta-Compressed TLV (from C&C Generals)
 
+> **Byte-level wire protocol specification:** The complete relay wire protocol — order serialization byte layout, relay frame format, sub-tick normalization algorithm, adaptive run-ahead formula, desync recovery protocol, transport encryption frame, connection handshake, and relay state machine — is specified in `research/relay-wire-protocol-design.md`.
+
 Inspired by C&C Generals' `NetPacket` format (see `research/generals-zero-hour-netcode-analysis.md`), the native wire format uses delta-compressed tag-length-value (TLV) encoding:
 
 - **Tag bytes** — single ASCII byte identifies the field: `T`ype, `K`(tic**K**), `P`layer, `S`ub-tick, `D`ata
@@ -1536,7 +1538,7 @@ The relay logic lives as a library (`RelayCore`) in `ic-net`. This library is us
 - **`relay-server` binary** — standalone headless process that hosts multiple concurrent games. Not Bevy, no ECS. Uses `RelayCore` + async I/O (tokio). This is the "dedicated server" for community hosting, server rooms, and Raspberry Pis.
 - **Game client** — `EmbeddedRelayNetwork` wraps `RelayCore` inside the game process. The host player runs the relay and plays simultaneously. Uses Bevy's async task system for I/O. This is the "Host Game" button.
 
-Both share `ic-protocol` for order serialization. Both are developed in Phase 5 alongside the multiplayer client code.
+Both share `ic-protocol` for order serialization. Both are developed in Phase 5 alongside the multiplayer client code. For the full async runtime architecture (tokio thread bridge for Bevy binaries, WASM portability, `IoBridge` trait), see `architecture/crate-graph.md` § "Async Architecture: Dual-Runtime with Channel Bridge."
 
 ### Failure Modes
 

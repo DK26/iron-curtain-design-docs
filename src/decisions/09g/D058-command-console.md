@@ -1219,6 +1219,10 @@ This is a convenience for power users who prefer text files over GUI settings. T
 - **NOT available in competitive/ranked play.** Dev commands are gated behind DeveloperMode (V44). The chat system and non-dev commands work in ranked; the Lua console and dev commands do not. Normal console commands (`/move`, `/build`, etc.) are treated as GUI-equivalent inputs — they produce the same `PlayerOrder` and are governed by D033 QoL toggles. See "Competitive Integrity in Multiplayer" above for the full framework: order rate monitoring, input source tracking, ranked restrictions, and tournament mode.
 - **NOT a server management panel.** Server administration beyond kick/ban/config should use external tools (web panels, RCON protocol). The in-game commands cover in-match operations only.
 
+### GUI-First Application Design (Cross-Reference)
+
+The in-game command console is part of the game client's GUI — not a separate terminal. IC's binary architecture is documented in `architecture/crate-graph.md` § "Binary Architecture: GUI-First Design." The key principle: the game client (`iron-curtain[.exe]`) is a **GUI application** that launches into a windowed menu. The `ic` CLI is a separate developer/modder utility. Players never need a terminal. The command console (`/help`, `/speed 2x`) is an in-game overlay — a text field inside the game window, not a shell prompt. CI-1 (Console = GUI parity) ensures every console command has a GUI equivalent.
+
 ### Alternatives Considered
 
 - **Separate console only, no chat integration** (rejected — Source Engine's model works for FPS games where chat is secondary, but RTS players use chat heavily during matches; forcing tilde-switch for commands is friction. Factorio and Minecraft prove unified is better for games where chat and commands coexist.)

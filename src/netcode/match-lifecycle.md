@@ -2,6 +2,8 @@
 
 Complete operational flow from lobby creation through match conclusion: lobby management, loading synchronization, in-game tick processing, pause/resume, disconnect handling, desync detection, replay finalization, and post-game cleanup.
 
+> **Lobby/matchmaking wire protocol:** The complete byte-level wire protocol for lobby management, server discovery, matchmaking queue, credential exchange, and lobby→game transition is specified in `research/lobby-matchmaking-wire-protocol-design.md`.
+
 ### Ready-Check & Match Start
 
 When matchmaking finds a match (or all lobby players click "ready"), the system runs a ready-check protocol before loading:

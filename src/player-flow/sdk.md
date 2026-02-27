@@ -24,6 +24,8 @@ The SDK is a separate Bevy application from the game (`ic-editor` crate). It sha
 │                                                          │
 │  ► Preferences                                           │
 │  ► Documentation                                         │
+│                                                          │
+│  New to the SDK?  [Start Guided Tour]                    │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -41,7 +43,7 @@ SDK → New Scenario / Open File
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│ [Scenario Editor] [Asset Studio] [Campaign Editor]                      │
+│ [Scenario Editor] [Asset Studio] [Campaign Editor]              [? Tour] │
 │ [Preview] [Test ▼] [Validate] [Publish]   Git: main • 4 changed           │
 │                               validation: Stale • Simple Mode             │
 ├──────────┬───────────────────────────────┬───────────────────────────────┤
@@ -62,7 +64,7 @@ SDK → New Scenario / Open File
 ```
 
 **Key features:**
-- 8 editing modes: Terrain, Entities, Triggers, Waypoints, Modules, Regions, Scripts, Layers
+- 12 editing modes: Terrain, Entities, Groups, Triggers, Waypoints, Connections, Modules, Regions, Layers, Portals, Scripts, Campaign
 - Simple/Advanced toggle (hides ~15 features without data loss)
 - Entity palette: search-as-you-type, 48×48 thumbnails, favorites, recently placed
 - Trigger editor: visual condition/action builder with countdown timers
@@ -78,6 +80,10 @@ SDK → New Scenario / Open File
 - Undo/Redo: command pattern, autosave
 - Export-safe authoring mode (D066): live fidelity indicators, feature gating for cross-engine compatibility
 - Migration Workbench entry point: "Upgrade Project" (preview in 6a, apply+rollback in 6b)
+- Interactive guided tours (D038) for each tool — step-by-step walkthroughs with spotlight overlay, action validation, and resumable progress. 10 tours ship with the SDK; modders can add more via Workshop
+- Visual waypoint authoring (D038 Waypoints Mode) — click to place named waypoint sequences on the map with route display, waypoint types (Move, Attack, Guard, Patrol, Harvest, Script, Wait), and OFP-style synchronization lines for multi-group coordination
+- Named mission outcomes (D038) — wire scenario triggers to campaign branch outcomes (`Mission.Complete("outcome_name")`)
+- Export to OpenRA and original RA formats (D066) — export-safe authoring mode with live fidelity indicators, trigger downcompilation, and extensible export targets
 
 **Example: Publish Readiness (AI Cutscene Variant Pack)**
 

@@ -1,6 +1,6 @@
 # 02 — Core Architecture
 
-**Keywords:** architecture, crate boundaries, `ic-sim`, `ic-net`, `ic-protocol`, `GameLoop<N, I>`, `NetworkModel`, `InputSource`, deterministic simulation, Bevy, platform-agnostic design, game modules
+**Keywords:** architecture, crate boundaries, `ic-sim`, `ic-net`, `ic-protocol`, `GameLoop<N, I>`, `NetworkModel`, `InputSource`, deterministic simulation, Bevy, platform-agnostic design, game modules, async runtime, tokio, bevy_tasks, IoBridge, WASM portability, GUI-first binary design
 
 ## Decision: Bevy
 
@@ -20,7 +20,7 @@
 | Rendering   | `bevy_render` + `wgpu` | Custom isometric sprite passes; 3D pipeline available to modders |
 | ECS         | `bevy_ecs`             | Archetypes, system scheduling, change detection                  |
 | Asset I/O   | `bevy_asset`           | Hot-reloading, platform-agnostic (WASM/mobile-safe)              |
-| Audio       | `bevy_audio`           | Platform-routed; `ic-audio` wraps for .aud/.ogg/EVA              |
+| Audio       | Kira via `bevy_kira_audio` | Four-bus mixer (Music/SFX/Voice/Ambient); `ic-audio` wraps for .aud/.ogg/EVA. See `research/audio-library-music-integration-design.md` |
 | Dev tools   | `egui` via `bevy_egui` | Immediate-mode debug overlays                                    |
 | Scripting   | `mlua` (Bevy resource) | Lua embedding, integrated as non-send resource                   |
 | Mod runtime | `wasmtime` / `wasmer`  | WASM sandboxed execution (Bevy system, not Bevy plugin)          |
@@ -409,7 +409,7 @@ RA1 registers `StandardOrderValidator` (ownership, affordability, prerequisites,
 | QoL & Gameplay Behavior Toggles (D033) | [qol-toggles.md](architecture/qol-toggles.md) |
 | Red Alert Experience Recreation Strategy | [ra-experience.md](architecture/ra-experience.md) |
 | First Runnable — Bevy Loading Red Alert Resources | [first-runnable.md](architecture/first-runnable.md) |
-| Crate Dependency Graph | [crate-graph.md](architecture/crate-graph.md) |
+| Crate Dependency Graph, Binary Architecture & Async Runtime | [crate-graph.md](architecture/crate-graph.md) |
 | Install & Source Layout | [install-layout.md](architecture/install-layout.md) |
 | IC SDK & Editor Architecture (D038 + D040) | [sdk-editor.md](architecture/sdk-editor.md) |
 | Multi-Game Extensibility (Game Modules) | [multi-game.md](architecture/multi-game.md) |

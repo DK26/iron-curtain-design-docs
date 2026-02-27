@@ -19,7 +19,7 @@
 - **Invariants preserved:** `ic-sim` remains pure (no LLM/network I/O), all gameplay effects still arrive as normal orders, fog/observer restrictions remain mode-dependent and explicit
 - **Defaults / trust behavior:** Ranked disables all LLM-assisted player-control modes; fair tournament prompt coaching uses coach-role vision only; omniscient spectator prompting is showmatch-only and trust-labeled
 - **Replay / privacy behavior:** Orders always recorded; LLM prompt text/reasoning capture is optional and strip/redact-able; API keys/tokens are never stored
-- **Keywords:** LLM vs LLM, exhibition mode, prompt duel, coach AI, spectator prompts, showmatch, BYOLLM, replay annotations, trust labels
+- **Keywords:** LLM vs LLM, exhibition mode, prompt duel, coach AI, spectator prompts, showmatch, BYOLLM, replay annotations, trust labels, BYO-LLM fight night, live AI battle, spectator AI
 
 ### Problem
 
@@ -328,6 +328,52 @@ When a live match uses prompt coaching or director prompting, all participants a
 - whether prompt text is being recorded for replay
 
 This mirrors D059's consent/disclosure philosophy (voice recording) and anti-coaching clarity.
+
+### Experimental: BYO-LLM Fight Night (Live Spectator AI Battles)
+
+An explicit experimental format built on the D073 policy stack: community events where players **bring their own LLM configuration** and pit them against each other in front of a live audience.
+
+#### Concept
+
+Think Twitch-style "whose AI is better" events:
+
+1. Each contestant registers an LLM setup: provider, model, prompt strategy profile (D047), optional system prompt / persona
+2. Contestants are matched (bracket, round-robin, or challenge format)
+3. The match runs live with spectator overlays showing each LLM's current plan summary, prompt role badges, and model identity
+4. Audience watches in real-time via spectator mode or stream, seeing both sides' strategic reasoning unfold
+
+The format naturally creates community content, rivalry, and iterative improvement loops as players refine their prompts and model choices between events.
+
+#### How It Maps to D073 Infrastructure
+
+| Fight Night Element | D073 Mechanism | Notes |
+| --- | --- | --- |
+| Player submits LLM config | D047 `LlmProvider` + prompt strategy profile | Player brings their own API key / local model |
+| LLM controls a side | D044 `LlmOrchestratorAi` (recommended v1) | `LlmPlayerAi` as experimental opt-in |
+| Live audience viewing | D073 spectator overlays + trust labels | Plan summary panel, model badge, mode banner |
+| Match governance | `LLM Exhibition Match` policy (mode 1) | No prompt coaching — pure LLM vs LLM |
+| Prompted variant | `Prompt Duel` policy (mode 2) | Each player coaches their own LLM live |
+| Replay / VOD | Standard replay + LLM annotation capture | Shareable `.icrep` with optional prompt transcript |
+| Tournament ops | D071 ICRP + D072 dashboard | Bracket management, match scheduling, replay archive |
+
+#### Experimental Scope and Constraints
+
+- **Phase 7 experimental feature** — ships alongside general D073 modes, not separately
+- **Never ranked** — D055 exclusion applies unconditionally
+- **BYOLLM only** — IC does not provide or host LLM inference; players bring their own provider/key
+- **No credential sharing** — each contestant's API keys stay local to their client; the relay never sees them
+- **Latency fairness is best-effort** — local Ollama vs cloud API latency differences are inherent to the format and part of the meta (choosing fast models matters); consider optional per-turn time budgets as a future fairness knob
+- **Skill library (D057) eligibility** — pure LLM-vs-LLM exhibition results may feed D057 with `exhibition` tag; omniscient/audience-prompted variants are excluded from skill promotion per D073 policy
+
+#### Community Event Tooling (Future, Post-v1)
+
+- Bracket/tournament management via D071 ICRP commands
+- Automated match scheduling and result recording
+- Leaderboard / Elo-style rating for registered LLM configs (community-run, not official ranked)
+- "Fight card" lobby UI showing upcoming matches, contestant LLM identities, and past records
+- Highlight reel / clip generation from replay annotations
+
+These are community-driven extensions, not core engine features. IC provides the match policy, replay infrastructure, and ICRP tooling surface; communities build the event layer on top.
 
 ### What This Is Not
 

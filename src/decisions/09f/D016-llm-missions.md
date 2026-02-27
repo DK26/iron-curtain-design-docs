@@ -20,6 +20,8 @@
 
 > **Positioning note:** LLM features are a quiet power-user capability, not a project headline. The primary single-player story is the hand-authored branching campaign system (D021), which requires no LLM and is genuinely excellent on its own merits. LLM generation is for players who want more content — it should never appear before D021 in marketing or documentation ordering. The word “AI” in gaming contexts attracts immediate hostility from a significant audience segment regardless of implementation quality. Lead with campaigns, reveal LLM as “also, modders and power users can use AI tools if they want.”
 
+> **Design goal — “One More Prompt.”** The LLM features should create the same compulsion loop as Civilization's “one more turn.” Every generated output — a mission debrief, a campaign twist, an exhibition match result — should leave the player wanting to try one more prompt to see what happens next. The generative campaign's inspect-and-react loop (battle report → narrative hook → next mission) is the primary driver: the player doesn't just want to play the next mission, they want to see what the LLM does with what just happened. The parameter space (faction, tone, story style, moral complexity, custom instructions) ensures that “one more prompt” also means “one more campaign” — each configuration produces a fundamentally different experience. This effect is the quiet retention engine for players who discover LLM features. See `01-VISION.md` § “The One More Prompt effect.”
+
 **Implementation approach:**
 - LLM generates YAML map definition + Lua trigger scripts
 - Same format as hand-crafted missions — no special runtime
@@ -81,6 +83,132 @@ The player opens "New Generative Campaign" from the main menu. If no LLM provide
 | **Victory conditions**      | (fixed length only) | For open-ended campaigns: a set of conditions that define campaign victory. Examples: "Eliminate General Morrison," "Capture all three Allied capitals," "Survive 30 missions." The LLM works toward these conditions narratively — building tension, creating setbacks, escalating stakes — and generates the final mission when conditions are ripe. Ignored when campaign length is fixed. |
 
 The player clicks "Generate Campaign" — the LLM produces the campaign skeleton before the first mission starts (typically 10–30 seconds depending on provider).
+
+**Step 1b — Natural Language Campaign Intent (optional, recommended):**
+
+The configuration screen above works. But most players don't think in parameters — they think in stories. A player's mental model is "Soviet campaign where I'm a disgraced colonel trying to redeem myself on the Eastern Front," not "faction=soviet, tone=realistic_military, difficulty_curve=escalating, theater=snow."
+
+The system supports **two entry paths** to the same pipeline:
+
+```
+Path A (structured — current):
+  Configuration screen → fill params → "Generate Campaign"
+
+Path B (natural language — new):
+  "Describe your campaign" text box → Intent Interpreter →
+  pre-filled configuration screen → user reviews/adjusts → "Generate Campaign"
+```
+
+Path B feeds into Path A. The user's natural language description **pre-fills** the same `CampaignParameters` struct, then shows the structured configuration screen with inferred values highlighted (subtle "inferred" badge). The user can review, override anything, or just click "Generate Campaign" immediately if the inferences look right.
+
+**The "Describe Your Campaign" text area** appears at the top of the "New Generative Campaign" screen, above the structured parameters. It's prominent but never required — a "Skip to manual configuration" link is always visible. Players who prefer clicking dropdowns use Path A directly. Players who prefer storytelling type a description and let the system figure out the details.
+
+**The Intent Interpreter** is a dedicated, lightweight LLM call (separate from skeleton generation) that takes the user's natural language and outputs structured parameter inferences with confidence scores:
+
+```yaml
+# User input: "Soviet campaign where you're a disgraced colonel
+#  trying to redeem yourself on the Eastern Front"
+#
+# Intent Interpreter output:
+inferred_parameters:
+  faction: { value: "soviet", confidence: 1.0, source: "explicit" }
+  tone: { value: "realistic_military", confidence: 0.8, source: "inferred: 'disgraced colonel' + 'redeem' → serious military drama" }
+  story_style: { value: "character_drama", confidence: 0.7, source: "inferred: redemption arc = character-driven narrative" }
+  difficulty_curve: { value: "escalating", confidence: 0.8, source: "inferred: redemption = start weak, earn power back" }
+  theater: { value: "snow", confidence: 0.7, source: "inferred: 'Eastern Front' → snow/temperate Eastern Europe" }
+  campaign_length: { value: 24, confidence: 0.5, source: "default — no signal from input" }
+  moral_complexity: { value: "medium", confidence: 0.7, source: "inferred: redemption arc implies moral stakes" }
+  roster_persistence: { value: true, confidence: 0.8, source: "inferred: persistent squad builds attachment for character drama" }
+  named_character_count: { value: 4, confidence: 0.6, source: "default, nudged up for character-driven style" }
+  mission_variety: { value: "defense_heavy", confidence: 0.7, source: "inferred: start desperate → transition to offensive" }
+  resource_level: { value: "scarce", confidence: 0.7, source: "inferred: disgraced = under-resourced, proving worth" }
+
+  # Narrative seeds — creative DNA that flows into skeleton generation
+  narrative_seeds:
+    protagonist_archetype: "disgraced officer seeking redemption through action"
+    starting_situation: "stripped of rank/resources, given a suicide mission nobody expects to succeed"
+    arc_shape: "fall → proving ground → earning trust → vindication or tragic failure"
+    suggested_characters:
+      - role: "skeptical superior who assigned the suicide mission"
+        personality_hint: "doubts the protagonist but secretly hopes they succeed"
+      - role: "loyal NCO who followed the colonel into disgrace"
+        personality_hint: "believes in the colonel when no one else does"
+      - role: "enemy commander who remembers the protagonist's former reputation"
+        personality_hint: "respects the protagonist, which makes the conflict personal"
+    thematic_tensions:
+      - "redemption vs. revenge — does the colonel fight to be restored, or to prove everyone wrong?"
+      - "obedience vs. initiative — following the orders that disgraced you, or doing what's right this time?"
+```
+
+**Why two outputs?** Some of the user's intent maps to `CampaignParameters` fields (faction, tone, difficulty) — these pre-fill the structured UI. The rest maps to **narrative seeds** — creative guidance that doesn't have a dropdown equivalent. Narrative seeds flow directly into the skeleton generation prompt (Step 2), enriching the campaign's creative DNA beyond what parameters alone can express.
+
+**The design principle: great defaults, not hidden magic.** The Intent Interpreter's inferences are always visible and overridable. The structured configuration screen shows exactly what was inferred and why (tooltips on inferred badges: "Inferred from 'Eastern Front' in your description"). Nothing is locked. The user can change "snow" to "desert" if they want an Eastern Front campaign in North Africa. The system's job is to provide the best starting point so most users just click "Generate."
+
+**Override priority** (when natural language and structured parameters conflict):
+
+```
+1. Explicit structured parameter (user clicked/typed in the config UI)     — ALWAYS wins
+2. Explicit natural language instruction ("make it brutal", "lots of naval") — high confidence
+3. Inferred from narrative context ("redemption arc" → escalating difficulty) — medium confidence
+4. Story style preset defaults (C&C Classic implies military thriller tone)   — low confidence
+5. Global defaults (the Default column in the parameter tables above)         — fallback
+```
+
+When a conflict arises — user says "Eastern Front" (implying land warfare) but also "include naval missions" (explicit override) — explicit instruction (#2) beats inference (#3). The UI can show this: `mission_variety: naval_heavy (from "include naval missions")` with the original inference struck through.
+
+**Single mission mode** uses the same Intent Interpreter. A user types "desperate defense on a frozen river, start with almost nothing, hold out until reinforcements arrive" and the system infers: theater=snow, mission_type=defense/survival, resources=scarce, difficulty=hard, a timed reinforcement trigger, narrative=desperate last stand. Same two-path pattern: natural language → pre-filled mission parameters → review → generate.
+
+**Inference heuristic grounding:** The Intent Interpreter's prompt includes a reference table mapping common natural language signals to parameter adjustments (see `research/llm-generation-schemas.md` § 13 for the complete table and prompt template). This keeps inferences consistent across LLM providers — the heuristics are documented guidance, not provider-specific emergent behavior.
+
+**Rust type definitions:**
+
+```rust
+/// Output of the Intent Interpreter — a lightweight LLM call that converts
+/// natural language campaign descriptions into structured parameters.
+pub struct IntentInterpretation {
+    /// Inferred values for CampaignParameters fields, with confidence scores.
+    pub inferred_params: HashMap<String, InferredValue>,
+    /// Creative guidance for skeleton generation — doesn't map to CampaignParameters.
+    pub narrative_seeds: Vec<NarrativeSeed>,
+    /// The original user input, preserved for the skeleton prompt.
+    pub raw_description: String,
+}
+
+pub struct InferredValue {
+    pub value: serde_json::Value,  // the inferred parameter value
+    pub confidence: f32,           // 0.0-1.0
+    pub source: InferenceSource,   // why this was inferred
+    pub explanation: String,       // human-readable: "Inferred from 'Eastern Front'"
+}
+
+pub enum InferenceSource {
+    Explicit,       // user directly stated it ("Soviet campaign")
+    Inferred,       // derived from narrative context ("redemption" → escalating)
+    Default,        // no signal — using global default
+}
+
+/// Narrative guidance that enriches skeleton generation beyond CampaignParameters.
+pub struct NarrativeSeed {
+    pub seed_type: NarrativeSeedType,
+    pub content: String,
+    pub related_characters: Vec<String>,
+}
+
+pub enum NarrativeSeedType {
+    ProtagonistArchetype,    // "disgraced officer seeking redemption"
+    StartingSituation,       // "given a suicide mission nobody expects to succeed"
+    ArcShape,                // "fall → proving ground → vindication"
+    CharacterSuggestion,     // "loyal NCO who believes in the colonel"
+    ThematicTension,         // "redemption vs. revenge"
+    NarrativeThread,         // "betrayal from within"
+    GeographicContext,       // "Eastern Front, 1943"
+    HistoricalInspiration,   // "based on the Battle of Kursk"
+    ToneModifier,            // "but with dark humor"
+    CustomConstraint,        // anything else the user specified
+}
+```
+
+> **Cross-reference:** The complete Intent Interpreter prompt template, inference heuristic grounding table, and narrative seed YAML schema are specified in `research/llm-generation-schemas.md` §§ 13–14.
 
 **Step 2 — Campaign Skeleton (generated once, upfront):**
 
@@ -449,7 +577,136 @@ pub enum CharacterStatus {
     Defected { to_faction: String, mission: u32 }, // switched sides
     Rogue { since_mission: u32 },              // operating independently
 }
+
+// --- Types referenced above but not yet defined ---
+
+/// The high-level campaign arc generated once at campaign start.
+/// Mirrors the YAML skeleton shown above, but typed for Rust consumption.
+pub struct CampaignSkeleton {
+    pub id: String,                    // e.g. "gen_soviet_2026-02-14_001"
+    pub title: String,
+    pub faction: String,
+    pub enemy_faction: String,
+    pub theater: String,
+    pub length: u32,                   // total missions (0 = open-ended)
+    pub arc: CampaignArc,
+    pub characters: Vec<CharacterState>,
+    pub backstory: String,
+    pub branch_points: Vec<PlannedBranchPoint>,
+}
+
+pub struct CampaignArc {
+    pub act_1: String,                 // e.g. "Establishing foothold (missions 1-8)"
+    pub act_2: String,
+    pub act_3: String,
+}
+
+pub struct PlannedBranchPoint {
+    pub mission: u32,                  // approximate mission number
+    pub theme: String,                 // e.g. "betray or protect civilian population"
+}
+
+/// All player-chosen parameters from the campaign setup screen.
+pub struct CampaignParameters {
+    pub faction: String,
+    pub campaign_length: u32,          // 8, 16, 24, 32, or 0 for open-ended
+    pub branching_density: BranchingDensity,
+    pub tone: String,                  // "military_thriller", "pulp_action", etc.
+    pub story_style: String,           // "cnc_classic", "realistic_military", etc.
+    pub difficulty_curve: DifficultyCurve,
+    pub roster_persistence: bool,
+    pub named_character_count: u8,     // 3-5 typically
+    pub theater: String,               // "european", "arctic", "random", etc.
+    pub game_module: String,
+    // Advanced parameters
+    pub mission_variety: String,       // "balanced", "assault_heavy", "defense_heavy"
+    pub faction_purity_permille: u16,  // 0-1000, default 900
+    pub resource_level: String,        // "scarce", "standard", "abundant"
+    pub weather_variation: bool,
+    pub custom_instructions: String,   // freeform player text
+    pub moral_complexity: MoralComplexity,
+    pub victory_conditions: Vec<String>, // for open-ended campaigns
+}
+
+pub enum BranchingDensity { Low, Medium, High }
+pub enum DifficultyCurve { Flat, Escalating, Adaptive, Brutal }
+pub enum MoralComplexity { Low, Medium, High }
+
+/// Compressed roster state for LLM prompts — not individual unit state.
+pub struct RosterSummary {
+    pub unit_counts: HashMap<String, u32>,   // unit_type → count
+    pub veterancy_distribution: [u32; 4],    // count at each vet level (0-3)
+    pub named_units: Vec<NamedUnitSummary>,  // hero units, named vehicles, etc.
+    pub total_value: i32,                    // approximate resource value of roster
+    pub army_composition: String,            // "armor-heavy", "balanced", "infantry-focused"
+}
+
+pub struct NamedUnitSummary {
+    pub name: String,
+    pub unit_type: String,
+    pub veterancy: u8,
+    pub kills: u32,
+    pub missions_survived: u32,
+}
+
+/// A story thread the LLM is tracking across the campaign.
+pub struct NarrativeThread {
+    pub id: String,                         // e.g. "sonya_betrayal"
+    pub title: String,                      // "Sonya's hidden agenda"
+    pub status: ThreadStatus,
+    pub involved_characters: Vec<String>,   // character names
+    pub foreshadowed_in: Vec<u32>,          // mission numbers where hints were dropped
+    pub expected_resolution_mission: Option<u32>, // approximate planned reveal
+    pub resolution_conditions: Vec<String>, // e.g. "loyalty < 40", "player chose ruthless path"
+    pub notes: String,                      // LLM's internal notes about this thread
+}
+
+pub enum ThreadStatus {
+    Foreshadowing,   // hints being dropped
+    Rising,          // tension building
+    Active,          // thread is the current focus
+    Resolved,        // payoff delivered
+    Abandoned,       // player's choices made this thread irrelevant
+}
+
+/// Snapshot of player behavior from D042 event classification.
+/// Informs LLM about how the player actually plays.
+pub struct PlayerBehaviorSnapshot {
+    pub aggression_score: u16,         // 0-1000, higher = more aggressive
+    pub micro_intensity: u16,          // 0-1000, higher = more active micro
+    pub tech_rush_tendency: u16,       // 0-1000, higher = prefers tech over mass
+    pub expansion_rate: u16,           // 0-1000, higher = expands faster
+    pub preferred_unit_mix: Vec<(String, u16)>, // (unit_type, usage_permille)
+    pub risk_tolerance: u16,           // 0-1000, higher = takes more risks
+    pub economy_focus: u16,            // 0-1000, higher = prioritizes economy
+    pub naval_preference: u16,         // 0-1000, usage of naval units
+    pub air_preference: u16,           // 0-1000, usage of air units
+}
+
+/// State of enemy forces at mission end.
+pub enum EnemyState {
+    Annihilated,                       // no enemy forces remain
+    Retreated { direction: String },   // enemy pulled back
+    Regrouping { estimated_strength: u16 }, // reforming for counter-attack
+    Entrenched { position: String },   // holding defensive position
+    Reinforcing { from: String },      // receiving reinforcements
+}
+
+/// Performance metrics for a completed mission.
+pub struct MissionPerformance {
+    pub time_seconds: u32,             // mission duration
+    pub efficiency_score: u16,         // 0-1000, resources_destroyed / resources_spent
+    pub units_lost: u32,
+    pub units_killed: u32,
+    pub structures_destroyed: u32,
+    pub objectives_completion_rate: u16, // 0-1000, completed / total objectives
+    pub territory_control_permille: u16, // 0-1000, map area controlled at end
+    pub economy_rating: u16,           // 0-1000, resource management quality
+    pub micro_rating: u16,             // 0-1000, unit preservation efficiency
+}
 ```
+
+> **Schema cross-reference:** For the full concrete YAML output schemas (map layout, actor placement, objectives, outcomes, Lua triggers) and prompt templates used by the LLM to generate these structures, see `research/llm-generation-schemas.md`.
 
 **Context window management:** The context grows with each mission. For long campaigns (24+ missions), the system compresses older mission summaries into shorter recaps (the LLM itself does this compression: "Summarize missions 1–8 in 200 words, retaining key plot points and character developments"). This keeps the prompt within typical context window limits (~8K–32K tokens for the campaign context, leaving room for the generation instructions and output).
 

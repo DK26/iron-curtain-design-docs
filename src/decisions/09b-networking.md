@@ -1,6 +1,6 @@
 # Decision Log — Networking & Multiplayer
 
-Pluggable networking, relay servers, sub-tick timestamps, cross-engine play, order validation, community servers, ranked matchmaking, netcode parameters, and dedicated server management.
+Pluggable networking, relay servers, sub-tick timestamps, cross-engine play, order validation, community servers, ranked matchmaking, netcode parameters, dedicated server management, and community server bundle.
 
 ---
 
@@ -15,3 +15,4 @@ Pluggable networking, relay servers, sub-tick timestamps, cross-engine play, ord
 | D055 | Ranked Tiers, Seasons & Matchmaking Queue | [D055](09b/D055-ranked-matchmaking.md) |
 | D060 | Netcode Parameter Philosophy — Automate Everything, Expose Almost Nothing | [D060](09b/D060-netcode-params.md) |
 | D072 | Dedicated Server Management — Simple by Default, Scalable by Choice | [D072](09b/D072-server-management.md) |
+| D074 | Community Server — Unified Binary with Capability Flags | [D074](09b/D074-community-server-bundle.md) |

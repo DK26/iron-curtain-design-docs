@@ -82,3 +82,7 @@ Deep-dive into Glicko-2 competitive data (D055):
 - Faction breakdown: win rate per faction with separate faction ratings
 - Rating distribution histogram: "You are here" marker
 - [Export CSV] button, [Leaderboard →] link
+
+### Feature Smart Tips (D065 Layer 2)
+
+First-visit and contextual tips appear on Player Profile screens via the `feature_discovery` hint category. Tips cover: what the profile shows (first visit), how to pin achievements for display, what the skill rating means, and how campaign progress benchmarks work. See D065 § Feature Smart Tips (`hints/feature-tips.yaml`) for the full hint catalog and trigger definitions.

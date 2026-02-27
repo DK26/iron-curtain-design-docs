@@ -13,6 +13,7 @@ Scripting tiers (Lua/WASM), OpenRA compatibility, UI themes, mod profiles, licen
 | D025 | Runtime MiniYAML Loading | [D025](09c/D025-miniyaml-runtime.md) |
 | D026 | OpenRA Mod Manifest Compatibility | [D026](09c/D026-mod-manifest.md) |
 | D027 | Canonical Enum Compatibility with OpenRA | [D027](09c/D027-canonical-enums.md) |
+| D075 | Remastered Collection Format Compatibility | [D075](09c/D075-remastered-format-compat.md) |
 
 ---
 

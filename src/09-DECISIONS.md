@@ -10,9 +10,9 @@ For improved agentic retrieval / RAG summaries, see the reusable **Decision Caps
 
 | Document                                                | Scope                                                                                       | Decisions                                           |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| [Foundation & Core](decisions/09a-foundation.md)        | Language, framework, data formats, simulation invariants, core engine identity              | D001–D003, D009, D010, D015, D017, D018, D039, D063, D064, D067 |
-| [Networking & Multiplayer](decisions/09b-networking.md) | Network model, relay server, sub-tick ordering, community servers, ranked play              | D006–D008, D011, D012, D052, D055, D060             |
-| [Modding & Compatibility](decisions/09c-modding.md)     | Scripting tiers, OpenRA compatibility, UI themes, mod profiles, licensing, export           | D004, D005, D014, D023–D027, D032, D050, D051, D062, D066, D068 |
+| [Foundation & Core](decisions/09a-foundation.md)        | Language, framework, data formats, simulation invariants, core engine identity, crate extraction | D001–D003, D009, D010, D015, D017, D018, D039, D063, D064, D067, D076 |
+| [Networking & Multiplayer](decisions/09b-networking.md) | Network model, relay server, sub-tick ordering, community servers, ranked play, community server bundle | D006–D008, D011, D012, D052, D055, D060, D074       |
+| [Modding & Compatibility](decisions/09c-modding.md)     | Scripting tiers, OpenRA compatibility, UI themes, mod profiles, licensing, export, Remastered format compat | D004, D005, D014, D023–D027, D032, D050, D051, D062, D066, D068, D075 |
 | [Gameplay & AI](decisions/09d-gameplay.md)              | Pathfinding, balance, QoL, AI systems, render modes, trait-abstracted subsystems, asymmetric co-op mode design, LLM exhibition/prompt-coached match modes | D013, D019, D021, D022, D028, D029, D033, D041–D045, D048, D054, D070, D073 |
 | [Community & Platform](decisions/09e-community.md)      | Workshop, telemetry, storage, achievements, governance, profiles, data portability          | D030, D031, D034–D037, D046, D049, D053, D061       |
 | [Tools & Editor](decisions/09f-tools.md)                | LLM mission generation, scenario editor, asset studio, mod SDK, foreign replays, skill library | D016, D020, D038, D040, D047, D056, D057            |
@@ -97,6 +97,9 @@ For improved agentic retrieval / RAG summaries, see the reusable **Decision Caps
 | D071 | External Tool API — IC Remote Protocol (ICRP)      | [Tools](decisions/09f/D071-external-tool-api.md)        |
 | D072 | Dedicated Server Management                         | [Networking](decisions/09b/D072-server-management.md)   |
 | D073 | LLM Exhibition Matches & Prompt-Coached Modes      | [Gameplay](decisions/09d/D073-llm-exhibition-modes.md)  |
+| D074 | Community Server — Unified Binary with Capability Flags | [Networking](decisions/09b/D074-community-server-bundle.md) |
+| D075 | Remastered Collection Format Compatibility              | [Modding](decisions/09c/D075-remastered-format-compat.md)   |
+| D076 | Standalone MIT/Apache-Licensed Crate Extraction Strategy | [Foundation](decisions/09a/D076-standalone-crates.md)       |
 
 ---
 
@@ -104,6 +107,6 @@ For improved agentic retrieval / RAG summaries, see the reusable **Decision Caps
 
 | ID   | Topic                                                                 | Needs Resolution By |
 | ---- | --------------------------------------------------------------------- | ------------------- |
-| P002 | Fixed-point scale (256? 1024? match OpenRA's 1024?)                   | Phase 2 start       |
-| P003 | Audio library choice + music integration design                       | Phase 3 start       |
-| P004 | Lobby/matchmaking wire format details (architecture resolved in D052) | Phase 5 start       |
+| ~~P002~~ | ~~Fixed-point scale~~ → **Resolved: 1024** (matches OpenRA WDist/WPos/WAngle). See `research/fixed-point-math-design.md` | Resolved |
+| ~~P003~~ | ~~Audio library choice + music integration design~~ → **Resolved: Kira via `bevy_kira_audio`** — four-bus mixer (Music/SFX/Voice/Ambient), dynamic music FSM, EVA priority queue, sound pooling. See `research/audio-library-music-integration-design.md` | Resolved |
+| ~~P004~~ | ~~Lobby/matchmaking wire format details~~ → **Resolved:** Complete lobby/matchmaking/discovery wire protocol — CBOR framing, 40+ message types, server discovery (HTTPS seed + mDNS), matchmaking queue, SCR credential exchange, lobby→game transition. See `research/lobby-matchmaking-wire-protocol-design.md` | Resolved |

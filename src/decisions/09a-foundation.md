@@ -1,6 +1,14 @@
 # Decision Log — Foundation & Core
 
-Language, framework, data formats, simulation invariants, and core engine identity.
+Language, framework, data formats, simulation invariants, core engine identity, and crate extraction.
+
+---
+
+### Standalone Decision Files (09a/)
+
+| Decision | Title | File |
+|----------|-------|------|
+| D076 | Standalone MIT/Apache-Licensed Crate Extraction Strategy | [D076](09a/D076-standalone-crates.md) |
 
 ---
 
@@ -122,6 +130,8 @@ The original plan avoided framework lock-in by assembling individual crates. Rej
 - Required for deterministic lockstep (floats can produce different results across platforms)
 - Original Red Alert used integer math — proven approach
 - OpenRA uses `WDist`/`WPos`/`WAngle` with 1024 subdivisions — same principle
+
+> **P002 resolved:** Scale factor = **1024** (matching OpenRA). Full type library (`Fixed`, `WorldPos`, `WAngle`), trig tables, CORDIC atan2, Newton sqrt, modifier arithmetic, and determinism guarantees: see `research/fixed-point-math-design.md`.
 
 ---
 

@@ -43,7 +43,7 @@ Main Menu → Campaign
 | New Game (Allied/Soviet) | Campaign Graph → first mission briefing                                   |
 | Continue (Allied/Soviet) | Campaign Graph → next available mission                                   |
 | Workshop Campaigns       | Workshop Browser (filtered to campaigns)                                  |
-| Commander School         | Tutorial campaign (D065, 10 branching missions)                           |
+| Commander School         | Tutorial campaign (D065, 6 branching missions)                            |
 | Ops Prologue *(optional / D070 validation mini-campaign)* | Campaign Browser / Featured (when enabled)                     |
 | Generative Campaign      | Generative Campaign Setup (D016) — or guidance panel if no LLM configured |
 | ← Back                   | Main Menu                                                                 |

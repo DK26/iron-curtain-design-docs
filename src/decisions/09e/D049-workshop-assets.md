@@ -301,6 +301,10 @@ radials:
 
 ### P2P Distribution (BitTorrent/WebTorrent)
 
+> **Wire protocol specification:** For the byte-level BT wire protocol, piece picker algorithm, choking strategy, authenticated announce, WebRTC signaling, `icpkg` binary header, and DHT design, see `research/p2p-engine-protocol-design.md`.
+
+> **P2P piece mapping:** The complete BitTorrent piece mapping for .icpkg packages — piece size, chunking, manifest-only fetch, CAS/BT interaction — is specified in `research/p2p-engine-protocol-design.md` § 10.
+
 **The cost problem:** A popular 500MB mod downloaded 10,000 times generates 5TB of egress. At CDN rates ($0.01–0.09/GB), that's $50–450/month — per mod. For a community project sustained by donations, centralized hosting is financially unsustainable at scale. A BitTorrent tracker VPS costs $5–20/month regardless of popularity.
 
 **The solution:** Workshop distribution uses the **BitTorrent protocol** for large packages, with HTTP direct download as fallback. The Workshop server acts as both metadata registry (SQLite, lightweight) and BitTorrent tracker (peer coordination, lightweight). Actual content transfer happens peer-to-peer between players who have the package.

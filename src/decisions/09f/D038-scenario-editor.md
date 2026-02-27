@@ -2,11 +2,13 @@
 
 **Revision note (2026-02-22):** Revised to formalize two advanced mission-authoring patterns requested for campaign-style scenarios: **Map Segment Unlock** (phase-based expansion of a pre-authored battlefield without runtime map resizing) and **Sub-Scenario Portal** (IC-native transitions into interior/mini-scenario spaces with optional cutscene/briefing bridges and explicit state handoff). This revision clarifies what is first-class in the editor versus what remains a future engine-level runtime-instance feature.
 
+**Revision note (2026-02-27):** Added **SDK Live Tutorial (Interactive Guided Tours)** — a YAML-driven, step-by-step tour system for the Scenario Editor, Asset Studio, and Campaign Editor. Tours use spotlight overlays, action validation, resumable progress (SQLite), and integrate with the existing "Coming From" profile system. 10 tours ship with the SDK; modders can author additional tours via Workshop distribution. Also added: **Waypoints Mode** (OFP F4-style visual route authoring with waypoint types, synchronization lines, and route naming), **Mission Outcome Wiring** (named outcome triggers connecting scenarios to D021 campaign branches, `Mission.Complete()` Lua API), and **Export Pipeline Integration** (D066 cross-reference — export-safe authoring, trigger downcompilation, CLI export, extensible export targets for RA1/OpenRA/community engines).
+
 ### Decision Capsule (LLM/RAG Summary)
 
-- **Status:** Accepted (Revised 2026-02-22)
+- **Status:** Accepted (Revised 2026-02-27)
 - **Phase:** Phase 6a (core editor + workflow foundation), Phase 6b (maturity features)
-- **Canonical for:** Scenario Editor mission authoring model, SDK authoring workflow (`Preview` / `Test` / `Validate` / `Publish`), and advanced scenario patterns
+- **Canonical for:** Scenario Editor mission authoring model, SDK authoring workflow (`Preview` / `Test` / `Validate` / `Publish`), advanced scenario patterns, and SDK Live Tutorial guided tours
 - **Scope:** `ic-editor`, `ic-sim` preview/test integration, `ic-render`, `ic-protocol`, SDK UX, creator validation/publish workflow
 - **Decision:** IC ships a full visual RTS scenario editor (terrain + entities + triggers + modules + regions + layers + compositions) inside the separate SDK app, with Simple/Advanced modes sharing one underlying data model.
 - **Why:** Layered complexity, emergent behavior from composable building blocks, and a fast edit→test loop are the proven drivers of long-lived mission communities.
@@ -17,8 +19,8 @@
 - **Advanced mission patterns:** `Map Segment Unlock` and `Sub-Scenario Portal` are editor-level authoring features; concurrent nested runtime sub-map instances remain deferred.
 - **Public interfaces / types / commands:** `StableContentId`, `ValidationPreset`, `ValidationResult`, `PerformanceBudgetProfile`, `MigrationReport`, `ic git setup`, `ic content diff`
 - **Affected docs:** `src/17-PLAYER-FLOW.md`, `src/04-MODDING.md`, `src/decisions/09c-modding.md`, `src/10-PERFORMANCE.md`
-- **Revision note summary:** Added first-class authoring support for phase-based map expansion and interior/mini-scenario portal transitions without changing the engine’s baseline runtime map model.
-- **Keywords:** scenario editor, sdk, validate playtest publish, map segment unlock, sub-scenario portal, export-safe authoring, publish readiness
+- **Revision note summary:** (2026-02-22) Added phase-based map expansion and interior/mini-scenario portal transitions. (2026-02-27) Added SDK Live Tutorial, Waypoints Mode (visual route authoring with sync lines), Mission Outcome Wiring (named outcomes → campaign branches), and Export Pipeline Integration (D066 cross-reference).
+- **Keywords:** scenario editor, sdk, validate playtest publish, map segment unlock, sub-scenario portal, export-safe authoring, publish readiness, guided tour, sdk tutorial, editor onboarding, tour yaml, waypoints, synchronization, mission outcome, export, openra, ra1, trigger downcompile
 
 **Resolves:** P005 (Map editor architecture)
 
@@ -372,6 +374,71 @@ OFP's trigger system adapted for RTS gameplay:
 
 **Countdown vs Timeout with Min/Mid/Max** is crucial for RTS missions. Example: "Reinforcements arrive 3–7 minutes after the player captures the bridge" (Countdown, Min=3m, Mid=5m, Max=7m). The player can't memorize the exact timing. In OFP, this was the key to making missions feel alive rather than scripted.
 
+### Mission Outcome Wiring (Scenario → Campaign)
+
+D021 defines **named outcomes** at the campaign level (e.g., `victory_bridge_intact`, `victory_bridge_destroyed`, `defeat`). The scenario editor is where those outcomes are *authored and wired* to in-game conditions.
+
+**Outcome Trigger type** — extends the existing Victory/Defeat trigger types:
+
+| Attribute | Description |
+|-----------|-------------|
+| **Trigger Type** | `Outcome` (new, alongside existing Victory/Defeat) |
+| **Outcome Name** | Named result string (dropdown populated from the campaign graph if the scenario is linked to a campaign; free-text if standalone) |
+| **Priority** | Integer (default 0). If two outcome triggers fire on the same tick, the higher-priority outcome wins |
+| **Debrief Override** | Optional per-outcome debrief text/audio/video that overrides the campaign-level debrief for this specific scenario |
+
+**Lua API for script-driven outcomes:**
+
+```lua
+-- Fire a named outcome from any script context (trigger, module, init)
+Mission.Complete("victory_bridge_intact")
+
+-- Fire with metadata (optional — flows to campaign variables)
+Mission.Complete("victory_bridge_destroyed", {
+    bridge_status = "destroyed",
+    civilian_casualties = Var.get("civ_deaths"),
+})
+
+-- Query available outcomes (useful for dynamic logic)
+local outcomes = Mission.GetOutcomes()  -- returns list of named outcomes from campaign graph
+
+-- Check if an outcome has fired (for multi-phase scenarios)
+if Mission.IsComplete() then return end
+```
+
+**Design rules:**
+- A scenario can define any number of Outcome triggers. The **first one to fire** determines the campaign branch — subsequent outcome triggers are ignored
+- If a scenario is standalone (not linked to a campaign), Outcome triggers with names starting with `victory` behave as Victory, names starting with `defeat` behave as Defeat, and all others behave as Victory. This makes standalone playtesting natural
+- Legacy `Victory` and `Defeat` trigger types still work — they map to the default outcomes `victory` and `defeat` respectively. Named outcomes are a strict superset
+
+**Outcome validation (editor checks):**
+- Warning if a scenario has no Outcome trigger and no Victory/Defeat trigger
+- Warning if a scenario linked to a campaign has Outcome names that don't match any branch in the campaign graph
+- Warning if a scenario has only one outcome (no branching potential — may be intentional for linear campaigns)
+- Error if two Outcome triggers have the same name and the same priority (ambiguous)
+
+**Example wiring:**
+
+```
+Campaign Graph (D021):          Scenario "bridge_mission":
+
+  ┌─────────────┐              Trigger "bridge_secured":
+  │ Bridge       │                Condition: allied_present in bridge_area
+  │ Mission      │───►            AND NOT building_destroyed(bridge)
+  │              │                Type: Outcome
+  └──┬───────┬───┘                Outcome Name: victory_bridge_intact
+     │       │
+     ▼       ▼                Trigger "bridge_blown":
+  ┌─────┐ ┌─────┐               Condition: building_destroyed(bridge)
+  │ 02a │ │ 02b │               Type: Outcome
+  │(int)│ │(des)│               Outcome Name: victory_bridge_destroyed
+  └─────┘ └─────┘
+                              Trigger "defeat":
+                                Condition: all player units destroyed
+                                Type: Outcome
+                                Outcome Name: defeat
+```
+
 ### Module System (Pre-Packaged Logic Nodes)
 
 Modules are IC's equivalent of Eden Editor's 154 built-in modules — complex game logic packaged as drag-and-drop nodes with a properties panel. Non-programmers get 80% of the power without writing Lua.
@@ -424,6 +491,119 @@ Modules are IC's equivalent of Eden Editor's 154 built-in modules — complex ga
 Modules connect to triggers and other entities via **visual connection lines** — same as OFP's synchronization system. A "Reinforcements" module connected to a trigger means the reinforcements arrive when the trigger fires. No scripting required.
 
 **Custom modules** can be created by modders — a YAML definition + Lua implementation, publishable via Workshop (D030). The community can extend the module library indefinitely.
+
+### Waypoints Mode (Visual Route Authoring)
+
+OFP's F4 (Waypoints) mode let designers click the map to create movement orders for groups — the most intuitive way to choreograph AI behavior without scripting. IC adapts this for RTS with waypoint types tailored to base-building and resource-gathering gameplay.
+
+#### Placing Waypoints
+
+- **Click the map** in Waypoints mode to place a waypoint marker (numbered circle with directional arrow)
+- **Click another position** while a waypoint is selected to create the next waypoint in the sequence — a colored line connects them
+- **Right-click** to finish the current waypoint sequence
+- Waypoints can be **moved** (drag), **deleted** (Del), and **reordered** (drag in the properties panel list)
+- Each waypoint sequence is a **named route** with a variable name (e.g., `north_patrol`, `convoy_route`) usable in scripts and module parameters
+
+#### Waypoint Types
+
+| Type | Behavior | OFP Equivalent |
+|------|----------|----------------|
+| **Move** | Move to position, then continue to next waypoint | Move |
+| **Attack** | Move to position, engage any enemies near waypoint before continuing | Seek and Destroy |
+| **Guard** | Hold position, engage targets within radius, return when clear | Guard |
+| **Patrol** | Cycle the entire route continuously (last waypoint links back to first) | Cycle |
+| **Load** | Move to position, pick up passengers or cargo at a transport building | Get In |
+| **Unload** | Move to position, drop off all passengers | Get Out |
+| **Harvest** | Move to ore field, harvest until depleted or ordered elsewhere | N/A (RTS-specific) |
+| **Script** | Execute Lua callback when the unit arrives at this waypoint | Scripted |
+| **Wait** | Pause at position for a duration (min/mid/max randomized timer) | N/A |
+| **Formation** | Reorganize the group into a specific formation before proceeding | Formation |
+
+#### Waypoint Properties Panel
+
+Each waypoint has a properties panel:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| **Name** | text | Variable name (e.g., `wp_bridge_cross_01`) — for referencing in scripts |
+| **Type** | dropdown | Waypoint type from the table above |
+| **Position** | cell coordinate | Map position (draggable in viewport) |
+| **Radius** | slider (0–20 cells) | Engagement/guard radius; units reaching anywhere within this radius count as "arrived" |
+| **Timer** | min/mid/max | Wait duration at this waypoint (for Wait type, or hold-time for Guard/Attack) |
+| **Formation** | dropdown | Group formation while moving toward this waypoint (Line, Column, Wedge, Staggered Column, None) |
+| **Speed** | enum | Movement speed: Unlimited / Limited / Forced March (affects stamina/readiness) |
+| **Combat Mode** | enum | Rules of engagement en route: Never Fire / Hold Fire / Open Fire / Open Fire, Engage at Will |
+| **Condition** | Lua expression | Optional condition that must be true before this waypoint activates (e.g., `Var.get("phase") >= 2`) |
+| **On Arrival** | Lua (Advanced) | Script executed when the first unit in the group reaches this waypoint |
+
+#### Visual Route Display
+
+Waypoint routes are rendered as colored lines on the isometric viewport:
+
+```
+┌────────────────────────────────────────────────────────┐
+│                                                        │
+│      ①───────────②──────────③                          │
+│      Move        Attack     Guard                      │
+│      (blue)      (red)      (yellow)                   │
+│                                                        │
+│          ④═══════⑤═══════⑥═══════④                     │
+│          Patrol  Patrol  Patrol  (loop)                │
+│          (green cycling arrows)                        │
+│                                                        │
+│      ⑦ · · · · · ⑧                                    │
+│      Wait         Script                               │
+│      (dotted, paused)                                  │
+│                                                        │
+└────────────────────────────────────────────────────────┘
+```
+
+- **Color coding by type:** Move=blue, Attack=red, Guard=yellow, Patrol=green (with cycling arrows), Harvest=amber, Wait=dotted gray
+- **Route labels** appear above the first waypoint showing the route name
+- **Inactive routes** (assigned to entities not currently selected) appear faded
+- **Active route** (selected entity's route) appears bright with animated directional arrows
+
+#### Assigning Entities to Routes
+
+- **Select an entity or group** → right-click a waypoint route → "Assign to Route"
+- **Or:** Select entity → Properties panel → Route dropdown → pick from named routes
+- **Or:** Module connection — a Patrol Route module references a named waypoint route
+- Multiple entities/groups can share the same route (each follows it independently)
+- Lua: `entity:set_route("north_patrol")` or `entity:set_patrol_route("north_patrol")` (existing API, now visually authored)
+
+#### Synchronization Lines (Multi-Group Coordination)
+
+OFP's synchronization concept — the single most powerful tool for coordinated AI behavior:
+
+- **Draw a sync line** between waypoints of different groups by holding Shift and clicking two waypoints
+- **Effect:** Both groups pause at their respective waypoints until *both* have arrived, then proceed simultaneously
+- **Use case:** "Group Alpha waits at the north ridge, Group Bravo waits at the south bridge. When BOTH are in position, they attack from both sides at once."
+- Synchronization lines appear as dashed white lines between the connected waypoints
+- Can sync more than two groups — all must arrive before any proceed
+
+```
+Group Alpha route:     ①───②───③ (sync) ───④ Attack
+                                  ╫
+Group Bravo route:     ⑤───⑥───⑦ (sync) ───⑧ Attack
+                                  ╫
+Group Charlie route:   ⑨───⑩──⑪ (sync) ───⑫ Attack
+
+All three groups wait at their sync waypoints until
+the last group arrives, then all proceed to Attack.
+```
+
+This creates the "three-pronged attack" coordination that makes OFP missions feel alive. No scripting required — pure visual placement.
+
+#### Relationship to Modules
+
+Waypoint routes and modules work together:
+
+- **Patrol Route module** = a module that wraps a named waypoint route with alert/response parameters. The module provides the "engage if threat detected, then return to route" logic; the waypoint route provides the path
+- **Guard Position module** = a single Guard-type waypoint with radius and priority parameters wrapped in a module
+- **Escort Convoy module** = entities following a waypoint route with "protect" behavior attached
+- **Hunt and Destroy module** = entities cycling between random waypoints within an area
+
+Waypoints mode gives designers **direct authoring** of the paths that modules reference. The same route can be used by a Patrol Route module, a custom Lua script, or a trigger's reinforcement entry path.
 
 ### Compositions (Reusable Building Blocks)
 
@@ -2061,6 +2241,252 @@ Import is always **best-effort** with clear reporting: "Imported 47 of 52 trigge
 
 **The 30-minute goal:** A veteran editor from ANY background should feel productive within 30 minutes. Not expert — productive. They recognize familiar concepts wearing new names, their muscle memory partially transfers via keybinding presets, and the migration cheat sheet fills the gaps. The learning curve is a gentle slope, not a cliff.
 
+### SDK Live Tutorial (Interactive Guided Tours)
+
+"Coming From" profiles and keybinding presets help veterans orient. But brand-new creators — the "New to editing" profile — need more than tooltips and reference docs. They need a hands-on walkthrough that builds confidence through doing. The SDK Live Tutorial is an interactive guided tour system that walks creators through their first scenario, asset import, or campaign with step-by-step instructions and validation.
+
+**Design principles:**
+- **Learn by doing** — every tour step asks the creator to perform an action, not just read text
+- **Spotlight focus** — the surrounding UI dims while the relevant element is highlighted, reducing cognitive load
+- **Validation before advancing** — the engine confirms the creator actually completed the step (painted terrain, placed a unit, etc.) before moving on
+- **Resumable** — tours persist progress to SQLite; closing the SDK mid-tour resumes at the last completed step
+- **Non-blocking** — tours can be skipped, paused, or dismissed at any point with no penalty
+
+#### Tour Engine Architecture
+
+```
+TourDefinition (YAML)
+    │
+    ▼
+TourStep ────► TourRenderer
+(highlight,      (spotlight overlay,
+ action,          callout bubble,
+ validation)      progress bar,
+                  skip/back/next)
+    │
+    ▼
+TourHistory (SQLite)  ◄──  TourFilter (suppression)
+```
+
+The tour engine reuses the suppression and history pattern from D065's Layer 2 contextual hints, adapted for multi-step guided sequences in the editor context. The key difference: Layer 2 hints are single-shot contextual tips; tours are ordered multi-step sequences with validation gates.
+
+#### Tour YAML Schema
+
+```yaml
+# sdk/tours/scenario-editor-basics.yaml
+tour:
+  id: scenario_editor_basics
+  title: "Scenario Editor Basics"
+  description: "Learn to create your first scenario in 10 minutes"
+  target_tool: scenario_editor
+  coming_from_profiles: [new_to_editing, all]
+  estimated_minutes: 10
+  prerequisite_tours: []              # optional: require another tour first
+
+  steps:
+    - id: welcome
+      title: "Welcome to the Scenario Editor"
+      text: "This is where you create missions. Let's build a simple skirmish map together."
+      highlight_ui: null              # no element highlighted (intro screen)
+      spotlight: false
+      position: screen_center
+      action: null                    # click Next to continue
+      validation: null                # no validation needed
+
+    - id: terrain_mode
+      title: "Terrain Painting"
+      text: "Click the Terrain tab to start painting your map."
+      highlight_ui: "mode_panel.terrain"
+      spotlight: true                 # dim everything except the highlighted element
+      action:
+        type: mode_switch
+        target_mode: terrain
+      validation:
+        type: action_performed
+        action: switch_to_terrain_mode
+
+    - id: paint_terrain
+      title: "Paint Some Terrain"
+      text: "Select a terrain type from the palette and paint on the viewport. Try creating a small island with grass and water."
+      highlight_ui: "terrain_palette"
+      spotlight: false                # highlight but don't dim (user needs full viewport)
+      action:
+        type: paint
+        min_cells: 20
+      validation:
+        type: cell_count
+        min: 20
+
+    - id: place_units
+      title: "Place Units"
+      text: "Switch to Entities mode and place some units on your map. Drag from the entity palette or double-click to place."
+      highlight_ui: "mode_panel.entities"
+      spotlight: true
+      action:
+        type: place_entity
+        min_count: 3
+      validation:
+        type: entity_count
+        min: 3
+
+    - id: place_buildings
+      title: "Place Buildings"
+      text: "Place a Construction Yard and a few base buildings. These give each player a starting base."
+      highlight_ui: "entity_palette.buildings"
+      spotlight: false
+      action:
+        type: place_entity
+        entity_category: building
+        min_count: 2
+      validation:
+        type: entity_count
+        category: building
+        min: 2
+
+    - id: assign_factions
+      title: "Assign Factions"
+      text: "Select a building, then look at the Properties panel. Change its Faction to assign it to a player. Make sure you have at least two factions."
+      highlight_ui: "properties_panel.faction"
+      spotlight: true
+      action:
+        type: set_attribute
+        attribute: faction
+      validation:
+        type: attribute_set
+        attribute: faction
+        distinct_values_min: 2
+
+    - id: preview
+      title: "Preview Your Scenario"
+      text: "Click Preview to see your scenario running! The editor will launch a quick simulation of your map."
+      highlight_ui: "workflow_buttons.preview"
+      spotlight: true
+      action:
+        type: click_button
+        button: preview
+      validation:
+        type: preview_launched
+
+    - id: complete
+      title: "Tour Complete!"
+      text: "You've created your first scenario! From here, explore triggers and modules to add mission logic. Press F1 on any element for detailed help."
+      position: screen_center
+      action: null
+      validation: null
+```
+
+**Tour step fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique step identifier within the tour |
+| `title` | string | Step heading shown in the callout bubble |
+| `text` | string | Instructional text (kept short and action-oriented) |
+| `highlight_ui` | string? | Logical UI element ID to highlight (uses `UiAnchorAlias` resolution) |
+| `spotlight` | bool | If true, dim surrounding UI and spotlight the highlighted element |
+| `position` | string? | Override callout position (`screen_center`, `near_element`, `bottom_bar`) |
+| `action.type` | string | What the creator should do: `mode_switch`, `paint`, `place_entity`, `set_attribute`, `click_button`, `select_item`, `open_panel` |
+| `validation.type` | string | How the engine confirms completion: `action_performed`, `cell_count`, `entity_count`, `attribute_set`, `preview_launched`, `file_saved`, `custom_lua` |
+
+#### Tour Catalog
+
+| Tour ID | Tool | Steps | Target Profile | Est. Time |
+|---------|------|-------|---------------|-----------|
+| `scenario_editor_basics` | Scenario Editor | 8 | new_to_editing | 10 min |
+| `terrain_deep_dive` | Scenario Editor | 6 | new_to_editing | 8 min |
+| `trigger_logic_101` | Scenario Editor | 7 | new_to_editing, aoe2 | 12 min |
+| `module_system` | Scenario Editor | 5 | new_to_editing, ofp_eden | 8 min |
+| `lua_scripting_intro` | Scenario Editor | 6 | new_to_editing | 15 min |
+| `asset_studio_basics` | Asset Studio | 6 | new_to_editing | 8 min |
+| `campaign_editor_basics` | Campaign Editor | 5 | new_to_editing | 10 min |
+| `aoe2_migration` | Scenario Editor | 4 | aoe2 | 5 min |
+| `ofp_migration` | Scenario Editor | 4 | ofp_eden | 5 min |
+| `publish_workflow` | All tools | 5 | all | 8 min |
+
+Migration tours (`aoe2_migration`, `ofp_migration`) are triggered automatically when the creator selects a "Coming From" profile on first SDK launch. They highlight IC equivalents for familiar concepts: "In AoE2 you use Triggers with Conditions and Effects. In IC, the same idea is split between Triggers (simple) and Modules (composable)."
+
+#### Tour Entry Points
+
+- **SDK Start Screen:** "New to the SDK? [Start Guided Tour]" — shown on first launch or if no tours have been completed
+- **Tab bar:** Small tour icon (`?`) in the tool tab bar. Clicking it opens the relevant tour for that tool
+- **Help menu:** `Help → Guided Tours` lists all available tours with completion status
+- **"Coming From" auto-trigger:** Selecting a "Coming From" profile on first launch starts the corresponding migration tour
+- **Console:** `/tour list`, `/tour start <id>`, `/tour reset`, `/tour resume`
+
+#### Tour UX
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                                                                  │
+│           ┌────────── dimmed ──────────┐                         │
+│           │                            │                         │
+│           │    ┌──────────────┐        │                         │
+│           │    │ ✦ SPOTLIGHT  │        │                         │
+│           │    │  (Terrain    │        │                         │
+│           │    │   tab)       │        │                         │
+│           │    └──────────────┘        │                         │
+│           │         ▼                  │                         │
+│           │  ┌─────────────────────┐   │                         │
+│           │  │ Step 2 of 8         │   │                         │
+│           │  │                     │   │                         │
+│           │  │ Terrain Painting    │   │                         │
+│           │  │ Click the Terrain   │   │                         │
+│           │  │ tab to start...     │   │                         │
+│           │  │                     │   │                         │
+│           │  │ [◄ Back] [Skip] [►] │   │                         │
+│           │  └─────────────────────┘   │                         │
+│           │                            │                         │
+│           └────────────────────────────┘                         │
+│                                                                  │
+│  ═══════════════════════════════════════                          │
+│  ●●○○○○○○  Scenario Editor Basics  [✕ Exit Tour]                 │
+│  ═══════════════════════════════════════                          │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+- **Progress bar** at the bottom shows step dots and tour title
+- **Callout bubble** appears near the highlighted element with title, text, and navigation buttons
+- **Back/Skip/Next** buttons — Back replays the previous step, Skip advances without validation, Next advances after validation passes
+- **Exit Tour** (`✕`) pauses the tour and saves progress; the tour can be resumed later from the tab bar icon or console
+
+#### Tour History (SQLite)
+
+```sql
+-- In editor.db (separate from player.db — ic-editor is a separate binary)
+CREATE TABLE sdk_tour_history (
+    tour_id       TEXT NOT NULL,
+    step_id       TEXT NOT NULL,
+    completed     BOOLEAN NOT NULL DEFAULT FALSE,
+    skipped       BOOLEAN NOT NULL DEFAULT FALSE,
+    completed_at  INTEGER,          -- Unix timestamp
+    PRIMARY KEY (tour_id, step_id)
+);
+```
+
+Tour completion unlocks a subtle "Tour Completed" badge in the SDK Start Screen's tour list. No forced gatekeeping — completing tours is encouraged, not required.
+
+#### Tour Authoring by Modders
+
+Modders can define tours for their editor extensions and total conversions using the same YAML schema. Tours are distributed via Workshop alongside the mod that defines them. The SDK discovers tour YAML files in the active mod's `sdk/tours/` directory and adds them to `Help → Guided Tours`.
+
+This enables mod communities to ship onboarding for their custom editor modules, new terrain types, or unique trigger actions — the same way D065's `mod_specific` hints let gameplay mods teach their mechanics.
+
+#### Relationship to D065
+
+The SDK tour engine and D065's Layer 2 hint system share architectural DNA:
+
+| Concept | D065 Layer 2 (Game Hints) | D038 Tours (SDK) |
+|---------|--------------------------|-------------------|
+| Definition format | YAML | YAML |
+| Trigger evaluation | Game-state + UI-context | Editor UI events |
+| Suppression/history | `hint_history` in `player.db` | `sdk_tour_history` in `editor.db` |
+| Dismissal | Per-hint "Don't show again" | Per-tour "Exit Tour" + resume |
+| Multi-step | No (single-shot tips) | Yes (ordered step sequences with validation) |
+| Modder-extensible | Yes (YAML + Lua triggers) | Yes (YAML tours in mod `sdk/tours/`) |
+| QoL toggle | Per-category in Settings | Tour prompts toggle in SDK Preferences |
+
+The two systems are deliberately separate implementations in separate binaries (`ic-game` vs `ic-editor`) but follow the same design language so creators who've played the game recognize the interaction pattern.
+
 ### Embedded Authoring Manual & Context Help (D038 + D037 Knowledge Base Integration)
 
 Powerful editors fail if users cannot discover what each flag, parameter, trigger action, module field, and script hook actually does. IC should ship an **embedded authoring manual** in the SDK, backed by the same D037 knowledge base content (no duplicate documentation system).
@@ -2180,6 +2606,76 @@ The editor's "accessibility through layered complexity" principle applies to dis
 **Phase:** Colorblind modes, UI scaling, and keyboard navigation ship with Phase 6a. High contrast mode and motor accessibility refinements ship in Phase 6b–7.
 
 > **Note:** The accessibility features above cover the **editor** UI. **Game-level accessibility** — colorblind faction colors, minimap palettes, resource differentiation, screen reader support for menus, subtitle options for EVA/briefings, and remappable controls — is a separate concern that applies to `ic-render` and `ic-ui`, not `ic-editor`. Game accessibility ships in Phase 7 (see `08-ROADMAP.md`).
+
+### Export Pipeline Integration (D066)
+
+IC scenarios and campaigns can be exported to other Red Alert implementations. The full export architecture is defined in D066 (Cross-Engine Export & Editor Extensibility, in `src/decisions/09c-modding.md`). This section summarizes the editor integration points.
+
+#### Export Targets
+
+| Target | Output Format | Coverage |
+|--------|--------------|----------|
+| **IC Native** | `.icscn` / `.iccampaign` (YAML) | Full fidelity (default) |
+| **OpenRA** | `.oramap` ZIP (map.yaml + map.bin + lua/) + MiniYAML rules + mod.yaml | High fidelity for standard RTS features; IC-specific features degrade with warnings |
+| **Original Red Alert** | `rules.ini` + `.bin` (terrain) + `.mpr` (mission) + `.shp`/`.pal`/`.aud`/`.mix` | Moderate fidelity; complex triggers downcompile via pattern matching |
+
+Export is intentionally **lossy** — IC-specific features (sub-scenario portals, weather system, veterancy, conditions/multipliers, advanced Lua triggers) are stripped with structured fidelity warnings. The philosophy: honest about limitations, never silently drops content.
+
+#### Export-Safe Authoring Mode
+
+When a creator selects an export target in the editor toolbar:
+
+- **Feature gating** — IC-only features are grayed out or hidden (same data model, reduced UI surface)
+- **Live fidelity indicators** — traffic-light badges (green/yellow/red) on each entity, trigger, and module:
+  - Green: exports cleanly
+  - Yellow: exports with degradation (tooltip explains what changes)
+  - Red: cannot export (feature has no equivalent in the target)
+- **Export-safe trigger templates** — pre-built trigger patterns guaranteed to downcompile cleanly to the target format. Available in the trigger palette when export mode is active
+
+#### Trigger Downcompilation (Lua → Target Triggers)
+
+D066 uses **pattern-based downcompilation** (not general transpilation) for converting IC Lua triggers to target formats:
+
+| IC Lua Pattern | RA1 / OpenRA Equivalent |
+|---|---|
+| `Trigger.AfterDelay(ticks, fn)` | Timed trigger |
+| `Trigger.OnEnteredFootprint(cells, fn)` | Cell trigger |
+| `Trigger.OnKilled(actor, fn)` | Destroyed trigger |
+| `Actor.Create(type, owner, pos)` | Teamtype + reinforcement |
+| `actor:Attack(target)` | Teamtype attack waypoint |
+| `Media.PlaySpeech(name)` | EVA speech action |
+| `Mission.Complete("victory")` | Win trigger |
+| `Mission.Complete("defeat")` | Lose trigger |
+
+Unrecognized Lua patterns → fidelity warning with the code highlighted. The creator can simplify the logic or accept the limitation.
+
+#### Editor Export Workflow
+
+```
+┌─────────────┐    ┌──────────────────┐    ┌─────────────┐    ┌──────────┐
+│ Select       │───►│ Validate with     │───►│ Export       │───►│ Output   │
+│ Export Target│    │ target constraints │    │ Preview      │    │ files    │
+└─────────────┘    └──────────────────┘    │ (fidelity   │    └──────────┘
+                                           │  report)     │
+                                           └─────────────┘
+```
+
+- **Validate** checks the scenario against the export target's constraints (map size limits, trigger compatibility, supported unit types)
+- **Export Preview** shows the fidelity report — what exports cleanly, what degrades, what is stripped
+- **Export** writes the output files to a directory
+
+#### CLI Export
+
+```bash
+ic export --target openra mission.yaml -o ./output/
+ic export --target ra1 campaign.yaml -o ./output/ --fidelity-report report.json
+ic export --target openra --dry-run mission.yaml    # fidelity check only
+ic export --target ra1,openra,ic maps/ -o ./export/  # batch export to multiple targets
+```
+
+#### Extensible Export Targets
+
+D066's `ExportTarget` trait is a pluggable interface — not hardcoded for RA1/OpenRA. Community contributors can add export targets (Tiberian Sun, RA2, Remastered, etc.) via WASM (Tier 3) editor plugins distributed through Workshop. The pattern: the IC scenario editor becomes a **universal C&C mission authoring tool** that can target any engine in the ecosystem.
 
 ### Alternatives Considered
 

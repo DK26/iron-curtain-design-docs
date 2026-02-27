@@ -21,6 +21,190 @@ ic-protocol  (shared types: PlayerOrder, TimestampedOrder)
 
 **Storage boundary:** `ic-sim` never reads or writes SQLite (invariant #1). Three crates are read-only consumers of the client-side SQLite database: `ic-ui` (post-game stats, career page, campaign dashboard), `ic-llm` (personalized missions, adaptive briefings, coaching), `ic-ai` (difficulty scaling, counter-strategy selection). Gameplay events are written by a Bevy observer system in `ic-game`, outside the deterministic sim. See D034 in `decisions/09e-community.md`.
 
+### Binary Architecture: GUI-First Design
+
+The crate graph produces four ship binaries. Each targets a distinct audience with an interface appropriate to that audience's workflow:
+
+| Binary | Crate | Interface | Primary Audience | What It Is |
+| --- | --- | --- | --- | --- |
+| `iron-curtain[.exe]` | `ic-game` | **GUI application** | Players | The game. Launches into a windowed/fullscreen menu with mouse/touch/controller interaction. Players never see a terminal. |
+| `ic-editor[.exe]` | `ic-editor` | **GUI application** | Modders, map makers | The SDK. Visual scenario editor, asset studio, campaign editor (D038+D040). |
+| `ic-server[.exe]` | `ic-net` | **CLI / daemon** | Server operators | Headless dedicated/relay server. Designed for systemd, Docker, and unattended operation. No window, no renderer. |
+| `ic[.exe]` | `ic-game` (feature-gated) | **CLI tool** | Modders, CI/CD, developers | Developer/modder utility. `ic mod check`, `ic mod publish`, `ic replay validate`, `ic server validate-config`. Analogous to OpenRA's `OpenRA.Utility.exe`. |
+
+**GUI-first principle:** The game client (`iron-curtain`) is a GUI application — not a CLI tool with a GUI bolted on. Players interact through menus, buttons, and mouse clicks. CLI flags on the game binary (`--windowed`, `--mod mymod`, `--portable`) are **launch parameters** (the same kind every game accepts), not a "CLI mode." The game never requires a terminal to play.
+
+**The `ic` CLI is a developer tool.** It serves the same role as `cargo`, `npm`, or `dotnet` — a command-line interface for automation, scripting, and CI/CD pipelines. It is aimed at modders, server operators, and contributors. Player-facing documentation never directs users to a terminal. The `ic` CLI is not installed to the system PATH by default — players who install via Steam, GOG, or a platform package manager get the game client and (optionally) the server binary, not the developer CLI.
+
+**In-game command console ≠ CLI tool.** D058's unified chat/command system (`/help`, `/speed 2x`) is an in-game overlay — part of the GUI, not a separate terminal. It uses the same `CommandDispatcher` as the CLI for consistency, but the user experience is a text field inside the game window, not a shell prompt. Players who never type `/` commands lose nothing — every command has a GUI equivalent (D058 CI-1).
+
+**Where CLI is the right answer:**
+
+- **Server operators:** `ic-server --map Fjord --players 8` on a headless Linux box. No monitor attached. systemd unit files, Docker Compose, Ansible playbooks — CLI is the native interface for infrastructure.
+- **CI/CD pipelines:** `ic mod lint && ic mod test && ic mod package` in a GitHub Actions workflow. Automation needs non-interactive, scriptable commands.
+- **Batch modding operations:** `ic mod migrate --from openra` to convert an entire mod directory. Power users who prefer the terminal can use it — the GUI mod manager (SDK) provides the same functionality visually.
+- **Diagnostics and debugging:** `ic replay validate *.icrep` to batch-check replay integrity. Developer workflow, not player workflow.
+
+**Where GUI is the only answer:**
+
+- Playing the game (menus, lobbies, matches, replays, settings)
+- First-launch wizard and content detection
+- Browsing and installing Workshop content
+- Configuring LLM providers (D047)
+- Campaign setup and mission generation
+- Replay viewer with transport controls, camera modes, overlays
+- Achievement browsing, career stats, player profile
+
+### Async Architecture: Dual-Runtime with Channel Bridge
+
+IC uses two async runtimes that never overlap within a single thread. The split is driven by Bevy's architecture and WASM portability.
+
+#### Why Two Runtimes
+
+**Bevy does not use tokio.** Bevy's `bevy_tasks` crate is built on `async-executor` / `futures-lite` (the smol family) — a lightweight, custom thread-pool executor with three pools:
+
+| Pool | Purpose | Example Uses |
+| --- | --- | --- |
+| `ComputeTaskPool` | CPU work needed for the current frame | Pathfinding, visibility culling, ECS queries |
+| `AsyncComputeTaskPool` | CPU work that can span multiple frames | Map loading, mod validation, state snapshot serialization |
+| `IoTaskPool` | Short-lived I/O-bound tasks | File reads, config loading, embedded relay socket I/O |
+
+But key IC dependencies — `librqbit` (BitTorrent P2P), `reqwest` (HTTP), `tokio-tungstenite` (WebSocket), `quinn` (QUIC) — require **tokio**. Calling `tokio::Runtime::block_on()` from inside Bevy's executor panics. The solution is a dedicated tokio runtime on a background OS thread, communicating via channels.
+
+#### Per-Binary Runtime Strategy
+
+| Binary | Game Loop | Async I/O | Bridge |
+| --- | --- | --- | --- |
+| `iron-curtain` (game) | Bevy scheduler + `bevy_tasks` pools | Dedicated tokio thread (background OS thread) | `crossbeam-channel` |
+| `ic-editor` (SDK) | Bevy scheduler + `bevy_tasks` pools | Dedicated tokio thread (background OS thread) | `crossbeam-channel` |
+| `ic-server` (relay) | No Bevy, no game loop | `#[tokio::main]` — tokio is the entire runtime | N/A |
+| `ic` (CLI) | No Bevy, no game loop | `tokio::runtime::Runtime::new()` + `block_on` | N/A |
+
+#### The Channel Bridge (Bevy Binaries)
+
+For `ic-game` and `ic-editor`, a single background OS thread hosts a tokio runtime. All tokio-dependent I/O runs there. The Bevy ECS communicates via typed channels:
+
+```
+┌──────────────────────────┐   crossbeam-channel   ┌──────────────────────────┐
+│  Bevy Game Loop (main)    │ ◄──────────────────► │  Tokio Thread (background)│
+│                           │  IoCommand / IoResult │                           │
+│  ic-sim (pure, no I/O)    │                       │  reqwest — HTTP/LLM calls │
+│  ic-ui (render, ECS)      │                       │  librqbit — P2P downloads │
+│  ic-audio (playback)      │                       │  tokio-tungstenite — WS   │
+│  bevy_tasks (compute,     │                       │  quinn — QUIC             │
+│    async compute, I/O)    │                       │  str0m I/O driver — VoIP  │
+└──────────────────────────┘                        └──────────────────────────┘
+```
+
+**How it works:**
+
+1. A Bevy system needs to make an LLM call or start a download → sends an `IoCommand` through `cmd_tx`.
+2. The tokio thread receives it, spawns a tokio task (`tokio::spawn`), and performs the async I/O.
+3. When complete, the result is sent back through `result_tx`.
+4. A Bevy system polls `result_rx.try_recv()` each frame and injects results into the ECS world as events or resource mutations.
+5. The sim never touches any of this — it remains pure.
+
+**Channel choice:** `crossbeam-channel` for the sync↔async boundary (already used by IC's replay writer and voice pipeline — see `05-FORMATS.md` § Replay Recording and D059 § Voice Pipeline). Within the tokio runtime, `tokio::sync::mpsc` for intra-task communication.
+
+```rust
+/// Commands sent from Bevy systems to the tokio I/O thread.
+pub enum IoCommand {
+    HttpRequest { id: RequestId, url: String, method: HttpMethod, body: Option<Vec<u8>> },
+    LlmPrompt { id: RequestId, task: LlmTask },
+    StartDownload { package_id: PackageId },
+    CancelDownload { package_id: PackageId },
+    WorkshopPublish { package: PackageManifest },
+    ReplayDownload { match_id: MatchId },
+}
+
+/// Results returned from the tokio I/O thread to Bevy systems.
+pub enum IoResult {
+    HttpResponse { id: RequestId, status: u16, body: Vec<u8> },
+    LlmResponse { id: RequestId, result: Result<String, LlmError> },
+    DownloadProgress { package_id: PackageId, bytes: u64, total: Option<u64> },
+    DownloadComplete { package_id: PackageId, path: PathBuf },
+    DownloadFailed { package_id: PackageId, error: String },
+    PublishResult { result: Result<PackageVersion, WorkshopError> },
+}
+```
+
+#### Relay Server: Pure Tokio
+
+`ic-server` has no Bevy, no ECS, no game loop. It is a standard async Rust server:
+
+- `#[tokio::main]` with multi-threaded work-stealing scheduler
+- One tokio task per game session drives `RelayCore` + socket I/O
+- `axum` or raw `hyper` for lobby/tracking HTTP endpoints
+- `tokio::net::UdpSocket` feeding `str0m` (sans-I/O WebRTC) for game relay and voice forwarding
+- Hundreds of concurrent sessions is well within tokio's comfort zone
+
+This is already established in `03-NETCODE.md` § Backend Language: "`relay-server` binary — standalone headless process that hosts multiple concurrent games. Not Bevy, no ECS. Uses `RelayCore` + async I/O (tokio)."
+
+#### Embedded Relay: Bevy's I/O Pool
+
+When a player clicks "Host Game," `EmbeddedRelayNetwork` wraps `RelayCore` inside the game process. The relay's socket I/O runs on **Bevy's `IoTaskPool`** — not the tokio thread. This is the pattern established in `03-NETCODE.md`: the embedded relay uses Bevy's async task system, not a separate tokio runtime.
+
+The embedded relay does not need tokio because `RelayCore` is a library with no runtime dependency — it processes orders and manages sessions. The socket I/O layer is thin and fits naturally into Bevy's I/O pool. Only external service calls (Workshop API, LLM, BitTorrent) route through the tokio thread.
+
+#### str0m: Sans-I/O Advantage
+
+str0m (WebRTC/VoIP — D059) has **no internal threads, no async runtime, no I/O**. All I/O is externalized — you own the sockets and feed str0m packets. This eliminates async runtime conflicts entirely:
+
+- **Relay server:** A tokio task owns the UDP socket and drives str0m. Natural fit.
+- **Game client (native):** A tokio task on the I/O thread owns the UDP socket. Voice packets are bridged to `ic-audio` via `crossbeam-channel` (already the design in D059 § Voice Pipeline).
+- **Game client (WASM):** The browser's WebRTC API handles transport. str0m is not used — the browser provides equivalent functionality natively.
+
+#### WASM: Platform-Specific I/O Bridge
+
+**Tokio does not work in browser WASM.** There is no `std::thread` in the browser, and tokio's scheduler depends on it. Bevy on WASM is single-threaded — all three task pools collapse to a single-threaded executor backed by `wasm-bindgen-futures::spawn_local`.
+
+The I/O bridge abstracts this behind a platform trait:
+
+```rust
+/// Platform-agnostic I/O bridge. Bevy systems interact with this
+/// trait as a resource — they don't know what runtime backs it.
+pub trait IoBridge: Send + Sync {
+    fn send_command(&self, cmd: IoCommand);
+    fn poll_results(&self) -> Vec<IoResult>;
+}
+
+/// Native: backed by crossbeam channels + dedicated tokio thread.
+#[cfg(not(target_arch = "wasm32"))]
+pub struct NativeIoBridge { /* cmd_tx, result_rx */ }
+
+/// WASM: backed by wasm-bindgen-futures + browser Fetch API.
+#[cfg(target_arch = "wasm32")]
+pub struct WasmIoBridge { /* internal state */ }
+```
+
+**Platform-specific behavior:**
+
+| Capability | Native | WASM |
+| --- | --- | --- |
+| HTTP (reqwest) | Tokio thread | Browser Fetch API (reqwest auto-switches) |
+| LLM API calls | Tokio thread (reqwest) | Browser Fetch API |
+| P2P downloads (librqbit) | Tokio thread | **Not available** — HTTP fallback from relay/CDN |
+| WebSocket | Tokio thread (tokio-tungstenite) | Browser WebSocket API |
+| WebRTC/VoIP | Tokio thread driving str0m | Browser WebRTC API (native, no str0m) |
+| UDP relay | Tokio thread (tokio::net::UdpSocket) | WebTransport or WebSocket tunnel |
+
+`librqbit` is **native-only** — WASM browser builds fall back to HTTP downloads served by Workshop CDN or relay mirrors. This constraint should be accepted early and the Workshop download system designed with HTTP fallback from the start (D049).
+
+#### What Is Never Async
+
+- **`ic-sim`** — Pure, deterministic, no I/O. Zero async. Invariant #1.
+- **ECS system logic** — Bevy systems run synchronously on the main thread (or parallel via Bevy's scheduler). They poll channels, they don't `await`.
+- **Order validation** — Deterministic, runs inside the sim. No network, no async.
+- **Audio playback** — `ic-audio` receives events synchronously from ECS and plays sounds. The audio backend (Kira) manages its own threads internally.
+
+#### Design Principles
+
+1. **One tokio runtime per process, on a dedicated thread** (for Bevy binaries). Never nest runtimes or call `block_on` from within Bevy's executor.
+2. **Channels are the universal bridge.** `crossbeam-channel` for sync↔async boundaries. `tokio::sync::mpsc` within tokio tasks. Already the established pattern for replay writing and voice pipeline.
+3. **Platform divergence lives behind `IoBridge`.** Bevy systems send commands and poll results through the trait. They never import `tokio` or `wasm-bindgen-futures` directly.
+4. **Sans-I/O libraries are preferred** where available (str0m for WebRTC). They eliminate async runtime coupling and work on every platform.
+5. **The sim is the sync anchor.** Everything radiates outward from the deterministic sim: the Bevy scheduler drives systems synchronously, systems communicate with async I/O through channels, and results flow back as ECS events. The sim never waits for I/O.
+
 ### Crate Design Notes
 
 Most crates are self-explanatory from the dependency graph, but three that appear in the graph without dedicated design doc sections are detailed here.
@@ -57,9 +241,169 @@ pub struct Jukebox {
 }
 ```
 
-**Format support:** `.aud` (IMA ADPCM, via `ra-formats` decoder), `.ogg`, `.wav`, `.mp3` (via Bevy/rodio). Audio backend is abstracted by Bevy — no platform-specific code in `ic-audio`.
+**Format support:** `.aud` (IMA ADPCM, via `ra-formats` decoder), `.ogg`, `.wav`, `.mp3` (via Kira/`bevy_kira_audio`). Audio backend is Kira (chosen over rodio/Oddio for sub-frame scheduling, clock-synced crossfade, and per-track DSP). No platform-specific code in `ic-audio`.
+
+> **Complete audio design:** Library evaluation, bus architecture, dynamic music FSM, EVA priority system, sound pooling, WASM constraints, and performance budget are specified in `research/audio-library-music-integration-design.md`.
 
 **Phase:** Core audio (effects, EVA, music) in Phase 3. Spatial audio and ambient soundscapes in Phase 3-4.
+
+##### Sim → Audio Event Bridge
+
+The sim is pure (invariant #1) and emits no I/O. Audio events are therefore produced by **Bevy observer systems in `ic-game`** that detect sim state changes and emit typed Bevy events consumed by `ic-audio`. This section defines the formal event taxonomy that bridges the two.
+
+**Event taxonomy:**
+
+| Event type | Trigger source (sim state change) | Audio bus target |
+| --- | --- | --- |
+| `CombatAudioEvent` | Weapon fire, projectile impact, explosion, unit death | `SfxBus` (WeaponSub / ExplosionSub) |
+| `ProductionAudioEvent` | Build started, build complete, unit ready | `SfxBus` (UiSub) |
+| `MovementAudioEvent` | Unit acknowledge, unit move start, formation move | `VoiceBus` (UnitSub) |
+| `EvaNotification` | Base under attack, unit lost, building complete, nuke detected, etc. | `VoiceBus` (EvaSub) |
+| `MusicStateChange` | Combat intensity shift, mission end (victory/defeat) | `MusicBus` |
+| `AmbientAudioEvent` | Biome change (map load), weather transition (D022) | `AmbientBus` (BiomeSub / WeatherSub) |
+| `UiAudioEvent` | Button click, menu transition, chat message received | `SfxBus` (UiSub) |
+
+**Rust type definitions:**
+
+```rust
+/// Combat sounds — one event per projectile hit, not per salvo.
+/// Spatial: always positional.
+#[derive(Event, Clone)]
+pub struct CombatAudioEvent {
+    pub kind: CombatSoundKind,
+    pub sound_id: SoundId,
+    pub position: WorldPos,
+    pub intensity: f32,         // 0.0-1.0, scales volume (explosion size, weapon caliber)
+}
+
+#[derive(Clone, Copy)]
+pub enum CombatSoundKind {
+    WeaponFire,
+    ProjectileImpact,
+    Explosion,
+    UnitDeath,
+}
+
+/// Production sounds — non-positional (played as UI feedback).
+#[derive(Event, Clone)]
+pub struct ProductionAudioEvent {
+    pub kind: ProductionSoundKind,
+    pub actor_id: ActorId,      // what was built — used for sound lookup in YAML
+    pub player: PlayerId,
+}
+
+#[derive(Clone, Copy)]
+pub enum ProductionSoundKind {
+    BuildStarted,
+    BuildComplete,
+    UnitReady,
+}
+
+/// Movement and acknowledgment sounds.
+/// Spatial for move-start engine sounds; non-positional for voice acknowledgments.
+#[derive(Event, Clone)]
+pub struct MovementAudioEvent {
+    pub kind: MovementSoundKind,
+    pub unit_type: ActorId,
+    pub position: WorldPos,
+    pub player: PlayerId,
+}
+
+#[derive(Clone, Copy)]
+pub enum MovementSoundKind {
+    Acknowledge,    // "Yes sir", "Affirmative" — voice response to player command
+    MoveStart,      // Engine/footstep sound when unit begins moving
+}
+
+/// EVA voice line trigger. Routed to the EvaSystem priority queue.
+/// See research/audio-library-music-integration-design.md § EVA Priority Queue
+/// for queue depth, cooldown, and interruption rules.
+#[derive(Event, Clone)]
+pub struct EvaNotification {
+    pub sound_id: SoundId,
+    pub priority: EvaPriority,
+    pub notification_type: NotificationType,  // cooldown key — reuses sim's enum
+}
+
+/// Dynamic music mood transition request.
+/// Emitted when combat score thresholds are crossed or mission ends.
+/// See research/audio-library-music-integration-design.md § Dynamic Music FSM
+/// for threshold values and transition rules.
+#[derive(Event, Clone)]
+pub struct MusicStateChange {
+    pub target_mood: MusicMood,   // Ambient, Buildup, Combat, Victory, Defeat
+    pub crossfade_ms: u32,        // override default crossfade duration (0 = use default)
+}
+
+/// Ambient soundscape changes — biome or weather transitions.
+#[derive(Event, Clone)]
+pub struct AmbientAudioEvent {
+    pub kind: AmbientSoundKind,
+    pub sound_id: SoundId,
+    pub crossfade_ms: u32,        // smooth transition between ambient loops
+}
+
+#[derive(Clone, Copy)]
+pub enum AmbientSoundKind {
+    BiomeChange,     // map load or camera moved to different biome region
+    WeatherChange,   // rain start/stop, storm intensity change (D022)
+}
+
+/// UI interaction sounds — non-positional, immediate playback.
+#[derive(Event, Clone)]
+pub struct UiAudioEvent {
+    pub sound_id: SoundId,
+}
+```
+
+**Event flow:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ ic-sim (deterministic)                                          │
+│   Weapon fires → UnitState changes → Production completes → …  │
+│   (pure state transitions, no events emitted)                   │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ state diffs visible via ECS queries
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ ic-game  (Bevy observer systems, non-deterministic)             │
+│                                                                 │
+│   on_weapon_fire()      → emit CombatAudioEvent                 │
+│   on_unit_death()       → emit CombatAudioEvent + EvaNotification│
+│   on_production_done()  → emit ProductionAudioEvent + EvaNotification│
+│   on_move_order()       → emit MovementAudioEvent               │
+│   on_notification()     → emit EvaNotification                  │
+│   on_mission_end()      → emit MusicStateChange                 │
+│   on_weather_change()   → emit AmbientAudioEvent                │
+│   on_ui_interaction()   → emit UiAudioEvent                     │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ Bevy events
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ ic-audio  (Bevy observer systems)                               │
+│                                                                 │
+│   on_combat_event()     → SfxBus (WeaponSub / ExplosionSub)    │
+│   on_production_event() → SfxBus (UiSub)                        │
+│   on_movement_event()   → VoiceBus (UnitSub)                    │
+│   on_eva_notification() → EvaSystem priority queue → VoiceBus   │
+│   on_music_change()     → DynamicMusicState FSM → MusicBus      │
+│   on_ambient_event()    → AmbientBus (BiomeSub / WeatherSub)    │
+│   on_ui_audio()         → SfxBus (UiSub)                        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Granularity rules:**
+
+- **Combat:** One `CombatAudioEvent` per projectile hit, not per salvo. This preserves spatial accuracy — each impact plays at its own `WorldPos`. The sound pool and instance limits in `ic-audio` handle the case where 50 shells land in one frame (see `research/audio-library-music-integration-design.md` § Sound Pooling and Instance Limits).
+- **Acknowledgments:** One `MovementAudioEvent::Acknowledge` per unit per command, with deduplication — if the same `unit_type` emits an acknowledgment within 100ms, only the first plays. This matches RA1 behavior (select 10 tanks, right-click = one "Acknowledged", not ten).
+- **EVA:** `EvaNotification` feeds into the existing priority queue (`EvaSystem`). Mapping from sim `NotificationType` to `EvaPriority` is YAML-driven (see `gameplay-systems.md` § Notification System). The queue handles cooldowns, max depth, and interruption logic — this bridge layer only emits the event; `ic-audio` owns all queuing and playback policy.
+- **Music:** `MusicStateChange` is emitted sparingly — only when the `update_combat_score()` system in `ic-audio` crosses a threshold (combat score > 0.3 → Combat mood) or when a mission ends. The `DynamicMusicState` FSM in `ic-audio` owns all transition logic, linger timers, and crossfade scheduling.
+- **Production and UI:** Non-positional, immediate playback. No deduplication needed — these events are infrequent by nature.
+
+**Key constraint:** These event types live in `ic-audio` (or a shared types module) and are emitted by observer systems in `ic-game`. They are **not** emitted by `ic-sim` — the sim produces pure state changes, and the observer layer in `ic-game` translates those into audio events. This preserves invariant #1 (simulation is pure, no I/O).
+
+> **Cross-references:** Bus architecture and mixer topology: `research/audio-library-music-integration-design.md` § 2. EVA priority queue and interruption rules: same document § 4. Dynamic music FSM and combat score thresholds: same document § 3. Notification types and YAML mapping: `src/architecture/gameplay-systems.md` § Notification System.
 
 #### `ic-ai` — Skirmish AI and Adaptive Difficulty
 

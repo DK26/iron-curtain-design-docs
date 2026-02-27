@@ -173,6 +173,15 @@ Recommended labels for cross-repo coordination:
 - `perf-risk`
 - `security-policy-gate`
 
+## Ready-to-Copy Filled-In Versions
+
+For the **IC engine/game repository** (primary Rust codebase), pre-filled versions of both templates are available — all placeholders replaced with IC-specific details:
+
+- **`tracking/ic-engine-agents.md`** — filled-in `AGENTS.md` with architectural invariants, crate workspace, build commands, milestone targets, and LLM/agent rules
+- **`tracking/ic-engine-code-index.md`** — filled-in `CODE-INDEX.md` with task routing table, all 13 crate subsystem entries, cross-cutting boundaries, and evidence paths
+
+Copy these into a new IC engine repo and update the baseline revision pin. For non-engine repos (relay server, tools, prototypes), use the generic templates and fill in the placeholders.
+
 ## Acceptance Criteria (Bootstrap Complete)
 
 A new external code repo is considered design-aligned only when:

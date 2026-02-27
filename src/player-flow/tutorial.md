@@ -8,7 +8,24 @@ The tutorial system (D065) has five layers that integrate throughout the flow ra
 Main Menu → Campaign → Commander School
 ```
 
-A dedicated 10-mission tutorial campaign using the D021 branching graph system. Teaches: camera, selection, movement, combat, building, harvesting, tech tree, control groups, multiplayer basics, advanced tactics, and camera bookmarks. Branching allows skipping known topics. Tutorial AI opponents are below Easy difficulty. The campaign content is shared across desktop and touch platforms; prompt wording and UI highlights adapt to `InputCapabilities`/`ScreenClass`.
+A focused 6-mission tutorial campaign using the D021 branching graph system, structured around **dopamine-first design**: achievement first, theory second. The player blows things up in mission 01 (learning camera and selection *during* combat), then builds because they want more units, then learns economy because they ran out of money. Boring fundamentals are taught *between* exciting moments, never as prerequisites.
+
+The tutorial covers only the basics — navigation, core features, buttons, and shortcuts. Unit counters, defense strategy, tech tree exploration, superweapons, and advanced tactics are deliberately left for the player to discover through skirmish and multiplayer.
+
+Each mission also weaves in **IC-specific features** that have no equivalent in classic Red Alert — attack-move, rally points, parallel factories, unit stances, weather effects, veterancy, smart box-select, and render mode toggle. Hint wording adapts by experience profile: veterans see "IC adds rally points" while newcomers see "Right-click to set a rally point." This ensures returning RA players understand what's *different* while newcomers learn everything fresh.
+
+**Mission flow (dopamine-first order):**
+
+| # | Mission | Dopamine Moment | Fundamental Taught | IC Feature Woven In |
+|---|---------|----------------|-------------------|---------------------|
+| 01 | First Blood | Explosions in 30 seconds | Camera, selection, attack | Attack-move |
+| 02 | Build Your Army | Deploying units you built | Construction, power, production | Rally points, parallel factories |
+| 03 | Supply Line | First ore delivery | Economy, harvesting | Smart box-select |
+| 04 | Command & Control | Multi-group attack feels effortless | Control groups, hotkeys, bookmarks | Unit stances, render toggle (F1) |
+| 05 | Iron Curtain Rising | Winning a real skirmish | Everything integrated (capstone) | Weather effects, veterancy |
+| 06 | Multiplayer Intro | First online interaction | Lobbies, chat, etiquette | Balance presets, experience profiles |
+
+Every mission awards an achievement on completion (D036). Branching allows skipping known topics. Tutorial AI opponents are below Easy difficulty. The campaign content is shared across desktop and touch platforms; prompt wording and UI highlights adapt to `InputCapabilities`/`ScreenClass`. The tutorial teaches game mechanics, gameplay, options, buttons, and shortcuts — everything else is for the player to discover through play.
 
 ### Layer 2 — Contextual Hints
 
@@ -24,7 +41,9 @@ Appear throughout the game as translucent overlay callouts at the point of need:
 └──────────────────────────────────────────┘
 ```
 
-YAML-driven triggers, adaptive suppression (hints shown less frequently as the player demonstrates mastery), experience-profile-aware (different hints for vanilla vs. OpenRA vs. Remastered veterans). Hint text is rendered from semantic action prompts, so desktop can say "Right-click to move" while touch devices render "Tap ground to move" for the same hint definition.
+YAML-driven triggers, adaptive suppression (hints shown less frequently as the player demonstrates mastery), experience-profile-aware (different hints for vanilla vs. OpenRA vs. Remastered veterans). A dedicated **IC new features** hint category surfaces IC-specific mechanics (rally points, attack-move, unit stances, weather, veterancy, parallel factories, smart selection, render toggle) at point of need — enabled by default for all profiles including veterans. Hint text is rendered from semantic action prompts, so desktop can say "Right-click to move" while touch devices render "Tap ground to move" for the same hint definition.
+
+**Feature Smart Tips:** The same Layer 2 hint pipeline extends to non-gameplay screens — Workshop, Settings, Player Profile, and Main Menu — using UI-context triggers (`ui_screen_enter`, `ui_element_focus`, `ui_screen_idle`, `ui_feature_unused`). These tips explain features in plain language for users encountering them for the first time: what Workshop categories mean, how mod profiles work, what experience profiles do, etc. A dedicated `feature_discovery` hint category (default On for all profiles) replaces the old milestone-based Progressive Feature Discovery system. See D065 § Feature Smart Tips for the full YAML catalog.
 
 ### Layer 3 — New Player Pipeline
 

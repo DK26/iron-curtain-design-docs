@@ -56,6 +56,11 @@ pub struct PartitionedWorld {
 ```
 
 **Actual solution: Fog-Authoritative Server**
+
+> **Full design specification:** For the complete FogAuth server-side sim loop, visibility computation, entity state delta wire format (byte-level), Fiedler priority accumulator algorithm, bandwidth budget model, client reconciler, and deployment cost analysis, see `research/fog-authoritative-server-design.md`.
+>
+> **FogAuth wire format:** Complete byte-level entity delta format (EntityEnter/Update/Leave with offset tables), bandwidth budget constants (64 KB/s, 2184 bytes/tick, capacity estimates per delta type), and Fiedler priority accumulator algorithm (1024-scale tier constants, staleness bonus formula, starvation timing guarantees) are specified in `research/fog-authoritative-server-design.md`.
+
 Server runs full sim, sends each client only entities they can see. Breaks pure lockstep. Requires server compute per game.
 
 ```rust
