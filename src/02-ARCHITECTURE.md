@@ -14,16 +14,16 @@
 
 **Bevy provides:**
 
-| Concern     | Bevy Subsystem         | Notes                                                            |
-| ----------- | ---------------------- | ---------------------------------------------------------------- |
-| Windowing   | `bevy_winit`           | Cross-platform, handles lifecycle events                         |
-| Rendering   | `bevy_render` + `wgpu` | Custom isometric sprite passes; 3D pipeline available to modders |
-| ECS         | `bevy_ecs`             | Archetypes, system scheduling, change detection                  |
-| Asset I/O   | `bevy_asset`           | Hot-reloading, platform-agnostic (WASM/mobile-safe)              |
+| Concern     | Bevy Subsystem             | Notes                                                                                                                                  |
+| ----------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Windowing   | `bevy_winit`               | Cross-platform, handles lifecycle events                                                                                               |
+| Rendering   | `bevy_render` + `wgpu`     | Custom isometric sprite passes; 3D pipeline available to modders                                                                       |
+| ECS         | `bevy_ecs`                 | Archetypes, system scheduling, change detection                                                                                        |
+| Asset I/O   | `bevy_asset`               | Hot-reloading, platform-agnostic (WASM/mobile-safe)                                                                                    |
 | Audio       | Kira via `bevy_kira_audio` | Four-bus mixer (Music/SFX/Voice/Ambient); `ic-audio` wraps for .aud/.ogg/EVA. See `research/audio-library-music-integration-design.md` |
-| Dev tools   | `egui` via `bevy_egui` | Immediate-mode debug overlays                                    |
-| Scripting   | `mlua` (Bevy resource) | Lua embedding, integrated as non-send resource                   |
-| Mod runtime | `wasmtime` / `wasmer`  | WASM sandboxed execution (Bevy system, not Bevy plugin)          |
+| Dev tools   | `egui` via `bevy_egui`     | Immediate-mode debug overlays                                                                                                          |
+| Scripting   | `mlua` (Bevy resource)     | Lua embedding, integrated as non-send resource                                                                                         |
+| Mod runtime | `wasmtime` / `wasmer`      | WASM sandboxed execution (Bevy system, not Bevy plugin)                                                                                |
 
 ## Simulation / Render Split (Critical Architecture)
 
@@ -398,19 +398,20 @@ RA1 registers `StandardOrderValidator` (ownership, affordability, prerequisites,
 
 ## Architecture Sub-Pages
 
-| Topic | File |
-|-------|------|
-| Extended Gameplay Systems (RA1) | [gameplay-systems.md](architecture/gameplay-systems.md) |
-| Game Loop | [game-loop.md](architecture/game-loop.md) |
-| State Recording & Replay Infrastructure | [state-recording.md](architecture/state-recording.md) |
-| Pathfinding & Spatial Queries | [pathfinding.md](architecture/pathfinding.md) |
-| Platform Portability | [platform-portability.md](architecture/platform-portability.md) |
-| UI Theme System (D032) | [ui-theme.md](architecture/ui-theme.md) |
-| QoL & Gameplay Behavior Toggles (D033) | [qol-toggles.md](architecture/qol-toggles.md) |
-| Red Alert Experience Recreation Strategy | [ra-experience.md](architecture/ra-experience.md) |
-| First Runnable — Bevy Loading Red Alert Resources | [first-runnable.md](architecture/first-runnable.md) |
-| Crate Dependency Graph, Binary Architecture & Async Runtime | [crate-graph.md](architecture/crate-graph.md) |
-| Install & Source Layout | [install-layout.md](architecture/install-layout.md) |
-| IC SDK & Editor Architecture (D038 + D040) | [sdk-editor.md](architecture/sdk-editor.md) |
-| Multi-Game Extensibility (Game Modules) | [multi-game.md](architecture/multi-game.md) |
-| Type-Safety Architectural Invariants | [type-safety.md](architecture/type-safety.md) |
+| Topic                                                       | File                                                            |
+| ----------------------------------------------------------- | --------------------------------------------------------------- |
+| Extended Gameplay Systems (RA1)                             | [gameplay-systems.md](architecture/gameplay-systems.md)         |
+| Game Loop                                                   | [game-loop.md](architecture/game-loop.md)                       |
+| State Recording & Replay Infrastructure                     | [state-recording.md](architecture/state-recording.md)           |
+| Pathfinding & Spatial Queries                               | [pathfinding.md](architecture/pathfinding.md)                   |
+| Platform Portability                                        | [platform-portability.md](architecture/platform-portability.md) |
+| UI Theme System (D032)                                      | [ui-theme.md](architecture/ui-theme.md)                         |
+| QoL & Gameplay Behavior Toggles (D033)                      | [qol-toggles.md](architecture/qol-toggles.md)                   |
+| Red Alert Experience Recreation Strategy                    | [ra-experience.md](architecture/ra-experience.md)               |
+| First Runnable — Bevy Loading Red Alert Resources           | [first-runnable.md](architecture/first-runnable.md)             |
+| Crate Dependency Graph, Binary Architecture & Async Runtime | [crate-graph.md](architecture/crate-graph.md)                   |
+| Install & Source Layout                                     | [install-layout.md](architecture/install-layout.md)             |
+| IC SDK & Editor Architecture (D038 + D040)                  | [sdk-editor.md](architecture/sdk-editor.md)                     |
+| Multi-Game Extensibility (Game Modules)                     | [multi-game.md](architecture/multi-game.md)                     |
+| Type-Safety Architectural Invariants                        | [type-safety.md](architecture/type-safety.md)                   |
+| API Misuse Analysis & Type-System Defenses                  | [api-misuse-defense.md](architecture/api-misuse-defense.md)     |

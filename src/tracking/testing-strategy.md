@@ -98,6 +98,48 @@ pub fn assert_no_false_positive(replay: &ReplayFile);
 
 /// Run a scenario with deliberate desync injection and assert detection.
 pub fn assert_desync_detected(scenario: &Scenario, desync_at: SimTick);
+
+/// Run a scenario and measure tick time, returning percentile statistics.
+pub fn benchmark_scenario(scenario: &Scenario, ticks: usize) -> TickStats;
+
+/// Run a scenario and assert zero heap allocations in the hot path.
+pub fn assert_zero_alloc_hot_path(scenario: &Scenario, ticks: usize);
+
+/// Run a scenario with a sandbox module and assert all escape vectors are blocked.
+pub fn assert_sandbox_contained(module: &WasmModule, escape_vectors: &[EscapeVector]);
+
+/// Run order validation and assert sim state is unchanged (purity check).
+pub fn assert_validation_pure(state: &SimState, orders: &[PlayerOrder]);
+
+/// Run two sim instances with identical input and assert hash match at every tick.
+pub fn assert_twin_determinism(scenario: &Scenario, seed: u64, ticks: usize);
+
+/// Run the same scenario on the current platform and compare hash against
+/// a stored cross-platform reference hash.
+pub fn assert_cross_platform_hash(scenario: &Scenario, reference: &HashFile);
+
+/// Run snapshot round-trip and assert byte-exact reconstruction.
+pub fn assert_snapshot_roundtrip(state: &SimState) -> RoundTripResult;
+
+/// Run a campaign mission sequence and verify roster carryover.
+pub fn assert_roster_carryover(campaign: &CampaignGraph, mission_sequence: &[MissionId]);
+
+/// Run a mod loading scenario and verify sandbox limits are enforced.
+pub fn assert_mod_sandbox_limits(mod_path: &Path, limits: &SandboxLimits);
+```
+
+### Tick Statistics (`TickStats`)
+
+```rust
+/// Per-scenario benchmark output — all values in microseconds.
+pub struct TickStats {
+    pub p50: u64,
+    pub p95: u64,
+    pub p99: u64,
+    pub max: u64,
+    pub heap_allocs: u64,      // total heap allocations during measurement window
+    pub peak_rss_bytes: u64,   // peak resident set size
+}
 ```
 
 ### Performance Benchmark Suite (`ic-bench`)
@@ -323,6 +365,147 @@ Detailed test specifications organized by subsystem. Each entry defines: what is
 | Invalid trigger rejection   | Generated Lua triggers with syntax errors or undefined references | Validation pass catches all errors before mission loads                | T3   |
 | Invalid unit type rejection | Generated YAML referencing nonexistent unit types                 | Content validator rejects with specific missing-type errors            | T3   |
 | Seed reproducibility        | Generate mission with same seed twice                             | Identical YAML output                                                  | T4   |
+
+## Property-Based Testing Specifications (proptest)
+
+Each property is a formal invariant verified across thousands of randomly generated inputs. Properties that fail produce a minimal counterexample for debugging.
+
+| Property                                   | Generator                                                                                                                                       | Invariant Assertion                                                                                                                                                                 | Shrink Target                                                     | Tier |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ---- |
+| Sim determinism                            | Random seed × random order sequence (up to 200 orders over 500 ticks)                                                                           | Two runs with identical seed+orders produce identical `state_hash()` at every tick                                                                                                  | Minimal divergent tick + minimal order sequence                   | T3   |
+| Order validation purity                    | Random `PlayerOrder` × random `SimState`                                                                                                        | `validate_order()` never mutates sim state (hash before == hash after)                                                                                                              | Minimal order type that causes mutation                           | T3   |
+| Order validation totality                  | Random `PlayerOrder` with arbitrary field values                                                                                                | `validate_order()` always returns `OrderValidity` — never panics, never hangs                                                                                                       | Minimal panicking order                                           | T3   |
+| Snapshot round-trip identity               | Random sim state after N random ticks                                                                                                           | `restore(snapshot(state))` produces `state_hash()` identical to original                                                                                                            | Minimal divergent component                                       | T3   |
+| Delta snapshot correctness                 | Random sim state + random mutations                                                                                                             | `apply_delta(delta_snapshot(baseline, current))` to baseline equals current state                                                                                                   | Minimal mutation set that breaks delta                            | T3   |
+| Fixed-point arithmetic closure             | Random `FixedPoint` × `FixedPoint` for add/sub/mul/div                                                                                          | Result stays within `i32` range; no silent overflow; division by zero returns error                                                                                                 | Minimal overflow pair                                             | T3   |
+| Pathfinding completeness                   | Random map topology × random start/end where path exists                                                                                        | Pathfinder always returns a path if one exists (checked against BFS ground truth)                                                                                                   | Minimal topology where pathfinder fails                           | T3   |
+| Pathfinding determinism                    | Random map × random start/end × two runs                                                                                                        | Identical path output for identical input                                                                                                                                           | Minimal map where paths diverge                                   | T3   |
+| Workshop dependency resolution termination | Random dependency graphs (1–100 packages, 0–10 deps each)                                                                                       | Resolver terminates within bounded time; returns valid order or error; no infinite loop                                                                                             | Minimal graph that causes non-termination                         | T3   |
+| Campaign DAG validity                      | Random mission graphs (1–50 missions, 1–5 outcomes each)                                                                                        | `CampaignGraph::new()` accepts iff acyclic, fully reachable, no dangling refs                                                                                                       | Minimal invalid graph accepted or valid graph rejected            | T3   |
+| UnitTag generation safety                  | Random pool operations (alloc/free sequences, 10K ops)                                                                                          | No two live units ever share the same `UnitTag`; stale tags always resolve to `None`                                                                                                | Minimal sequence producing tag collision                          | T3   |
+| Chat scope isolation                       | Random chat messages × random scope assignments                                                                                                 | `ChatMessage<TeamScope>` is never delivered to non-team recipients                                                                                                                  | Minimal routing violation                                         | T2   |
+| BoundedVec overflow safety                 | Random push/pop sequences against `BoundedVec<T, N>`                                                                                            | Length never exceeds N; push beyond N returns `Err`; no panic                                                                                                                       | Minimal violating sequence                                        | T1   |
+| BoundedCvar range enforcement              | Random `set()` calls with values across full `T` range                                                                                          | `get()` always returns value within `[min, max]`; no value escapes bounds                                                                                                           | Minimal value that escapes bounds                                 | T1   |
+| Merkle tree consistency                    | Random component mutations × tree rebuild                                                                                                       | Root hash changes iff at least one leaf changed; unchanged leaves produce same hash                                                                                                 | Minimal mutation where root hash is wrong                         | T3   |
+| Weather schedule determinism               | Random weather configurations × two sim instances                                                                                               | Weather state identical at every tick across instances with same seed                                                                                                               | Minimal divergent config                                          | T2   |
+| Anti-cheat NaN pipeline guard              | Random f64 sequences (incl. NaN, Inf, subnormal) fed to all anti-cheat scoring paths (EWMA, behavioral_score, TrustFactors, PopulationBaseline) | No output field is ever NaN or Inf; NaN inputs produce fail-closed sentinel values (1.0 for suspicion scores, population median for trust factors)                                  | Minimal input that produces NaN in any output field               | T3   |
+| WASM timing oracle resistance              | Random spatial query inputs × random fog configurations (0–100% fogged entities in query region)                                                | `ic_query_units_in_range()` execution time does not vary beyond ±10% based on fogged entity count (measured over 1000 iterations per configuration; timer resolution ≥ microsecond) | Minimal fog configuration where timing variance exceeds threshold | T3   |
+| Replay network isolation                   | Random replay file × random embedded YAML with external URLs                                                                                    | During `SelfContained` replay playback, zero network I/O syscalls are issued; all external asset references resolve to placeholder                                                  | Minimal replay content that triggers network access               | T2   |
+| Key rotation sequence monotonicity         | Random concurrent rotation attempts × random timing                                                                                             | `rotation_sequence_number` is strictly monotonically increasing; no two rotations share a sequence number; cooldown-violating rotations are rejected except Emergency               | Minimal concurrent rotation pair that violates monotonicity       | T2   |
+| CRL tiered policy correctness              | Random credential status × random match context (ranked/unranked/LAN)                                                                           | Ranked context hard-fails on unknown CRL status; unranked grace-period allows 24h; LAN soft-fails with warning; no context allows revoked credentials                               | Minimal context where wrong policy is applied                     | T2   |
+
+**proptest configuration:** 256 cases per property in T1/T2 (PR gate speed), 10,000 cases in T3 (nightly thoroughness). Regression files committed to repository — discovered failures are replayed in T1 forever.
+
+## API Misuse Test Matrix
+
+Systematic tests derived from the API misuse analysis in `architecture/api-misuse-defense.md`. Each test verifies that a specific misuse vector is blocked by either the type system (compile-time) or runtime validation.
+
+### Compile-Time Defense Verification
+
+These defenses are verified by the type system — no runtime test needed. They are verified during code review and tracked here for completeness. If a refactor accidentally removes the defense, `cargo check` will catch it.
+
+| Defense                                                 | Mechanism                                          | What Would Break It                                             | Monitoring                |
+| ------------------------------------------------------- | -------------------------------------------------- | --------------------------------------------------------------- | ------------------------- |
+| S5: `ReconcilerToken` prevents unauthorized corrections | `_private: ()` field                               | Making field `pub` or adding `Default` derive                   | Code review checklist     |
+| S8: `Simulation` is `!Sync`                             | `&mut self` on all mutation methods                | Adding `unsafe impl Sync`                                       | `clippy` + code review    |
+| O6: `OrderBudget` unconstructible externally            | `_private: ()` field                               | Making inner fields `pub`                                       | Code review checklist     |
+| O7: `Verified<PlayerOrder>` restricted construction     | `pub(crate)` on `new_verified()`                   | Changing to `pub`                                               | Code review checklist     |
+| W1: `WasmTerminated` has no `execute()`                 | Typestate pattern                                  | Adding `execute()` to terminated state                          | Code review + trait audit |
+| W7: `FsReadCapability` unconstructible externally       | `_private: ()` field                               | Making field `pub`                                              | Code review checklist     |
+| P1: Workshop `extract()` requires `PkgVerifying`        | Typestate consumes `self`                          | Adding `extract()` to `PkgDownloading`                          | Code review + trait audit |
+| C1: `MissionLoading` has no `complete()`                | Typestate pattern                                  | Adding `complete()` to loading state                            | Code review + trait audit |
+| B4: Read buffer immutability                            | `read()` returns `&T`                              | Returning `&mut T` from `read()`                                | Code review checklist     |
+| N7: `SyncHash` ≠ `StateHash`                            | Distinct newtypes, no `From` impl                  | Adding `From<SyncHash> for StateHash`                           | `clippy` + code review    |
+| M1: Chat scope branding                                 | `ChatMessage<TeamScope>` ≠ `ChatMessage<AllScope>` | Adding `From<ChatMessage<TeamScope>> for ChatMessage<AllScope>` | Code review checklist     |
+
+### Runtime Defense Test Specifications
+
+Tests verifying runtime defenses against misuse vectors. Each test has a specific assertion, exact pass/fail criteria, and measurement metric.
+
+| ID  | Misuse Vector                | Test Method                                               | Exact Assertion                                                                                 | Measurement Metric                                           | Tier |
+| --- | ---------------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---- |
+| S1  | Future-tick orders           | Call `apply_tick(tick=N+2)` when sim is at tick N         | Returns `TickMismatchError { expected: N, got: N+2 }`                                           | Error variant + field values match                           | T1   |
+| S3  | Cross-game snapshot restore  | `Simulation::restore()` with snapshot from different seed | Returns `SnapshotError::ConfigMismatch { field: "game_seed" }`                                  | Error variant, sim state_hash unchanged                      | T2   |
+| S4  | Corrupted snapshot           | Flip random byte in serialized snapshot, call `restore()` | Returns `SnapshotError::IntegrityCheckFailed`                                                   | 100 random bit-flips, 100% detection rate                    | T3   |
+| S6  | Float injection via snapshot | Embed `f32` bytes in snapshot where `FixedPoint` expected | `serde` deserialization returns type error                                                      | Error type is `DeserializationError`, not panic              | T3   |
+| S7  | Unknown player order         | `inject_orders()` with non-existent `PlayerId(999)`       | `OrderRejection::UnknownPlayer { id: 999 }`                                                     | Rejection logged in telemetry with player ID                 | T1   |
+| S9  | Out-of-bounds coordinates    | Move order to `WorldPos { x: 999999, y: 999999, z: 0 }`   | `OrderRejection::OutOfBounds { pos, map_bounds }`                                               | Both position and bounds included in error                   | T1   |
+| O1  | Stale UnitTag after death    | Kill unit, send attack order targeting dead unit's tag    | `OrderRejection::StaleTarget { tag, current_generation }`                                       | Generation mismatch detected                                 | T1   |
+| O2  | Order rate limit             | Send 201 orders in one tick (budget=200)                  | First 200 accepted, 201st returns `BudgetExhausted`                                             | Exact count: accepted=200, rejected=1                        | T2   |
+| O3  | Timestamp manipulation       | `sub_tick_time = 999999999` (far future)                  | Relay clamps to envelope max (e.g., 66667µs)                                                    | Clamped value ≤ tick_window_us; telemetry event fires        | T2   |
+| O8  | Oversized unit selection     | Move order with 100 UnitTags (max=40)                     | `OrderRejection::SelectionTooLarge { count: 100, max: 40 }`                                     | Both count and max in error                                  | T1   |
+| N2  | Handshake replay             | Capture challenge response, replay on new connection      | Connection terminated with `AuthError::NonceReused`                                             | Connection drops within 100ms of replay                      | T2   |
+| N6  | Half-open connection flood   | Open 10,000 TCP connections, don't complete handshake     | All timeout within configured window (default: 5s); relay accepts new connections after cleanup | Peak memory < 50MB during flood; recovery < 1s               | T3   |
+| W3  | WASM memory bomb             | `memory.grow(65536)` from WASM module                     | Growth denied; module receives trap; host continues                                             | Host memory unchanged; module terminated cleanly             | T3   |
+| W5  | WASM infinite loop           | `loop {}` in WASM entry point                             | Fuel exhausted; module trapped; host continues                                                  | Execution terminates within fuel budget; game tick completes | T3   |
+| L1  | Lua string bomb              | `string.rep("a", 2^30)`                                   | Memory limit hit; script receives error; host continues                                         | Host memory unchanged; script terminated                     | T3   |
+| L2  | Lua infinite loop            | `while true do end`                                       | Instruction limit hit; script terminated                                                        | Script terminates within instruction budget                  | T3   |
+| L3  | Lua system access            | Call `os.execute("rm -rf /")`                             | Returns nil (function not registered)                                                           | No side effects on host filesystem                           | T1   |
+| L5  | Lua UnitTag forgery          | Script creates tag value for enemy unit, calls host API   | `SandboxError::OwnershipViolation { tag, caller, owner }`                                       | Error includes all three IDs                                 | T3   |
+| U1  | Stale UnitTag resolution     | Alloc tag, free slot, resolve original tag                | `UnitPool::resolve()` returns `None`                                                            | Generation mismatch, no panic                                | T1   |
+| U2  | Pool exhaustion              | Allocate units beyond pool capacity (2049 for RA1)        | `UnitPoolError::PoolExhausted` after 2048th                                                     | Exact count: 2048 succeed, 2049th fails                      | T2   |
+| F1  | Negative health YAML         | `health: { max: -100 }` in unit definition                | `SchemaError::InvalidValue { field: "health.max", value: "-100", constraint: "> 0" }`           | Error includes file path + line number                       | T1   |
+| F2  | Circular YAML inheritance    | `A inherits B inherits A`                                 | `RuleLoadError::CircularInheritance { chain: "A → B → A" }`                                     | Chain string matches cycle path                              | T1   |
+| F3  | Unknown TOML key             | `unknwon_feld = true` in config.toml                      | `DeserializationError::UnknownField { field: "unknwon_feld", valid: [...] }`                    | Error lists available fields                                 | T1   |
+| A1  | Zip Slip in .oramap          | Entry path `../../etc/passwd` in archive                  | `PathBoundaryError::EscapeAttempt { path, boundary }`                                           | Extract produces zero files outside boundary                 | T3   |
+| A2  | Truncated .mix               | Header claims 47 files, data for 31                       | `MixParseError::FileCountMismatch { declared: 47, actual: 31 }`                                 | Both counts in error                                         | T1   |
+
+## Integration Scenario Matrix
+
+End-to-end scenarios testing multiple systems interacting. Each scenario has explicit setup, action sequence, and verification points.
+
+| Scenario                        | Systems Under Test              | Setup                                                              | Action Sequence                                                           | Verification Points                                                                                                                       | Tier |
+| ------------------------------- | ------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ---- |
+| Full match lifecycle            | sim + net + replay              | 2-player game, relay network, 5-min scenario                       | Lobby → loading → 1000 ticks → surrender → post-game                      | (1) Replay file exists, (2) replay hash matches live hash, (3) post-game stats match sim query                                            | T2   |
+| Reconnection mid-combat         | sim + net + snapshot            | 2-player game, combat in progress at tick 300                      | P2 disconnects → 200 ticks → P2 reconnects with snapshot → 500 more ticks | (1) Snapshot accepted, (2) state hashes match after reconnect, (3) no combat resolution errors                                            | T2   |
+| Mod load with conflicts         | modding + YAML + sim            | Two mods overriding `rifle_infantry.cost` with different values    | Load profile with explicit priority → start game → build rifle infantry   | (1) Conflict detected and logged, (2) higher-priority mod wins, (3) cost in game matches winner, (4) fingerprint identical across clients | T3   |
+| Workshop install → gameplay     | Workshop + sim + modding        | Package with new unit type, dependency on base content             | Install package → resolve deps → load mod → start game → build new unit   | (1) Deps installed in order, (2) unit definition loaded, (3) unit buildable in game, (4) unit stats match YAML                            | T4   |
+| Campaign transition with roster | campaign + sim + snapshot       | Campaign with 2 missions, transition on victory                    | Play M1 → win with 5 units → transition → verify roster in M2             | (1) 5 units in M2 roster, (2) health/veterancy preserved, (3) story flags accessible                                                      | T2   |
+| Chat scope in multiplayer       | chat + net + relay              | 4-player team game (2v2)                                           | P1 sends team chat → P1 sends all-chat → verify delivery                  | (1) Team chat: P1+P2 receive, P3+P4 do not, (2) all-chat: all 4 receive, (3) observer sees all-chat only                                  | T2   |
+| WASM mod with sandbox limits    | WASM + sim + modding            | Malicious mod attempting memory bomb + file access + infinite loop | Load mod → trigger memory.grow → trigger file access → trigger loop       | (1) Memory growth denied, (2) file access denied, (3) loop terminated by fuel, (4) game continues normally                                | T3   |
+| Desync detection → diagnosis    | sim + net + Merkle tree         | 2-player game, deliberate single-archetype mutation at tick 500    | Run to tick 500 → corrupt one archetype on P2 → run to tick 510           | (1) Desync detected within 10 ticks, (2) Merkle tree identifies exact archetype, (3) diagnosis payload < 1KB                              | T2   |
+| Anti-cheat → trust score flow   | sim + net + telemetry + ranking | Player with 10 clean games, then 1 flagged game                    | Play 10 games cleanly → play 1 game with known-cheat replay pattern       | (1) Trust score starts high, (2) flagged game triggers score drop, (3) subsequent clean games recover slowly                              | T4   |
+| Save/load during weather        | sim + weather + snapshot        | Game with active blizzard at tick 300                              | Save at tick 300 → load → run 500 more ticks                              | (1) Weather state matches, (2) terrain surface conditions match, (3) state hash at tick 800 matches fresh run                             | T3   |
+| Console dev-mode flagging       | console + replay + ranking      | Ranked game, player issues `/god_mode`                             | Start ranked → exec dev command → complete match → check replay + ranking | (1) Dev flag set, (2) replay metadata shows dev-mode, (3) match excluded from ranked standings                                            | T2   |
+| Foreign replay import           | replay + sim + format           | `.orarep` file from OpenRA                                         | Import → play back via `ForeignReplayPlayback` → check divergence         | (1) Import succeeds, (2) playback runs to completion, (3) divergences logged with tick+archetype detail                                   | T3   |
+
+## Measurement & Metrics Framework
+
+Every automated test produces structured output beyond pass/fail. These metrics feed into the release-readiness dashboard.
+
+### Performance Metrics (collected per benchmark run)
+
+| Metric                     | Collection Method                                      | Storage                       | Alert Threshold                              |
+| -------------------------- | ------------------------------------------------------ | ----------------------------- | -------------------------------------------- |
+| Tick time (p50, p95, p99)  | `criterion` statistical analysis                       | Benchmark history DB (SQLite) | p99 exceeds budget by >10%                   |
+| Heap allocations per tick  | Custom global allocator wrapper counting `alloc` calls | Per-benchmark counter         | Any allocation in designated zero-alloc path |
+| L1 cache miss rate         | `perf stat` / platform performance counters            | Benchmark log                 | > 5% in hot tick loop                        |
+| Peak RSS during scenario   | `/proc/self/status` sampling at 10ms intervals         | Benchmark log                 | > 2× expected for unit count                 |
+| Pathfinding nodes expanded | Internal counter in pathfinder                         | Per-benchmark metric          | > 2× optimal for known map                   |
+| Serialization throughput   | Bytes/second for snapshot and replay frame writes      | Benchmark log                 | Regression > 15%                             |
+
+### Correctness Metrics (collected per test suite run)
+
+| Metric                            | Collection Method                                       | Storage               | Alert Threshold                               |
+| --------------------------------- | ------------------------------------------------------- | --------------------- | --------------------------------------------- |
+| Determinism violations            | Hash comparison failures across repeated runs           | Test result DB        | Any violation is a P0 bug                     |
+| False positive rate (anti-cheat)  | `flagged_clean / total_clean` on labeled corpus         | Corpus evaluation log | > 0.1% (V54 threshold)                        |
+| False negative rate (anti-cheat)  | `missed_cheat / total_cheat` on labeled corpus          | Corpus evaluation log | > 5% (V54 threshold)                          |
+| Order rejection accuracy          | Correct rejection variant rate across exhaustive matrix | Test result DB        | < 100% is a bug                               |
+| Fuzz coverage (edge/line)         | `cargo-fuzz` with `--sanitizer=coverage`                | Fuzz coverage report  | < 80% line coverage in target module          |
+| Property test case count          | proptest runner statistics                              | Test log              | < configured minimum (256 for T1, 10K for T3) |
+| Snapshot round-trip bit-exactness | Byte comparison of snapshot → restore → snapshot        | Test result DB        | Any byte difference is a P0 bug               |
+
+### Security Metrics (collected per security test suite run)
+
+| Metric                            | Collection Method                                                | Storage           | Alert Threshold                     |
+| --------------------------------- | ---------------------------------------------------------------- | ----------------- | ----------------------------------- |
+| Sandbox escape attempts blocked   | Counter in WASM/Lua host                                         | Security test log | Any unblocked attempt is a P0 bug   |
+| Path traversal attempts blocked   | `StrictPath` rejection counter during fuzz                       | Fuzz log          | Any unblocked traversal is a P0 bug |
+| Replay tampering detection rate   | Tampered frames detected / total tampered frames                 | Security test log | < 100% is a P0 bug                  |
+| SCR replay attack detection rate  | Replayed credentials detected / total replays                    | Security test log | < 100% is a P0 bug                  |
+| Rate limit enforcement accuracy   | Orders dropped when budget exhausted / orders sent beyond budget | Test log          | < 100% is a bug                     |
+| Half-open connection cleanup time | Time from flood to full recovery                                 | Stress test log   | > 5 seconds is a bug                |
 
 ## Coverage Mapping: Design Features → Tests
 

