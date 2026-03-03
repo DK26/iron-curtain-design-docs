@@ -423,7 +423,7 @@ impl RelayServer {
 ```
 
 **Key design choices:**
-- **Detection, not prevention.** We can't conclusively prove automation from order patterns alone. The system flags suspicion for review, not automatic bans.
+- **Prevention first, then detection.** IC's architecture prevents the most damaging cheats before they reach the detection layer. The fog-authoritative server (V1–V8) makes maphack impossible in relay mode; deterministic order validation (V9) rejects invalid state mutations; transport encryption (V14) prevents eavesdropping. Detection handles what prevention cannot: automation that sends valid orders at superhuman rates. This hierarchy — prevention → detection → deterrence — matches industry consensus from Riot Games, Valve, and i3D (FairFight).
 - **Relay-side only.** Analysis happens on the server — cheating clients can't detect or adapt to the analysis.
 - **Replay-based post-hoc analysis.** Tournament replays can be analyzed after the fact with more sophisticated models (timing distribution analysis, reaction-to-fog-reveal correlation).
 - **Community reporting.** Player reports feed into suspicion scoring — a player flagged by both the system and opponents warrants review.
@@ -459,6 +459,43 @@ pub enum AntiCheatAction {
 ```
 
 **Key insight from Lichess:** Neither model alone is sufficient. Statistical analysis catches sophisticated bots that mimic human timing but play at superhuman decision quality. Behavioral analysis catches crude automation that makes human-quality decisions but with inhuman input patterns. Together, false positive rates are dramatically reduced — Lichess processes millions of games with very few false bans.
+
+#### Population-Baseline Statistical Comparison (from FairFight)
+
+The hardcoded thresholds in the relay-side analysis above (`sustained_apm_above(600)`, `avg_reaction_time() < 100ms`, `pattern_entropy < HUMAN_ENTROPY_FLOOR`) are a starting point, not the final design. Fixed thresholds have a fundamental flaw: they don't adapt as the player population evolves with new hardware, game patches, and meta shifts. A legitimate player on a high-polling-rate mouse with mechanical switches may register reaction times that would have been flagged as inhuman five years ago.
+
+IC adapts the **population-average comparison approach** proven by i3D's FairFight (Algorithmic Analysis of Player Statistics — AAPS). Instead of comparing against absolute constants, each metric is compared against rolling population percentiles computed from the ranking server's match database:
+
+```rust
+pub struct PopulationBaseline {
+    pub apm_p99: f64,                       // 99th percentile APM across rated matches
+    pub reaction_time_p1: Duration,          // 1st percentile reaction time (fastest)
+    pub entropy_p5: f64,                     // 5th percentile pattern entropy
+    pub sustained_peak_p99: Duration,        // 99th percentile sustained APM duration
+    pub last_recalculated: Timestamp,        // when this baseline was computed
+    pub sample_size: u64,                    // number of matches in the sample
+}
+```
+
+**How population baselines improve detection:**
+- **Outlier detection is relative:** A player performing at p99.9 in a population of 50,000 is a stronger signal than one exceeding a hardcoded number.
+- **Baselines auto-adjust:** When the population's mean APM rises due to the game's meta favoring micro-heavy strategies, the thresholds shift naturally.
+- **Per-tier baselines:** A Diamond-tier player having APM at Bronze-tier p99 is not suspicious. Baselines are computed per rating tier to avoid penalizing high-skill players.
+
+The fixed thresholds remain as **hard floors** — emergency trip-wires for extreme outliers (e.g., APM > 2000, reaction < 40ms) that no population shift would normalize. Population baselines are the primary detection signal; fixed thresholds are the safety net.
+
+**Recalculation cadence:** Population baselines are recomputed weekly from the most recent rolling window of rated matches (configurable, default 30 days). Recomputation is a batch job on the ranking server, not a real-time operation.
+
+#### Enforcement Timing Strategy (Wave Bans)
+
+IC does not act on every detection event immediately. Drawing from Valve's VAC wave ban strategy (which deliberately delays enforcement to maximize intelligence gathering), IC uses a **batched enforcement cadence** for non-urgent cases:
+
+- **Immediate action:** `AntiCheatAction::ShadowRestrict` (high-confidence automation) and `AntiCheatAction::FlagForReview` (dual-model agreement) are processed in real-time. Immediate action stops the harm.
+- **Batched enforcement:** Points accumulated from individual auto-flags (V54) are evaluated against suspension/ban thresholds on a **weekly enforcement cycle** rather than continuously. This serves two purposes:
+  1. **Intelligence gathering:** Delayed enforcement prevents cheat developers from correlating detection with specific tool updates. If a cheat is detected on Monday but the ban wave runs on Friday, the developer cannot determine which session triggered detection.
+  2. **False-positive buffering:** A player who triggers two auto-flags in one week due to an unusual session has time for point decay (V54) to soften the impact before it crosses a threshold.
+
+**Transparency:** Quarterly anti-cheat transparency reports (V54) publish aggregate enforcement statistics (total flags, bans, appeals, false-positive rate) without disclosing detection internals or enforcement timing details.
 
 #### Smart Analysis Triggers
 
@@ -522,6 +559,67 @@ IC's behavioral analysis draws from the most successful open-source competitive 
 | **uBlock Origin**                 | GPL-3.0                  | [gorhill/uBlock](https://github.com/gorhill/uBlock)                        | Not a game — but the best-in-class example of real-time **pattern matching at scale with community-maintained rule sets**. Token-dispatch fast-path matching, flat-array struct-of-arrays data layout (validates ECS/D015), BidiTrie compact trie, three-layer cheapest-first evaluation, allow/block/block-important priority realms. uBO uses WASM because browsers can't run native code — IC compiles Rust directly to native machine code (faster than WASM), but the data structures and architectural patterns transfer directly. See `research/ublock-origin-pattern-matching-analysis.md`. |
 
 **Key pattern across all projects:** No successful open-source competitive platform uses client-side anti-cheat. Every one converges on the same architecture: server-side behavioral analysis + replay evidence + community governance + transparent tooling. IC's four-part strategy (D058 § Competitive Integrity) is this consensus, formalized.
+
+#### Industry Anti-Cheat Patterns (Commercial References)
+
+IC's open-source reference projects (above) are the primary design inputs, but several proprietary systems demonstrate patterns worth acknowledging. These are not code references — their architectures are inferred from public documentation, GDC talks, and observable behavior:
+
+- **VACNet / VAC Live (Valve, CS2):** Server-side deep learning that claims to detect new cheat behaviors within hours via continuous retraining. Demonstrates the value of a model retraining pipeline — IC adapts this as the continuous calibration loop (V54). VAC's wave ban strategy (deliberately deferred enforcement) is adapted as IC's enforcement timing cadence (above).
+- **FairFight AAPS (i3D):** Algorithmic Analysis of Player Statistics — compares individual player metrics against population averages rather than fixed thresholds. Entirely server-side, non-invasive. IC adapts this as population-baseline statistical comparison (above). FairFight's graduated penalty model (warning → restriction → suspension) validates IC's graduated response (V54).
+- **CS2 Trust Factor (Valve):** Multi-signal behavioral score (hours played, account age, report frequency, other games played) that affects matchmaking quality as a continuous value, not a binary restriction. IC adapts this as behavioral matchmaking integration (below).
+- **Dota 2 Behavior Score (Valve):** Behavior grades (Normal through F) from abandons, reports, and commends. Scores below 3000 trigger auto-mute; extremely low scores trigger bans without notice. Low Priority matchmaking pool requires winning games to exit (not just playing). IC adapts the continuous-score-as-matchmaking-input pattern and the tiered behavioral consequences.
+- **GTA Online Bad Sport (Rockstar):** Separate matchmaking pool for disruptive players with escalating timeout durations (2 → 4 → 8 days) and visible dunce hat. Cautionary example: controversial because the system doesn't distinguish intentional griefing from self-defense actions. IC's behavioral analysis must account for context (see V55's classification heuristic approach).
+
+**What IC does NOT adopt from commercial systems:**
+- No kernel-level anti-cheat (Riot Vanguard, Activision RICOCHET kernel driver, EAC). Open-source + cross-platform + Linux/WASM = incompatible with ring-0 drivers.
+- No memory encryption or code obfuscation (Riot's `.text` section encryption, anti-debugging checks). IC is open-source — the source code is public. Obfuscation is meaningless.
+- No creative in-game punishments (RICOCHET "Damage Shield" reducing cheater damage, "Cloaking" making cheaters invisible). Entertaining but architecturally complex and creates unpredictable game states. IC's relay-side enforcement is at the matchmaking and access-control layer, not the simulation layer.
+
+#### Behavioral Matchmaking Integration (Trust Score)
+
+IC's `AntiCheatAction::ShadowRestrict` is a binary state — a player is either restricted or not. Industry experience from CS2 Trust Factor, Dota 2 Behavior Score, and Lichess's `lame` player segregation converges on a more nuanced approach: a **continuous behavioral trust score** that influences matchmaking quality.
+
+```rust
+/// Per-player trust score — influences matchmaking pool quality.
+/// Computed by the ranking server, stored in player's SCR (D052).
+pub struct TrustScore {
+    pub score: u16,                          // 0–12000 (Dota 2 scale is 0–12000)
+    pub factors: TrustFactors,
+    pub last_updated: Timestamp,
+}
+
+pub struct TrustFactors {
+    pub account_age_days: u32,               // older accounts → higher trust
+    pub rated_games_played: u32,             // more history → more signal
+    pub anti_cheat_points: u8,               // from V54 graduated response (inverse)
+    pub report_rate: f64,                    // reports received per 100 games
+    pub commend_rate: f64,                   // commendations received per 100 games
+    pub abandon_rate: f64,                   // abandons per 100 games
+    pub season_participation: u8,            // seasons with placement (D055)
+}
+```
+
+**How trust score affects matchmaking (D055 integration):**
+- Matchmaking preferentially groups players with similar trust scores. A high-trust player should encounter other high-trust players.
+- Trust score is NOT visible to the player (unlike Dota 2, which shows the number). Opacity prevents gaming the system.
+- Trust score cannot override MMR for match quality — it is a secondary signal after skill rating.
+- Community server operators (D052) can configure minimum trust score thresholds for their servers via `server_config.toml` (D064).
+
+**Behavioral consequences (graduated, from Dota 2 model):**
+
+| Trust Score Range | Consequence                                                     |
+| ----------------- | --------------------------------------------------------------- |
+| 10000–12000       | Default — no restrictions                                       |
+| 7000–9999         | Normal matchmaking, no restrictions                             |
+| 4000–6999         | Slower matchmaking (pool restriction), warning displayed        |
+| 2000–3999         | Voice chat disabled; text chat rate-limited; ranked queue delay |
+| 0–1999            | Ranked queue disabled; review triggered; ban imminent           |
+
+**Trust score recovery:** Trust score recovers passively through clean play — completing rated games without reports, earning commendations, and not triggering anti-cheat flags. Recovery is slow and intentional: it takes longer to rebuild trust than to lose it (asymmetric by design, matching Dota 2's model).
+
+**Federated trust:** In IC's federated community server model (D052), trust scores are community-scoped. A player's trust score on Community Server A is independent of their score on Community Server B (matching the cross-community reputation design in D052). The official IC ranking authority maintains the canonical trust score; community servers can maintain their own or defer to the canonical one.
+
+**Phase:** Trust score system ships with ranked matchmaking (Phase 5). Trust score factors are computed from the same match database as population baselines. Integration with D055's matchmaking queue is a Phase 5 exit criterion.
 
 ## Vulnerability 13: Match Result Fraud
 
@@ -1870,12 +1968,12 @@ The behavioral anti-cheat system (fog-of-war access patterns, APM anomaly detect
 
 **Tiered confidence thresholds:**
 
-| Detection Category     | Action          | Minimum Confidence | Max False-Positive Rate |
-| ---------------------- | --------------- | ------------------ | ----------------------- |
-| Fog oracle (maphack)   | Auto-flag       | 95%                | 1 in 10,000 matches     |
-| APM anomaly (bot)      | Auto-flag       | 99%                | 1 in 100,000 matches    |
-| Click precision (aimbot)| Review queue    | 90%                | 1 in 1,000 matches      |
-| Desync pattern (exploit)| Auto-disconnect | 99.9%              | 1 in 1,000,000 matches  |
+| Detection Category       | Action          | Minimum Confidence | Max False-Positive Rate |
+| ------------------------ | --------------- | ------------------ | ----------------------- |
+| Fog oracle (maphack)     | Auto-flag       | 95%                | 1 in 10,000 matches     |
+| APM anomaly (bot)        | Auto-flag       | 99%                | 1 in 100,000 matches    |
+| Click precision (aimbot) | Review queue    | 90%                | 1 in 1,000 matches      |
+| Desync pattern (exploit) | Auto-disconnect | 99.9%              | 1 in 1,000,000 matches  |
 
 **Calibration dataset:** Before deployment, each detector is calibrated against a corpus of labeled replays: confirmed-cheating replays (from test accounts) and confirmed-legitimate replays (from high-skill tournament players). The false-positive rate is measured against the legitimate corpus.
 
@@ -1886,6 +1984,15 @@ The behavioral anti-cheat system (fog-of-war access patterns, APM anomaly detect
 - 25 points → permanent ban (appealable)
 
 **Transparency report:** Aggregate anti-cheat statistics (total flags, false-positive rate, ban count) are published quarterly. Individual detection details are not disclosed (to avoid teaching cheaters to evade).
+
+**Continuous calibration (post-deployment feedback loop):** The pre-deployment calibration corpus is a starting point, not a static artifact. Drawing from VACNet's continuous retraining model, IC maintains a living calibration pipeline:
+
+1. **Confirmed-cheat ingestion:** When a human reviewer confirms a flagged player as cheating, the relevant replays are automatically added to the "confirmed-cheat" partition of the calibration corpus. When an appeal succeeds, the replays move to the "false-positive" partition.
+2. **Threshold recalibration:** Population baselines (V12) and detection thresholds are recomputed weekly from the updated corpus. If the confirmed-cheat partition grows to include a new cheat pattern (e.g., a novel tool that evades the current entropy check), the recalibrated thresholds will detect it in subsequent matches.
+3. **Model drift monitoring:** The ranking server tracks detection rates, false-positive rates, and appeal rates over rolling 90-day windows. A sustained increase in appeal success rate signals model drift — the thresholds are catching more legitimate players than they should. A sustained decrease in detection rate signals evasion evolution — cheat tools have adapted.
+4. **Corpus hygiene:** The calibration corpus is versioned with timestamps. Replays older than 12 months are archived (not deleted) and excluded from active calibration to prevent stale patterns from anchoring thresholds.
+
+**Phase:** Continuous calibration pipeline ships with ranked matchmaking (Phase 5). Initial corpus creation is the Phase 5 exit criterion; the feedback loop activates post-launch once human review generates confirmed cases.
 
 **Phase:** False-positive calibration ships with ranked matchmaking (Phase 5). Calibration dataset creation is a Phase 5 exit criterion.
 
@@ -1903,16 +2010,16 @@ Desync events (clients diverging from deterministic sim state) can be caused by 
 
 **Classification heuristic:**
 
-| Signal                                         | Likely Platform Bug | Likely Cheat          |
-| ---------------------------------------------- | ------------------- | --------------------- |
-| Divergence in position/pathfinding only         | ✓                   |                       |
-| Divergence in fog/vision state                  |                     | ✓                     |
-| Divergence in resource/unit count               |                     | ✓                     |
-| Affects multiple independent matches            | ✓                   |                       |
-| Correlates with specific CPU/OS combination     | ✓                   |                       |
-| Divergence immediately after suspicious order   |                     | ✓                     |
-| Both peers report same divergence point         | ✓                   |                       |
-| Only one peer reports divergence                |                     | ✓ (modified client)   |
+| Signal                                        | Likely Platform Bug | Likely Cheat        |
+| --------------------------------------------- | ------------------- | ------------------- |
+| Divergence in position/pathfinding only       | ✓                   |                     |
+| Divergence in fog/vision state                |                     | ✓                   |
+| Divergence in resource/unit count             |                     | ✓                   |
+| Affects multiple independent matches          | ✓                   |                     |
+| Correlates with specific CPU/OS combination   | ✓                   |                     |
+| Divergence immediately after suspicious order |                     | ✓                   |
+| Both peers report same divergence point       | ✓                   |                     |
+| Only one peer reports divergence              |                     | ✓ (modified client) |
 
 **Bug report pipeline:** Desyncs classified as likely-platform-bug are automatically filed as bug reports with the diagnostic fingerprint. These do not count toward anti-cheat points (V54).
 
@@ -1976,64 +2083,67 @@ This supersedes naive string-based checks like `path.contains("..")` (see V33) w
 
 Iron Curtain's anti-cheat is **architectural, not bolted on.** Every defense emerges from design decisions made for other reasons:
 
-| Threat               | Defense                                           | Source                                   |
-| -------------------- | ------------------------------------------------- | ---------------------------------------- |
-| Maphack              | Fog-authoritative server                          | Network model architecture               |
-| Order injection      | Deterministic validation in sim                   | Sim purity (invariant #1)                |
-| Order forgery (direct-peer optional mode) | Ed25519 per-order signing                         | Session auth design                      |
-| Lag switch           | Relay server owns the clock                       | Relay architecture (D007)                |
-| Speed hack           | Relay tick authority                              | Same as above                            |
-| State saturation     | Time-budget pool + EWMA scoring + hard caps       | OrderBudget + EwmaTrafficMonitor + relay |
-| Eavesdropping        | AEAD / TLS transport encryption                   | Transport security design                |
-| Packet forgery       | Authenticated encryption (AEAD)                   | Transport security design                |
-| Protocol DoS         | BoundedReader + size caps + rate limits           | Protocol hardening                       |
-| Replay tampering     | Ed25519 signed hash chain                         | Replay system design                     |
-| Automation           | Dual-model detection (behavioral + statistical)   | Relay-side + post-hoc replay analysis    |
-| Result fraud         | Relay-certified match results                     | Relay architecture                       |
-| Seed manipulation    | Commit-reveal seed protocol                       | Connection establishment (03-NETCODE.md) |
-| Version mismatch     | Protocol handshake                                | Lobby system                             |
-| WASM mod abuse       | Capability-based sandbox                          | Modding architecture (D005)              |
-| Desync exploit       | Server-side only analysis                         | Security by design                       |
-| Supply chain attack  | Anomaly detection + provenance + 2FA + lockfile   | Workshop security (D030)                 |
-| Typosquatting        | Publisher-scoped naming + similarity detection    | Workshop naming (D030)                   |
-| Manifest confusion   | Canonical-inside-package + manifest_hash          | Workshop integrity (D030/D049)           |
-| Index poisoning      | Path-scoped PR validation + signed index          | Git-index security (D049)                |
-| Dependency confusion | Source-pinned lockfiles + shadow warnings         | Workshop federation (D050)               |
-| Version mutation     | Immutability rule + CI enforcement                | Workshop integrity (D030)                |
-| Relay exhaustion     | Connection limits + per-IP caps + idle timeout    | Relay architecture (D007)                |
-| Desync-as-DoS        | Per-player attribution + strike system            | Desync detection                         |
-| Win-trading          | Diminishing returns + distinct-opponent req       | Ranked integrity (D055)                  |
-| Queue dodging        | Anonymous veto + escalating dodge penalty         | Matchmaking fairness (D055)              |
-| Tracking phishing    | Protocol handshake + trust indicators + HTTPS     | CommunityBridge security                 |
-| Cross-community rep  | Community-scoped display + local-only ratings     | SCR portability (D052)                   |
-| Placement carnage    | Hidden matchmaking rating + min match quality     | Season transition (D055)                 |
-| Desperation exploit  | Reduced info content + min queue population       | Matchmaking fairness (D055)              |
-| Relay ranked SPOF    | Checkpoint hashes + degraded cert + monitoring    | Relay architecture (D007)                |
-| Tier config inject   | Monotonic validation + path sandboxing            | YAML loading defense                     |
-| EWMA NaN             | Finite guard + reset-to-safe + alpha validation   | Traffic monitor hardening                |
-| Reconciler drift     | Capped ticks_since_sync + defined MAX_DELTA       | Cross-engine security (D011)             |
-| Anti-cheat trust     | Relay ≠ judge + defined thresholds + appeal       | Dual-model integrity (V12)               |
-| Protocol fingerprint | Opt-in sources + proxy routing + minimal ident    | CommunityBridge privacy                  |
-| Format parser DoS    | Decompression caps + fuzzing + iteration limits   | `ra-formats` defensive parsing (V38)     |
-| Lua sandbox bypass   | `string.rep` cap + coroutine check + fatal limits | Modding sandbox hardening (V39)          |
-| LLM content inject   | Validation pipeline + cumulative limits + filter  | LLM safety gate (V40)                    |
-| Replay resource skip | Consent prompt + content-type restriction         | Replay security model (V41)              |
-| Save game bomb       | Decompression cap + schema validation + size cap  | Format safety (V42)                      |
-| DNS rebinding/SSRF   | IP range block + DNS pinning + post-resolve val   | WASM network hardening (V43)             |
-| Dev mode exploit     | Sim-state flag + lobby-only + ranked disabled     | Multiplayer integrity (V44)              |
-| Replay frame loss    | Frame loss counter + `send_timeout` + gap mark    | Replay integrity (V45)                   |
-| Path traversal       | `strict-path` boundary enforcement                | Path security infrastructure             |
-| Name impersonation   | UTS #39 skeleton + mixed-script ban + BiDi strip  | Display name validation (V46)            |
-| Key compromise       | Dual-signed rotation + BIP-39 emergency recovery  | Identity key rotation (V47)              |
-| Server impersonation | Cert chain + CRL + OCSP-style fast revocation     | Community server auth (V48)              |
-| Package forgery      | Author Ed25519 signing + registry counter-sign    | Workshop package integrity (V49)         |
-| Mod cross-probing    | Namespace isolation + capability-gated IPC         | WASM module isolation (V50)              |
-| Supply chain update  | Popularity quarantine + diff review + rollback    | Workshop package quarantine (V51)        |
-| Star-jacking         | Rate limit + anomaly detection + fork detection   | Workshop reputation defense (V52)        |
+| Threat                                     | Defense                                           | Source                                   |
+| ------------------------------------------ | ------------------------------------------------- | ---------------------------------------- |
+| Maphack                                    | Fog-authoritative server                          | Network model architecture               |
+| Order injection                            | Deterministic validation in sim                   | Sim purity (invariant #1)                |
+| Order forgery (direct-peer optional mode)  | Ed25519 per-order signing                         | Session auth design                      |
+| Lag switch                                 | Relay server owns the clock                       | Relay architecture (D007)                |
+| Speed hack                                 | Relay tick authority                              | Same as above                            |
+| State saturation                           | Time-budget pool + EWMA scoring + hard caps       | OrderBudget + EwmaTrafficMonitor + relay |
+| Eavesdropping                              | AEAD / TLS transport encryption                   | Transport security design                |
+| Packet forgery                             | Authenticated encryption (AEAD)                   | Transport security design                |
+| Protocol DoS                               | BoundedReader + size caps + rate limits           | Protocol hardening                       |
+| Replay tampering                           | Ed25519 signed hash chain                         | Replay system design                     |
+| Automation                                 | Dual-model detection (behavioral + statistical)   | Relay-side + post-hoc replay analysis    |
+| Result fraud                               | Relay-certified match results                     | Relay architecture                       |
+| Seed manipulation                          | Commit-reveal seed protocol                       | Connection establishment (03-NETCODE.md) |
+| Version mismatch                           | Protocol handshake                                | Lobby system                             |
+| WASM mod abuse                             | Capability-based sandbox                          | Modding architecture (D005)              |
+| Desync exploit                             | Server-side only analysis                         | Security by design                       |
+| Supply chain attack                        | Anomaly detection + provenance + 2FA + lockfile   | Workshop security (D030)                 |
+| Typosquatting                              | Publisher-scoped naming + similarity detection    | Workshop naming (D030)                   |
+| Manifest confusion                         | Canonical-inside-package + manifest_hash          | Workshop integrity (D030/D049)           |
+| Index poisoning                            | Path-scoped PR validation + signed index          | Git-index security (D049)                |
+| Dependency confusion                       | Source-pinned lockfiles + shadow warnings         | Workshop federation (D050)               |
+| Version mutation                           | Immutability rule + CI enforcement                | Workshop integrity (D030)                |
+| Relay exhaustion                           | Connection limits + per-IP caps + idle timeout    | Relay architecture (D007)                |
+| Desync-as-DoS                              | Per-player attribution + strike system            | Desync detection                         |
+| Win-trading                                | Diminishing returns + distinct-opponent req       | Ranked integrity (D055)                  |
+| Queue dodging                              | Anonymous veto + escalating dodge penalty         | Matchmaking fairness (D055)              |
+| Tracking phishing                          | Protocol handshake + trust indicators + HTTPS     | CommunityBridge security                 |
+| Cross-community rep                        | Community-scoped display + local-only ratings     | SCR portability (D052)                   |
+| Placement carnage                          | Hidden matchmaking rating + min match quality     | Season transition (D055)                 |
+| Desperation exploit                        | Reduced info content + min queue population       | Matchmaking fairness (D055)              |
+| Relay ranked SPOF                          | Checkpoint hashes + degraded cert + monitoring    | Relay architecture (D007)                |
+| Tier config inject                         | Monotonic validation + path sandboxing            | YAML loading defense                     |
+| EWMA NaN                                   | Finite guard + reset-to-safe + alpha validation   | Traffic monitor hardening                |
+| Reconciler drift                           | Capped ticks_since_sync + defined MAX_DELTA       | Cross-engine security (D011)             |
+| Anti-cheat trust                           | Relay ≠ judge + defined thresholds + appeal       | Dual-model integrity (V12)               |
+| Behavioral mmk pool                        | Continuous trust score + tiered consequences      | Behavioral matchmaking (V12/D055)        |
+| Detection evasion                          | Population baselines + continuous recalibration   | Population-baseline comparison (V12/V54) |
+| Enforcement timing                         | Wave ban cadence + intelligence gathering         | Enforcement timing strategy (V12)        |
+| Protocol fingerprint                       | Opt-in sources + proxy routing + minimal ident    | CommunityBridge privacy                  |
+| Format parser DoS                          | Decompression caps + fuzzing + iteration limits   | `ra-formats` defensive parsing (V38)     |
+| Lua sandbox bypass                         | `string.rep` cap + coroutine check + fatal limits | Modding sandbox hardening (V39)          |
+| LLM content inject                         | Validation pipeline + cumulative limits + filter  | LLM safety gate (V40)                    |
+| Replay resource skip                       | Consent prompt + content-type restriction         | Replay security model (V41)              |
+| Save game bomb                             | Decompression cap + schema validation + size cap  | Format safety (V42)                      |
+| DNS rebinding/SSRF                         | IP range block + DNS pinning + post-resolve val   | WASM network hardening (V43)             |
+| Dev mode exploit                           | Sim-state flag + lobby-only + ranked disabled     | Multiplayer integrity (V44)              |
+| Replay frame loss                          | Frame loss counter + `send_timeout` + gap mark    | Replay integrity (V45)                   |
+| Path traversal                             | `strict-path` boundary enforcement                | Path security infrastructure             |
+| Name impersonation                         | UTS #39 skeleton + mixed-script ban + BiDi strip  | Display name validation (V46)            |
+| Key compromise                             | Dual-signed rotation + BIP-39 emergency recovery  | Identity key rotation (V47)              |
+| Server impersonation                       | Cert chain + CRL + OCSP-style fast revocation     | Community server auth (V48)              |
+| Package forgery                            | Author Ed25519 signing + registry counter-sign    | Workshop package integrity (V49)         |
+| Mod cross-probing                          | Namespace isolation + capability-gated IPC        | WASM module isolation (V50)              |
+| Supply chain update                        | Popularity quarantine + diff review + rollback    | Workshop package quarantine (V51)        |
+| Star-jacking                               | Rate limit + anomaly detection + fork detection   | Workshop reputation defense (V52)        |
 | Direct-peer replay forgery (optional mode) | Peer-attested frame hashes + end-match signing    | Direct-peer replay attestation (V53)     |
-| False accusations    | Tiered thresholds + calibration + graduated resp  | Anti-cheat false-positive control (V54)  |
-| Bug-as-cheat         | Desync fingerprint + classification heuristic     | Desync classification (V55)              |
-| BiDi text injection  | Unified sanitization pipeline + context registry  | Text safety (V56)                        |
+| False accusations                          | Tiered thresholds + calibration + graduated resp  | Anti-cheat false-positive control (V54)  |
+| Bug-as-cheat                               | Desync fingerprint + classification heuristic     | Desync classification (V55)              |
+| BiDi text injection                        | Unified sanitization pipeline + context registry  | Text safety (V56)                        |
 
 **No kernel-level anti-cheat.** Open-source, cross-platform, no ring-0 drivers. We accept that lockstep RTS will always have a maphack risk in client-sim modes — the fog-authoritative server is the real answer for high-stakes play.
 
