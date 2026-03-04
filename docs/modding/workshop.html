@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-da66c284.js";
+            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-b6ee3c41.js"></script>
+        <script src="../toc-2281c970.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -644,338 +644,18 @@ package:
   # Omitting platforms field = available on all platforms (default)
 </code></pre>
 <p>The Workshop browser filters resources by the player’s current platform. Platform-incompatible resources are hidden by default (shown grayed-out with an “Other platforms” toggle). Phase 0–3: no platform filtering (all resources visible). Phase 5+: server-side filtering.</p>
-<h3 id="llm-driven-resource-discovery-d030"><a class="header" href="#llm-driven-resource-discovery-d030">LLM-Driven Resource Discovery (D030)</a></h3>
-<p>The <code>ic-llm</code> crate can search the Workshop programmatically and incorporate discovered resources into generated content:</p>
-<p><strong>Discovery pipeline:</strong></p>
-<pre><code>  ┌─────────────────────────────────────────────────────────────────┐
-  │ LLM generates mission concept                                  │
-  │ ("Soviet ambush in snowy forest with dramatic briefing")        │
-  └──────────────┬──────────────────────────────────────────────────┘
-                 │
-                 ▼
-  ┌─────────────────────────────────────────────────────────────────┐
-  │ Identify needed assets                                          │
-  │ → winter terrain textures                                       │
-  │ → Soviet voice lines                                            │
-  │ → ambush/tension music                                          │
-  │ → briefing video (optional)                                     │
-  └──────────────┬──────────────────────────────────────────────────┘
-                 │
-                 ▼
-  ┌─────────────────────────────────────────────────────────────────┐
-  │ Search Workshop via WorkshopClient                              │
-  │ → query="winter terrain", tags=["snow", "forest"]              │
-  │ → query="Soviet voice lines", tags=["soviet", "military"]     │
-  │ → query="tension music", tags=["ambush", "suspense"]          │
-  │ → Filter: ai_usage != Deny (exclude resources authors          │
-  │   have marked as off-limits to LLM agents)                     │
-  └──────────────┬──────────────────────────────────────────────────┘
-                 │
-                 ▼
-  ┌─────────────────────────────────────────────────────────────────┐
-  │ Evaluate candidates via llm_meta                                │
-  │ → Read summary, purpose, composition_hints,                     │
-  │   content_description, related_resources                        │
-  │ → Filter by license compatibility                               │
-  │ → Rank by gameplay_tags match score                             │
-  └──────────────┬──────────────────────────────────────────────────┘
-                 │
-                 ▼
-  ┌─────────────────────────────────────────────────────────────────┐
-  │ Partition by ai_usage permission                                │
-  │ → ai_usage: Allow  → auto-add as dependency (no human needed)  │
-  │ → ai_usage: MetadataOnly → recommend to human for confirmation │
-  └──────────────┬──────────────────────────────────────────────────┘
-                 │
-                 ▼
-  ┌─────────────────────────────────────────────────────────────────┐
-  │ Add discovered resources as dependencies in generated mod.yaml │
-  │ → Allow resources added directly                                │
-  │ → MetadataOnly resources shown as suggestions in editor UI     │
-  │ → Dependencies resolved at install time via `ic mod install`   │
-  └─────────────────────────────────────────────────────────────────┘
-</code></pre>
-<p>The LLM sees workshop resources through their <code>llm_meta</code> fields. A music track tagged <code>summary: "Military march, Soviet theme, orchestral, 2:30"</code> and <code>composition_hints: "Pairs well with Soviet faction voice lines"</code> lets the LLM intelligently select and compose assets for a coherent mission experience.</p>
-<p><strong>Author consent (ai_usage):</strong> Every Workshop resource carries an <code>ai_usage</code> permission that is SEPARATE from the SPDX license. A CC-BY music track can be ai_usage: Deny (author is fine with human redistribution but doesn’t want LLMs auto-incorporating it). Conversely, an all-rights-reserved cutscene could be ai_usage: Allow (author wants the resource to be discoverable and composable by LLM agents even though the license is restrictive). The license governs human legal rights; <code>ai_usage</code> governs automated agent behavior. See the <code>AiUsagePermission</code> enum above for the three tiers.</p>
-<p><strong>Default: <code>MetadataOnly</code>.</strong> When an author publishes without explicitly setting <code>ai_usage</code>, the default is <code>MetadataOnly</code> — LLMs can find and recommend the resource, but a human must confirm adding it. This respects authors who haven’t thought about AI usage while still making their content discoverable. Authors who want full LLM integration set <code>ai_usage: allow</code> explicitly. <code>ic mod publish</code> prompts for this choice on first publish and remembers it as a user-level default.</p>
-<p><strong>License-aware generation:</strong> The LLM also filters by license compatibility — if generating content for a CC-BY mod, it only pulls CC-BY-compatible resources (<code>CC0-1.0</code>, <code>CC-BY-4.0</code>), excluding <code>CC-BY-NC-4.0</code> or <code>CC-BY-SA-4.0</code> unless the mod’s own license is compatible. Both ai_usage AND license must pass for a resource to be auto-added.</p>
-<h3 id="steam-workshop-integration-d030"><a class="header" href="#steam-workshop-integration-d030">Steam Workshop Integration (D030)</a></h3>
-<p>Steam Workshop is an <strong>optional distribution source</strong>, not a replacement for the IC Workshop. Resources published to Steam Workshop appear in the virtual repository alongside IC Workshop and local resources. Priority ordering determines which source wins when the same resource exists in multiple places.</p>
-<pre><code class="language-toml"># settings.toml — Steam Workshop as an additional source
-[[workshop.sources]]
-url = "https://workshop.ironcurtain.gg"      # official IC Workshop
-priority = 1
-
-[[workshop.sources]]
-type = "steam_workshop"                      # Steam Workshop source
-app_id = 0000000                             # IC's Steam app ID
-priority = 2
-
-[[workshop.sources]]
-path = "C:/my-local-workshop"
-priority = 3
-</code></pre>
-<p><strong>Key design constraints:</strong></p>
-<ul>
-<li>IC Workshop is always the primary source — Steam is additive, never required</li>
-<li>Resources can be published to both IC Workshop and Steam Workshop simultaneously via <code>ic mod publish --also-steam</code></li>
-<li>Steam Workshop subscriptions sync to local cache automatically</li>
-<li>No Steam lock-in — the game is fully functional without Steam</li>
-</ul>
-<h3 id="in-game-workshop-browser-d030"><a class="header" href="#in-game-workshop-browser-d030">In-Game Workshop Browser (D030)</a></h3>
-<p>The in-game browser is how most players interact with the Workshop. It queries the merged view of all configured repository sources — whether that’s a git-hosted index (Phase 0–3), a full Workshop server (Phase 5+), or both. UX inspired by CS:GO/Steam Workshop browser:</p>
-<ul>
-<li><strong>Search:</strong> Full-text search across names, descriptions, tags, and <code>llm_meta</code> fields. Phase 0–3: local search over cached <code>index.yaml</code>. Phase 5+: FTS5-powered server-side search.</li>
-<li><strong>Filter:</strong> By category (map, mod, music, sprites, etc.), game module (RA1, TD, RA2), author, license. Rating and download count filters available when Workshop server is live (Phase 5+).</li>
-<li><strong>Sort:</strong> By newest, alphabetical, author. Phase 5+ adds: popularity, highest rated, most downloaded, trending.</li>
-<li><strong>Preview:</strong> Screenshot, description, dependency list, license info, author name.</li>
-<li><strong>One-click install:</strong> Downloads to local cache, resolves dependencies automatically. Works identically regardless of backend.</li>
-<li><strong>Collections:</strong> Curated bundles (“Best Soviet mods”, “Tournament map pool Season 5”). Phase 5+ feature.</li>
-<li><strong>Creator profiles:</strong> Author page showing all published content, reputation score, tip links (D035). Phase 5+ feature.</li>
-</ul>
-<h3 id="modpacks-as-first-class-workshop-resources-d030"><a class="header" href="#modpacks-as-first-class-workshop-resources-d030">Modpacks as First-Class Workshop Resources (D030)</a></h3>
-<p>A <strong>modpack</strong> is a Workshop resource that bundles a curated set of mods with pinned versions, load order, and configuration — published as a single installable resource. This is the lesson from Minecraft’s CurseForge and Modrinth: modpacks solve the three hardest problems in modding ecosystems — discovery (“what mods should I use?”), compatibility (“do these mods work together?”), and onboarding (“how do I install all of this?”).</p>
-<p><strong>Modpacks are published snapshots of mod profiles (D062).</strong> Curators build and test mod profiles locally (<code>ic profile save</code>, <code>ic profile inspect</code>, <code>ic profile diff</code>), then publish the working result via <code>ic mod publish-profile</code>. Workshop modpacks import as local profiles via <code>ic profile import</code>. This makes the curator workflow reproducible — no manual reconstruction of the mod configuration each session.</p>
-<pre><code class="language-yaml"># mod.yaml for a modpack
-mod:
-  id: alice/red-apocalypse-pack
-  title: "Red Apocalypse Complete Experience"
-  version: "2.1.0"
-  authors: ["alice"]
-  description: "A curated collection of 12 mods for an enhanced RA1 experience"
-  license: "CC0-1.0"
-  category: Modpack                    # distinct category from Mod
-
-engine:
-  version: "^0.5.0"
-  game_module: "ra1"
-
-# Modpack-specific: list of mods with pinned versions and load order
-modpack:
-  mods:
-    - id: "bob/hd-sprites"
-      version: "=2.1.0"               # exact pin — tested with this version
-    - id: "carol/economy-overhaul"
-      version: "=1.4.2"
-    - id: "dave/ai-improvements"
-      version: "=3.0.1"
-    - id: "alice/tank-rebalance"
-      version: "=1.1.0"
-
-  # Explicit conflict resolutions (if any)
-  conflicts:
-    - unit: heavy_tank
-      field: health.max
-      use_mod: "alice/tank-rebalance"
-
-  # Configuration overrides applied after all mods load
-  config:
-    balance_preset: classic
-    qol_preset: iron_curtain
-</code></pre>
-<p><strong>Why modpacks matter:</strong></p>
-<ul>
-<li><strong>For players:</strong> One-click install of a tested, working mod combination. No manual dependency chasing, no version mismatch debugging.</li>
-<li><strong>For modpack curators:</strong> A creative role that doesn’t require writing any mod code. Curators test combinations, resolve conflicts, and publish a known-good experience.</li>
-<li><strong>For mod authors:</strong> Inclusion in popular modpacks drives discovery and downloads. Modpacks reference mods by Workshop ID — the original mod author keeps full credit and control.</li>
-</ul>
-<p><strong>Modpack lifecycle:</strong></p>
-<ul>
-<li><code>ic mod init modpack</code> — scaffolds a modpack manifest</li>
-<li><code>ic mod check</code> — validates all mods in the pack are compatible (version resolution, conflict detection)</li>
-<li><code>ic mod test --headless</code> — loads all mods in sequence, runs smoke tests</li>
-<li><code>ic mod publish</code> — publishes the modpack to Workshop. Installing the modpack auto-installs all referenced mods.</li>
-</ul>
-<p><strong>Phase:</strong> Modpack support in Phase 6a (alongside full Workshop registry).</p>
-<h3 id="auto-download-on-lobby-join-d030"><a class="header" href="#auto-download-on-lobby-join-d030">Auto-Download on Lobby Join (D030)</a></h3>
-<p>When a player joins a multiplayer lobby, the client checks <code>GameListing.required_mods</code> (see <code>03-NETCODE.md</code> § <code>GameListing</code>) against the local cache. Missing resources trigger automatic download:</p>
-<ol>
-<li><strong>Diff:</strong> Compare <code>required_mods</code> against local cache</li>
-<li><strong>Prompt:</strong> Show missing resources with total download size and estimated time</li>
-<li><strong>Download:</strong> Fetch via P2P (BitTorrent/WebTorrent — D049) from lobby peers and the wider swarm, with HTTP fallback from Workshop server. Lobby peers are prioritized as download sources since they already have the required content.</li>
-<li><strong>Verify:</strong> SHA-256 checksum validation for every downloaded resource</li>
-<li><strong>Install:</strong> Place in local cache, update dependency graph</li>
-<li><strong>Ready:</strong> Player joins game with all required content</li>
-</ol>
-<p>Players can cancel at any time. Auto-download respects bandwidth limits configured in settings. Resources downloaded this way are tagged as <strong>transient</strong> — they remain in the local cache and are fully functional, but are subject to auto-cleanup after a configurable period of non-use (default: 30 days). After the session, a non-intrusive toast offers the player the choice to pin (keep forever), let auto-clean run its course, or remove immediately. Frequently-used transient resources (3+ sessions) are automatically promoted to pinned. See <code>../decisions/09e/D030-workshop-registry.md</code> “Local Resource Management” for the full lifecycle, storage budget, and cleanup UX.</p>
-<h3 id="creator-reputation-system-d030"><a class="header" href="#creator-reputation-system-d030">Creator Reputation System (D030)</a></h3>
-<p>Creators earn reputation through community signals:</p>
+<hr>
+<h2 id="sub-pages"><a class="header" href="#sub-pages">Sub-Pages</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Signal</th><th>Weight</th><th>Description</th></tr>
+<tr><th>Section</th><th>Topic</th><th>File</th></tr>
 </thead>
 <tbody>
-<tr><td>Total downloads</td><td>Medium</td><td>Cumulative downloads across all published resources</td></tr>
-<tr><td>Average rating</td><td>High</td><td>Mean star rating across published resources (minimum 10 ratings to display)</td></tr>
-<tr><td>Dependency count</td><td>High</td><td>How many other resources/mods depend on this creator’s work</td></tr>
-<tr><td>Publish consistency</td><td>Low</td><td>Regular updates and new content over time</td></tr>
-<tr><td>Community reports</td><td>Negative</td><td>DMCA strikes, policy violations reduce reputation</td></tr>
+<tr><td>Workshop Features</td><td>LLM-driven resource discovery, Steam Workshop integration, in-game browser, modpacks, auto-download on lobby join, creator reputation, content moderation/DMCA, voluntary tipping, achievement integration, Workshop API</td><td><a href="workshop-features.html">workshop-features.md</a></td></tr>
 </tbody>
 </table>
 </div>
-<p><strong>Badges:</strong></p>
-<ul>
-<li><strong>Verified</strong> — identity confirmed (e.g., linked GitHub account)</li>
-<li><strong>Prolific</strong> — 10+ published resources with ≥4.0 average rating</li>
-<li><strong>Foundation</strong> — resources depended on by 50+ other resources</li>
-<li><strong>Curator</strong> — maintains high-quality curated collections</li>
-</ul>
-<p>Reputation is displayed but not gatekeeping — any registered user can publish. Badges appear on resource listings, in-game browser, and author profiles. See <code>../decisions/09e/D030-workshop-registry.md</code> for full design.</p>
-<h3 id="content-moderation--dmcatakedown-policy-d030"><a class="header" href="#content-moderation--dmcatakedown-policy-d030">Content Moderation &amp; DMCA/Takedown Policy (D030)</a></h3>
-<p>The Workshop must be a safe, legal distribution platform. Content moderation is a combination of automated scanning, community reporting, and moderator review.</p>
-<p><strong>Prohibited content:</strong> Malware, hate speech, illegal content, impersonation of other creators.</p>
-<p><strong>DMCA/IP takedown process (due process, not shoot-first):</strong></p>
-<ol>
-<li><strong>Reporter files takedown request</strong> via Workshop UI or email, specifying the resource and the claim (DMCA, license violation, policy violation)</li>
-<li><strong>Resource is flagged</strong> — not immediately removed — and the author is notified with a 72-hour response window</li>
-<li><strong>Author can counter-claim</strong> (e.g., they hold the rights, the reporter is mistaken)</li>
-<li><strong>Workshop moderators review</strong> — if the claim is valid, the resource is delisted (not deleted — remains in local caches of existing users)</li>
-<li><strong>Repeat offenders</strong> accumulate strikes. Three strikes → account publishing privileges suspended. Appeals process available.</li>
-<li><strong>DMCA safe harbor:</strong> The Workshop server operator (official or community-hosted) follows standard DMCA safe harbor procedures</li>
-</ol>
-<p><strong>Lessons applied:</strong> ArmA’s heavy-handed approach (IP bans for mod redistribution) chilled creativity. Skyrim’s paid mods debacle showed mandatory paywalls destroy goodwill. Our policy: due process, transparency, no mandatory monetization.</p>
-<h3 id="creator-recognition--voluntary-tipping-d035"><a class="header" href="#creator-recognition--voluntary-tipping-d035">Creator Recognition — Voluntary Tipping (D035)</a></h3>
-<p>Creators can optionally include tip/sponsorship links in their resource metadata. Iron Curtain <strong>never processes payments</strong> — we simply display links.</p>
-<pre><code class="language-yaml"># In resource manifest
-creator:
-  name: "alice"
-  tip_links:
-    - platform: ko-fi
-      url: "https://ko-fi.com/alice"
-    - platform: github-sponsors
-      url: "https://github.com/sponsors/alice"
-</code></pre>
-<p>Tip links appear on resource pages, author profiles, and in the in-game browser. No mandatory paywalls — all Workshop content is free to download. This is a deliberate design choice informed by the Skyrim paid mods controversy and ArmA’s gray-zone monetization issues.</p>
-<h3 id="achievement-system-integration-d036"><a class="header" href="#achievement-system-integration-d036">Achievement System Integration (D036)</a></h3>
-<p>Mod-defined achievements are publishable as Workshop resources. A mod can ship an achievement pack that defines achievements triggered by Lua scripts:</p>
-<pre><code class="language-yaml"># achievements/my-mod-achievements.yaml
-achievements:
-  - id: "my_mod.nuclear_winter"
-    title: "Nuclear Winter"
-    description: "Win a match using only nuclear weapons"
-    icon: "icons/nuclear_winter.png"
-    game_module: ra1
-    category: competitive
-    trigger: lua
-    script: "triggers/nuclear_winter.lua"
-</code></pre>
-<p>Achievement packs are versioned, dependency-tracked, and license-required like all Workshop resources. Engine-defined achievements (campaign completion, competitive milestones) ship with the game and cannot be overridden by mods.</p>
-<p>See <code>../decisions/09e/D036-achievements.md</code> for the full achievement system design including SQL schema and category taxonomy.</p>
-<h3 id="workshop-api"><a class="header" href="#workshop-api">Workshop API</a></h3>
-<p>The Workshop server stores all resource metadata, versions, dependencies, ratings, and search indices in an embedded SQLite database (D034). No external database required — the server is a single Rust binary that creates its <code>.db</code> file on first run. FTS5 provides full-text search over resource names, descriptions, and <code>llm_meta</code> tags. WAL mode handles concurrent reads from browse/search endpoints.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub trait WorkshopClient: Send + Sync {
-    fn browse(&amp;self, filter: &amp;ResourceFilter) -&gt; Result&lt;Vec&lt;ResourceListing&gt;&gt;;
-    fn download(&amp;self, id: &amp;ResourceId, version: &amp;VersionReq) -&gt; Result&lt;ResourcePackage&gt;;
-    fn publish(&amp;self, package: &amp;ResourcePackage) -&gt; Result&lt;ResourceId&gt;;
-    fn rate(&amp;self, id: &amp;ResourceId, rating: Rating) -&gt; Result&lt;()&gt;;
-    fn search(&amp;self, query: &amp;str, category: ResourceCategory) -&gt; Result&lt;Vec&lt;ResourceListing&gt;&gt;;
-    fn resolve(&amp;self, deps: &amp;[Dependency]) -&gt; Result&lt;DependencyGraph&gt;;   // D030: dep resolution
-    fn audit_licenses(&amp;self, graph: &amp;DependencyGraph) -&gt; Result&lt;LicenseReport&gt;; // D030: license check
-    fn promote(&amp;self, id: &amp;ResourceId, to_channel: Channel) -&gt; Result&lt;()&gt;; // D030: channel promotion
-    fn replicate(&amp;self, filter: &amp;ResourceFilter, target: &amp;str) -&gt; Result&lt;ReplicationReport&gt;; // D030: pull replication
-    fn create_token(&amp;self, name: &amp;str, scopes: &amp;[TokenScope], expires: Duration) -&gt; Result&lt;ApiToken&gt;; // CI/CD auth
-    fn revoke_token(&amp;self, token_id: &amp;str) -&gt; Result&lt;()&gt;; // CI/CD: revoke compromised tokens
-    fn report_content(&amp;self, id: &amp;ResourceId, reason: ContentReport) -&gt; Result&lt;()&gt;; // D030: content moderation
-    fn get_creator_profile(&amp;self, publisher: &amp;str) -&gt; Result&lt;CreatorProfile&gt;; // D030: creator reputation
-}
-
-/// Globally unique resource identifier: "publisher/name@version"
-pub struct ResourceId {
-    pub publisher: String,
-    pub name: String,
-    pub version: Version,             // semver
-}
-
-pub struct Dependency {
-    pub id: String,                   // "publisher/name"
-    pub version: VersionReq,          // semver range
-    pub source: DependencySource,     // Workshop, Local, Url
-    pub optional: bool,
-}
-
-pub struct ResourcePackage {
-    pub id: ResourceId,               // globally unique identifier
-    pub meta: ResourceMeta,           // title, author, description, tags
-    pub license: String,              // SPDX identifier (REQUIRED)
-    pub eula: Option&lt;Eula&gt;,           // optional additional terms (URL + summary)
-    pub ai_usage: AiUsagePermission,  // author's consent for LLM/AI access (REQUIRED)
-    pub llm_meta: Option&lt;LlmResourceMeta&gt;, // LLM-readable description
-    pub category: ResourceCategory,   // Music, Sprites, Map, Mod, etc.
-    pub files: Vec&lt;PackageFile&gt;,      // the actual content
-    pub checksum: Sha256Hash,         // package integrity (computed on publish)
-    pub channel: Channel,             // dev | beta | release
-    pub dependencies: Vec&lt;Dependency&gt;,// other workshop items this requires
-    pub compatibility: VersionInfo,   // engine version + game module this targets
-}
-
-/// Optional End User License Agreement for additional terms beyond the SPDX license.
-pub struct Eula {
-    pub url: String,                  // link to full EULA text (REQUIRED if eula present)
-    pub summary: Option&lt;String&gt;,      // one-line human-readable summary
-}
-
-/// Author's explicit consent for how LLM/AI agents may interact with this resource.
-/// This is SEPARATE from the SPDX license — a resource can be CC-BY (humans may
-/// redistribute) but ai_usage: Deny (author doesn't want automated AI incorporation).
-/// The license governs human use; ai_usage governs automated agent use.
-pub enum AiUsagePermission {
-    /// LLMs can discover, evaluate, pull, and incorporate this resource into
-    /// generated content (missions, mods, campaigns) without per-use approval.
-    /// The resource appears in LLM search results and can be auto-added as a
-    /// dependency by ic-llm's discovery pipeline (D030).
-    Allow,
-
-    /// LLMs can read this resource's metadata (llm_meta, tags, description) for
-    /// discovery and recommendation, but cannot auto-pull it as a dependency.
-    /// A human must explicitly confirm adding this resource. This is the DEFAULT —
-    /// it lets LLMs recommend the resource to modders while keeping the author's
-    /// content behind a human decision gate.
-    MetadataOnly,
-
-    /// Resource is excluded from LLM agent queries entirely. Human users can still
-    /// browse, search, and install it normally. The resource is invisible to ic-llm's
-    /// automated discovery pipeline. Use this for resources where the author does not
-    /// want any AI-mediated discovery or incorporation.
-    Deny,
-}
-
-/// LLM-readable metadata for workshop resources.
-/// Enables intelligent browsing, selection, and composition by ic-llm.
-pub struct LlmResourceMeta {
-    pub summary: String,              // one-line: "A 4-player desert skirmish map with limited ore"
-    pub purpose: String,              // when/why to use this: "Best for competitive 2v2 with scarce resources"
-    pub gameplay_tags: Vec&lt;String&gt;,   // semantic: ["desert", "2v2", "competitive", "scarce_resources"]
-    pub difficulty: Option&lt;String&gt;,   // for missions/campaigns: "hard", "beginner-friendly"
-    pub composition_hints: Option&lt;String&gt;, // how this combines with other resources
-    pub content_description: Option&lt;ContentDescription&gt;, // rich structured description for complex resources
-    pub related_resources: Vec&lt;String&gt;, // resource IDs that compose well with this one
-}
-
-/// Rich structured description for complex multi-file resources (cutscene packs,
-/// campaign bundles, sound libraries). Gives LLMs enough context to evaluate
-/// relevance without downloading and parsing the full resource.
-pub struct ContentDescription {
-    pub contents: Vec&lt;String&gt;,        // what's inside: ["5 briefing videos", "3 radar comm clips"]
-    pub themes: Vec&lt;String&gt;,          // mood/tone: ["military", "suspense", "soviet_propaganda"]
-    pub style: Option&lt;String&gt;,        // visual/audio style: "Retro FMV with live actors"
-    pub duration: Option&lt;String&gt;,     // for temporal media: "12 minutes total"
-    pub resolution: Option&lt;String&gt;,   // for visual media: "320x200 palette-indexed"
-    pub technical_notes: Option&lt;String&gt;, // format-specific info an LLM needs to know
-}
-
-pub struct DependencyGraph {
-    pub resolved: Vec&lt;ResolvedDependency&gt;, // all deps with exact versions
-    pub conflicts: Vec&lt;DependencyConflict&gt;, // incompatible version requirements
-}
-
-pub struct LicenseReport {
-    pub compatible: bool,
-    pub issues: Vec&lt;LicenseIssue&gt;,    // e.g., "CC-BY-NC dep in CC-BY mod"
-}
-<span class="boring">}</span></code></pre>
 
                     </main>
 
@@ -985,7 +665,7 @@ pub struct LicenseReport {
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../05-FORMATS.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../modding/workshop-features.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -999,7 +679,7 @@ pub struct LicenseReport {
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../05-FORMATS.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../modding/workshop-features.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

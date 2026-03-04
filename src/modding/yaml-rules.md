@@ -132,14 +132,14 @@ heavy_tank:
 
 **Filter types:** Conditions use typed filters matching D028's `ConditionId` system:
 
-| Filter Type   | Examples                                           | Resolves Against             |
-| ------------- | -------------------------------------------------- | ---------------------------- |
-| **state**     | `deployed`, `moving`, `idle`, `damaged`            | Entity condition bitset      |
-| **terrain**   | `on_road`, `on_snow`, `on_water`, `in_garrison`    | Cell terrain type            |
-| **attribute** | `vs [armored]`, `vs [infantry]`, `vs [air]`        | Target attribute tags        |
-| **veterancy** | `veterancy >= 1`, `veterancy == 3`                 | Entity veterancy level       |
-| **proximity** | `near_ally_repair`, `near_enemy`, `near_structure` | Spatial query (cached/ticked)|
-| **global**    | `superweapon_active`, `low_power`                  | Player-level game state      |
+| Filter Type   | Examples                                           | Resolves Against              |
+| ------------- | -------------------------------------------------- | ----------------------------- |
+| **state**     | `deployed`, `moving`, `idle`, `damaged`            | Entity condition bitset       |
+| **terrain**   | `on_road`, `on_snow`, `on_water`, `in_garrison`    | Cell terrain type             |
+| **attribute** | `vs [armored]`, `vs [infantry]`, `vs [air]`        | Target attribute tags         |
+| **veterancy** | `veterancy >= 1`, `veterancy == 3`                 | Entity veterancy level        |
+| **proximity** | `near_ally_repair`, `near_enemy`, `near_structure` | Spatial query (cached/ticked) |
+| **global**    | `superweapon_active`, `low_power`                  | Player-level game state       |
 
 **Rust resolution:** At runtime, conditional modifiers feed directly into D028's `StatModifiers` component. The YAML loader converts each modifier entry into a `(source, stat, modifier_value, condition)` tuple:
 

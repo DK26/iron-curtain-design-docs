@@ -40,15 +40,15 @@ Honest players on good connections always get responsive gameplay. A lagging pla
 
 *OpenRA values are from source code analysis, not runtime benchmarks. Tick processing times are estimates.*
 
-| Factor                      | OpenRA                               | Iron Curtain                                          | Improvement                            |
-| --------------------------- | ------------------------------------ | ----------------------------------------------------- | -------------------------------------- |
-| Waiting for slowest client  | Yes — everyone freezes               | No — relay drops late orders                          | Eliminates worst-case stalls entirely  |
-| Order batching interval     | Every N frames (`NetFrameInterval`)  | Every tick                                            | No batching delay                      |
-| Order scheduling delay      | +`OrderLatency` ticks                | +1 tick (next relay broadcast)                        | Fewer ticks of delay                   |
-| Tick processing time        | Estimated 30-60ms (limits tick rate) | ~8ms (allows higher tick rate)                        | 4-8x faster per tick                   |
-| Achievable tick rate        | ~15 tps                              | 30+ tps                                               | 2x shorter lockstep window             |
-| GC pauses during processing | C# GC characteristic                 | 0ms                                                   | Eliminates unpredictable hitches       |
-| Visual feedback on click    | Waits for order confirmation         | Immediate (cosmetic prediction)                       | Perceived lag drops to near-zero       |
-| Single-player order delay   | 1 projected frame (~66ms at 15 tps)  | 0 frames (`LocalNetwork` = next tick)                 | Zero delay                             |
-| Worst connection impact     | Freezes all players                  | Only affects the lagging player                       | Architectural fairness                 |
+| Factor                      | OpenRA                               | Iron Curtain                                                                              | Improvement                            |
+| --------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------- | -------------------------------------- |
+| Waiting for slowest client  | Yes — everyone freezes               | No — relay drops late orders                                                              | Eliminates worst-case stalls entirely  |
+| Order batching interval     | Every N frames (`NetFrameInterval`)  | Every tick                                                                                | No batching delay                      |
+| Order scheduling delay      | +`OrderLatency` ticks                | +1 tick (next relay broadcast)                                                            | Fewer ticks of delay                   |
+| Tick processing time        | Estimated 30-60ms (limits tick rate) | ~8ms (allows higher tick rate)                                                            | 4-8x faster per tick                   |
+| Achievable tick rate        | ~15 tps                              | 30+ tps                                                                                   | 2x shorter lockstep window             |
+| GC pauses during processing | C# GC characteristic                 | 0ms                                                                                       | Eliminates unpredictable hitches       |
+| Visual feedback on click    | Waits for order confirmation         | Immediate (cosmetic prediction)                                                           | Perceived lag drops to near-zero       |
+| Single-player order delay   | 1 projected frame (~66ms at 15 tps)  | 0 frames (`LocalNetwork` = next tick)                                                     | Zero delay                             |
+| Worst connection impact     | Freezes all players                  | Only affects the lagging player                                                           | Architectural fairness                 |
 | Architectural headroom      | No sim snapshots                     | Snapshottable sim (D010) enables optional rollback/GGPO experiments (`M11`, `P-Optional`) | Path to eliminating perceived MP delay |

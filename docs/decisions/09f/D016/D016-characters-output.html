@@ -1,0 +1,662 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Characters &amp; Output - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09f/D016/D016-characters-output.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h4 id="character-construction-principles"><a class="header" href="#character-construction-principles">Character Construction Principles</a></h4>
+<p>Generative campaigns live or die on character quality. A procedurally generated mission with a mediocre map is forgettable. A procedurally generated mission where a character you care about betrays you is unforgettable. The LLM’s system prompt includes explicit character construction guidance drawn from proven storytelling principles.</p>
+<p><strong>Personality-first construction:</strong></p>
+<p>Every named character is built from a personality model, not just a role label. The LLM assigns each character:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Purpose</th><th>Example (Sonya)</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>MBTI type</strong></td><td>Governs decision-making patterns, stress reactions, communication style, and interpersonal dynamics</td><td>ENTJ — ambitious strategist who leads from the front and challenges authority</td></tr>
+<tr><td><strong>Core traits</strong></td><td>3–5 adjectives that define the character’s public-facing personality</td><td>Brilliant, ambitious, morally flexible</td></tr>
+<tr><td><strong>Flaw</strong></td><td>A specific weakness that creates dramatic tension and makes the character human</td><td>Believes the ends always justify the means</td></tr>
+<tr><td><strong>Desire</strong></td><td>What the character wants — drives their actions and alliances</td><td>Power and control over the outcome of the war</td></tr>
+<tr><td><strong>Fear</strong></td><td>What the character dreads — drives their mistakes and vulnerabilities</td><td>Being a pawn in someone else’s game</td></tr>
+<tr><td><strong>Speech style</strong></td><td>Concrete voice direction so dialogue sounds like a person, not a bot</td><td>“Precise intelligence language with subtle manipulation”</td></tr>
+</tbody>
+</table>
+</div>
+<p>The MBTI type is not a horoscope — it’s a <strong>consistency framework</strong>. When the LLM generates dialogue, decisions, and reactions over 24 missions, the personality type keeps the character’s voice and behavior coherent. An ISTJ commander (Petrov) responds to a crisis differently than an ESTP commando (Volkov): Petrov consults doctrine, Volkov acts immediately. An ENTJ intelligence officer (Sonya) challenges the player’s plan head-on; an INFJ would express doubts obliquely. The LLM’s system prompt maps each type to concrete behavioral patterns:</p>
+<ul>
+<li><strong>Under stress:</strong> How the character cracks (ISTJ → becomes rigidly procedural; ESTP → reckless improvisation; ENTJ → autocratic overreach; INTJ → cold withdrawal)</li>
+<li><strong>In conflict:</strong> How they argue (ST types cite facts; NF types appeal to values; TJ types issue ultimatums; FP types walk away)</li>
+<li><strong>Loyalty shifts:</strong> What makes them stay or leave (SJ types value duty and chain of command; NP types value autonomy and moral alignment; NT types follow competence; SF types follow personal bonds)</li>
+<li><strong>Dialogue voice:</strong> How they talk (specific sentence structures, vocabulary patterns, verbal tics, and what they never say)</li>
+</ul>
+<p><strong>The flaw/desire/fear triangle</strong> is the engine of character drama. Every meaningful character moment comes from the collision between what a character wants, what they’re afraid of, and the weakness that undermines them. Sonya <em>wants</em> control, <em>fears</em> being a pawn, and her <em>flaw</em> (ends justify means) is exactly what makes her vulnerable to becoming the thing she fears. The LLM uses this triangle to generate character arcs that feel authored, not random.</p>
+<p><strong>Ensemble dynamics:</strong></p>
+<p>The LLM doesn’t build characters in isolation — it builds a cast with deliberate personality contrasts. The system prompt instructs:</p>
+<ul>
+<li><strong>No duplicate MBTI types</strong> in the core cast (3–5 characters). Personality diversity creates natural interpersonal tension.</li>
+<li><strong>Complementary and opposing pairs.</strong> Petrov (ISTJ, duty-bound) and Sonya (ENTJ, ambitious) disagree on <em>why</em> they’re fighting. Volkov (ESTP, lives-for-combat) and a hypothetical diplomat character (INFJ, seeks-peace) disagree on <em>whether</em> they should be. These pairings generate conflict without scripting.</li>
+<li><strong>Role alignment — or deliberate misalignment.</strong> A character whose MBTI fits their role (ISTJ commander) is reliable. A character whose personality clashes with their role (ENFP intelligence officer — creative but unfocused) creates tension that pays off during crises.</li>
+</ul>
+<p><strong>Inter-character dynamics (MBTI interaction simulation):</strong></p>
+<p>Characters don’t exist in isolation — they interact with each other, and those interactions are where the best drama lives. The LLM uses MBTI compatibility and tension patterns to simulate how characters relate, argue, collaborate, and clash <em>with each other</em> — not just with the player.</p>
+<p>The system prompt maps personality pairings to interaction patterns:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Pairing dynamic</th><th>Example</th><th>Interaction pattern</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>NT + NT</strong> (strategist meets strategist)</td><td>Sonya (ENTJ) vs. Morrison (INTJ)</td><td>Intellectual respect masking mutual threat. Each anticipates the other’s moves. Conversations are chess games. If forced to cooperate, they’re devastatingly effective — but neither trusts the other to stay loyal.</td></tr>
+<tr><td><strong>ST + NF</strong> (realist meets idealist)</td><td>Petrov (ISTJ) + diplomat (INFJ)</td><td>Petrov dismisses idealism as naïve; the diplomat sees Petrov as a blunt instrument. Under pressure, the diplomat’s moral clarity gives Petrov purpose he didn’t know he lacked.</td></tr>
+<tr><td><strong>SP + SJ</strong> (improviser meets rule-follower)</td><td>Volkov (ESTP) + Petrov (ISTJ)</td><td>Volkov breaks protocol; Petrov enforces it. They argue constantly — but Volkov’s improvisation saves the squad when doctrine fails, and Petrov’s discipline saves them when improvisation gets reckless. Grudging mutual respect over time.</td></tr>
+<tr><td><strong>TJ + FP</strong> (commander meets rebel)</td><td>Sonya (ENTJ) + a resistance leader (ISFP)</td><td>Sonya issues orders; the ISFP resists on principle. Sonya sees inefficiency; the ISFP sees tyranny. The conflict escalates until one of them is proven right — or both are proven wrong.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The LLM generates inter-character dialogue — not just player-facing briefings — by simulating how each character would respond to the other’s personality. When Petrov delivers a mission debrief and Volkov interrupts with a joke, the LLM knows Petrov’s ISTJ response is clipped disapproval (“This isn’t the time, Sergeant”), not laughter. When Sonya proposes a morally questionable plan, the LLM knows which characters push back (NF types, SF types) and which support it (NT types, pragmatic ST types).</p>
+<p>Over a 24-mission campaign, these simulated interactions create emergent relationships that the LLM tracks in narrative threads. A Petrov-Volkov friction arc might evolve from mutual irritation (missions 1–5) to grudging respect (missions 6–12) to genuine trust (missions 13–20) to devastating loss if one of them dies. None of this is scripted — it emerges from consistent MBTI-driven behavioral simulation applied to the campaign’s actual events.</p>
+<p><strong>Story Style Presets:</strong></p>
+<p>The <code>story_style</code> parameter controls how the LLM constructs both characters and narrative. The default — <strong>C&amp;C Classic</strong> — is designed to feel like an actual C&amp;C campaign:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Style</th><th>Character Voice</th><th>Narrative Feel</th><th>Inspired By</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>C&amp;C Classic</strong> (default)</td><td>Over-the-top military personalities. Commanders are larger-than-life. Villains monologue. Heroes quip under fire. Every character is memorable on first briefing.</td><td>Bombastic Cold War drama with genuine tension underneath. Betrayals. Superweapons. Last stands. The war is absurd and deadly serious at the same time.</td><td>RA1/RA2 campaigns, Tanya’s one-liners, Stalin’s theatrics, Yuri’s menace, Carville’s charm</td></tr>
+<tr><td><strong>Realistic Military</strong></td><td>Understated professionalism. Characters speak in military shorthand. Emotions are implied, not stated.</td><td>Band of Brothers tone. The horror of war comes from what’s <em>not</em> said. Missions feel like operations, not adventures.</td><td>Generation Kill, Black Hawk Down, early Tom Clancy</td></tr>
+<tr><td><strong>Political Thriller</strong></td><td>Everyone has an agenda. Dialogue is subtext-heavy. Trust is currency.</td><td>Slow-burn intrigue with sudden violence. The real enemy is often on your own side.</td><td>The Americans, Tinker Tailor Soldier Spy, Metal Gear Solid</td></tr>
+<tr><td><strong>Pulp Sci-Fi</strong></td><td>Characters are archetypes turned to 11. Scientists are mad. Soldiers are grizzled. Villains are theatrical.</td><td>Experimental tech, dimension portals, time travel, alien artifacts. Camp embraced, not apologized for.</td><td>RA2 Yuri’s Revenge, C&amp;C Renegade, Starship Troopers</td></tr>
+<tr><td><strong>Character Drama</strong></td><td>Deeply human characters with complex motivations. Relationships shift over the campaign.</td><td>The war is the backdrop; the story is about the people. Victory feels bittersweet. Loss feels personal.</td><td>The Wire, Battlestar Galatica, This War of Mine</td></tr>
+</tbody>
+</table>
+</div>
+<p>The default (C&amp;C Classic) exists because generative campaigns should feel like C&amp;C out of the box — not generic military fiction. Kane, Tanya, Yuri, and Carville are memorable because they’re <em>specific</em>: exaggerated personalities with distinctive voices, clear motivations, and dramatic reveals. The LLM’s system prompt for C&amp;C Classic includes explicit guidance: “Characters should be instantly recognizable from their first line of dialogue. A commander who speaks in forgettable military platitudes is a failed character. Every briefing should have a line worth quoting.”</p>
+<p>Players who want a different narrative texture pick a different style — or write a freeform description. The <code>custom_instructions</code> field in Advanced parameters stacks with the style preset, so a player can select “C&amp;C Classic” and add “but make the villain sympathetic” for a hybrid tone.</p>
+<p><strong>C&amp;C Classic — Narrative DNA (LLM System Prompt Guidelines):</strong></p>
+<p>The “C&amp;C Classic” preset isn’t just a label — it’s a set of concrete generation rules derived from Principle #20 (Narrative Identity) in <a href="13-PHILOSOPHY.html">13-PHILOSOPHY.md</a>. When the LLM generates content in this style, its system prompt includes the following directives. These also serve as authoring guidelines for hand-crafted IC campaigns.</p>
+<p><em>Tone rules:</em></p>
+<ol>
+<li><strong>Play everything straight.</strong> Never acknowledge absurdity. A psychic weapon is presented with the same military gravitas as a tank column. A trained attack dolphin gets a unit briefing, not a joke. The audience finds the humor because the world takes itself seriously — the moment the writing winks, the spell breaks.</li>
+<li><strong>Escalate constantly.</strong> Every act raises the stakes. If mission 1 is “secure a bridge,” mission 8 should involve a superweapon, and mission 20 should threaten civilization. C&amp;C campaigns climb from tactical skirmish to existential crisis. Never de-escalate the macro arc, even if individual missions provide breathers.</li>
+<li><strong>Make it quotable.</strong> Before finalizing any briefing, villain monologue, or unit voice line, apply the quotability test: would a player repeat this line to a friend? Would it work as a forum signature? If a line communicates information but isn’t memorable, rewrite it until it is.</li>
+</ol>
+<p><em>Character rules:</em></p>
+<ol start="4">
+<li><strong>First line establishes personality.</strong> A character’s introduction must immediately communicate who they are. Generic: “Commander, I’ll be your intelligence officer.” C&amp;C Classic: “Commander, I’ve read your file. Impressive — if any of it is true.” The personality is the introduction.</li>
+<li><strong>Villains believe they’re right.</strong> C&amp;C villains — Kane, Yuri, Stalin — are compelling because they have genuine convictions. Kane isn’t evil for evil’s sake; he has a vision. Generate villains with philosophy, not just malice. The best villain dialogue makes the player pause and think “…he has a point.”</li>
+<li><strong>Heroes have attitude, not perfection.</strong> Tanya isn’t a generic soldier — she’s cocky, impatient, and treats war like a playground. Carville isn’t a generic general — he’s folksy, irreverent, and drops Southern metaphors. Generate heroes with specific personality quirks that make them fun, not admirable.</li>
+<li><strong>Betrayal is always personal.</strong> C&amp;C campaigns are built on betrayals — and the best ones hurt because you liked the character. If the campaign skeleton includes a betrayal arc, invest missions in making that character genuinely likeable first. A betrayal by a cipher is plot. A betrayal by someone you trusted is drama.</li>
+</ol>
+<p><em>World-building rules:</em></p>
+<ol start="8">
+<li><strong>Cold War as mythology, not history.</strong> Real Cold War events are raw material, not constraints. Einstein erasing Hitler, chronosphere technology, psychic amplifiers, orbital ion cannons — these are mythological amplifications of real anxieties. Generate world details that feel like Cold War fever dreams, not Wikipedia entries.</li>
+<li><strong>Technology is dramatic, not realistic.</strong> Every weapon and structure should evoke a feeling. “GAP generator” isn’t just radar jamming — it’s shrouding your base in mystery. “Iron Curtain device” isn’t just invulnerability — it’s invoking the most famous metaphor of the Cold War era. Name technologies for dramatic impact, not technical accuracy.</li>
+<li><strong>Factions are worldviews.</strong> Allied briefings should feel like Western military confidence: professional, optimistic, technologically superior, with an undercurrent of “we’re the good guys, right?” Soviet briefings should feel like revolutionary conviction: the individual serves the collective, sacrifice is glory, industrial might is beautiful. Generate faction-specific vocabulary, sentence structure, and emotional register — not just different unit names.</li>
+</ol>
+<p><em>Structural rules:</em></p>
+<ol start="11">
+<li><strong>Every mission has a “moment.”</strong> A moment is a scripted event that creates an emotional peak — a character’s dramatic entrance, a surprise betrayal, a superweapon firing, an unexpected ally, a desperate last stand. Missions without moments are forgettable. Generate at least one moment per mission, placed at a dramatically appropriate time (not always the climax — a mid-mission gut punch is often stronger).</li>
+<li><strong>Briefings sell the mission.</strong> The briefing exists to make the player <em>want</em> to play the next mission. It should end with a question (explicit or implied) that the mission answers. “Can we take the beachhead before Morrison moves his armor south?” The player clicks “Deploy” because they want to find out.</li>
+<li><strong>Debriefs acknowledge what happened.</strong> Post-mission debriefs should reference specific battle report outcomes: casualties, key moments, named units that survived or died. A debrief that says “Well done, Commander” regardless of outcome is a failed debrief. React to the player’s actual experience.</li>
+</ol>
+<blockquote>
+<p><strong>Cross-reference:</strong> These rules derive from Principle #20 (Narrative Identity — Earnest Commitment, Never Ironic Distance) in <a href="13-PHILOSOPHY.html">13-PHILOSOPHY.md</a>, which establishes the seven C&amp;C narrative pillars. The rules above are the specific, actionable LLM directives and human authoring guidelines that implement those pillars for content generation. Other story style presets (Realistic Military, Political Thriller, etc.) have their own rule sets — but C&amp;C Classic is the default because it captures the franchise’s actual identity.</p>
+</blockquote>
+<p><strong>Step 3 — Post-Mission Inspection &amp; Progressive Generation:</strong></p>
+<p>After each mission, the system collects a detailed <strong>battle report</strong> — not just “win/lose” but a structured account of what happened during gameplay. This report is the LLM’s primary input for generating the next mission. The LLM inspects what actually occurred and reacts to it against the backstory and campaign arc.</p>
+<p><strong>What the battle report captures:</strong></p>
+<ul>
+<li><strong>Outcome:</strong> which named outcome the player achieved (victory variant, defeat variant)</li>
+<li><strong>Casualties:</strong> units lost by type, how they died (combat, friendly fire, sacrificed), named characters killed or wounded</li>
+<li><strong>Surviving forces:</strong> exact roster state — what the player has left to carry forward</li>
+<li><strong>Buildings:</strong> structures built, destroyed, captured (especially enemy structures)</li>
+<li><strong>Economy:</strong> resources gathered, spent, remaining; whether the player was resource-starved or flush</li>
+<li><strong>Timeline:</strong> mission duration, how quickly objectives were completed, idle periods</li>
+<li><strong>Territory:</strong> areas controlled at mission end, ground gained or lost</li>
+<li><strong>Key moments:</strong> scripted triggers that fired (or didn’t), secondary objectives attempted, hidden objectives discovered</li>
+<li><strong>Enemy state:</strong> what enemy forces survived, whether the enemy retreated or was annihilated, enemy structures remaining</li>
+<li><strong>Player behavior patterns:</strong> aggressive vs. defensive play, tech rush vs. mass production, micromanagement intensity (from D042 event logs)</li>
+</ul>
+<p>The LLM receives this battle report alongside the campaign context and generates the next mission <strong>as a direct reaction to what happened.</strong> This is not “fill in the next slot in a pre-planned arc” — it’s “inspect the battlefield aftermath and decide what happens next in the story.”</p>
+<p><strong>How inspection drives generation:</strong></p>
+<ol>
+<li><strong>Narrative consequences.</strong> The LLM sees the player barely survived mission 5 with 3 tanks and no base — the next mission isn’t a large-scale assault. It’s a desperate retreat, a scavenging mission, or a resistance operation behind enemy lines. The campaign <em>genre</em> shifts based on the player’s actual situation.</li>
+<li><strong>Escalation and de-escalation.</strong> If the player steamrolled mission 3, the LLM escalates: the enemy regroups, brings reinforcements, changes tactics. If the player struggled, the LLM provides a breather mission — resupply, ally arrival, intelligence gathering.</li>
+<li><strong>Story continuity.</strong> The LLM references specific events: “Commander, the bridge at Danzig we lost in the last operation — the enemy is using it to move armor south. We need it back.” Because the player actually lost that bridge.</li>
+<li><strong>Character reactions.</strong> Named characters react to what happened. Volkov’s briefing changes if the player sacrificed civilians in the last mission. Sonya questions the commander’s judgment after heavy losses. Morrison taunts the player after a defensive victory: “You held the line. Impressive. It won’t save you.”</li>
+<li><strong>Campaign arc awareness.</strong> The LLM knows where it is in the story — mission 8 of 24, end of Act 1 — and paces accordingly. Early missions establish, middle missions complicate, late missions resolve. But the <em>specific</em> complications come from the battle reports, not from a pre-written script.</li>
+<li><strong>Mission number context.</strong> The LLM knows which mission number it’s generating relative to the total (or relative to victory conditions in open-ended mode). Mission 3/24 gets an establishing tone. Mission 20/24 gets climactic urgency. The story progression scales accordingly — the LLM won’t generate a “final confrontation” at mission 6 unless the campaign is 8 missions long.</li>
+</ol>
+<p><strong>Generation pipeline per mission:</strong></p>
+<pre><code>┌─────────────────────────────────────────────────────────┐
+│                 Mission Generation Pipeline              │
+│                                                          │
+│  Inputs:                                                 │
+│  ├── Campaign skeleton (backstory, arc, characters)      │
+│  ├── Campaign context (accumulated state — see below)    │
+│  ├── Player's campaign state (roster, flags, path taken) │
+│  ├── Last mission battle report (detailed telemetry)     │
+│  ├── Player profile (D042 — playstyle, preferences)      │
+│  ├── Campaign parameters (difficulty, tone, etc.)        │
+│  ├── Victory condition progress (open-ended campaigns)   │
+│  └── Available Workshop resources (maps, assets)         │
+│                                                          │
+│  LLM generates:                                          │
+│  ├── Mission briefing (text, character dialogue)         │
+│  ├── Map layout (YAML terrain definition)                │
+│  ├── Objectives (primary + secondary + hidden)           │
+│  ├── Enemy composition and AI behavior                   │
+│  ├── Triggers and scripted events (Lua)                  │
+│  ├── Named outcomes (2–4 per mission)                    │
+│  ├── Carryover configuration (roster, equipment, flags)  │
+│  ├── Weather schedule (D022)                             │
+│  ├── Debrief per outcome (text, story flag effects)      │
+│  ├── Cinematic sequences (mid-mission + pre/post)        │
+│  ├── Dynamic music playlist + mood tags                  │
+│  ├── Radar comm events (in-mission character dialogue)   │
+│  ├── In-mission branching dialogues (RPG-style choices)  │
+│  ├── EVA notification scripts (custom voice cues)        │
+│  └── Intermission dialogue trees (between missions)      │
+│                                                          │
+│  Validation pass:                                        │
+│  ├── All unit types exist in the game module             │
+│  ├── All map references resolve                          │
+│  ├── Objectives are reachable (pathfinding check)        │
+│  ├── Lua scripts parse and sandbox-check                 │
+│  ├── Named outcomes have valid transitions               │
+│  └── Difficulty budget is within configured range        │
+│                                                          │
+│  Output: standard D021 mission node (YAML + Lua + map)   │
+└─────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Step 4 — Campaign Context (the LLM’s memory):</strong></p>
+<p>The LLM doesn’t have inherent memory between generation calls. The system maintains a <strong>campaign context</strong> document — a structured summary of everything that has happened — and includes it in every generation prompt. This is the bridge between “generate mission N” and “generate mission N+1 that makes sense.”</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Accumulated campaign context — passed to the LLM with each generation request.
+/// Grows over the campaign but is summarized/compressed to fit context windows.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct GenerativeCampaignContext {
+    /// The original campaign skeleton (backstory, arc, characters).
+    pub skeleton: CampaignSkeleton,
+    
+    /// Campaign parameters chosen by the player at setup.
+    pub parameters: CampaignParameters,
+    
+    /// Per-mission summary of what happened (compressed narrative, not raw state).
+    pub mission_history: Vec&lt;MissionSummary&gt;,
+    
+    /// Current state of each named character — tracks everything the LLM needs
+    /// to write them consistently and evolve their arc.
+    pub character_states: Vec&lt;CharacterState&gt;,
+    
+    /// Active story flags and campaign variables (D021 persistent state).
+    pub flags: HashMap&lt;String, Value&gt;,
+    
+    /// Current unit roster summary (unit counts by type, veterancy distribution,
+    /// named units — not individual unit state, which is too granular for prompts).
+    pub roster_summary: RosterSummary,
+    
+    /// Narrative threads the LLM is tracking (set up in skeleton, updated per mission).
+    /// e.g., "Sonya's betrayal — foreshadowed in missions 3, 5; reveal planned for ~mission 12"
+    pub active_threads: Vec&lt;NarrativeThread&gt;,
+    
+    /// Player tendency observations (from D042 profile + mission outcomes).
+    /// e.g., "Player favors aggressive strategies, rarely uses naval units,
+    /// tends to protect civilians"
+    pub player_tendencies: Vec&lt;String&gt;,
+    
+    /// The planned arc position — where we are in the narrative structure.
+    /// e.g., "Act 2, rising action, approaching midpoint crisis"
+    pub arc_position: String,
+}
+
+pub struct MissionSummary {
+    pub mission_number: u32,
+    pub title: String,
+    pub outcome: String,            // the named outcome the player achieved
+    pub narrative_summary: String,  // 2-3 sentence LLM-generated summary
+    pub key_events: Vec&lt;String&gt;,    // "Volkov killed", "bridge destroyed", "civilians saved"
+    pub performance: MissionPerformance, // time, casualties, rating
+}
+
+/// Detailed battle telemetry collected after each mission.
+/// This is what the LLM "inspects" to decide what happens next.
+pub struct BattleReport {
+    pub units_lost: HashMap&lt;String, u32&gt;,        // unit type → count lost
+    pub units_surviving: HashMap&lt;String, u32&gt;,   // unit type → count remaining
+    pub named_casualties: Vec&lt;String&gt;,           // named characters killed this mission
+    pub buildings_destroyed: Vec&lt;String&gt;,        // player structures lost
+    pub buildings_captured: Vec&lt;String&gt;,         // enemy structures captured
+    pub enemy_forces_remaining: EnemyState,      // annihilated, retreated, regrouping, entrenched
+    pub resources_gathered: i64,
+    pub resources_spent: i64,
+    pub mission_duration_seconds: u32,
+    pub territory_control_permille: i32,          // 0–1000, fraction of map controlled (fixed-point, not f32)
+    pub objectives_completed: Vec&lt;String&gt;,       // primary + secondary + hidden
+    pub objectives_failed: Vec&lt;String&gt;,
+    pub player_behavior: PlayerBehaviorSnapshot, // from D042 event classification
+}
+
+/// Tracks a named character's evolving state across the campaign.
+/// The LLM reads this to write consistent, reactive character behavior.
+pub struct CharacterState {
+    pub name: String,
+    pub status: CharacterStatus,         // Alive, Dead, MIA, Captured, Defected
+    pub allegiance: String,              // current faction — can change mid-campaign
+    pub loyalty: u8,                     // 0–100; LLM adjusts based on player actions
+    pub relationship_to_player: i8,      // -100 to +100 (hostile → loyal)
+    pub hidden_agenda: Option&lt;String&gt;,   // secret motivation; revealed when conditions trigger
+    pub personality_type: String,        // MBTI code (e.g., "ISTJ") — personality consistency anchor
+    pub speech_style: String,            // dialogue voice guidance for the LLM
+    pub flaw: String,                    // dramatic weakness — drives character conflict
+    pub desire: String,                  // what they want — drives their actions
+    pub fear: String,                    // what they dread — drives their mistakes
+    pub missions_appeared: Vec&lt;u32&gt;,     // which missions this character appeared in
+    pub kills: u32,                      // if a field unit — combat track record
+    pub notable_events: Vec&lt;String&gt;,     // "betrayed the player in mission 12", "saved Volkov in mission 7"
+    pub current_narrative_role: String,  // "ally", "antagonist", "rival", "prisoner", "rogue"
+}
+
+pub enum CharacterStatus {
+    Alive,
+    Dead { mission: u32, cause: String },     // permanently gone
+    MIA { since_mission: u32 },                // may return
+    Captured { by_faction: String },           // rescue or prisoner exchange possible
+    Defected { to_faction: String, mission: u32 }, // switched sides
+    Rogue { since_mission: u32 },              // operating independently
+}
+
+// --- Types referenced above but not yet defined ---
+
+/// The high-level campaign arc generated once at campaign start.
+/// Mirrors the YAML skeleton shown above, but typed for Rust consumption.
+pub struct CampaignSkeleton {
+    pub id: String,                    // e.g. "gen_soviet_2026-02-14_001"
+    pub title: String,
+    pub faction: String,
+    pub enemy_faction: String,
+    pub theater: String,
+    pub length: u32,                   // total missions (0 = open-ended)
+    pub arc: CampaignArc,
+    pub characters: Vec&lt;CharacterState&gt;,
+    pub backstory: String,
+    pub branch_points: Vec&lt;PlannedBranchPoint&gt;,
+}
+
+pub struct CampaignArc {
+    pub act_1: String,                 // e.g. "Establishing foothold (missions 1-8)"
+    pub act_2: String,
+    pub act_3: String,
+}
+
+pub struct PlannedBranchPoint {
+    pub mission: u32,                  // approximate mission number
+    pub theme: String,                 // e.g. "betray or protect civilian population"
+}
+
+/// All player-chosen parameters from the campaign setup screen.
+pub struct CampaignParameters {
+    pub faction: String,
+    pub campaign_length: u32,          // 8, 16, 24, 32, or 0 for open-ended
+    pub branching_density: BranchingDensity,
+    pub tone: String,                  // "military_thriller", "pulp_action", etc.
+    pub story_style: String,           // "cnc_classic", "realistic_military", etc.
+    pub difficulty_curve: DifficultyCurve,
+    pub roster_persistence: bool,
+    pub named_character_count: u8,     // 3-5 typically
+    pub theater: String,               // "european", "arctic", "random", etc.
+    pub game_module: String,
+    // Advanced parameters
+    pub mission_variety: String,       // "balanced", "assault_heavy", "defense_heavy"
+    pub faction_purity_permille: u16,  // 0-1000, default 900
+    pub resource_level: String,        // "scarce", "standard", "abundant"
+    pub weather_variation: bool,
+    pub custom_instructions: String,   // freeform player text
+    pub moral_complexity: MoralComplexity,
+    pub victory_conditions: Vec&lt;String&gt;, // for open-ended campaigns
+}
+
+pub enum BranchingDensity { Low, Medium, High }
+pub enum DifficultyCurve { Flat, Escalating, Adaptive, Brutal }
+pub enum MoralComplexity { Low, Medium, High }
+
+/// Compressed roster state for LLM prompts — not individual unit state.
+pub struct RosterSummary {
+    pub unit_counts: HashMap&lt;String, u32&gt;,   // unit_type → count
+    pub veterancy_distribution: [u32; 4],    // count at each vet level (0-3)
+    pub named_units: Vec&lt;NamedUnitSummary&gt;,  // hero units, named vehicles, etc.
+    pub total_value: i32,                    // approximate resource value of roster
+    pub army_composition: String,            // "armor-heavy", "balanced", "infantry-focused"
+}
+
+pub struct NamedUnitSummary {
+    pub name: String,
+    pub unit_type: String,
+    pub veterancy: u8,
+    pub kills: u32,
+    pub missions_survived: u32,
+}
+
+/// A story thread the LLM is tracking across the campaign.
+pub struct NarrativeThread {
+    pub id: String,                         // e.g. "sonya_betrayal"
+    pub title: String,                      // "Sonya's hidden agenda"
+    pub status: ThreadStatus,
+    pub involved_characters: Vec&lt;String&gt;,   // character names
+    pub foreshadowed_in: Vec&lt;u32&gt;,          // mission numbers where hints were dropped
+    pub expected_resolution_mission: Option&lt;u32&gt;, // approximate planned reveal
+    pub resolution_conditions: Vec&lt;String&gt;, // e.g. "loyalty &lt; 40", "player chose ruthless path"
+    pub notes: String,                      // LLM's internal notes about this thread
+}
+
+pub enum ThreadStatus {
+    Foreshadowing,   // hints being dropped
+    Rising,          // tension building
+    Active,          // thread is the current focus
+    Resolved,        // payoff delivered
+    Abandoned,       // player's choices made this thread irrelevant
+}
+
+/// Snapshot of player behavior from D042 event classification.
+/// Informs LLM about how the player actually plays.
+pub struct PlayerBehaviorSnapshot {
+    pub aggression_score: u16,         // 0-1000, higher = more aggressive
+    pub micro_intensity: u16,          // 0-1000, higher = more active micro
+    pub tech_rush_tendency: u16,       // 0-1000, higher = prefers tech over mass
+    pub expansion_rate: u16,           // 0-1000, higher = expands faster
+    pub preferred_unit_mix: Vec&lt;(String, u16)&gt;, // (unit_type, usage_permille)
+    pub risk_tolerance: u16,           // 0-1000, higher = takes more risks
+    pub economy_focus: u16,            // 0-1000, higher = prioritizes economy
+    pub naval_preference: u16,         // 0-1000, usage of naval units
+    pub air_preference: u16,           // 0-1000, usage of air units
+}
+
+/// State of enemy forces at mission end.
+pub enum EnemyState {
+    Annihilated,                       // no enemy forces remain
+    Retreated { direction: String },   // enemy pulled back
+    Regrouping { estimated_strength: u16 }, // reforming for counter-attack
+    Entrenched { position: String },   // holding defensive position
+    Reinforcing { from: String },      // receiving reinforcements
+}
+
+/// Performance metrics for a completed mission.
+pub struct MissionPerformance {
+    pub time_seconds: u32,             // mission duration
+    pub efficiency_score: u16,         // 0-1000, resources_destroyed / resources_spent
+    pub units_lost: u32,
+    pub units_killed: u32,
+    pub structures_destroyed: u32,
+    pub objectives_completion_rate: u16, // 0-1000, completed / total objectives
+    pub territory_control_permille: u16, // 0-1000, map area controlled at end
+    pub economy_rating: u16,           // 0-1000, resource management quality
+    pub micro_rating: u16,             // 0-1000, unit preservation efficiency
+}
+<span class="boring">}</span></code></pre>
+<blockquote>
+<p><strong>Schema cross-reference:</strong> For the full concrete YAML output schemas (map layout, actor placement, objectives, outcomes, Lua triggers) and prompt templates used by the LLM to generate these structures, see <code>research/llm-generation-schemas.md</code>.</p>
+</blockquote>
+<p><strong>Context window management:</strong> The context grows with each mission. For long campaigns (24+ missions), the system compresses older mission summaries into shorter recaps (the LLM itself does this compression: “Summarize missions 1–8 in 200 words, retaining key plot points and character developments”). This keeps the prompt within typical context window limits (~8K–32K tokens for the campaign context, leaving room for the generation instructions and output).</p>
+<h4 id="generated-output--standard-d021-campaigns"><a class="header" href="#generated-output--standard-d021-campaigns">Generated Output = Standard D021 Campaigns</a></h4>
+<p>Everything the LLM generates is standard IC format:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Generated artifact</th><th>Format</th><th>Same as hand-crafted?</th></tr>
+</thead>
+<tbody>
+<tr><td>Campaign graph</td><td>D021 YAML (<code>campaign.yaml</code>)</td><td>Identical</td></tr>
+<tr><td>Mission maps</td><td>YAML map definition</td><td>Identical</td></tr>
+<tr><td>Triggers / scripts</td><td>Lua (same API as <code>04-MODDING.md</code>)</td><td>Identical</td></tr>
+<tr><td>Briefings</td><td>YAML text + character references</td><td>Identical</td></tr>
+<tr><td>Named characters</td><td>D038 Named Characters format</td><td>Identical</td></tr>
+<tr><td>Carryover config</td><td>D021 carryover modes</td><td>Identical</td></tr>
+<tr><td>Story flags</td><td>D021 <code>flags</code></td><td>Identical</td></tr>
+<tr><td>Intermissions</td><td>D038 Intermission Screens (briefing, debrief, roster mgmt, dialogue)</td><td>Identical</td></tr>
+<tr><td>Cinematic sequences</td><td>D038 Cinematic Sequence module (YAML step list)</td><td>Identical</td></tr>
+<tr><td>Dynamic music config</td><td>D038 Music Playlist module (mood-tagged track lists)</td><td>Identical</td></tr>
+<tr><td>Radar comm events</td><td>D038 Video Playback / Radar Comm module</td><td>Identical</td></tr>
+<tr><td>In-mission dialogues</td><td>D038 Dialogue Editor format (branching tree YAML)</td><td>Identical</td></tr>
+<tr><td>EVA notifications</td><td>D038 EVA module (custom event → audio + text)</td><td>Identical</td></tr>
+<tr><td>Ambient sound zones</td><td>D038 Ambient Sound Zone module</td><td>Identical</td></tr>
+</tbody>
+</table>
+</div>
+<p>This is the key architectural decision: <strong>there is no “generative campaign runtime.”</strong> The LLM is a content creation tool. Once a mission is generated, it’s a normal mission. Once the full campaign is complete (all 24 missions played), it’s a normal D021 campaign — playable by anyone, with or without an LLM.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../decisions/09f/D016/D016-overview-generation.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../decisions/09f/D016/D016-cinematics-media.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../decisions/09f/D016/D016-overview-generation.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../decisions/09f/D016/D016-cinematics-media.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../../mark-09e88c2c.min.js"></script>
+        <script src="../../../searcher-c2a407aa.js"></script>
+
+        <script src="../../../clipboard-1626706a.min.js"></script>
+        <script src="../../../highlight-abc7f01d.js"></script>
+        <script src="../../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

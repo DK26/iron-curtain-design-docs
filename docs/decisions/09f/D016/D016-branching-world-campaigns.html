@@ -1,0 +1,623 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Branching &amp; World Campaigns - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09f/D016/D016-branching-world-campaigns.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h4 id="saving-replaying-and-sharing"><a class="header" href="#saving-replaying-and-sharing">Saving, Replaying, and Sharing</a></h4>
+<p><strong>Campaign library:</strong></p>
+<p>Every generative campaign is saved to the player’s local campaign list:</p>
+<pre><code>┌──────────────────────────────────────────────────────┐
+│  My Campaigns                                         │
+│                                                       │
+│  📖 Operation Iron Tide          Soviet  24/24  ★★★★  │
+│     Generated 2026-02-14  |  Completed  |  18h 42m   │
+│  📖 Arctic Vengeance             Allied  12/16  ▶︎    │
+│     Generated 2026-02-10  |  In Progress              │
+│  📖 Desert Crossroads            Soviet   8/8   ★★★   │
+│     Generated 2026-02-08  |  Completed  |  6h 15m    │
+│  📕 Red Alert (Hand-crafted)     Soviet  14/14  ★★★★★ │
+│     Built-in campaign                                 │
+│                                                       │
+│  [+ New Generative Campaign]  [Import...]             │
+└──────────────────────────────────────────────────────┘
+</code></pre>
+<ul>
+<li><strong>Auto-naming:</strong> The LLM names each campaign at skeleton generation. The player can rename.</li>
+<li><strong>Progress tracking:</strong> Shows mission count (played / total), completion status, play time.</li>
+<li><strong>Rating:</strong> Player can rate their own campaign (personal quality bookmark).</li>
+<li><strong>Resume:</strong> In-progress campaigns resume from the last completed mission. The next mission generates on resume if not already cached.</li>
+</ul>
+<p><strong>Replayability:</strong></p>
+<p>A completed generative campaign is a complete D021 campaign — all 24 missions exist as YAML + Lua + maps. The player (or anyone they share it with) can replay it from the start without an LLM. The campaign graph, all branching paths, and all mission content are materialized. A replayer can take different branches than the original player did, experiencing the missions the original player never saw.</p>
+<p><strong>Sharing:</strong></p>
+<p>Campaigns are shareable as standard IC campaign packages:</p>
+<ul>
+<li><strong>Export:</strong> <code>ic campaign export "Operation Iron Tide"</code> → produces a <code>.icpkg</code> campaign package (ZIP with <code>campaign.yaml</code>, mission files, maps, Lua scripts, assets). Same format as any hand-crafted campaign.</li>
+<li><strong>Workshop publish:</strong> One-click publish to Workshop (D030). The campaign appears alongside hand-crafted campaigns — there’s no second-class status. Tags indicate “LLM-generated” for discoverability, not segregation.</li>
+<li><strong>Import:</strong> Other players install the campaign like any Workshop content. No LLM needed to play.</li>
+</ul>
+<p><strong>Community refinement:</strong></p>
+<p>Shared campaigns are standard IC content — fully editable. Community members can:</p>
+<ul>
+<li><strong>Open in the Campaign Editor (D038):</strong> See the full mission graph, edit transitions, adjust difficulty, fix LLM-generated rough spots.</li>
+<li><strong>Modify missions in the Scenario Editor:</strong> Adjust unit placement, triggers, objectives, terrain. Polish LLM output into hand-crafted quality.</li>
+<li><strong>Edit campaign parameters:</strong> The campaign package includes the original <code>CampaignParameters</code> and <code>CampaignSkeleton</code> YAML. A modder can adjust these and re-generate specific missions (if they have an LLM configured), or directly edit the generated output.</li>
+<li><strong>Edit inner prompts:</strong> The campaign package preserves the generation prompts used for each mission. A modder can modify these prompts — adjusting tone, adding constraints, changing character behavior — and re-generate specific missions to see different results. This is the “prompt as mod parameter” principle: the LLM instructions are part of the campaign’s editable content, not hidden internals.</li>
+<li><strong>Fork and republish:</strong> Take someone’s campaign, improve it, publish as a new version. Standard Workshop versioning applies. Credit the original via Workshop dependency metadata.</li>
+</ul>
+<p>This creates a <strong>generation → curation → refinement pipeline</strong>: the LLM generates raw material, the community curates the best campaigns (Workshop ratings, downloads), and skilled modders refine them into polished experiences. The LLM is a starting gun, not the finish line.</p>
+<h4 id="branching-in-generative-campaigns"><a class="header" href="#branching-in-generative-campaigns">Branching in Generative Campaigns</a></h4>
+<p>Branching is central to generative campaigns, not optional. The LLM generates missions with multiple named outcomes (D021), and the player’s choice of outcome drives the next generation.</p>
+<p><strong>Within-mission branching:</strong></p>
+<p>Each generated mission has 2–4 named outcomes. These aren’t just win/lose — they’re narrative forks:</p>
+<ul>
+<li>“Victory — civilians evacuated” vs. “Victory — civilians sacrificed for tactical advantage”</li>
+<li>“Victory — Volkov survived” vs. “Victory — Volkov killed covering the retreat”</li>
+<li>“Defeat — orderly retreat” vs. “Defeat — routed, heavy losses”</li>
+</ul>
+<p>The LLM generates different outcome descriptions and assigns different story flag effects to each. The next mission is generated based on which outcome the player achieved.</p>
+<p><strong>Between-mission branching:</strong></p>
+<p>The campaign skeleton includes planned branch points (approximately every 4–6 missions). At these points, the LLM generates 2–3 possible next missions and lets the campaign graph branch. The player’s outcome determines which branch they take — but since missions are generated progressively, the LLM only generates the branch the player actually enters (plus one mission lookahead on the most likely alternate path, for pacing).</p>
+<p><strong>Branch convergence:</strong></p>
+<p>Not every branch diverges permanently. The LLM’s skeleton includes convergence points — moments where different paths lead to the same narrative beat (e.g., “regardless of which route you took, the final assault on Berlin begins”). This prevents the campaign from sprawling into an unmanageable tree. The skeleton’s act structure naturally creates convergence: all Act 1 paths converge at the Act 2 opening, all Act 2 paths converge at the climax.</p>
+<p><strong>Why branching matters even with LLM generation:</strong></p>
+<p>One might argue that since the LLM generates each mission dynamically, branching is unnecessary — just generate whatever comes next. But branching serves a critical purpose: <strong>the generated campaign must be replayable without an LLM.</strong> Once materialized, the campaign graph must contain the branches the player <em>didn’t</em> take too, so a replayer (or the same player on a second playthrough) can explore alternate paths. The LLM generates branches ahead of time. Progressive generation generates the branches as they become relevant — not all 24 missions on day one, but also not waiting until the player finishes mission 7 to generate mission 8’s alternatives.</p>
+<h4 id="campaign-event-patterns"><a class="header" href="#campaign-event-patterns">Campaign Event Patterns</a></h4>
+<p>The LLM doesn’t just generate “attack this base” missions in sequence. It draws from a vocabulary of <strong>dramatic event patterns</strong> — narrative structures inspired by the C&amp;C franchise’s most memorable campaign moments and classic military fiction. These patterns are documented in the system prompt so the LLM has a rich palette to paint from.</p>
+<p>The LLM chooses when and how to deploy these patterns based on the campaign context, battle reports, character states, and narrative pacing. None are scripted in advance — they emerge from the interplay of the player’s actions and the LLM’s storytelling.</p>
+<p><strong>Betrayal &amp; defection patterns:</strong></p>
+<ul>
+<li><strong>The backstab.</strong> A trusted ally — an intelligence officer, a fellow commander, a political advisor — switches sides mid-campaign. The turn is foreshadowed in briefings (the LLM plants hints over 2–3 missions: contradictory intel, suspicious absences, intercepted communications), then triggered by a story flag or a player decision. Inspired by: Nadia poisoning Stalin (RA1), Yuri’s betrayal (RA2).</li>
+<li><strong>Defection offer.</strong> An enemy commander, impressed by the player’s performance or disillusioned with their own side, secretly offers to defect. The player must decide: accept (gaining intelligence + units but risking a double agent) or refuse. The LLM uses the <code>relationship_to_player</code> score from battle reports — if the player spared enemy forces in previous missions, defection becomes plausible.</li>
+<li><strong>Loyalty erosion.</strong> A character’s <code>loyalty</code> score drops based on player actions: sacrificing troops carelessly, ignoring a character’s advice repeatedly, making morally questionable choices. When loyalty drops below a threshold, the LLM generates a confrontation mission — the character either leaves, turns hostile, or issues an ultimatum.</li>
+<li><strong>The double agent.</strong> A rescued prisoner, a defector from the enemy, a “helpful” neutral — someone the player trusted turns out to be feeding intelligence to the other side. The reveal comes when the player notices the enemy is always prepared for their strategies (the LLM has been describing suspiciously well-prepared enemies for several missions).</li>
+</ul>
+<p><strong>Rogue faction patterns:</strong></p>
+<ul>
+<li><strong>Splinter group.</strong> Part of the player’s own faction breaks away — a rogue general forms a splinter army, or a political faction seizes a province and declares independence. The player must fight former allies with the same unit types and tactics. Inspired by: Yuri’s army splitting from the Soviets (RA2), rogue Soviet generals in RA1.</li>
+<li><strong>Third-party emergence.</strong> A faction that didn’t exist at campaign start appears mid-campaign: a resistance movement, a mercenary army, a scientific cult with experimental weapons. The LLM introduces them as a complication — sometimes an optional ally, sometimes an enemy, sometimes both at different times.</li>
+<li><strong>Warlord territory.</strong> In open-ended campaigns, regions not controlled by either main faction become warlord territories — autonomous zones with their own mini-armies and demands. The LLM generates negotiation or conquest missions for these zones.</li>
+</ul>
+<p><strong>Plot twist patterns:</strong></p>
+<ul>
+<li><strong>Secret weapon reveal.</strong> The enemy unveils a devastating new technology: a superweapon, an experimental unit, a weaponized chronosphere. The LLM builds toward the reveal (intelligence fragments over 2–3 missions), then the player faces it in a desperate defense mission. Follow-up missions involve stealing or destroying it.</li>
+<li><strong>True enemy reveal.</strong> The faction the player has been fighting isn’t the real threat. A larger power has been manipulating both sides. The campaign pivots to a temporary alliance with the former enemy against the true threat. Inspired by: RA2 Yuri’s Revenge (Allies and Soviets team up against Yuri).</li>
+<li><strong>The war was a lie.</strong> The player’s own command has been giving false intelligence. The “enemy base” the player destroyed in mission 5 was a civilian research facility. The “war hero” the player is protecting is a war criminal. Moral complexity emerges from the campaign’s own history, not from a pre-written script.</li>
+<li><strong>Time pressure crisis.</strong> A countdown starts: nuclear launch, superweapon charging, allied capital about to fall. The next 2–3 missions are a race against time, each one clearing a prerequisite for the final mission (destroy the radar, capture the codes, reach the launch site). The LLM paces this urgently — short missions, high stakes, no breathers.</li>
+</ul>
+<p><strong>Force dynamics patterns:</strong></p>
+<ul>
+<li><strong>Army to resistance.</strong> After a catastrophic loss, the player’s conventional army is shattered. The campaign genre shifts: smaller forces, guerrilla objectives (sabotage, assassination, intelligence gathering), no base building. The LLM generates this naturally when the battle report shows heavy losses. Rebuilding over subsequent missions gradually restores conventional operations.</li>
+<li><strong>Underdog to superpower.</strong> The inverse: the player starts with a small force and grows mission by mission. The LLM scales enemy composition accordingly, and the tone shifts from desperate survival to strategic dominance. Late-campaign missions are large-scale assaults the player couldn’t have dreamed of in mission 2.</li>
+<li><strong>Siege / last stand.</strong> The player must hold a critical position against overwhelming odds. Reinforcement timing is the drama — will they arrive? The LLM generates increasingly desperate defensive waves, with the outcome determining whether the campaign continues as a retreat or a counter-attack.</li>
+<li><strong>Behind enemy lines.</strong> A commando mission deep in enemy territory with a small, hand-picked squad. No reinforcements, no base, limited resources. Named characters shine here. Inspired by: virtually every Tanya mission in the RA franchise.</li>
+</ul>
+<p><strong>Character-driven patterns:</strong></p>
+<ul>
+<li><strong>Rescue the captured.</strong> A named character is captured during a mission (or between missions, as a narrative event). The player faces a choice: launch a risky rescue operation, negotiate a prisoner exchange (giving up tactical advantage), or abandon them (with loyalty consequences for other characters). A rescued character returns with changed traits — traumatized, radicalized, or more loyal than ever.</li>
+<li><strong>Rival commander.</strong> The LLM develops a specific enemy commander as the player’s nemesis. This character appears in briefings, taunts the player after defeats, acts surprised after losses. The rivalry develops over 5–10 missions before the final confrontation. The enemy commander reacts to the player’s tactics: if the player favors air power, the rival starts deploying heavy AA and mocking the strategy.</li>
+<li><strong>Mentor’s fall.</strong> An experienced commander who guided the player in early missions is killed, goes MIA, or turns traitor. The player must continue without their guidance — the tone shifts from “following orders” to “making hard calls alone.”</li>
+<li><strong>Character return.</strong> A character thought dead or MIA resurfaces — changed. An MIA character returns with intelligence gained during capture. A “dead” character survived and is now leading a resistance cell. A defected character has second thoughts. The LLM tracks <code>CharacterStatus::MIA</code> and <code>CharacterStatus::Dead</code> and can reverse them with narrative justification.</li>
+</ul>
+<p><strong>Diplomatic &amp; political patterns:</strong></p>
+<ul>
+<li><strong>Temporary alliance.</strong> The player’s faction and the enemy faction must cooperate against a common threat (rogue faction, third-party invasion, natural disaster). Missions feature mixed unit control — the player commands some enemy units. Trust is fragile; the alliance may end in betrayal.</li>
+<li><strong>Ceasefire and cold war.</strong> Fighting pauses for 2–3 missions while the LLM generates espionage, infiltration, and political maneuvering missions. The player builds up forces during the ceasefire, knowing combat will resume. When and how it resumes depends on the player’s actions during the ceasefire.</li>
+<li><strong>Civilian dynamics.</strong> Missions where civilians matter: evacuate a city before a bombing, protect a refugee convoy, decide whether to commandeer civilian infrastructure. The player’s treatment of civilians affects the campaign’s politics — a player who protects civilians gains partisan support; one who sacrifices them faces insurgencies on their own territory.</li>
+</ul>
+<p>These patterns are examples, not an exhaustive list. The LLM’s system prompt includes them as inspiration. The LLM can also invent novel patterns that don’t fit these categories — the constraint is that every event must produce standard D021 missions and respect the campaign’s current state, not that every event must match a template.</p>
+<h4 id="open-ended-campaigns"><a class="header" href="#open-ended-campaigns">Open-Ended Campaigns</a></h4>
+<p>Fixed-length campaigns (8, 16, 24 missions) suit players who want a structured experience. But the most interesting generative campaigns may be <strong>open-ended</strong> — where the campaign continues until victory conditions are met, and the LLM determines the pacing.</p>
+<p><strong>How open-ended campaigns work:</strong></p>
+<p>Instead of “generate 24 missions,” the player defines <strong>victory conditions</strong> — a set of goals that, when achieved, trigger the campaign finale:</p>
+<pre><code class="language-yaml">victory_conditions:
+  # Any ONE of these triggers the final mission sequence
+  - type: eliminate_character
+    target: "General Morrison"
+    description: "Hunt down and eliminate the Allied Supreme Commander"
+  - type: capture_locations
+    targets: ["London", "Paris", "Washington"]
+    description: "Capture all three Allied capitals"
+  - type: survival
+    missions: 30
+    description: "Survive 30 missions against escalating odds"
+
+# Optional: defeat conditions that end the campaign in failure
+defeat_conditions:
+  - type: roster_depleted
+    threshold: 0       # lose all named characters
+    description: "All commanders killed — the war is lost"
+  - type: lose_streak
+    count: 3
+    description: "Three consecutive mission failures — command is relieved"
+</code></pre>
+<p>The LLM sees these conditions and works toward them narratively. It doesn’t just generate missions until the player happens to kill Morrison — it builds a story arc where Morrison is an escalating threat, intelligence about his location is gathered over missions, near-misses create tension, and the final confrontation feels earned.</p>
+<p><strong>Dynamic narrative shifts:</strong></p>
+<p>Open-ended campaigns enable dramatic genre shifts that fixed-length campaigns can’t. The LLM inspects the battle report and can pivot the entire campaign direction:</p>
+<ul>
+<li><strong>Army → Resistance.</strong> The player starts with a full division. After a devastating defeat in mission 8, they lose most forces. The LLM generates mission 9 as a guerrilla operation — small squad, no base building, ambush tactics, sabotage objectives. The campaign has organically shifted from conventional warfare to an insurgency. If the player rebuilds over the next few missions, it shifts back.</li>
+<li><strong>Hunter → Hunted.</strong> The player is pursuing a VIP target. The VIP escapes repeatedly. The LLM decides the VIP has learned the player’s tactics and launches a counter-offensive. Now the player is defending against an enemy who knows their weaknesses.</li>
+<li><strong>Rising power → Civil war.</strong> The player’s faction is winning the war. Political factions within their own side start competing for control. The LLM introduces betrayal missions where the player fights former allies.</li>
+<li><strong>Conventional → Desperate.</strong> Resources dry up. Supply lines are cut. The LLM generates missions with scarce starting resources, forcing the player to capture enemy supplies or scavenge the battlefield.</li>
+</ul>
+<p>These shifts emerge naturally from the battle reports. The LLM doesn’t follow a script — it reads the game state and decides what makes a good story.</p>
+<p><strong>Escalation mechanics:</strong></p>
+<p>In open-ended campaigns, the enemy isn’t static. The LLM uses a concept of <strong>enemy adaptation</strong> — the longer the campaign runs, the more the enemy evolves:</p>
+<ul>
+<li><strong>VIP escalation.</strong> A fleeing VIP gains experience and resources the longer they survive. Early missions to catch them are straightforward pursuits. By mission 15, the VIP has fortified a stronghold, recruited allies, and developed counter-strategies. The difficulty curve is driven by the narrative, not a slider.</li>
+<li><strong>Enemy learning.</strong> The LLM tracks what strategies the player uses (from battle reports) and has the enemy adapt. Player loves tank rushes? The enemy starts mining approaches and building anti-armor defenses. Player relies on air power? The enemy invests in AA.</li>
+<li><strong>Resource escalation.</strong> Both sides grow over the campaign. Early missions are skirmishes. Late missions are full-scale battles. The LLM scales force composition to match the campaign’s progression.</li>
+<li><strong>Alliance shifts.</strong> Neutral factions that appeared in early missions may become allies or enemies based on the player’s choices. The political landscape evolves.</li>
+</ul>
+<p><strong>How the LLM decides “it’s time for the finale”:</strong></p>
+<p>The LLM doesn’t just check <code>if conditions_met { generate_finale(); }</code>. It builds toward the conclusion:</p>
+<ol>
+<li><strong>Sensing readiness.</strong> The LLM evaluates whether the player’s current roster, position, and narrative momentum make a finale satisfying. If the player barely survived the last mission, the finale waits — a recovery mission first.</li>
+<li><strong>Creating the opportunity.</strong> When conditions are approaching (the player has captured 2/3 capitals, Morrison’s location is almost known), the LLM generates missions that create the <em>opportunity</em> for the final push — intelligence missions, staging operations, securing supply lines.</li>
+<li><strong>The finale sequence.</strong> The final mission (or final 2–3 missions) are generated as a climactic arc, not a single mission. The LLM knows these are the last ones and gives them appropriate weight — cutscene-worthy briefings, all surviving named characters present, callbacks to early campaign events.</li>
+<li><strong>Earning the ending.</strong> The campaign length is indeterminate but not infinite. The LLM aims for a satisfying arc — typically 15–40 missions depending on the victory conditions. If the campaign has gone on “too long” without progress toward victory (the player keeps failing to advance), the LLM introduces narrative catalysts: an unexpected ally, a turning point event, or a vulnerability in the enemy’s position.</li>
+</ol>
+<p><strong>Open-ended campaign identity:</strong></p>
+<p>What makes open-ended campaigns distinct from fixed-length ones:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Aspect</th><th>Fixed-length (24 missions)</th><th>Open-ended</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>End condition</strong></td><td>Mission count reached</td><td>Victory conditions met</td></tr>
+<tr><td><strong>Skeleton</strong></td><td>Full arc planned upfront</td><td>Backstory + conditions + characters; arc emerges</td></tr>
+<tr><td><strong>Pacing</strong></td><td>LLM knows position in arc (mission 8/24)</td><td>LLM estimates narrative momentum</td></tr>
+<tr><td><strong>Narrative shifts</strong></td><td>Planned at branch points</td><td>Emerge from battle reports</td></tr>
+<tr><td><strong>Difficulty</strong></td><td>Follows configured curve</td><td>Driven by enemy adaptation + player state</td></tr>
+<tr><td><strong>Replayability</strong></td><td>Take different branches</td><td>Entirely different campaign length and arc</td></tr>
+<tr><td><strong>Typical length</strong></td><td>Exactly as configured</td><td>15–40 missions (emergent)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Both modes produce standard D021 campaigns. Both are saveable, shareable, and replayable without an LLM. The difference is in how much creative control the LLM exercises during generation.</p>
+<h4 id="world-domination-campaign"><a class="header" href="#world-domination-campaign">World Domination Campaign</a></h4>
+<p>A third generative campaign mode — distinct from both fixed-length narrative campaigns and open-ended condition-based campaigns. <strong>World Domination</strong> is an LLM-driven narrative campaign where the story plays out across a world map. The LLM is the narrative director — it generates missions, drives the story, and decides what happens next based on the player’s real-time battle results. The world map is the visualization: territory expands when you win, contracts when you lose, and shifts when the narrative demands it.</p>
+<p>This is the mode where the campaign <em>is</em> the map.</p>
+<p><strong>How it works:</strong></p>
+<p>The player starts in a region — say, Greece — and fights toward a goal: conquer Europe, defend the homeland, push west to the Atlantic. The LLM generates each mission based on where the player stands on the map, what happened in previous battles, and where the narrative is heading. The player doesn’t pick targets from a strategy menu — the LLM presents the next mission (or a choice between missions) based on the story it’s building.</p>
+<p>After each RTS battle, the results feed back to the LLM. Won decisively? Territory advances. Lost badly? The enemy pushes into your territory. But it’s not purely mechanical — the LLM controls the narrative arc. Maybe you lose three missions in a row, your territory shrinks, things look dire — and then the LLM introduces a turning point: your engineers develop a new weapon, a neutral faction joins your side, a storm destroys the enemy’s supply lines. Or maybe there’s no rescue — you simply lose. The LLM decides based on accumulated battle results, the story it’s been building, and the dramatic pacing.</p>
+<pre><code class="language-yaml"># World Domination campaign setup (extends standard CampaignParameters)
+world_domination:
+  map: "europe_1953"                  # world map asset (see World Map Assets below)
+  starting_region: "athens"           # where the player's campaign begins
+  factions:
+    - id: soviet
+      name: "Soviet Union"
+      color: "#CC0000"
+      starting_regions: ["moscow", "leningrad", "stalingrad", "kiev", "minsk"]
+      ai_personality: null             # player-controlled
+    - id: allied
+      name: "Allied Forces"
+      color: "#0044CC"
+      starting_regions: ["london", "paris", "washington", "rome", "berlin"]
+      ai_personality: "strategic"      # AI-controlled (D043 preset)
+    - id: neutral
+      name: "Neutral States"
+      color: "#888888"
+      starting_regions: ["stockholm", "bern", "ankara", "cairo"]
+      ai_personality: "defensive"      # defends territory, doesn't expand
+  
+  # The LLM decides when and how the campaign ends — these are hints, not hard rules.
+  # The LLM may end the campaign with a climactic finale at 60% control, or let 
+  # the player push to 90% if the narrative supports it.
+  narrative_hints:
+    goal_direction: west               # general direction of conquest (flavor for LLM)
+    domination_target: "Europe"        # what "winning" means narratively
+    tone: military_drama              # narrative tone: military_drama, pulp, dark, heroic
+</code></pre>
+<p><strong>The campaign loop:</strong></p>
+<pre><code>┌────────────────────────────────────────────────────────────────┐
+│                    World Domination Loop                        │
+│                                                                │
+│  1. VIEW WORLD MAP                                             │
+│     ├── See your territory, enemy territory, contested zones   │
+│     ├── See the frontline — where your campaign stands         │
+│     └── See the narrative state (briefing, intel, context)     │
+│                                                                │
+│  2. LLM PRESENTS NEXT MISSION                                  │
+│     ├── Based on current frontline and strategic situation      │
+│     ├── Based on accumulated battle results and player actions  │
+│     ├── Based on narrative arc (pacing, tension, stakes)        │
+│     ├── May offer a choice: "Attack Crete or reinforce Athens?" │
+│     └── May force a scenario: "Enemy launches surprise attack!" │
+│                                                                │
+│  3. PLAY RTS MISSION (standard IC gameplay)                    │
+│     └── Full real-time battle — this is the game                │
+│                                                                │
+│  4. RESULTS FEED BACK TO LLM                                   │
+│     ├── Battle outcome (victory, defeat, pyrrhic, decisive)    │
+│     ├── Casualties, surviving units, player tactics used        │
+│     ├── Objectives completed or failed                         │
+│     └── Time taken, resources spent, player style               │
+│                                                                │
+│  5. LLM UPDATES THE WORLD                                      │
+│     ├── Territory changes (advance, retreat, or hold)           │
+│     ├── Narrative consequences (new allies, betrayals, tech)    │
+│     ├── Story progression (turning points, escalation, arcs)   │
+│     └── May introduce recovery or setback events               │
+│                                                                │
+│  6. GOTO 1                                                     │
+└────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Region properties:</strong></p>
+<p>Each region on the world map has strategic properties that affect mission generation:</p>
+<pre><code class="language-yaml">regions:
+  berlin:
+    display_name: "Berlin"
+    terrain_type: urban              # affects generated map terrain
+    climate: temperate               # affects weather (D022)
+    resource_value: 3                # economic importance (LLM considers for narrative weight)
+    fortification: heavy             # affects defender advantage
+    population: civilian_heavy       # affects civilian presence in missions
+    adjacent: ["warsaw", "prague", "hamburg", "munich"]
+    special_features:
+      - type: factory_complex        # bonus: faster unit production
+      - type: airfield               # bonus: air support in adjacent battles
+    strategic_importance: critical    # LLM emphasizes this in narrative
+
+  arctic_outpost:
+    display_name: "Arctic Research Station"
+    terrain_type: arctic
+    climate: arctic
+    resource_value: 1
+    fortification: light
+    population: minimal
+    adjacent: ["murmansk", "arctic_sea"]
+    special_features:
+      - type: research_lab           # bonus: unlocks special units/tech
+    strategic_importance: moderate
+</code></pre>
+<p><strong>Progress and regression:</strong></p>
+<p>The world map is not a one-way march to victory. The LLM drives territory changes based on battle outcomes <em>and</em> narrative arc:</p>
+<ul>
+<li><strong>Win a mission</strong> → territory typically advances. The LLM decides how much — a minor victory might push one region forward, a decisive rout might cascade into capturing two or three.</li>
+<li><strong>Lose a mission</strong> → the enemy pushes in. The LLM decides the severity — a narrow loss might mean holding the line but losing influence, while a collapse means the enemy sweeps through multiple regions.</li>
+<li><strong>Pyrrhic victory</strong> → you won, but at what cost? The LLM might advance your territory but weaken your forces so severely that the next mission is a desperate defense.</li>
+</ul>
+<p>But it’s not a mechanical formula. The LLM is a <strong>narrative director</strong>, not a spreadsheet. It mixes battle results with story:</p>
+<ul>
+<li><strong>Recovery arcs:</strong> You’ve lost three missions. Your territory has shrunk to a handful of regions. Things look hopeless — and then the LLM introduces a breakthrough. Maybe your engineers develop a new superweapon. Maybe a neutral faction defects to your side. Maybe a brutal winter slows the enemy advance and buys you time. The recovery feels earned because it follows real setbacks.</li>
+<li><strong>Deus ex machina:</strong> Rarely, the LLM creates a dramatic reversal — an earthquake destroys the enemy’s main base, a rogue commander switches sides, an intelligence coup reveals the enemy’s plans. These are narratively justified and infrequent enough to feel special.</li>
+<li><strong>Escalation:</strong> You’re winning too easily? The LLM introduces complications — a second front opens, the enemy deploys experimental weapons, an ally betrays you. The world map shifts to reflect the new threat.</li>
+<li><strong>Inevitable defeat:</strong> Sometimes there’s no rescue. If the player keeps losing badly and the narrative can’t credibly save them, the campaign ends in defeat. The LLM builds to a dramatic conclusion — a last stand, a desperate evacuation, a bitter retreat — rather than just showing “Game Over.”</li>
+</ul>
+<p>The key insight: <strong>the player’s agency is in the RTS battles.</strong> How well you fight determines the raw material the LLM works with. Win well and consistently, and the narrative carries you forward. Fight poorly, and the LLM builds a story of struggle and potential collapse. But the LLM always has latitude to shape the pacing — it’s telling a war story, not just calculating territory percentages.</p>
+<p><strong>Force persistence across the map:</strong></p>
+<p>Units aren’t disposable between battles. The world domination mode uses a <strong>per-region force pool</strong>:</p>
+<ul>
+<li>Each region the player controls has a garrison (force pool). The player deploys from these forces when attacking from or defending that region.</li>
+<li>Casualties in battle reduce the garrison. Reinforcements arrive as the narrative progresses (based on controlled factories, resource income, and narrative events).</li>
+<li>Veteran units from previous battles remain — a region with battle-hardened veterans is harder to defeat than one with fresh recruits.</li>
+<li>Named characters (D038 Named Characters) can be assigned to regions. Moving them to a front gives bonuses but risks their death.</li>
+<li>D021’s roster persistence and carryover apply within the campaign — the “roster” is the regional garrison.</li>
+</ul>
+<p><strong>Mission generation from campaign state:</strong></p>
+<p>The LLM generates each mission from the <strong>strategic situation</strong> — it’s not picking from a random pool, it’s reading the state of the world and crafting a battle that makes sense:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Input</th><th>How it affects the mission</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Region terrain type</strong></td><td>Map terrain (urban streets, arctic tundra, rural farmland, desert, mountain pass)</td></tr>
+<tr><td><strong>Attacker’s force pool</strong></td><td>Player’s starting units (drawn from the garrison)</td></tr>
+<tr><td><strong>Defender’s force pool</strong></td><td>Enemy’s garrison strength (affects enemy unit count and quality)</td></tr>
+<tr><td><strong>Fortification level</strong></td><td>Defender gets pre-built structures, mines, walls</td></tr>
+<tr><td><strong>Campaign progression</strong></td><td>Tech level escalation — later in the campaign unlocks higher-tier units</td></tr>
+<tr><td><strong>Adjacent region bonuses</strong></td><td>Airfield = air support; factory = reinforcements mid-mission; radar = revealed shroud</td></tr>
+<tr><td><strong>Special features</strong></td><td>Research lab = experimental units; port = naval elements</td></tr>
+<tr><td><strong>Battle history</strong></td><td>Regions fought over multiple times get war-torn terrain (destroyed buildings, craters)</td></tr>
+<tr><td><strong>Narrative arc</strong></td><td>Briefing, character dialogue, story events, turning points, named objectives</td></tr>
+<tr><td><strong>Player battle results</strong></td><td>Previous performance shapes difficulty, tone, and stakes of the next mission</td></tr>
+</tbody>
+</table>
+</div>
+<p>Without an LLM, missions are generated from <strong>templates</strong> — the system picks a template matching the terrain type and action type (urban assault, rural defense, naval landing, etc.) and populates it with forces from the strategic state. With an LLM, the missions are crafted: the briefing tells a story, characters react to what you did last mission, the objectives reflect the narrative the LLM is building.</p>
+<p><strong>The world map between missions:</strong></p>
+<p>Between missions, the player sees the world map — the D038 World Map intermission template, elevated into the primary campaign interface. The map shows the story so far: where you’ve been, what you control, and where the narrative is taking you next.</p>
+<pre><code>┌────────────────────────────────────────────────────────────────────────┐
+│  WORLD DOMINATION — Operation Iron Tide          Mission 14  Soviet   │
+│                                                                        │
+│  ┌────────────────────────────────────────────────────────────────┐    │
+│  │                                                                │    │
+│  │           ██ MURMANSK                                          │    │
+│  │          ░░░░                                                  │    │
+│  │    ██ STOCKHOLM    ██ LENINGRAD                                │    │
+│  │      ░░░░░        ████████                                     │    │
+│  │  ▓▓ LONDON    ▓▓ BERLIN   ██ MOSCOW    Legend:                 │    │
+│  │  ▓▓▓▓▓▓▓▓   ░░░░░░░░   ████████████   ██ Soviet (You)        │    │
+│  │  ▓▓ PARIS    ▓▓ PRAGUE   ██ KIEV       ▓▓ Allied (Enemy)      │    │
+│  │  ▓▓▓▓▓▓▓▓   ░░ VIENNA   ██ STALINGRAD ░░ Contested           │    │
+│  │  ▓▓ ROME     ░░ BUDAPEST ██ MINSK      ▒▒ Neutral             │    │
+│  │              ▒▒ ISTANBUL                                       │    │
+│  │              ▒▒ CAIRO                                          │    │
+│  │                                                                │    │
+│  └────────────────────────────────────────────────────────────────┘    │
+│                                                                        │
+│  Territory: 12/28 regions (43%)                                        │
+│                                                                        │
+│  ┌─ BRIEFING ────────────────────────────────────────────────────┐    │
+│  │  General Volkov has ordered an advance into Central Europe.   │    │
+│  │  Berlin is contested — Allied forces are dug in. Our victory  │    │
+│  │  at Warsaw has opened the road west, but intelligence reports │    │
+│  │  a counterattack forming from Hamburg.                        │    │
+│  │                                                                │    │
+│  │  "We push now, or we lose the initiative." — Col. Petrov      │    │
+│  └───────────────────────────────────────────────────────────────┘    │
+│                                                                        │
+│  [BEGIN MISSION: Battle for Berlin]                  [Save &amp; Quit]    │
+└────────────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p>The map is the campaign. The player sees their progress and regression at a glance — territory expanding and contracting as the war ebbs and flows. The LLM presents the next mission through narrative briefing, not through a strategy game menu. Sometimes the LLM offers a choice (“Reinforce the eastern front or press the western advance?”) — but the choices are narrative, not board-game actions.</p>
+<p><strong>Comparison to narrative campaigns:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Aspect</th><th>Narrative Campaign (fixed/open-ended)</th><th>World Domination</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Structure</strong></td><td>Linear/branching mission graph</td><td>LLM-driven narrative across a world map</td></tr>
+<tr><td><strong>Mission order</strong></td><td>Determined by story arc</td><td>Determined by LLM based on map state + results</td></tr>
+<tr><td><strong>Progress model</strong></td><td>Mission completion advances the story</td><td>Territory changes visualize campaign progress</td></tr>
+<tr><td><strong>Regression</strong></td><td>Rarely (defeat branches to different path)</td><td>Frequent — battles lost = territory lost</td></tr>
+<tr><td><strong>Recovery</strong></td><td>Fixed by story branches</td><td>LLM-driven: new tech, allies, events, or defeat</td></tr>
+<tr><td><strong>Player agency</strong></td><td>Choose outcomes within missions</td><td>Fight well in RTS battles; LLM shapes consequences</td></tr>
+<tr><td><strong>LLM role</strong></td><td>Story arc, characters, narrative pacing</td><td>Narrative director — drives the entire campaign</td></tr>
+<tr><td><strong>Without LLM</strong></td><td>Requires shared/imported campaign</td><td>Playable with templates (loses narrative richness)</td></tr>
+<tr><td><strong>Replayability</strong></td><td>Different branches</td><td>Different narrative every time</td></tr>
+<tr><td><strong>Inspired by</strong></td><td>C&amp;C campaign structure + Total War</td><td>C&amp;C campaign feel + dynamic world map</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>World domination without LLM:</strong></p>
+<p>World Domination is <strong>playable without an LLM</strong>, though it loses its defining feature. Without the LLM, the system falls back to template-generated missions — pick a template matching the terrain and action type, populate it with forces from the strategic state. Territory advances/retreats follow mechanical rules (win = advance, lose = retreat) instead of narrative-driven pacing. There are no recovery arcs, no turning points, no deus ex machina — just a deterministic strategic layer. It still works as a campaign, but it’s closer to a Risk-style conquest game than the narrative experience the LLM provides. The LLM is what makes World Domination feel like a <em>war story</em> rather than a <em>board game</em>.</p>
+<p><strong>Strategic AI for non-player factions (no-LLM fallback):</strong></p>
+<p>When the LLM drives the campaign, non-player factions behave according to the narrative — the LLM decides when and where the enemy attacks, retreats, or introduces surprises. Without an LLM, a mechanical <strong>strategic AI</strong> controls non-player faction behavior on the world map:</p>
+<ul>
+<li>Each AI faction has an <code>ai_personality</code> (D043 preset): <code>aggressive</code> (expands toward player), <code>defensive</code> (holds territory, counter-attacks only), <code>opportunistic</code> (attacks weakened regions), <code>strategic</code> (balances expansion and defense).</li>
+<li>The AI evaluates regions by adjacency, garrison strength, and strategic importance. It prioritizes attacking weak borders and reinforcing threatened ones.</li>
+<li>If the player pushes hard on one front, the AI opens a second front on an undefended border — simple but effective strategic pressure.</li>
+<li>The AI’s behavior is deterministic given the campaign state, ensuring consistent replay behavior.</li>
+</ul>
+<p>This strategic AI is separate from the tactical RTS AI (D043) — it operates on the world map layer, not within individual missions. The tactical AI still controls enemy units during RTS battles.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../decisions/09f/D016/D016-cinematics-media.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../decisions/09f/D016/D016-world-assets-multiplayer.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../decisions/09f/D016/D016-cinematics-media.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../decisions/09f/D016/D016-world-assets-multiplayer.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../../mark-09e88c2c.min.js"></script>
+        <script src="../../../searcher-c2a407aa.js"></script>
+
+        <script src="../../../clipboard-1626706a.min.js"></script>
+        <script src="../../../highlight-abc7f01d.js"></script>
+        <script src="../../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

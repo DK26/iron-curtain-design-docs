@@ -1,0 +1,658 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Keys, Operations &amp; Integration - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09b/D052/D052-keys-operations-integration.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h3 id="key-lifecycle"><a class="header" href="#key-lifecycle">Key Lifecycle</a></h3>
+<h4 id="key-identification"><a class="header" href="#key-identification">Key Identification</a></h4>
+<p>Every Ed25519 public key — player or community — has a <strong>key fingerprint</strong> for human reference:</p>
+<pre><code>Fingerprint = SHA-256(public_key)[0..8], displayed as 16 hex chars
+Example:     3f7a2b91e4d08c56
+</code></pre>
+<p>The fingerprint is a display convenience. Internally, the full 32-byte public key is the canonical identifier (stored in SCRs, credential tables, etc.). Fingerprints appear in the UI for key verification dialogs, rotation notices, and trust management screens.</p>
+<p>Why 8 bytes (64 bits) instead of GPG-style 4-byte short IDs? GPG short key IDs (32 bits) famously suffered birthday-attack collisions — an attacker could generate a key with the same 4-byte fingerprint in minutes. 8 bytes requires ~2^32 key generations to find a collision — far beyond practical for the hobbyist community operators IC targets. For cryptographic operations, the full 32-byte key is always used; the fingerprint is only for human eyeball verification.</p>
+<h4 id="player-keys"><a class="header" href="#player-keys">Player Keys</a></h4>
+<ul>
+<li>Generated on first community join. Ed25519 keypair stored encrypted (AEAD with user passphrase) in the player’s local config.</li>
+<li>The same keypair CAN be reused across communities (simpler) or the player CAN generate per-community keypairs (more private). Player’s choice in settings.</li>
+<li><strong>Key recovery via mnemonic seed (D061):</strong> The keypair is derived from a 24-word BIP-39 mnemonic phrase. If the player saved the phrase, they can regenerate the identical keypair on any machine via <code>ic identity recover</code>. Existing SCRs validate automatically — the recovered key matches the old public key.</li>
+<li><strong>Key loss without mnemonic:</strong> If the player lost both the keypair AND the recovery phrase, they re-register with the community (new key = new player with fresh rating). This is intentional — unrecoverable key loss resets reputation, preventing key selling.</li>
+<li><strong>Key export:</strong> <code>ic player export-key --encrypted</code> exports the keypair as an encrypted file (AEAD, user passphrase). The mnemonic seed phrase is the preferred backup mechanism; encrypted key export is an alternative for users who prefer file-based backup.</li>
+</ul>
+<h4 id="community-keys-two-key-architecture"><a class="header" href="#community-keys-two-key-architecture">Community Keys: Two-Key Architecture</a></h4>
+<p>Every community server has <strong>two</strong> Ed25519 keypairs, inspired by DNSSEC’s Zone Signing Key (ZSK) / Key Signing Key (KSK) pattern:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Purpose</th><th>Storage</th><th>Usage Frequency</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Signing Key (SK)</strong></td><td>Signs all day-to-day SCRs (ratings, matches, achievements)</td><td>On the server, encrypted at rest</td><td>Every match result, every rating update</td></tr>
+<tr><td><strong>Recovery Key (RK)</strong></td><td>Signs key rotation records and emergency revocations only</td><td><strong>Offline</strong> — operator saves it, never stored on the server</td><td>Rare: only for key rotation or compromise recovery</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Why two keys?</strong> A single-key system has a catastrophic failure mode: if the key is lost, the community dies (no way to rotate to a new key). If the key is stolen, the attacker can forge credentials <em>and</em> the operator can’t prove they’re the real owner (both parties have the same key). The two-key pattern solves both:</p>
+<ul>
+<li><strong>Key loss:</strong> Operator uses the RK (stored offline) to sign a rotation to a new SK. Community survives.</li>
+<li><strong>Key theft:</strong> Operator uses the RK to revoke the compromised SK and rotate to a new one. Attacker has the SK but not the RK, so they can’t forge rotation records. Community recovers.</li>
+<li><strong>Both lost:</strong> Nuclear option — community is dead, players re-register. But losing both requires extraordinary negligence (the RK was specifically generated for offline backup).</li>
+</ul>
+<p>This is the same pattern used by DNSSEC (ZSK + KSK), hardware security modules (operational key + root key), cryptocurrency validators (signing key + withdrawal key), and Certificate Authorities (intermediate + root certificates).</p>
+<p><strong>Key generation flow:</strong></p>
+<pre><code>$ ic community init --name "Clan Wolfpack" --url "https://wolfpack.example.com"
+
+  Generating community Signing Key (SK)...
+  SK fingerprint: 3f7a2b91e4d08c56
+  SK stored encrypted at: /etc/ironcurtain/server/signing-key.enc
+
+  Generating community Recovery Key (RK)...
+  RK fingerprint: 9c4d17e3f28a6b05
+
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  SAVE YOUR RECOVERY KEY NOW                                 ║
+  ║                                                             ║
+  ║  This key will NOT be stored on the server.                 ║
+  ║  You need it to recover if your signing key is lost or      ║
+  ║  stolen. Without it, a lost key means your community dies.  ║
+  ║                                                             ║
+  ║  Recovery Key (base64):                                     ║
+  ║  rk-ed25519:MC4CAQAwBQYDK2VwBCIEIGXu5Mw8N3...             ║
+  ║                                                             ║
+  ║  Options:                                                   ║
+  ║    1. Copy to clipboard                                     ║
+  ║    2. Save to encrypted file                                ║
+  ║    3. Display QR code (for paper backup)                    ║
+  ║                                                             ║
+  ║  Store it in a password manager, a safe, or a USB drive     ║
+  ║  in a drawer. Treat it like a master password.              ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  [1/2/3/I saved it, continue]: 
+</code></pre>
+<p>The RK private key is shown exactly once during <code>ic community init</code>. The server stores only the RK’s <em>public</em> key (so clients can verify rotation records signed by the RK). The RK private key is never written to disk by the server.</p>
+<p><strong>Key backup and retrieval:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operation</th><th>Command</th><th>What It Does</th></tr>
+</thead>
+<tbody>
+<tr><td>Export SK (encrypted)</td><td><code>ic community export-signing-key</code></td><td>Exports the SK private key in an encrypted file (AEAD, operator passphrase). For backup or server migration.</td></tr>
+<tr><td>Import SK</td><td><code>ic community import-signing-key &lt;file&gt;</code></td><td>Restores the SK from an encrypted export. For server migration or disaster recovery.</td></tr>
+<tr><td>Rotate SK (voluntary)</td><td><code>ic community rotate-signing-key</code></td><td>Generates a new SK, signs a rotation record with the old SK: “old_SK → new_SK”. Graceful, no disruption.</td></tr>
+<tr><td>Emergency rotation (SK lost/stolen)</td><td><code>ic community emergency-rotate --recovery-key &lt;rk&gt;</code></td><td>Generates a new SK, signs a rotation record with the RK: “RK revokes old_SK, authorizes new_SK”. The only operation that uses the RK.</td></tr>
+<tr><td>Regenerate RK</td><td><code>ic community regenerate-recovery-key --recovery-key &lt;old_rk&gt;</code></td><td>Generates a new RK, signs a rotation record: “old_RK → new_RK”. The old RK authorizes the new one.</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="key-rotation-voluntary"><a class="header" href="#key-rotation-voluntary">Key Rotation (Voluntary)</a></h4>
+<p>Good security hygiene is to rotate signing keys periodically — not because Ed25519 keys weaken over time, but to limit the blast radius of an undetected compromise. IC makes voluntary rotation seamless:</p>
+<ol>
+<li>Operator runs <code>ic community rotate-signing-key</code>.</li>
+<li>Server generates a new SK keypair.</li>
+<li>Server signs a <strong>key rotation record</strong> with the OLD SK:</li>
+</ol>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct KeyRotationRecord {
+    pub record_type: u8,          // 0x05 = key rotation
+    pub old_key: [u8; 32],        // SK being retired
+    pub new_key: [u8; 32],        // replacement SK
+    pub signed_by: KeyRole,       // SK (voluntary) or RK (emergency)
+    pub reason: RotationReason,
+    pub effective_at: i64,        // Unix timestamp
+    pub old_key_valid_until: i64, // grace period end (default: +30 days)
+    pub signature: [u8; 64],      // signed by old_key or recovery_key
+}
+
+pub enum KeyRole {
+    SigningKey,    // voluntary rotation — signed by old SK
+    RecoveryKey,   // emergency rotation — signed by RK
+}
+
+pub enum RotationReason {
+    Scheduled,         // periodic rotation (good hygiene)
+    ServerMigration,   // moving to new hardware
+    Compromise,        // SK compromised, emergency revocation
+    PrecautionaryRevoke, // SK might be compromised, revoking as precaution
+}
+<span class="boring">}</span></code></pre>
+<ol start="4">
+<li>Server starts signing new SCRs with the new SK immediately.</li>
+<li>Clients encountering the rotation record verify it (against the old SK for voluntary rotation, or against the RK for emergency rotation).</li>
+<li>Clients update their stored community key.</li>
+<li><strong>Grace period (30 days default):</strong> During the grace period, clients accept SCRs signed by EITHER the old or new SK. This handles players who cached credentials signed by the old key and haven’t synced yet.</li>
+<li>After the grace period, only the new SK is accepted.</li>
+</ol>
+<h4 id="key-compromise-recovery"><a class="header" href="#key-compromise-recovery">Key Compromise Recovery</a></h4>
+<p>If a community operator discovers (or suspects) their SK has been compromised:</p>
+<ol>
+<li><strong>Immediate response:</strong> Run <code>ic community emergency-rotate --recovery-key &lt;rk&gt;</code>.</li>
+<li>Server generates a new SK.</li>
+<li>Server signs an <strong>emergency rotation record</strong> with the <strong>Recovery Key</strong>:
+<ul>
+<li><code>signed_by: RecoveryKey</code></li>
+<li><code>reason: Compromise</code> (or <code>PrecautionaryRevoke</code>)</li>
+<li><code>old_key_valid_until: now</code> (no grace period for compromised keys — immediate revocation)</li>
+</ul>
+</li>
+<li>Clients encountering this record verify it against the RK public key (cached since community join).</li>
+<li><strong>Compromise window SCRs:</strong> SCRs issued between the compromise and the rotation are potentially forged. The rotation record includes the <code>effective_at</code> timestamp. Clients can flag SCRs signed by the old key after this timestamp as “potentially compromised” (⚠️ in the UI). SCRs signed before the compromise window remain valid — the key was legitimate when they were issued.</li>
+<li><strong>Attacker is locked out:</strong> The attacker has the old SK but not the RK. They cannot forge rotation records, so clients who receive the legitimate RK-signed rotation will reject the attacker’s old-SK-signed SCRs going forward.</li>
+</ol>
+<p><strong>What about third-party compromise reports?</strong> (“Someone told me community X’s key was stolen.”)</p>
+<p>IC does <strong>not</strong> support third-party key revocation. Only the RK holder can revoke an SK. This is the same model as PGP — only the key owner can issue a revocation certificate. If you suspect a community’s key is compromised but they haven’t rotated:</p>
+<ul>
+<li>Remove them from your trusted communities list (D053). This is your defense.</li>
+<li>Contact the community operator out-of-band (Discord, email, their website) to alert them.</li>
+<li>The community appears as ⚠️ Untrusted in profiles of players who removed them.</li>
+</ul>
+<p>Central revocation authorities (CRLs, OCSP) require central infrastructure — exactly what IC’s federated model avoids. The tradeoff is that compromise propagation depends on the operator’s responsiveness. This is acceptable: IC communities are run by the same people who already manage Discord servers, game servers, and community websites. They’re reachable.</p>
+<h4 id="key-expiry-policy"><a class="header" href="#key-expiry-policy">Key Expiry Policy</a></h4>
+<p><strong>Community keys (SK and RK) do NOT expire.</strong> This is an explicit design choice.</p>
+<p>Arguments for expiry (and why they don’t apply):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Argument</th><th>Counterpoint</th></tr>
+</thead>
+<tbody>
+<tr><td>“Limits damage from silent compromise”</td><td>SCRs already have per-record <code>expires_at</code> (7 days default for ratings). A silently compromised key can only forge SCRs that expire in a week. Voluntary key rotation provides the same benefit without forced expiry.</td></tr>
+<tr><td>“Forces rotation hygiene”</td><td>IC’s community operators are hobbyists running $5 VPSes. Forced expiry creates an operational burden that causes more harm (communities dying from forgotten renewal) than good. Let rotation be voluntary.</td></tr>
+<tr><td>“TLS certs expire”</td><td>TLS operates in a CA trust model with automated renewal (ACME/Let’s Encrypt). IC has no CA and no automated renewal infrastructure. The analogy doesn’t hold.</td></tr>
+<tr><td>“What if the operator disappears?”</td><td>SCR <code>expires_at</code> handles this naturally. If the server goes offline, rating SCRs expire within 7 days and become un-refreshable. The community dies gracefully — players’ old match/achievement SCRs (which have <code>expires_at: never</code>) remain verifiable, but ratings go stale. No key expiry needed.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The correct analogy is SSH host keys (never expire, TOFU model) and PGP keys (no forced expiry, voluntary rotation or revocation), not TLS certificates.</p>
+<p><strong>However, IC nudges operators toward good hygiene:</strong></p>
+<ul>
+<li>The server logs a warning if the SK hasn’t been rotated in 12 months: “Consider rotating your signing key. Run <code>ic community rotate-signing-key</code>.” This is a reminder, not an enforcement.</li>
+<li>The client shows a subtle indicator if a community’s SK is older than 24 months: small 🕐 icon next to the community name. This is informational, not blocking.</li>
+</ul>
+<h4 id="client-side-key-storage"><a class="header" href="#client-side-key-storage">Client-Side Key Storage</a></h4>
+<p>When a player joins a community, the client receives and caches both public keys:</p>
+<pre><code class="language-sql">-- In the community credential store (community_info table)
+CREATE TABLE community_info (
+    community_key       BLOB NOT NULL,     -- Current SK public key (32 bytes)
+    recovery_key        BLOB NOT NULL,     -- RK public key (32 bytes) — cached at join
+    community_name      TEXT NOT NULL,
+    server_url          TEXT NOT NULL,
+    key_fingerprint     TEXT NOT NULL,     -- hex(SHA-256(community_key)[0..8])
+    rk_fingerprint      TEXT NOT NULL,     -- hex(SHA-256(recovery_key)[0..8])
+    sk_rotated_at       INTEGER,           -- when current SK was activated
+    joined_at           INTEGER NOT NULL,
+    last_sync           INTEGER NOT NULL
+);
+
+-- Key rotation history (for audit trail)
+CREATE TABLE key_rotations (
+    sequence        INTEGER PRIMARY KEY,
+    old_key         BLOB NOT NULL,         -- retired SK public key
+    new_key         BLOB NOT NULL,         -- replacement SK public key
+    signed_by       TEXT NOT NULL,         -- 'signing_key' or 'recovery_key'
+    reason          TEXT NOT NULL,
+    effective_at    INTEGER NOT NULL,
+    grace_until     INTEGER NOT NULL,      -- old key accepted until this time
+    rotation_record BLOB NOT NULL          -- full signed rotation record bytes
+);
+</code></pre>
+<p>The <code>key_rotations</code> table provides an audit trail: the client can verify the entire chain of key rotations from the original key (cached at join time) to the current key. This means even if a client was offline for months and missed several rotations, they can verify the chain: “original_SK → SK2 (signed by original_SK) → SK3 (signed by SK2) → current_SK (signed by SK3).” If any link in the chain breaks, the client alerts the user.</p>
+<h4 id="revocation-player-level"><a class="header" href="#revocation-player-level">Revocation (Player-Level)</a></h4>
+<ul>
+<li>The community server signs a revocation record: <code>(record_type, min_valid_sequence, signature)</code>.</li>
+<li>Clients encountering a revocation update their local <code>revocations</code> table.</li>
+<li>Verification checks: <code>scr.sequence &gt;= revocations[scr.record_type].min_valid_sequence</code>.</li>
+<li>Use case: player caught cheating → server issues revocation for all their records below a new sequence → player’s cached credentials become unverifiable → they must re-authenticate, and the server can refuse.</li>
+</ul>
+<p>Revocations are distinct from key rotations. Revocations invalidate a specific player’s credentials. Key rotations replace the community’s signing key. Both use signed records; they solve different problems.</p>
+<h4 id="social-recovery-optional-for-large-communities"><a class="header" href="#social-recovery-optional-for-large-communities">Social Recovery (Optional, for Large Communities)</a></h4>
+<p>The two-key system has one remaining single point of failure: the RK itself. If the sole operator loses the RK private key (hardware failure, lost USB drive) AND the SK is also compromised, the community is dead. For small clan servers this is acceptable — the operator is one person who backs up their key. For large communities (1,000+ members, years of match history), the stakes are higher.</p>
+<p><strong>Social recovery</strong> eliminates this single point by distributing the RK across multiple trusted people using <strong>Shamir’s Secret Sharing</strong> (SSS). Instead of one person holding the RK, the community designates N <strong>recovery guardians</strong> — trusted community members who each hold a shard. A threshold of K shards (e.g., 3 of 5) is required to reconstruct the RK and sign an emergency rotation.</p>
+<p>This pattern comes from Ethereum’s account abstraction ecosystem (ERC-4337, Argent wallet, Vitalik Buterin’s 2021 social recovery proposal), adapted for IC’s community key model. The Web3 ecosystem spent years refining social recovery UX because key loss destroyed real value — IC benefits from those lessons without needing a blockchain.</p>
+<p><strong>Setup:</strong></p>
+<pre><code>$ ic community setup-social-recovery --guardians 5 --threshold 3
+
+  Social Recovery Setup
+  ─────────────────────
+  Your Recovery Key will be split into 5 shards.
+  Any 3 shards can reconstruct it.
+
+  Enter guardian identities (player keys or community member names):
+    Guardian 1: alice   (player_key: 3f7a2b91...)
+    Guardian 2: bob     (player_key: 9c4d17e3...)
+    Guardian 3: carol   (player_key: a1b2c3d4...)
+    Guardian 4: dave    (player_key: e5f6a7b8...)
+    Guardian 5: eve     (player_key: 12345678...)
+
+  Generating shards...
+  Each guardian will receive their shard encrypted to their player key.
+  Shards are transmitted via the community server's secure channel.
+
+  ⚠️  Store the guardian list securely. You need 3 of these 5 people
+     to recover your community if the Recovery Key is lost.
+
+  [Confirm and distribute shards]
+</code></pre>
+<p><strong>How it works:</strong></p>
+<ol>
+<li>The RK private key is split into N shards using Shamir’s Secret Sharing over the Ed25519 scalar field.</li>
+<li>Each shard is encrypted to the guardian’s player public key (X25519 key agreement + AEAD) and transmitted.</li>
+<li>Guardians store their shard locally (in their player credential SQLite, encrypted at rest).</li>
+<li>The operator’s server stores only the guardian list (public keys + shard indices) — never the shards themselves.</li>
+<li>To perform emergency rotation, K guardians each decrypt and submit their shard to a recovery coordinator (can be the operator’s new server, or any guardian). The coordinator reconstructs the RK, signs the rotation record, and discards the reconstructed key.</li>
+<li>After recovery, new shards should be generated (the old shards reconstructed the old RK; a fresh <code>setup-social-recovery</code> generates shards for a new RK).</li>
+</ol>
+<p><strong>Guardian management:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operation</th><th>Command</th></tr>
+</thead>
+<tbody>
+<tr><td>Set up social recovery</td><td><code>ic community setup-social-recovery --guardians N --threshold K</code></td></tr>
+<tr><td>Replace a guardian</td><td><code>ic community replace-guardian &lt;old&gt; &lt;new&gt; --recovery-key &lt;rk&gt;</code> (requires RK to re-shard)</td></tr>
+<tr><td>Check guardian status</td><td><code>ic community guardian-status</code> (pings guardians, verifies they still hold valid shards)</td></tr>
+<tr><td>Initiate recovery</td><td><code>ic community social-recover</code> (collects K shards, reconstructs RK, rotates SK)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Guardian liveness:</strong> <code>ic community guardian-status</code> periodically checks (opt-in, configurable interval) whether guardians are still reachable and their shards are intact (guardians sign a challenge with their player key; possession of the shard is verified via a zero-knowledge proof of shard validity, not by revealing the shard). If a guardian is unreachable for 90+ days, the operator is warned: “Guardian dave has been unreachable for 94 days. Consider replacing them.”</p>
+<p><strong>Why not just use N independent RKs?</strong> With N independent RKs, any single compromise recovers the full key — the security level degrades as N increases. With Shamir’s threshold scheme, compromising K-1 guardians reveals <em>zero information</em> about the RK. This is information-theoretically secure, not just computationally secure.</p>
+<p><strong>Rust crate:</strong> <code>sharks</code> (Shamir’s Secret Sharing, permissively licensed, well-audited). Alternatively <code>vsss-rs</code> (Verifiable Secret Sharing — adds the property that each guardian can verify their shard is valid without learning the secret, preventing a malicious dealer from distributing fake shards).</p>
+<p><strong>Phase:</strong> Social recovery is optional and ships in Phase 6a. The two-key system (Phase 5) works without it. Communities that want social recovery enable it as an upgrade — it doesn’t change any existing key management flows, just adds a recovery path.</p>
+<h4 id="summary-failure-mode-comparison"><a class="header" href="#summary-failure-mode-comparison">Summary: Failure Mode Comparison</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Scenario</th><th>Single-Key System</th><th>IC Two-Key System</th><th>IC Two-Key + Social Recovery</th></tr>
+</thead>
+<tbody>
+<tr><td>SK lost, operator has no backup</td><td>Community dead. All credentials permanently unverifiable. Players start over.</td><td>Operator uses RK to rotate to new SK. Community survives. All existing SCRs remain valid.</td><td>Same as two-key.</td></tr>
+<tr><td>SK stolen</td><td>Attacker can forge credentials AND operator can’t prove legitimacy (both hold same key). Community dead.</td><td>Operator uses RK to revoke stolen SK, rotate to new SK. Attacker locked out. Community recovers.</td><td>Same as two-key.</td></tr>
+<tr><td>SK stolen + operator doesn’t notice for weeks</td><td>Unlimited forgery window. No recovery.</td><td>SCR <code>expires_at</code> limits forgery to 7-day windows. RK-signed rotation locks out attacker retroactively.</td><td>Same as two-key.</td></tr>
+<tr><td>Both SK and RK lost</td><td>—</td><td>Community dead. But this requires losing both an online server key AND an offline backup. Extraordinary negligence.</td><td><strong>K guardians reconstruct RK → rotate SK. Community survives.</strong> This is the upgrade.</td></tr>
+<tr><td>Operator disappears (burnout, health, life)</td><td>Community dead.</td><td>Community dead (unless operator shared RK with a trusted successor).</td><td><strong>K guardians reconstruct RK → transfer operations to new operator. Community survives.</strong></td></tr>
+<tr><td>RK stolen (but SK is fine)</td><td>—</td><td>No immediate impact — RK isn’t used for day-to-day operations. Operator should regenerate RK immediately: <code>ic community regenerate-recovery-key</code>.</td><td>Same as two-key — but after regeneration, resharding is recommended.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="cross-community-interoperability"><a class="header" href="#cross-community-interoperability">Cross-Community Interoperability</a></h3>
+<p>Communities are independent ranking domains — a 1500 rating on “Official IC” means nothing on “Clan Wolfpack.” This is intentional: different communities can run different game modules, balance presets (D019), and matchmaking rules.</p>
+<p><strong>However, portable proofs are useful:</strong></p>
+<ul>
+<li>“I have 500+ matches on the official community” — provable by presenting signed match SCRs.</li>
+<li>“I achieved ‘Iron Curtain’ achievement on Official IC” — provable by presenting the signed achievement SCR.</li>
+<li>A tournament community can require “minimum 50 rated matches on any community with verifiable SCRs” as an entry requirement.</li>
+</ul>
+<p><strong>Cross-domain credential principle:</strong> Cross-community credential presentation is architecturally a “bridge” — data signed in Domain A is presented in Domain B. The most expensive lessons in Web3 were bridge hacks (Ronin $625M, Wormhole $325M, Nomad $190M), all caused by trusting cross-domain data without sufficient validation at the boundary. IC’s design is already better than most Web3 bridges (each verifier independently checks Ed25519 signatures locally, no intermediary trusted), but the following principle should be explicit:</p>
+<blockquote>
+<p><strong>Cross-domain credentials are read-only.</strong> Community Y can <em>display</em> and <em>verify</em> credentials signed by Community X, but must never <em>update its own state</em> based on them without independent re-verification. If Community Y grants a privilege based on Community X membership (e.g., “skip probation if you have 100+ matches on Official IC”), it must re-verify the SCR at the moment the privilege is exercised — not cache the check from an earlier session. Stale cached trust checks are the root cause of bridge exploits: the external state changed (key rotated, credential revoked), but the receiving domain still trusted its cached approval.</p>
+</blockquote>
+<p>In practice, this means:</p>
+<ul>
+<li>Trust requirements (D053 <code>TrustRequirement</code>) re-verify SCRs on every room join, not once per session.</li>
+<li>Matchmaking checks re-verify rating SCRs before each match, not at queue entry.</li>
+<li>Tournament entry requirements re-verify all credential conditions at match start, not at registration.</li>
+<li>The <code>expires_at</code> field on SCRs (default 7 days for ratings) provides a natural staleness bound, but point-of-use re-verification catches revocations within the validity window.</li>
+</ul>
+<p>This costs one Ed25519 signature check (~65μs) per verification — negligible even at thousands of verifications per second.</p>
+<p><strong>Cross-community rating display (V29):</strong></p>
+<p>Foreign credentials displayed in lobbies and profiles must be visually distinct from the current community’s ratings to prevent misrepresentation:</p>
+<ul>
+<li><strong>Full-color</strong> tier badge for the current community’s rating. <strong>Desaturated/outlined</strong> badge for credentials from other communities, with the issuing community name in small text.</li>
+<li>Matchmaking always uses the <strong>current community’s</strong> rating. Foreign ratings never influence matchmaking — a “Supreme Commander” from another server starts at default rating + placement deviation when joining a new community.</li>
+<li><strong>Optional seeding hint:</strong> Community operators MAY configure foreign credentials as a seeding signal during placement (weighted at 30% — a foreign 2400 seeds at ~1650, not 2400). Disabled by default. This is a convenience, not a trust assertion.</li>
+</ul>
+<p><strong>Leaderboards:</strong></p>
+<ul>
+<li>Each community maintains its own leaderboard, compiled from the rating SCRs it has issued.</li>
+<li>The community server caches current ratings (in RAM or SQLite) for leaderboard display.</li>
+<li>Players can view their own full match history locally (from their SQLite credential file) without server involvement.</li>
+</ul>
+<h3 id="community-server-operational-requirements"><a class="header" href="#community-server-operational-requirements">Community Server Operational Requirements</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Metric</th><th>Estimate</th></tr>
+</thead>
+<tbody>
+<tr><td>Storage per player</td><td>~40 bytes persistent (key + revocation). ~200 bytes cached (rating for matchmaking)</td></tr>
+<tr><td>Storage for 10,000 players</td><td>~2.3 MB</td></tr>
+<tr><td>RAM for matchmaking (1,000 concurrent)</td><td>~200 KB</td></tr>
+<tr><td>CPU per match result signing</td><td>~1ms (Ed25519 sign is ~60μs; rest is rating computation)</td></tr>
+<tr><td>Bandwidth per match result</td><td>~500 bytes (2 SCRs returned: rating + match)</td></tr>
+<tr><td>Monthly VPS cost (small community, &lt;1000 players)</td><td>$5–10</td></tr>
+<tr><td>Monthly VPS cost (large community, 10,000+ players)</td><td>$20–50</td></tr>
+</tbody>
+</table>
+</div>
+<p>This is cheaper than any centralized ranking service. Operating a community is within reach of a single motivated community member — the same people who already run OpenRA servers and Discord bots.</p>
+<h3 id="relationship-to-existing-decisions"><a class="header" href="#relationship-to-existing-decisions">Relationship to Existing Decisions</a></h3>
+<ul>
+<li><strong>D007 (Relay server):</strong> The relay produces <code>CertifiedMatchResult</code> — the input to rating computation. A Community Server bundles relay + ranking in one process.</li>
+<li><strong>D030/D050 (Workshop federation):</strong> Community Servers federate like Workshop sources. <code>settings.toml</code> lists communities the same way it lists Workshop sources.</li>
+<li><strong>D034 (SQLite):</strong> The credential file IS SQLite. The community server’s small state IS SQLite.</li>
+<li><strong>D036 (Achievements):</strong> Achievement records are SCRs stored in the credential file. The community server is the signing authority.</li>
+<li><strong>D041 (RankingProvider trait):</strong> Matchmaking uses <code>RankingProvider</code> implementations. Community operators choose their algorithm.</li>
+<li><strong>D042 (Player profiles):</strong> Behavioral profiles remain local-only (D042). The credential file holds signed competitive data (ratings, matches, achievements). They complement each other: D042 = private local analytics, D052 = portable signed reputation.</li>
+<li><strong>P004 (Lobby/matchmaking):</strong> This decision partially resolves P004. Room discovery (5 tiers), lobby P2P resource sharing, and matchmaking are now designed. The remaining Phase 5 work is wire format specifics (message framing, serialization, state machine transitions).</li>
+</ul>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ul>
+<li><strong>Centralized ranking database</strong> (rejected — expensive to host, single point of failure, doesn’t match IC’s federation model, violates local-first privacy principle)</li>
+<li><strong>JWT for credentials</strong> (rejected — algorithm confusion attacks, <code>alg: none</code> bypass, JSON parsing ambiguity, no built-in replay protection, no built-in revocation. See comparison table above)</li>
+<li><strong>Blockchain/DLT for rankings</strong> (rejected — massively overcomplicated for this use case, environmental concerns, no benefit over Ed25519 signed records)</li>
+<li><strong>Per-player credential chaining (prev_hash linking)</strong> (evaluated, rejected — would add a 32-byte <code>prev_hash</code> field to each SCR, linking each record to its predecessor in a per-player hash chain. Goal: guarantee completeness of match history presentation, preventing players from hiding losses. Rejected because: the server-computed rating already reflects all matches — the rating IS the ground truth, and a player hiding individual match SCRs can’t change their verified rating. The chain also creates false positives when legitimate credential file loss/corruption breaks the chain, requires the server to track per-player chain heads adding state proportional to <code>N_players × N_record_types</code>, and complicates the clean “verify signature, check sequence” flow for a primarily cosmetic concern. The transparency log — which audits the <em>server</em>, not the player — is the higher-value accountability mechanism.)</li>
+<li><strong>Web-of-trust (players sign each other’s match results)</strong> (rejected — Sybil attacks trivially game this; a trusted community server as signing authority is simpler and more resistant)</li>
+<li><strong>PASETO (Platform-Agnostic Security Tokens)</strong> (considered — fixes many JWT flaws, mandates modern algorithms. Rejected because: still JSON-based, still has header/payload/footer structure that invites parsing issues, and IC’s binary SCR format is more compact and purpose-built. PASETO is good; SCR is better for this niche.)</li>
+</ul>
+<h3 id="phase"><a class="header" href="#phase">Phase</a></h3>
+<p>Community Server infrastructure ships in <strong>Phase 5</strong> (Multiplayer &amp; Competitive, Months 20–26). The SCR format and credential SQLite schema are defined early (Phase 2) to support local testing with mock community servers.</p>
+<ul>
+<li><strong>Phase 2:</strong> SCR format crate, local credential store, mock community server for testing.</li>
+<li><strong>Phase 5:</strong> Full community server (relay + ranking + matchmaking + achievement signing). <code>ic community join/leave/status</code> CLI commands. In-game community browser.</li>
+<li><strong>Phase 6a:</strong> Federation between communities. Community discovery. Cross-community credential presentation. Community reputation.</li>
+</ul>
+<h3 id="cross-pollination-lessons-flowing-between-d052d053-workshop-and-netcode"><a class="header" href="#cross-pollination-lessons-flowing-between-d052d053-workshop-and-netcode">Cross-Pollination: Lessons Flowing Between D052/D053, Workshop, and Netcode</a></h3>
+<p>The work on community servers, trust chains, and player profiles produced patterns that strengthen Workshop and netcode designs — and vice versa. This section catalogues the cross-system lessons beyond the four shared infrastructure opportunities already documented in D049 (unified <code>ic-server</code> binary, federation library, auth/identity layer, EWMA scoring).</p>
+<h4 id="d052d053--workshop-d030d049d050"><a class="header" href="#d052d053--workshop-d030d049d050">D052/D053 → Workshop (D030/D049/D050)</a></h4>
+<p><strong>1. Two-key architecture for Workshop index signing.</strong></p>
+<p>The Workshop’s git-index security (D049) plans a single Ed25519 key for signing <code>index.yaml</code>. That’s the same single-point-of-failure the two-key architecture (§ Key Lifecycle above) was designed to eliminate. CI pipeline compromise is one of the most common supply-chain attack vectors (SolarWinds, Codecov, ua-parser-js). The SK+RK pattern maps directly:</p>
+<ul>
+<li><strong>Index Signing Key (SK):</strong> Held by CI, used to sign every <code>index.yaml</code> build. Rotated periodically or on compromise.</li>
+<li><strong>Index Recovery Key (RK):</strong> Held offline by ≥2 project maintainers (threshold signing or independent copies). Used solely to sign a <code>KeyRotationRecord</code> that re-anchors trust to a new SK.</li>
+</ul>
+<p>If CI is compromised, the attacker gets SK but not RK. Maintainers rotate via RK — clients that verify the rotation chain continue trusting the index. Without two-key, CI compromise means either (a) the attacker signs malicious indexes indefinitely, or (b) the project mints a new key and every client must manually re-trust it. The rotation chain avoids both.</p>
+<p><strong>2. Publisher two-key identity.</strong></p>
+<p>Individual mod publishers currently authenticate via GitHub account (Phase 0–3) or Workshop server credentials (Phase 4+). If alice’s account is compromised, her packages can be poisoned. The two-key pattern extends to publishers:</p>
+<ul>
+<li><strong>Publisher Signing Key (SK):</strong> Used to sign each <code>.icpkg</code> manifest on publish. Stored on the publisher’s development machine.</li>
+<li><strong>Publisher Recovery Key (RK):</strong> Generated at first publish. Stored offline (e.g., USB key, password manager). Used only to rotate the SK if compromised.</li>
+</ul>
+<p>Clients that cache alice’s public key can verify her packages remain authentic through key rotations. The <code>KeyRotationRecord</code> struct from D052 is reusable — same format, same verification logic, different context. This also enables package pinning: <code>ic mod pin alice/tanks --key &lt;fingerprint&gt;</code> refuses installs signed by any other key, even if alice’s Workshop account is hijacked.</p>
+<p><strong>3. Trust-based Workshop source filtering.</strong></p>
+<p>D053’s <code>TrustRequirement</code> model (None / AnyCommunityVerified / SpecificCommunities) maps to Workshop sources. Currently, <code>settings.toml</code> implicitly trusts all configured sources equally. Applying D053’s trust tiers:</p>
+<ul>
+<li><strong>Trusted source:</strong> <code>ic mod install</code> proceeds silently.</li>
+<li><strong>Known source:</strong> Install proceeds with an informational note.</li>
+<li><strong>Unknown source:</strong> <code>ic mod install</code> warns and requires <code>--allow-untrusted</code> flag (or interactive confirmation).</li>
+</ul>
+<p>This is the same UX pattern as the game browser trust badges — ✅/⚠️/❌ — applied to the <code>ic</code> CLI and in-game mod browser. When a dependency chain pulls a package from an untrusted source, the solver surfaces this clearly before proceeding.</p>
+<p><strong>4. Server-side validation principle as shared invariant.</strong></p>
+<p>D052’s explicit principle — “never sign data you didn’t produce or verify” — should be a shared invariant across all IC server components. For the Workshop server, this means:</p>
+<ul>
+<li>Never accept a publish without verifying: SHA-256 matches, manifest is valid YAML, version doesn’t already exist, publisher key matches the namespace, no path traversal in file entries.</li>
+<li>Never sign a package listing without recomputing checksums from the stored <code>.icpkg</code>.</li>
+<li>Workshop server attestation: a <code>CertifiedPublishResult</code> (analogous to the relay’s <code>CertifiedMatchResult</code>) signed by the server, proving the publish was validated. Stored in the publisher’s local credential file — portable proof that “this package was accepted by Workshop server X at time T.”</li>
+</ul>
+<p><strong>5. Registration policies → Workshop publisher policies.</strong></p>
+<p>D052’s <code>RegistrationPolicy</code> enum (Open / RequirePlatform / RequireInvite / RequireChallenge / AnyOf) maps to Workshop publisher onboarding. A community-hosted Workshop server can configure who may publish:</p>
+<ul>
+<li><code>Open</code> — anyone can publish (appropriate for experimental/testing servers)</li>
+<li><code>RequirePlatform</code> — must have a linked Steam/platform account</li>
+<li><code>RequireInvite</code> — existing publisher must vouch (prevents spam/typosquat floods)</li>
+</ul>
+<p>This is already implicit in the git-index phase (GitHub account = identity), but should be explicit in the Workshop server design for Phase 4+.</p>
+<h4 id="d052d053--netcode-d007d003"><a class="header" href="#d052d053--netcode-d007d003">D052/D053 → Netcode (D007/D003)</a></h4>
+<p><strong>6. Relay server two-key pattern.</strong></p>
+<p>Relay servers produce signed <code>CertifiedMatchResult</code> records — the trust anchor for all competitive data. If a relay’s signing key leaks, all match results are forgeable. Same SK+RK solution: relay operators generate a signing key (used by the running relay binary) and a recovery key (stored offline). On compromise, the operator rotates via RK without invalidating the community’s entire match history.</p>
+<p>Currently D052 says a community server “trusts its own relay” — but this trust should be cryptographically verifiable: the community server knows the relay’s public key (registered in <code>community_info</code>), and the <code>CertifiedMatchResult</code> carries the relay’s signature. Key rotation propagates through the same <code>KeyRotationRecord</code> chain.</p>
+<p><strong>7. Trust-verified P2P peer selection.</strong></p>
+<p>D049’s P2P peer scoring selects peers by capacity, locality, seed status, and lobby context. D053’s trust model adds a fifth dimension: when downloading mods from lobby peers, prefer peers with verified profiles from trusted communities. A verified player is less likely to serve malicious content (Sybil nodes have no community history). The scoring formula gains an optional trust component:</p>
+<pre><code>PeerScore = Capacity(0.35) + Locality(0.25) + SeedStatus(0.2) + Trust(0.1) + LobbyContext(0.1)
+</code></pre>
+<p>Trust scoring: verified by a trusted community = 1.0, verified by any community = 0.5, unverified = 0. This is opt-in — communities that don’t care about trust verification keep the original 4-factor formula.</p>
+<h4 id="workshopnetcode--d052d053"><a class="header" href="#workshopnetcode--d052d053">Workshop/Netcode → D052/D053</a></h4>
+<p><strong>8. Profile fetch rate control.</strong></p>
+<p>Netcode uses three-layer rate control (per-connection, per-IP, global). Profile fetching in lobbies is susceptible to the same abuse patterns — a malicious client could spam profile requests to exhaust server bandwidth or enumerate player data. The same rate-control architecture applies: per-IP rate limits on profile fetch requests, exponential backoff on repeated fetches of the same profile, and a TTL cache that makes duplicate requests a local cache hit.</p>
+<p><strong>9. Content integrity hashing for composite profiles.</strong></p>
+<p>The Workshop uses SHA-256 checksums plus <code>manifest_hash</code> for double verification. When a player assembles their composite profile (identity + SCRs from multiple communities), the assembled profile can include a composite hash — enabling cache invalidation without re-fetching every individual SCR. When a profile is requested, the server returns the composite hash first; if it matches the cached version, no further transfer is needed. This is the same “content-addressed fetch” pattern the Workshop uses for <code>.icpkg</code> files.</p>
+<p><strong>10. EWMA scoring for community member standing.</strong></p>
+<p>The Workshop’s EWMA (Exponentially Weighted Moving Average) peer scoring — already identified as shared infrastructure in D049 — has a concrete consumer in D052/D053: community member standing. A community server can track per-member quality signals (connection stability, disconnect rate, desync frequency, report count) using time-decaying EWMA scores. Recent behavior weighs more than ancient history. This feeds into matchmaking preferences (D052) and the profile’s community standing display (D053) without requiring a separate scoring system.</p>
+<h4 id="shared-pattern-key-management-as-reusable-infrastructure"><a class="header" href="#shared-pattern-key-management-as-reusable-infrastructure">Shared pattern: key management as reusable infrastructure</a></h4>
+<p>The two-key architecture now appears in three contexts: community servers, relay servers, and Workshop (index + publishers). This suggests extracting it as a shared <code>ic-crypto</code> module (or section of <code>ic-protocol</code>) that provides:</p>
+<ul>
+<li><code>SigningKeypair</code> + <code>RecoveryKeypair</code> generation</li>
+<li><code>KeyRotationRecord</code> creation and chain verification</li>
+<li>Fingerprint computation and display formatting</li>
+<li>Common serialization for the rotation chain</li>
+</ul>
+<p>All three consumers use Ed25519, the same rotation record format, and the same verification logic. The only difference is context (what the key signs). This is a Phase 2 deliverable — the crypto primitives must exist before community servers, relays, or Workshop servers use them.</p>
+<hr>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../decisions/09b/D052/D052-transparency-matchmaking-lobby.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../decisions/09b/D055-ranked-matchmaking.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../decisions/09b/D052/D052-transparency-matchmaking-lobby.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../decisions/09b/D055-ranked-matchmaking.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../../mark-09e88c2c.min.js"></script>
+        <script src="../../../searcher-c2a407aa.js"></script>
+
+        <script src="../../../clipboard-1626706a.min.js"></script>
+        <script src="../../../highlight-abc7f01d.js"></script>
+        <script src="../../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

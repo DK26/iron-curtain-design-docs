@@ -1,0 +1,714 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>VoIP Effects &amp; ECS - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09g/D059/D059-voip-effects-ecs.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h4 id="voice-effects--enhancement"><a class="header" href="#voice-effects--enhancement">Voice Effects &amp; Enhancement</a></h4>
+<p>Voice effects apply DSP processing to incoming voice on the <strong>receiver side</strong> — after Opus decode, before spatial panning and mixing. This is a deliberate architectural choice:</p>
+<ul>
+<li><strong>Receiver controls their experience.</strong> Alice hears radio-filtered voice; Bob hears clean audio. Neither imposes on the other.</li>
+<li><strong>Clean audio preserved.</strong> The Opus-encoded stream in replays (voice-in-replay, D059 § 7) is unprocessed. Effects can be re-applied during replay playback with different presets — a caster might use clean voice while a viewer uses radio flavor.</li>
+<li><strong>No codec penalty.</strong> Applying effects before Opus encoding wastes bits encoding the effect rather than the voice. Receiver-side effects are “free” from a compression perspective.</li>
+<li><strong>Per-speaker effects.</strong> A player can assign different effects to different teammates (e.g., radio filter on ally A, clean for ally B) via per-speaker settings.</li>
+</ul>
+<h5 id="dsp-chain-architecture"><a class="header" href="#dsp-chain-architecture">DSP Chain Architecture</a></h5>
+<p>Each voice effect preset is a composable chain of lightweight DSP stages:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// A single DSP processing stage. Implementations are stateful
+/// (filters maintain internal buffers) but cheap — a biquad filter
+/// processes 960 samples (20ms at 48kHz) in &lt;5 microseconds.
+pub trait VoiceEffectStage: Send + 'static {
+    /// Process samples in-place. Called on the audio thread.
+    /// `sample_rate` is always 48000 (Opus output).
+    fn process(&amp;mut self, samples: &amp;mut [f32], sample_rate: u32);
+
+    /// Reset internal state. Called when a speaker stops and restarts
+    /// (avoids filter ringing from stale state across transmissions).
+    fn reset(&amp;mut self);
+
+    /// Human-readable name for diagnostics.
+    fn name(&amp;self) -&gt; &amp;str;
+}
+
+/// A complete voice effect preset — an ordered chain of DSP stages
+/// plus optional transmission envelope effects (squelch tones).
+pub struct VoiceEffectChain {
+    pub stages: Vec&lt;Box&lt;dyn VoiceEffectStage&gt;&gt;,
+    pub squelch: Option&lt;SquelchConfig&gt;,
+    pub metadata: EffectMetadata,
+}
+
+/// Squelch tones — short audio cues on transmission start/end.
+/// Classic military radio has a distinctive "roger beep."
+pub struct SquelchConfig {
+    pub start_tone_hz: u32,       // e.g., 1200 Hz
+    pub end_tone_hz: u32,         // e.g., 800 Hz
+    pub duration_ms: u32,         // e.g., 60ms
+    pub volume: f32,              // 0.0-1.0, relative to voice
+}
+
+pub struct EffectMetadata {
+    pub name: String,
+    pub description: String,
+    pub author: String,
+    pub version: String,         // semver
+    pub tags: Vec&lt;String&gt;,
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Built-in DSP stages</strong> (implemented in <code>ic-audio</code>, no external crate dependencies beyond <code>std</code> math):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Stage</th><th>Parameters</th><th>Use</th><th>CPU Cost (960 samples)</th></tr>
+</thead>
+<tbody>
+<tr><td><code>BiquadFilter</code></td><td><code>mode</code> (LP/HP/BP/notch/shelf), <code>freq_hz</code>, <code>q</code>, <code>gain</code></td><td>Band-pass for radio; high-shelf for presence; low-cut for clarity</td><td>~3 μs</td></tr>
+<tr><td><code>Compressor</code></td><td><code>threshold_db</code>, <code>ratio</code>, <code>attack_ms</code>, <code>release_ms</code></td><td>Even out loud/quiet speakers; radio dynamic range control</td><td>~5 μs</td></tr>
+<tr><td><code>SoftClipDistort</code></td><td><code>drive</code> (0.0-1.0), <code>mode</code> (soft_clip / tube / foldback)</td><td>Subtle harmonic warmth for vintage radio; tube saturation</td><td>~2 μs</td></tr>
+<tr><td><code>NoiseGate</code></td><td><code>threshold_db</code>, <code>attack_ms</code>, <code>release_ms</code>, <code>hold_ms</code></td><td>Radio squelch — silence below threshold; clean up mic bleed</td><td>~3 μs</td></tr>
+<tr><td><code>NoiseLayer</code></td><td><code>type</code> (static / crackle / hiss), <code>level_db</code>, <code>seed</code></td><td>Atmospheric static for radio presets; deterministic seed for consistency</td><td>~4 μs</td></tr>
+<tr><td><code>SimpleReverb</code></td><td><code>decay_ms</code>, <code>mix</code> (0.0-1.0), <code>pre_delay_ms</code></td><td>Room/bunker ambiance; short decay for command post feel</td><td>~8 μs</td></tr>
+<tr><td><code>DeEsser</code></td><td><code>frequency_hz</code>, <code>threshold_db</code>, <code>ratio</code></td><td>Sibilance reduction; tames harsh microphones</td><td>~5 μs</td></tr>
+<tr><td><code>GainStage</code></td><td><code>gain_db</code></td><td>Level adjustment between stages; makeup gain after compression</td><td>~1 μs</td></tr>
+<tr><td><code>FrequencyShift</code></td><td><code>shift_hz</code>, <code>mix</code> (0.0-1.0)</td><td>Subtle pitch shift for scrambled/encrypted effect</td><td>~6 μs</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>CPU budget:</strong> A 6-stage chain (typical for radio presets) costs ~25 μs per speaker per 20ms frame. With 8 simultaneous speakers, that’s 200 μs — well under 5% of the audio thread’s budget. Even aggressive 10-stage custom chains remain negligible.</p>
+<p><strong>Why no external DSP crate:</strong> Audio DSP filter implementations are straightforward (a biquad is ~10 lines of Rust). External crates like <code>fundsp</code> or <code>dasp</code> are excellent for complex synthesis but add dependency weight for operations that IC needs in their simplest form. The built-in stages above total ~500 lines of Rust. If future effects need convolution reverb or FFT-based processing, <code>fundsp</code> becomes a justified dependency — but the Phase 3 built-in presets don’t require it.</p>
+<h5 id="built-in-presets"><a class="header" href="#built-in-presets">Built-in Presets</a></h5>
+<p>Six presets ship with IC, spanning practical enhancement to thematic immersion. All are defined in YAML — the same format modders use for custom presets.</p>
+<p><strong>1. Clean Enhanced</strong> — <em>Practical voice clarity without character effects.</em></p>
+<p>Noise gate removes mic bleed, gentle compression evens volume differences between speakers, de-esser tames harsh sibilance, and a subtle high-shelf adds presence. Recommended for competitive play where voice clarity matters more than atmosphere.</p>
+<pre><code class="language-yaml">name: "Clean Enhanced"
+description: "Improved voice clarity — compression, de-essing, noise gate"
+tags: ["clean", "competitive", "clarity"]
+chain:
+  - type: noise_gate
+    threshold_db: -42
+    attack_ms: 1
+    release_ms: 80
+    hold_ms: 50
+  - type: compressor
+    threshold_db: -22
+    ratio: 3.0
+    attack_ms: 8
+    release_ms: 60
+  - type: de_esser
+    frequency_hz: 6500
+    threshold_db: -15
+    ratio: 4.0
+  - type: biquad_filter
+    mode: high_shelf
+    freq_hz: 3000
+    q: 0.7
+    gain_db: 2.0
+</code></pre>
+<p><strong>2. Military Radio</strong> — <em>NATO-standard HF radio. The signature IC effect.</em></p>
+<p>Tight band-pass (300 Hz–3.4 kHz) matches real HF radio bandwidth. Compression squashes dynamic range like AGC circuitry. Subtle soft-clip distortion adds harmonic warmth. Noise gate creates a squelch effect. A faint static layer completes the illusion. Squelch tones mark transmission start/end — the distinctive “roger beep” of military comms.</p>
+<pre><code class="language-yaml">name: "Military Radio"
+description: "NATO HF radio — tight bandwidth, squelch, static crackle"
+tags: ["radio", "military", "immersive", "cold-war"]
+chain:
+  - type: biquad_filter
+    mode: high_pass
+    freq_hz: 300
+    q: 0.7
+  - type: biquad_filter
+    mode: low_pass
+    freq_hz: 3400
+    q: 0.7
+  - type: compressor
+    threshold_db: -18
+    ratio: 6.0
+    attack_ms: 3
+    release_ms: 40
+  - type: soft_clip_distortion
+    drive: 0.12
+    mode: tube
+  - type: noise_gate
+    threshold_db: -38
+    attack_ms: 1
+    release_ms: 100
+    hold_ms: 30
+  - type: noise_layer
+    type: static_crackle
+    level_db: -32
+squelch:
+  start_tone_hz: 1200
+  end_tone_hz: 800
+  duration_ms: 60
+  volume: 0.25
+</code></pre>
+<p><strong>3. Field Radio</strong> — <em>Forward observer radio with environmental interference.</em></p>
+<p>Wider band-pass than Military Radio (less “studio,” more “field”). Heavier static and occasional signal drift (subtle frequency wobble). No squelch tones — field conditions are rougher. The effect intensifies when <code>ConnectionQuality.quality_tier</code> drops (more static at lower quality) — adaptive degradation as a feature, not a bug.</p>
+<pre><code class="language-yaml">name: "Field Radio"
+description: "Frontline field radio — static interference, signal drift"
+tags: ["radio", "military", "atmospheric", "cold-war"]
+chain:
+  - type: biquad_filter
+    mode: high_pass
+    freq_hz: 250
+    q: 0.5
+  - type: biquad_filter
+    mode: low_pass
+    freq_hz: 3800
+    q: 0.5
+  - type: compressor
+    threshold_db: -20
+    ratio: 4.0
+    attack_ms: 5
+    release_ms: 50
+  - type: soft_clip_distortion
+    drive: 0.20
+    mode: soft_clip
+  - type: noise_layer
+    type: static_crackle
+    level_db: -26
+  - type: frequency_shift
+    shift_hz: 0.3
+    mix: 0.05
+</code></pre>
+<p><strong>4. Command Post</strong> — <em>Bunker-filtered comms with short reverb.</em></p>
+<p>Short reverb (~180ms decay) creates the acoustic signature of a concrete command bunker. Slight band-pass and compression. No static — the command post has clean equipment. This is the “mission briefing room” voice.</p>
+<pre><code class="language-yaml">name: "Command Post"
+description: "Concrete bunker comms — short reverb, clean equipment"
+tags: ["bunker", "military", "reverb", "cold-war"]
+chain:
+  - type: biquad_filter
+    mode: high_pass
+    freq_hz: 200
+    q: 0.7
+  - type: biquad_filter
+    mode: low_pass
+    freq_hz: 5000
+    q: 0.7
+  - type: compressor
+    threshold_db: -20
+    ratio: 3.5
+    attack_ms: 5
+    release_ms: 50
+  - type: simple_reverb
+    decay_ms: 180
+    mix: 0.20
+    pre_delay_ms: 8
+</code></pre>
+<p><strong>5. SIGINT Intercept</strong> — <em>Encrypted comms being decoded. For fun.</em></p>
+<p>Frequency shifting, periodic glitch artifacts, and heavy processing create the effect of intercepted encrypted communications being partially decoded. Not practical for serious play — this is the “I’m playing a spy” preset.</p>
+<pre><code class="language-yaml">name: "SIGINT Intercept"
+description: "Intercepted encrypted communications — partial decode artifacts"
+tags: ["scrambled", "spy", "fun", "cold-war"]
+chain:
+  - type: biquad_filter
+    mode: band_pass
+    freq_hz: 1500
+    q: 2.0
+  - type: frequency_shift
+    shift_hz: 3.0
+    mix: 0.15
+  - type: soft_clip_distortion
+    drive: 0.30
+    mode: foldback
+  - type: compressor
+    threshold_db: -15
+    ratio: 8.0
+    attack_ms: 1
+    release_ms: 30
+  - type: noise_layer
+    type: hiss
+    level_db: -28
+</code></pre>
+<p><strong>6. Vintage Valve</strong> — <em>1940s vacuum tube radio warmth.</em></p>
+<p>Warm tube saturation, narrower bandwidth than HF radio, gentle compression. Evokes WW2-era communications equipment. Pairs well with Tiberian Dawn’s earlier-era aesthetic.</p>
+<pre><code class="language-yaml">name: "Vintage Valve"
+description: "Vacuum tube radio — warm saturation, WW2-era bandwidth"
+tags: ["radio", "vintage", "warm", "retro"]
+chain:
+  - type: biquad_filter
+    mode: high_pass
+    freq_hz: 350
+    q: 0.5
+  - type: biquad_filter
+    mode: low_pass
+    freq_hz: 2800
+    q: 0.5
+  - type: soft_clip_distortion
+    drive: 0.25
+    mode: tube
+  - type: compressor
+    threshold_db: -22
+    ratio: 3.0
+    attack_ms: 10
+    release_ms: 80
+  - type: gain_stage
+    gain_db: -2.0
+  - type: noise_layer
+    type: hiss
+    level_db: -30
+squelch:
+  start_tone_hz: 1000
+  end_tone_hz: 600
+  duration_ms: 80
+  volume: 0.20
+</code></pre>
+<h5 id="enhanced-voice-isolation-background-voice-removal"><a class="header" href="#enhanced-voice-isolation-background-voice-removal">Enhanced Voice Isolation (Background Voice Removal)</a></h5>
+<p>The user’s request for “getting rid of background voices” is addressed at two levels:</p>
+<ol>
+<li>
+<p><strong>Sender-side (existing):</strong> <code>nnnoiseless</code> (RNNoise) already handles this on the capture side. RNNoise’s GRU neural network is trained specifically to isolate a primary speaker from background noise — including other voices. It performs well against TV audio, family conversations, and roommate speech because these register as non-stationary noise at lower amplitude than the primary mic input. This is already enabled by default (<code>voice.noise_suppression: true</code>).</p>
+</li>
+<li>
+<p><strong>Receiver-side (new, optional):</strong> An enhanced isolation mode applies a second <code>nnnoiseless</code> pass on the decoded audio. This catches background voices that survived Opus compression (Opus preserves all audio above the encoding threshold — including faint background voices that RNNoise on the sender side left in). The double-pass is more aggressive but risks removing valid speaker audio in edge cases (e.g., two people talking simultaneously into one mic). Exposed as <code>voice.enhanced_isolation: bool</code> (D033 toggle, default <code>false</code>).</p>
+</li>
+</ol>
+<p><strong>Why receiver-side isolation is optional:</strong> Double-pass noise suppression can create audible artifacts — “underwater” voice quality when the second pass is too aggressive. Most users will find sender-side RNNoise sufficient. Enhanced isolation is for environments where background voices are a persistent problem (shared rooms, open offices) and the speaker cannot control their environment.</p>
+<h5 id="workshop-voice-effect-presets"><a class="header" href="#workshop-voice-effect-presets">Workshop Voice Effect Presets</a></h5>
+<p>Voice effect presets are a Workshop resource type (D030), published and shared like any other mod resource:</p>
+<p><strong>Resource type:</strong> <code>voice_effect</code> (Workshop category: “Voice Effects”)
+<strong>File format:</strong> YAML with <code>.icvfx.yaml</code> extension (standard YAML — <code>serde_yaml</code> deserialization)
+<strong>Version:</strong> Semver, following Workshop resource conventions (D030)</p>
+<p><strong>Workshop preset structure:</strong></p>
+<pre><code class="language-yaml"># File: radio_spetsnaz.icvfx.yaml
+# Workshop metadata block (same as all Workshop resources)
+workshop:
+  name: "Spetsnaz Radio"
+  description: "Soviet military radio — heavy static, narrow bandwidth, authentic squelch"
+  author: "comrade_modder"
+  version: "1.2.0"
+  license: "CC-BY-4.0"
+  tags: ["radio", "soviet", "military", "cold-war", "immersive"]
+  # Optional LLM metadata (D016 narrative DNA)
+  llm:
+    tone: "Soviet military communications — terse, formal"
+    era: "Cold War, 1980s"
+
+# DSP chain — same format as built-in presets
+chain:
+  - type: biquad_filter
+    mode: high_pass
+    freq_hz: 400
+    q: 0.8
+  - type: biquad_filter
+    mode: low_pass
+    freq_hz: 2800
+    q: 0.8
+  - type: compressor
+    threshold_db: -16
+    ratio: 8.0
+    attack_ms: 2
+    release_ms: 30
+  - type: soft_clip_distortion
+    drive: 0.18
+    mode: tube
+  - type: noise_layer
+    type: static_crackle
+    level_db: -24
+squelch:
+  start_tone_hz: 1400
+  end_tone_hz: 900
+  duration_ms: 50
+  volume: 0.30
+</code></pre>
+<p><strong>Preview before subscribing:</strong> The Workshop browser includes an “audition” feature — a 5-second sample voice clip (bundled with IC) is processed through the effect in real-time and played back. Players hear exactly what the effect sounds like before downloading. This uses the same DSP chain instantiation as live voice — no separate preview system.</p>
+<p><strong>Validation:</strong> Workshop voice effects are pure data (YAML DSP parameters). The DSP stages are built-in engine code — presets cannot execute arbitrary code. Parameter values are clamped to safe ranges (e.g., <code>drive</code> 0.0-1.0, <code>freq_hz</code> 20-20000, <code>gain_db</code> -40 to +20). This is inherently sandboxed — a malicious preset can at worst produce unpleasant audio, never crash the engine or access the filesystem. If a <code>chain</code> stage references an unknown <code>type</code>, it is skipped with a warning log.</p>
+<p><strong>CLI tooling:</strong> The <code>ic</code> CLI supports effect preset development:</p>
+<pre><code class="language-bash">ic audio effect preview radio_spetsnaz.icvfx.yaml      # Preview with sample clip
+ic audio effect validate radio_spetsnaz.icvfx.yaml      # Check YAML structure + param ranges
+ic audio effect chain-info radio_spetsnaz.icvfx.yaml    # Print stage count, CPU estimate
+ic workshop publish --type voice-effect radio_spetsnaz.icvfx.yaml
+</code></pre>
+<h5 id="voice-effect-settings-integration"><a class="header" href="#voice-effect-settings-integration">Voice Effect Settings Integration</a></h5>
+<p>Updated <code>VoiceSettings</code> resource (additions in bold comments):</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Resource)]
+pub struct VoiceSettings {
+    pub noise_suppression: bool,       // D033 toggle, default true
+    pub enhanced_isolation: bool,      // D033 toggle, default false — receiver-side double-pass
+    pub spatial_audio: bool,           // D033 toggle, default false
+    pub vad_mode: bool,                // false = PTT, true = VAD
+    pub ptt_key: KeyCode,
+    pub max_ptt_duration_secs: u32,    // hotmic protection, default 120
+    pub effect_preset: Option&lt;String&gt;, // D033 setting — preset name or None for bypass
+    pub effect_enabled: bool,          // D033 toggle, default false — master effect switch
+    pub per_speaker_effects: HashMap&lt;PlayerId, String&gt;, // per-speaker override presets
+}
+<span class="boring">}</span></code></pre>
+<p><strong>D033 QoL toggle pattern:</strong> Voice effects follow the same toggle pattern as spatial audio and noise suppression. The <code>effect_preset</code> name is a D033 setting (selectable in voice settings UI). Experience profiles (D033) can bundle a voice effect preset with other preferences — e.g., an “Immersive” profile might enable spatial audio + Military Radio effect + smart danger alerts.</p>
+<p><strong>Audio thread sync:</strong> When <code>VoiceSettings</code> changes (user selects a new preset in the UI), the ECS → audio thread channel sends a <code>VoiceCommand::SetEffectPreset(chain)</code> message. The audio thread instantiates the new <code>VoiceEffectChain</code> and applies it starting from the next decoded frame. No glitch — the old chain’s state is discarded and the new chain processes from a clean <code>reset()</code> state.</p>
+<h5 id="competitive-considerations"><a class="header" href="#competitive-considerations">Competitive Considerations</a></h5>
+<p>Voice effects are <strong>cosmetic audio processing</strong> with no competitive implications:</p>
+<ul>
+<li><strong>Receiver-side only</strong> — what you hear is your choice, not imposed on others. No player gains information advantage from voice effects.</li>
+<li><strong>No simulation interaction</strong> — effects run entirely in <code>ic-audio</code> on the playback thread. Zero contact with <code>ic-sim</code>.</li>
+<li><strong>Tournament mode (D058):</strong> Tournament organizers can restrict voice effects via lobby settings (<code>voice_effects_allowed: bool</code>). Broadcast streams may want clean voice for professional production. The restriction is per-lobby, not global — community tournaments set their own rules.</li>
+<li><strong>Replay casters:</strong> When casting replays with voice-in-replay, casters apply their own effect preset (or none). This means the same replay can sound like a military briefing or a clean podcast depending on the caster’s preference.</li>
+</ul>
+<h4 id="ecs-integration-and-audio-thread-architecture"><a class="header" href="#ecs-integration-and-audio-thread-architecture">ECS Integration and Audio Thread Architecture</a></h4>
+<p>Voice state management uses Bevy ECS. The real-time audio pipeline runs on a dedicated thread. This follows the same pattern as Bevy’s own audio system — ECS components are the <em>control surface</em>; the audio thread is the <em>engine</em>.</p>
+<p><strong>ECS components and resources</strong> (in <code>ic-audio</code> and <code>ic-net</code> systems, regular <code>Update</code> schedule — NOT in <code>ic-sim</code>’s <code>FixedUpdate</code>):</p>
+<p><strong>Crate boundary note:</strong> <code>ic-audio</code> (voice processing, jitter buffer, Opus encode/decode) and <code>ic-net</code> (VoicePacket send/receive on <code>MessageLane::Voice</code>) do not depend on each other directly. The bridge is <code>ic-game</code>, which depends on both and wires them together at app startup: <code>ic-net</code> systems write incoming <code>VoicePacket</code> data to a crossbeam channel; <code>ic-audio</code> systems read from that channel to feed the jitter buffer. Outgoing voice follows the reverse path. This preserves crate independence while enabling data flow — the same integration pattern <code>ic-game</code> uses to wire <code>ic-sim</code> and <code>ic-net</code> via <code>ic-protocol</code>.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Attached to player entities. Updated by the voice network system
+/// when VoicePackets arrive (or VoiceActivity orders are processed).
+/// Queried by ic-ui to render speaker icons.
+#[derive(Component)]
+pub struct VoiceActivity {
+    pub speaking: bool,
+    pub last_transmission: Instant,
+}
+
+/// Per-player mute/deafen state. Written by UI and /mute commands.
+/// Read by the voice network system to filter forwarding hints.
+#[derive(Component)]
+pub struct VoiceMuteState {
+    pub self_mute: bool,
+    pub self_deafen: bool,
+    pub muted_players: HashSet&lt;PlayerId&gt;,
+}
+
+/// Per-player incoming voice volume (0.0–2.0). Written by UI slider.
+/// Sent to the audio thread via channel for per-speaker gain.
+#[derive(Component)]
+pub struct VoiceVolume(pub f32);
+
+/// Per-speaker diagnostics. Updated by the audio thread via channel.
+/// Queried by ic-ui to render connection quality indicators.
+#[derive(Component)]
+pub struct VoiceDiagnostics {
+    pub jitter_ms: f32,
+    pub packet_loss_pct: f32,
+    pub round_trip_ms: f32,
+    pub buffer_depth_frames: u32,
+    pub estimated_latency_ms: f32,
+}
+
+/// Global voice settings. Synced to audio thread on change.
+#[derive(Resource)]
+pub struct VoiceSettings {
+    pub noise_suppression: bool,     // D033 toggle, default true
+    pub enhanced_isolation: bool,    // D033 toggle, default false
+    pub spatial_audio: bool,         // D033 toggle, default false
+    pub vad_mode: bool,              // false = PTT, true = VAD
+    pub ptt_key: KeyCode,
+    pub max_ptt_duration_secs: u32,  // hotmic protection, default 120
+    pub effect_preset: Option&lt;String&gt;, // D033 setting, None = bypass
+    pub effect_enabled: bool,        // D033 toggle, default false
+}
+<span class="boring">}</span></code></pre>
+<p><strong>ECS ↔ Audio thread communication</strong> via lock-free <code>crossbeam</code> channels:</p>
+<pre><code>┌─────────────────────────────────────────────────────┐
+│  ECS World (Bevy systems — ic-audio, ic-ui, ic-net) │
+│                                                     │
+│  Player entities:                                   │
+│    VoiceActivity, VoiceMuteState, VoiceVolume,      │
+│    VoiceDiagnostics                                 │
+│                                                     │
+│  Resources:                                         │
+│    VoiceBitrateAdapter, VoiceTransportState,         │
+│    PttState, VoiceSettings                          │
+│                                                     │
+│  Systems:                                           │
+│    voice_ui_system — reads activity, renders icons  │
+│    voice_settings_system — syncs settings to thread │
+│    voice_network_system — sends/receives packets    │
+│      via channels, updates diagnostics              │
+└──────────┬──────────────────────────┬───────────────┘
+           │ crossbeam channel        │ crossbeam channel
+           │ (commands ↓)             │ (events ↑)
+┌──────────▼──────────────────────────▼───────────────┐
+│  Audio Thread (dedicated, NOT ECS-scheduled)        │
+│                                                     │
+│  Capture: cpal → resample → denoise → encode        │
+│  Playback: jitter buffer → decode/PLC → mix → cpal  │
+│                                                     │
+│  Runs on OS audio callback cadence (~5-10ms)        │
+└─────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Why the audio pipeline cannot be an ECS system:</strong> ECS systems run on Bevy’s task pool at frame rate (16ms at 60fps, 33ms at 30fps). Audio capture/playback runs on OS audio threads with ~5ms deadlines via <code>cpal</code> callbacks. A jitter buffer that pops every 20ms cannot be driven by a system running at frame rate — the timing mismatch causes audible artifacts. The audio thread runs independently and communicates with ECS via channels: the ECS side sends commands (“PTT pressed”, “mute player X”, “change bitrate”) and receives events (“speaker X started”, “diagnostics update”, “encoded packet ready”).</p>
+<p><strong>What lives where:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Concern</th><th>ECS?</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td>Voice state (speaking, mute, volume)</td><td>Yes</td><td>Components on player entities, queried by UI systems</td></tr>
+<tr><td>Voice settings (PTT key, noise suppress)</td><td>Yes</td><td>Bevy resource, synced to audio thread via channel</td></tr>
+<tr><td>Voice effect preset selection</td><td>Yes</td><td>Part of VoiceSettings; chain instantiated on audio thread</td></tr>
+<tr><td>Network send/receive (VoicePacket ↔ lane)</td><td>Yes</td><td>ECS system bridges network layer and audio thread</td></tr>
+<tr><td>Voice UI (speaker icons, PTT indicator)</td><td>Yes</td><td>Standard Bevy UI systems querying voice components</td></tr>
+<tr><td>Audio capture + encode pipeline</td><td>No</td><td>Dedicated audio thread, cpal callback timing</td></tr>
+<tr><td>Jitter buffer + decode/PLC</td><td>No</td><td>Dedicated audio thread, 20ms frame cadence</td></tr>
+<tr><td>Audio output + mixing</td><td>No</td><td>Bevy audio backend thread (existing)</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="ui-indicators"><a class="header" href="#ui-indicators">UI Indicators</a></h4>
+<p>Voice activity is shown in the game UI:</p>
+<ul>
+<li><strong>In-game overlay:</strong> Small speaker icon next to the player’s name/color indicator when they are transmitting. Follows the same placement as SC2’s voice indicators (top-right player list).</li>
+<li><strong>Lobby:</strong> Speaker icon pulses when a player is speaking. Volume slider per player.</li>
+<li><strong>Chat log:</strong> <code>[VOICE] Alice is speaking</code> / <code>[VOICE] Alice stopped</code> timestamps in the chat log (optional, toggle via D033 QoL).</li>
+<li><strong>PTT indicator:</strong> Small microphone icon in the bottom-right corner when PTT key is held. Red slash through it when self-muted.</li>
+<li><strong>Connection quality:</strong> Per-speaker signal bars (1-4 bars) derived from <code>VoiceDiagnostics</code> — jitter, loss, and latency combined into a single quality score. Visible in the player list overlay next to the speaker icon. A player with consistently poor voice quality sees a tooltip: “Poor voice connection — high packet loss” to distinguish voice issues from game network issues. Transport state (“Direct” vs “Tunneled”) shown as a small icon when TCP fallback is active.</li>
+<li><strong>Hotmic warning:</strong> If PTT exceeds 90 seconds (75% of the 120s auto-cut threshold), the PTT indicator turns yellow with a countdown. At 120s, it cuts and shows a brief “PTT timeout” notification.</li>
+<li><strong>Voice diagnostics panel:</strong> <code>/voice diag</code> command opens a detailed overlay (developer/power-user tool) showing per-speaker jitter histogram, packet loss graph, buffer depth, estimated mouth-to-ear latency, and encode/decode CPU time. This is the equivalent of Discord’s “Voice &amp; Video Debug” panel.</li>
+<li><strong>Voice effect indicator:</strong> When a voice effect preset is active, a small filter icon appears next to the microphone indicator. Hovering shows the active preset name (e.g., “Military Radio”). The icon uses the preset’s primary tag color (radio presets = olive drab, clean presets = blue, fun presets = purple).</li>
+</ul>
+<h4 id="competitive-voice-rules"><a class="header" href="#competitive-voice-rules">Competitive Voice Rules</a></h4>
+<p>Voice behavior in competitive contexts requires explicit rules that D058’s tournament/ranked modes enforce:</p>
+<p><strong>Voice during pause:</strong> Voice transmission continues during game pauses and tactical timeouts. Voice is I/O, not simulation — pausing the sim does not pause communication. This matches CS2 (voice continues during tactical timeout) and SC2 (voice unaffected by pause). Team coordination during pauses is a legitimate strategic activity.</p>
+<p><strong>Eliminated player voice routing:</strong> When a player is eliminated (all units/structures destroyed), their voice routing depends on the game mode:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mode</th><th>Eliminated player can…</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td>Casual / unranked</td><td>Remain on team voice</td><td>Social experience; D021 eliminated-player roles (advisor, reinforcement controller) require voice</td></tr>
+<tr><td>Ranked 1v1</td><td>N/A (game ends on elimination)</td><td>No team to talk to</td></tr>
+<tr><td>Ranked team</td><td>Remain on team voice for 60 seconds, then observer-only</td><td>Brief window for handoff callouts, then prevents persistent backseat gaming. Configurable via tournament rules (D058)</td></tr>
+<tr><td>Tournament</td><td>Configurable by organizer: permanent team voice, timed cutoff, or immediate observer-only</td><td>Tournament organizers decide the rule for their event</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Ranked voice channel restrictions:</strong> In ranked matchmaking (D055), <code>VoiceTarget::All</code> (all-chat voice) is <strong>disabled</strong>. Players can only use <code>VoiceTarget::Team</code>. All-chat text remains available (for gg/glhf). This matches CS2 and Valorant’s competitive modes, which restrict voice to team-only. Rationale: cross-team voice is a toxicity vector and provides no competitive value. Tournament mode (D058) can re-enable all-voice if the organizer chooses (e.g., for show matches).</p>
+<p><strong>Coach slot:</strong> Community servers (D052) can designate a <strong>coach slot</strong> per team — a non-playing participant who has team voice access but cannot issue orders. The coach sees the team’s shared vision (not full-map observer view). Coach voice routing uses <code>VoiceTarget::Team</code> but the coach’s <code>PlayerId</code> is flagged as <code>PlayerRole::Coach</code> in the lobby. Coaches are subject to the same mute/report system as players. For ranked, coach slots are disabled (pure player skill measurement). For tournaments, organizer configures per-event. This follows CS2’s coach system (voice during freezetime/timeouts, restricted during live rounds) but adapted for RTS where there are no freezetime rounds — the coach can speak at all times.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../decisions/09g/D059/D059-voip-relay-moderation.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../decisions/09g/D059/D059-beacons-coordination.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../decisions/09g/D059/D059-voip-relay-moderation.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../decisions/09g/D059/D059-beacons-coordination.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../../mark-09e88c2c.min.js"></script>
+        <script src="../../../searcher-c2a407aa.js"></script>
+
+        <script src="../../../clipboard-1626706a.min.js"></script>
+        <script src="../../../highlight-abc7f01d.js"></script>
+        <script src="../../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

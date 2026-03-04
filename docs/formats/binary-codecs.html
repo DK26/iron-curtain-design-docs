@@ -1,0 +1,884 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Binary Codecs &amp; EA Insights - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/formats/binary-codecs.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="binary-format-codec-reference-ea-source-code"><a class="header" href="#binary-format-codec-reference-ea-source-code">Binary Format Codec Reference (EA Source Code)</a></h2>
+<blockquote>
+<p>All struct definitions in this section are taken verbatim from the GPL v3 EA source code repositories:</p>
+<ul>
+<li><a href="https://github.com/electronicarts/CnC_Remastered_Collection">CnC_Remastered_Collection</a> — primary source (REDALERT/ and TIBERIANDAWN/ directories)</li>
+<li><a href="https://github.com/electronicarts/CnC_Red_Alert">CnC_Red_Alert</a> — VQA/VQ video format definitions (VQ/ and WINVQ/ directories)</li>
+</ul>
+<p>These are the authoritative definitions for <code>ra-formats</code> crate implementation. Field names, sizes, and types must match exactly for binary compatibility.</p>
+</blockquote>
+<h3 id="mix-archive-format-mix"><a class="header" href="#mix-archive-format-mix">MIX Archive Format (.mix)</a></h3>
+<p><strong>Source:</strong> <code>REDALERT/MIXFILE.H</code>, <code>REDALERT/MIXFILE.CPP</code>, <code>REDALERT/CRC.H</code>, <code>REDALERT/CRC.CPP</code></p>
+<p>A MIX file is a flat archive. Files are identified by CRC hash of their filename — there is no filename table in the archive.</p>
+<h4 id="file-layout"><a class="header" href="#file-layout">File Layout</a></h4>
+<pre><code>[optional: 2-byte zero flag + 2-byte flags word]  // Extended format only
+[FileHeader]                                       // 6 bytes
+[SubBlock array]                                   // sorted by CRC for binary search
+[file data]                                        // concatenated file bodies
+</code></pre>
+<h4 id="structures"><a class="header" href="#structures">Structures</a></h4>
+<pre><code class="language-c">// Archive header (6 bytes)
+typedef struct {
+    short count;    // Number of files in the archive
+    long  size;     // Total size of all file data (bytes)
+} FileHeader;
+
+// Per-file index entry (12 bytes)
+struct SubBlock {
+    long CRC;       // CRC hash of uppercase filename
+    long Offset;    // Byte offset from start of data section
+    long Size;      // File size in bytes
+};
+</code></pre>
+<p><strong>Extended format detection:</strong> If the first <code>short</code> read is 0, the next <code>short</code> is a flags word:</p>
+<ul>
+<li>Bit <code>0x0001</code> — archive contains SHA-1 digest</li>
+<li>Bit <code>0x0002</code> — archive header is encrypted (Blowfish)</li>
+</ul>
+<p>When neither flag is set, the first <code>short</code> is the file count and the archive uses the basic format.</p>
+<h4 id="crc-filename-hashing-algorithm"><a class="header" href="#crc-filename-hashing-algorithm">CRC Filename Hashing Algorithm</a></h4>
+<pre><code class="language-c">// From CRC.H / CRC.CPP — CRCEngine
+// Accumulates bytes in a 4-byte staging buffer, then:
+//   CRC = _lrotl(CRC, 1) + *longptr;
+// (rotate CRC left 1 bit, add next 4 bytes as a long)
+//
+// Filenames are converted to UPPERCASE before hashing.
+// Partial final bytes (&lt; 4) are accumulated into the staging buffer
+// and the final partial long is added the same way.
+</code></pre>
+<p>The SubBlock array is sorted by CRC to enable binary search lookup at runtime.</p>
+<hr>
+<h3 id="shp-sprite-format-shp"><a class="header" href="#shp-sprite-format-shp">SHP Sprite Format (.shp)</a></h3>
+<p><strong>Source:</strong> <code>REDALERT/WIN32LIB/SHAPE.H</code>, <code>REDALERT/2KEYFRAM.CPP</code>, <code>TIBERIANDAWN/KEYFRAME.CPP</code></p>
+<p>SHP files contain one or more palette-indexed sprite frames. Individual frames are typically LCW-compressed.</p>
+<h4 id="shape-block-multi-frame-container"><a class="header" href="#shape-block-multi-frame-container">Shape Block (Multi-Frame Container)</a></h4>
+<pre><code class="language-c">// From SHAPE.H — container for multiple shapes
+typedef struct {
+    unsigned short NumShapes;   // Number of shapes in block
+    long           Offsets[];   // Variable-length array of offsets to each shape
+} ShapeBlock_Type;
+</code></pre>
+<h4 id="single-shape-header"><a class="header" href="#single-shape-header">Single Shape Header</a></h4>
+<pre><code class="language-c">// From SHAPE.H — header for one shape frame
+typedef struct {
+    unsigned short ShapeType;       // Shape type flags (see below)
+    unsigned char  Height;          // Height in scan lines
+    unsigned short Width;           // Width in bytes
+    unsigned char  OriginalHeight;  // Original (unscaled) height
+    unsigned short ShapeSize;       // Total size including header
+    unsigned short DataLength;      // Size of uncompressed data
+    unsigned char  Colortable[16];  // Color remap table (compact shapes only)
+} Shape_Type;
+</code></pre>
+<h4 id="keyframe-animation-header-multi-frame-shp"><a class="header" href="#keyframe-animation-header-multi-frame-shp">Keyframe Animation Header (Multi-Frame SHP)</a></h4>
+<pre><code class="language-c">// From 2KEYFRAM.CPP — header for keyframe animation files
+typedef struct {
+    unsigned short frames;              // Number of frames
+    unsigned short x;                   // X offset
+    unsigned short y;                   // Y offset
+    unsigned short width;               // Frame width
+    unsigned short height;              // Frame height
+    unsigned short largest_frame_size;  // Largest single frame (for buffer allocation)
+    unsigned short flags;               // Bit 0 = has embedded palette (768 bytes after offsets)
+} KeyFrameHeaderType;
+</code></pre>
+<p>When <code>flags &amp; 1</code>, a 768-byte palette (256 × RGB) follows immediately after the frame offset table. Retrieved via <code>Get_Build_Frame_Palette()</code>.</p>
+<h4 id="shape-type-flags-makeshape"><a class="header" href="#shape-type-flags-makeshape">Shape Type Flags (MAKESHAPE)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Value</th><th>Name</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>0x0000</code></td><td>NORMAL</td><td>Standard shape</td></tr>
+<tr><td><code>0x0001</code></td><td>COMPACT</td><td>Uses 16-color palette (Colortable)</td></tr>
+<tr><td><code>0x0002</code></td><td>NOCOMP</td><td>Uncompressed pixel data</td></tr>
+<tr><td><code>0x0004</code></td><td>VARIABLE</td><td>Variable-length color table (&lt;16)</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="drawing-flags-runtime"><a class="header" href="#drawing-flags-runtime">Drawing Flags (Runtime)</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Value</th><th>Name</th><th>Effect</th></tr>
+</thead>
+<tbody>
+<tr><td><code>0x0000</code></td><td>SHAPE_NORMAL</td><td>No transformation</td></tr>
+<tr><td><code>0x0001</code></td><td>SHAPE_HORZ_REV</td><td>Horizontal flip</td></tr>
+<tr><td><code>0x0002</code></td><td>SHAPE_VERT_REV</td><td>Vertical flip</td></tr>
+<tr><td><code>0x0004</code></td><td>SHAPE_SCALING</td><td>Apply scale factor</td></tr>
+<tr><td><code>0x0020</code></td><td>SHAPE_CENTER</td><td>Draw centered on coordinates</td></tr>
+<tr><td><code>0x0100</code></td><td>SHAPE_FADING</td><td>Apply fade/remap table</td></tr>
+<tr><td><code>0x0200</code></td><td>SHAPE_PREDATOR</td><td>Predator-style cloaking distortion</td></tr>
+<tr><td><code>0x0400</code></td><td>SHAPE_COMPACT</td><td>Shape uses compact color table</td></tr>
+<tr><td><code>0x1000</code></td><td>SHAPE_GHOST</td><td>Ghost/transparent rendering</td></tr>
+<tr><td><code>0x2000</code></td><td>SHAPE_SHADOW</td><td>Shadow rendering mode</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h3 id="lcw-compression"><a class="header" href="#lcw-compression">LCW Compression</a></h3>
+<p><strong>Source:</strong> <code>REDALERT/LCW.CPP</code>, <code>REDALERT/LCWUNCMP.CPP</code>, <code>REDALERT/WIN32LIB/IFF.H</code></p>
+<p>LCW (Lempel-Castle-Welch) is Westwood’s primary data compression algorithm, used for SHP frame data, VQA video chunks, icon set data, and other compressed resources.</p>
+<h4 id="compression-header-wrapper"><a class="header" href="#compression-header-wrapper">Compression Header Wrapper</a></h4>
+<pre><code class="language-c">// From IFF.H — optional header wrapping compressed data
+typedef struct {
+    char  Method;   // Compression method (see CompressionType)
+    char  pad;      // Padding byte
+    long  Size;     // Decompressed size
+    short Skip;     // Bytes to skip
+} CompHeaderType;
+
+typedef enum {
+    NOCOMPRESS  = 0,
+    LZW12       = 1,
+    LZW14       = 2,
+    HORIZONTAL  = 3,
+    LCW         = 4
+} CompressionType;
+</code></pre>
+<h4 id="lcw-command-opcodes"><a class="header" href="#lcw-command-opcodes">LCW Command Opcodes</a></h4>
+<p>LCW decompression processes a source stream and produces output by copying literals, referencing previous output (sliding window), or filling runs:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Byte Pattern</th><th>Name</th><th>Operation</th></tr>
+</thead>
+<tbody>
+<tr><td><code>0b0xxx_yyyy, yyyyyyyy</code></td><td>Short copy</td><td>Copy run of <code>x+3</code> bytes from <code>y</code> bytes back in output (relative)</td></tr>
+<tr><td><code>0b10xx_xxxx, n₁..nₓ₊₁</code></td><td>Medium literal</td><td>Copy next <code>x+1</code> bytes verbatim from source to output</td></tr>
+<tr><td><code>0b11xx_xxxx, w₁</code></td><td>Medium copy</td><td>Copy <code>x+3</code> bytes from absolute output offset <code>w₁</code></td></tr>
+<tr><td><code>0xFF, w₁, w₂</code></td><td>Long copy</td><td>Copy <code>w₁</code> bytes from absolute output offset <code>w₂</code></td></tr>
+<tr><td><code>0xFE, w₁, b₁</code></td><td>Long run</td><td>Fill <code>w₁</code> bytes with value <code>b₁</code></td></tr>
+<tr><td><code>0x80</code></td><td>End marker</td><td>End of compressed data</td></tr>
+</tbody>
+</table>
+</div>
+<p>Where <code>w₁</code>, <code>w₂</code> are little-endian 16-bit words and <code>b₁</code> is a single byte.</p>
+<p><strong>Key detail:</strong> Short copies use <em>relative</em> backward references (from current output position), while medium and long copies use <em>absolute</em> offsets from the start of the output buffer. This dual addressing is a distinctive feature of LCW.</p>
+<blockquote>
+<p><strong>Security (V38):</strong> All <code>ra-formats</code> decompressors (LCW, LZ4, ADPCM) must enforce decompression ratio caps (256:1), absolute output size limits, and loop iteration counters. Every format parser must have a <code>cargo-fuzz</code> target. Archive extraction (<code>.oramap</code> ZIP) must use <code>strict-path</code> <code>PathBoundary</code> to prevent Zip Slip. See <code>06-SECURITY.md</code> § Vulnerability 38.</p>
+</blockquote>
+<h4 id="iff-chunk-id-macro"><a class="header" href="#iff-chunk-id-macro">IFF Chunk ID Macro</a></h4>
+<pre><code class="language-c">// From IFF.H — used by MIX, icon set, and other IFF-based formats
+#define MAKE_ID(a,b,c,d) ((long)((long)d &lt;&lt; 24) | ((long)c &lt;&lt; 16) | ((long)b &lt;&lt; 8) | (long)(a))
+</code></pre>
+<hr>
+<h3 id="tmp-terrain-tile-format-tmp--icon-sets"><a class="header" href="#tmp-terrain-tile-format-tmp--icon-sets">TMP Terrain Tile Format (.tmp / Icon Sets)</a></h3>
+<p><strong>Source:</strong> <code>REDALERT/WIN32LIB/TILE.H</code>, <code>TIBERIANDAWN/WIN32LIB/TILE.H</code>, <code>*/WIN32LIB/ICONSET.CPP</code>, <code>*/WIN32LIB/STAMP.INC</code>, <code>REDALERT/COMPAT.H</code></p>
+<p>TMP files are <strong>IFF-format icon sets</strong> — collections of fixed-size tiles arranged in a grid. Each tile is a 24×24 pixel palette-indexed bitmap. The engine renders terrain by compositing these tiles onto the map.</p>
+<h4 id="on-disk-iff-chunk-structure"><a class="header" href="#on-disk-iff-chunk-structure">On-Disk IFF Chunk Structure</a></h4>
+<p>TMP files use Westwood’s IFF variant with these chunk identifiers:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Chunk ID</th><th>FourCC</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ICON</code></td><td><code>MAKE_ID('I','C','O','N')</code></td><td>Form identifier (file magic — must be first)</td></tr>
+<tr><td><code>SINF</code></td><td><code>MAKE_ID('S','I','N','F')</code></td><td>Set info: icon dimensions and format</td></tr>
+<tr><td><code>SSET</code></td><td><code>MAKE_ID('S','S','E','T')</code></td><td>Icon pixel data (may be LCW-compressed)</td></tr>
+<tr><td><code>TRNS</code></td><td><code>MAKE_ID('T','R','N','S')</code></td><td>Per-icon transparency flags</td></tr>
+<tr><td><code>MAP </code></td><td><code>MAKE_ID('M','A','P',' ')</code></td><td>Icon mapping table (logical → physical)</td></tr>
+<tr><td><code>RPAL</code></td><td><code>MAKE_ID('R','P','A','L')</code></td><td>Icon palette</td></tr>
+<tr><td><code>RTBL</code></td><td><code>MAKE_ID('R','T','B','L')</code></td><td>Remap table</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="sinf-chunk-icon-dimensions"><a class="header" href="#sinf-chunk-icon-dimensions">SINF Chunk (Icon Dimensions)</a></h4>
+<pre><code class="language-c">// Local struct in Load_Icon_Set() — read from SINF chunk
+struct {
+    char Width;      // Width of one icon in bytes (pixels = Width &lt;&lt; 3)
+    char Height;     // Height of one icon in bytes (pixels = Height &lt;&lt; 3)
+    char Format;     // Graphic mode
+    char Bitplanes;  // Number of bitplanes per icon
+} sinf;
+
+// Standard RA value: Width=3, Height=3 → 24×24 pixels (3 &lt;&lt; 3 = 24)
+// Bytes per icon = ((Width&lt;&lt;3) * (Height&lt;&lt;3) * Bitplanes) &gt;&gt; 3
+// For 24×24 8-bit: (24 * 24 * 8) &gt;&gt; 3 = 576 bytes per icon
+</code></pre>
+<h4 id="in-memory-control-structure"><a class="header" href="#in-memory-control-structure">In-Memory Control Structure</a></h4>
+<p>The IFF chunks are loaded into a contiguous memory block with <code>IControl_Type</code> as the header. <strong>Two versions exist</strong> — Tiberian Dawn and Red Alert differ:</p>
+<pre><code class="language-c">// Tiberian Dawn version (TIBERIANDAWN/WIN32LIB/TILE.H)
+typedef struct {
+    short           Width;      // Width of icons (pixels)
+    short           Height;     // Height of icons (pixels)
+    short           Count;      // Number of (logical) icons in this set
+    short           Allocated;  // Was this iconset allocated? (runtime flag)
+    long            Size;       // Size of entire iconset memory block
+    unsigned char * Icons;      // Offset from buffer start to icon data
+    long            Palettes;   // Offset from buffer start to palette data
+    long            Remaps;     // Offset from buffer start to remap index data
+    long            TransFlag;  // Offset for transparency flag table
+    unsigned char * Map;        // Icon map offset (if present)
+} IControl_Type;
+// Note: Icons and Map are stored as raw pointers in TD
+
+// Red Alert version (REDALERT/WIN32LIB/TILE.H, REDALERT/COMPAT.H)
+typedef struct {
+    short Width;      // Width of icons (pixels)
+    short Height;     // Height of icons (pixels)
+    short Count;      // Number of (logical) icons in this set
+    short Allocated;  // Was this iconset allocated? (runtime flag)
+    short MapWidth;   // Width of map (in icons) — RA-only field
+    short MapHeight;  // Height of map (in icons) — RA-only field
+    long  Size;       // Size of entire iconset memory block
+    long  Icons;      // Offset from buffer start to icon data
+    long  Palettes;   // Offset from buffer start to palette data
+    long  Remaps;     // Offset from buffer start to remap index data
+    long  TransFlag;  // Offset for transparency flag table
+    long  ColorMap;   // Offset for color control value table — RA-only field
+    long  Map;        // Icon map offset (if present)
+} IControl_Type;
+// Note: RA version uses long offsets (not pointers) and adds MapWidth, MapHeight, ColorMap
+</code></pre>
+<p><strong>Constraint:</strong> “This structure MUST be a multiple of 16 bytes long” (per source comment in STAMP.INC and TILE.H).</p>
+<h4 id="how-the-map-array-works"><a class="header" href="#how-the-map-array-works">How the Map Array Works</a></h4>
+<p>The <code>Map</code> array maps logical grid positions to physical icon indices. Each byte represents one cell in the template grid (<code>MapWidth × MapHeight</code> in RA, or <code>Width × Height</code> in TD). A value of <code>0xFF</code> (<code>-1</code> signed) means the cell is empty/transparent — no tile is drawn there.</p>
+<pre><code class="language-c">// From CDATA.CPP — reading the icon map
+Mem_Copy(Get_Icon_Set_Map(Get_Image_Data()), map, Width * Height);
+for (index = 0; index &lt; Width * Height; index++) {
+    if (map[index] != 0xFF) {
+        // This cell has a visible tile — draw icon data at map[index]
+    }
+}
+</code></pre>
+<p>Icon pixel data is accessed as: <code>&amp;Icons[map[index] * (24 * 24)]</code> — each icon is 576 bytes of palette-indexed pixels.</p>
+<h4 id="color-control-map-ra-only"><a class="header" href="#color-control-map-ra-only">Color Control Map (RA only)</a></h4>
+<p>The <code>ColorMap</code> table provides per-icon land type information. Each byte maps to one of 16 terrain categories used by the game logic:</p>
+<pre><code class="language-c">// From CDATA.CPP — RA land type lookup
+static LandType _land[16] = {
+    LAND_CLEAR, LAND_CLEAR, LAND_CLEAR, LAND_CLEAR,  // 0-3
+    LAND_CLEAR, LAND_CLEAR, LAND_BEACH, LAND_CLEAR,  // 4-7
+    LAND_ROCK,  LAND_ROAD,  LAND_WATER, LAND_RIVER,  // 8-11
+    LAND_CLEAR, LAND_CLEAR, LAND_ROUGH, LAND_CLEAR,  // 12-15
+};
+return _land[control_map[icon_index]];
+</code></pre>
+<h4 id="iconsetclass-ra-only"><a class="header" href="#iconsetclass-ra-only">IconsetClass (RA Only)</a></h4>
+<p>Red Alert wraps <code>IControl_Type</code> in a C++ class with accessor methods:</p>
+<pre><code class="language-c">// From COMPAT.H
+class IconsetClass : protected IControl_Type {
+public:
+    int Map_Width()                  const { return MapWidth; }
+    int Map_Height()                 const { return MapHeight; }
+    int Icon_Count()                 const { return Count; }
+    int Pixel_Width()                const { return Width; }
+    int Pixel_Height()               const { return Height; }
+    int Total_Size()                 const { return Size; }
+    unsigned char const * Icon_Data()    const { return (unsigned char const *)this + Icons; }
+    unsigned char const * Map_Data()     const { return (unsigned char const *)this + Map; }
+    unsigned char const * Palette_Data() const { return (unsigned char const *)this + Palettes; }
+    unsigned char const * Remap_Data()   const { return (unsigned char const *)this + Remaps; }
+    unsigned char const * Trans_Data()   const { return (unsigned char const *)this + TransFlag; }
+    unsigned char * Control_Map()        { return (unsigned char *)this + ColorMap; }
+};
+</code></pre>
+<p>All offset fields are relative to the start of the <code>IControl_Type</code> structure itself — the data is a single contiguous allocation.</p>
+<hr>
+<h3 id="pal-palette-format-pal"><a class="header" href="#pal-palette-format-pal">PAL Palette Format (.pal)</a></h3>
+<p><strong>Source:</strong> <code>REDALERT/WIN32LIB/PALETTE.H</code>, <code>TIBERIANDAWN/WIN32LIB/LOADPAL.CPP</code>, <code>REDALERT/WIN32LIB/DrawMisc.cpp</code></p>
+<p>PAL files are the simplest format — a raw dump of 256 RGB color values with no header.</p>
+<h4 id="file-layout-1"><a class="header" href="#file-layout-1">File Layout</a></h4>
+<pre><code>768 bytes total = 256 entries × 3 bytes (R, G, B)
+</code></pre>
+<p>No magic number, no header, no footer. Just 768 bytes of color data.</p>
+<h4 id="constants"><a class="header" href="#constants">Constants</a></h4>
+<pre><code class="language-c">// From PALETTE.H
+#define RGB_BYTES      3
+#define PALETTE_SIZE   256
+#define PALETTE_BYTES  768   // PALETTE_SIZE * RGB_BYTES
+</code></pre>
+<h4 id="color-range-6-bit-vga-063"><a class="header" href="#color-range-6-bit-vga-063">Color Range: 6-bit VGA (0–63)</a></h4>
+<p>Each R, G, B component is in <strong>6-bit VGA range (0–63)</strong>, not 8-bit. This is because the original VGA hardware registers only accepted 6-bit color values.</p>
+<pre><code class="language-c">// From PALETTE.H
+typedef struct {
+    char red;
+    char green;
+    char blue;
+} RGB;   // Each field: 0–63 (6-bit)
+</code></pre>
+<h4 id="loading-and-conversion"><a class="header" href="#loading-and-conversion">Loading and Conversion</a></h4>
+<pre><code class="language-c">// From LOADPAL.CPP — loading is trivially simple
+void Load_Palette(char *palette_file_name, void *palette_pointer) {
+    Load_Data(palette_file_name, palette_pointer, 768);
+}
+
+// From DDRAW.CPP — converting 6-bit VGA to 8-bit for display
+void Set_DD_Palette(void *palette) {
+    for (int i = 0; i &lt; 768; i++) {
+        buffer[i] = palette[i] &lt;&lt; 2;  // 6-bit (0–63) → 8-bit (0–252)
+    }
+}
+
+// From WRITEPCX.CPP — PCX files use 8-bit, converted on read
+// Reading PCX palette:  value &gt;&gt;= 2;  (8-bit → 6-bit)
+// Writing PCX palette:  value &lt;&lt;= 2;  (6-bit → 8-bit)
+</code></pre>
+<p><strong>Implementation note for ra-formats:</strong> When loading <code>.pal</code> files, expose both the raw 6-bit values and a convenience method that returns 8-bit values (left-shift by 2). The 6-bit values are the canonical form — all palette operations in the original game work in 6-bit space.</p>
+<hr>
+<h3 id="aud-audio-format-aud"><a class="header" href="#aud-audio-format-aud">AUD Audio Format (.aud)</a></h3>
+<p><strong>Source:</strong> <code>REDALERT/WIN32LIB/AUDIO.H</code>, <code>REDALERT/ADPCM.CPP</code>, <code>REDALERT/ITABLE.CPP</code>, <code>REDALERT/DTABLE.CPP</code>, <code>REDALERT/WIN32LIB/SOSCOMP.H</code></p>
+<p>AUD files contain IMA ADPCM-compressed audio (Westwood’s variant). The file has a simple header followed by compressed audio chunks.</p>
+<h4 id="file-header"><a class="header" href="#file-header">File Header</a></h4>
+<pre><code class="language-c">// From AUDIO.H
+#pragma pack(push, 1)
+typedef struct {
+    unsigned short int Rate;        // Playback rate in Hz (e.g., 22050)
+    long               Size;        // Size of compressed data (bytes)
+    long               UncompSize;  // Size of uncompressed data (bytes)
+    unsigned char      Flags;       // Bit flags (see below)
+    unsigned char      Compression; // Compression algorithm ID
+} AUDHeaderType;
+#pragma pack(pop)
+</code></pre>
+<p><strong>Flags:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Bit</th><th>Name</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>0x01</code></td><td><code>AUD_FLAG_STEREO</code></td><td>Stereo audio (two channels)</td></tr>
+<tr><td><code>0x02</code></td><td><code>AUD_FLAG_16BIT</code></td><td>16-bit samples (vs. 8-bit)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Compression types</strong> (from <code>SOUNDINT.H</code>):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Value</th><th>Name</th><th>Algorithm</th></tr>
+</thead>
+<tbody>
+<tr><td>0</td><td><code>SCOMP_NONE</code></td><td>No compression</td></tr>
+<tr><td>1</td><td><code>SCOMP_WESTWOOD</code></td><td>Westwood ADPCM (the standard for RA audio)</td></tr>
+<tr><td>33</td><td><code>SCOMP_SONARC</code></td><td>Sonarc compression</td></tr>
+<tr><td>99</td><td><code>SCOMP_SOS</code></td><td>SOS ADPCM</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="adpcm-codec-structure"><a class="header" href="#adpcm-codec-structure">ADPCM Codec Structure</a></h4>
+<pre><code class="language-c">// From SOSCOMP.H — codec state for ADPCM decompression
+typedef struct _tagCOMPRESS_INFO {
+    char *          lpSource;         // Source data pointer
+    char *          lpDest;           // Destination buffer pointer
+    unsigned long   dwCompSize;       // Compressed data size
+    unsigned long   dwUnCompSize;     // Uncompressed data size
+    unsigned long   dwSampleIndex;    // Current sample index (channel 1)
+    long            dwPredicted;      // Predicted sample value (channel 1)
+    long            dwDifference;     // Difference value (channel 1)
+    short           wCodeBuf;         // Code buffer (channel 1)
+    short           wCode;            // Current code (channel 1)
+    short           wStep;            // Step size (channel 1)
+    short           wIndex;           // Index into step table (channel 1)
+    // --- Stereo: second channel state ---
+    unsigned long   dwSampleIndex2;
+    long            dwPredicted2;
+    long            dwDifference2;
+    short           wCodeBuf2;
+    short           wCode2;
+    short           wStep2;
+    short           wIndex2;
+    // ---
+    short           wBitSize;         // Bits per sample (8 or 16)
+    short           wChannels;        // Number of channels (1=mono, 2=stereo)
+} _SOS_COMPRESS_INFO;
+
+// Chunk header for compressed audio blocks
+typedef struct _tagCOMPRESS_HEADER {
+    unsigned long dwType;             // Compression type identifier
+    unsigned long dwCompressedSize;   // Size of compressed data
+    unsigned long dwUnCompressedSize; // Size when decompressed
+    unsigned long dwSourceBitSize;    // Original bit depth
+    char          szName[16];         // Name string
+} _SOS_COMPRESS_HEADER;
+</code></pre>
+<h4 id="westwood-adpcm-decompression-algorithm"><a class="header" href="#westwood-adpcm-decompression-algorithm">Westwood ADPCM Decompression Algorithm</a></h4>
+<p>The algorithm processes each byte as two 4-bit nibbles (low nibble first, then high nibble). It uses pre-computed <code>IndexTable</code> and <code>DiffTable</code> lookup tables for decoding.</p>
+<pre><code class="language-c">// From ADPCM.CPP — core decompression loop (simplified)
+// 'code' is one byte of compressed data containing TWO samples
+//
+// For each byte:
+//   1. Process low nibble  (code &amp; 0x0F)
+//   2. Process high nibble (code &gt;&gt; 4)
+//
+// Per nibble:
+//   fastindex = (fastindex &amp; 0xFF00) | token;   // token = 4-bit nibble
+//   sample += DiffTable[fastindex];              // apply difference
+//   sample = clamp(sample, -32768, 32767);       // clamp to 16-bit range
+//   fastindex = IndexTable[fastindex];           // advance index
+//   output = (unsigned short)sample;             // write sample
+
+// The 'fastindex' combines the step index (high byte) and token (low byte)
+// into a single 16-bit lookup key: index = (step_index &lt;&lt; 4) | token
+</code></pre>
+<p><strong>Table structure:</strong> Both tables are indexed by <code>[step_index * 16 + token]</code> where <code>step_index</code> is 0–88 and <code>token</code> is 0–15, giving 1424 entries each.</p>
+<ul>
+<li><code>IndexTable[1424]</code> (<code>unsigned short</code>) — next step index after applying this token</li>
+<li><code>DiffTable[1424]</code> (<code>long</code>) — signed difference to add to the current sample</li>
+</ul>
+<p>The tables are pre-multiplied by 16 for performance (the index already includes the token offset). Full table values are in <code>ITABLE.CPP</code> and <code>DTABLE.CPP</code>.</p>
+<hr>
+<h3 id="vqa-video-format-vqa"><a class="header" href="#vqa-video-format-vqa">VQA Video Format (.vqa)</a></h3>
+<p><strong>Source:</strong> <code>VQ/INCLUDE/VQA32/VQAFILE.H</code> (CnC_Red_Alert repo), <code>REDALERT/WIN32LIB/IFF.H</code></p>
+<p>VQA (Vector Quantized Animation) files store cutscene videos using vector quantization — a codebook of small pixel blocks that are referenced by index to reconstruct each frame.</p>
+<h4 id="vqa-file-header"><a class="header" href="#vqa-file-header">VQA File Header</a></h4>
+<pre><code class="language-c">// From VQAFILE.H
+typedef struct _VQAHeader {
+    unsigned short Version;         // Format version
+    unsigned short Flags;           // Bit 0 = has audio, Bit 1 = has alt audio
+    unsigned short Frames;          // Total number of video frames
+    unsigned short ImageWidth;      // Image width in pixels
+    unsigned short ImageHeight;     // Image height in pixels
+    unsigned char  BlockWidth;      // Codebook block width (typically 4)
+    unsigned char  BlockHeight;     // Codebook block height (typically 2 or 4)
+    unsigned char  FPS;             // Frames per second (typically 15)
+    unsigned char  Groupsize;       // VQ codebook group size
+    unsigned short Num1Colors;      // Number of 1-color blocks(?)
+    unsigned short CBentries;       // Number of codebook entries
+    unsigned short Xpos;            // X display position
+    unsigned short Ypos;            // Y display position
+    unsigned short MaxFramesize;    // Largest frame size (for buffer allocation)
+    // Audio fields
+    unsigned short SampleRate;      // Audio sample rate (e.g., 22050)
+    unsigned char  Channels;        // Audio channels (1=mono, 2=stereo)
+    unsigned char  BitsPerSample;   // Audio bits per sample (8 or 16)
+    // Alternate audio stream
+    unsigned short AltSampleRate;
+    unsigned char  AltChannels;
+    unsigned char  AltBitsPerSample;
+    // Reserved
+    unsigned short FutureUse[5];
+} VQAHeader;
+</code></pre>
+<h4 id="vqa-chunk-types"><a class="header" href="#vqa-chunk-types">VQA Chunk Types</a></h4>
+<p>VQA files use a chunk-based IFF-like structure. Each chunk has a 4-byte ASCII identifier and a big-endian 4-byte size.</p>
+<p><strong>Top-level structure:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Chunk</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>WVQA</code></td><td>Form/container chunk (file magic)</td></tr>
+<tr><td><code>VQHD</code></td><td>VQA header (contains <code>VQAHeader</code> above)</td></tr>
+<tr><td><code>FINF</code></td><td>Frame info table — seek offsets for each frame</td></tr>
+<tr><td><code>VQFR</code></td><td>Video frame (delta frame)</td></tr>
+<tr><td><code>VQFK</code></td><td>Video keyframe</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Sub-chunks within frames:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Chunk</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>CBF0</code> / <code>CBFZ</code></td><td>Full codebook, uncompressed / LCW-compressed</td></tr>
+<tr><td><code>CBP0</code> / <code>CBPZ</code></td><td>Partial codebook (1/Groupsize of full), uncompressed / LCW-compressed</td></tr>
+<tr><td><code>VPT0</code> / <code>VPTZ</code></td><td>Vector pointers (frame block indices), uncompressed / LCW-compressed</td></tr>
+<tr><td><code>VPTK</code></td><td>Vector pointer keyframe</td></tr>
+<tr><td><code>VPTD</code></td><td>Vector pointer delta (differences from previous frame)</td></tr>
+<tr><td><code>VPTR</code> / <code>VPRZ</code></td><td>Vector pointer + run-skip-dump encoding</td></tr>
+<tr><td><code>CPL0</code> / <code>CPLZ</code></td><td>Palette (256 × RGB), uncompressed / LCW-compressed</td></tr>
+<tr><td><code>SND0</code></td><td>Audio — raw PCM</td></tr>
+<tr><td><code>SND1</code></td><td>Audio — Westwood “ZAP” ADPCM</td></tr>
+<tr><td><code>SND2</code></td><td>Audio — IMA ADPCM (same codec as AUD files)</td></tr>
+<tr><td><code>SNDZ</code></td><td>Audio — LCW-compressed</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Naming convention:</strong> Suffix <code>0</code> = uncompressed data. Suffix <code>Z</code> = LCW-compressed. Suffix <code>K</code> = keyframe. Suffix <code>D</code> = delta.</p>
+<h4 id="finf-frame-info-table"><a class="header" href="#finf-frame-info-table">FINF (Frame Info) Table</a></h4>
+<p>The <code>FINF</code> chunk contains a table of 4 bytes per frame encoding seek position and flags:</p>
+<pre><code class="language-c">// Bits 31–28: Frame flags
+//   Bit 31 (0x80000000): KEY   — keyframe (full codebook + vector pointers)
+//   Bit 30 (0x40000000): PAL   — frame includes palette change
+//   Bit 29 (0x20000000): SYNC  — audio sync point
+// Bits 27–0: File offset in WORDs (multiply by 2 for byte offset)
+</code></pre>
+<h4 id="vpc-codes-vector-pointer-compression"><a class="header" href="#vpc-codes-vector-pointer-compression">VPC Codes (Vector Pointer Compression)</a></h4>
+<pre><code class="language-c">// Run-skip-dump encoding opcodes for vector pointer data
+#define VPC_ONE_SINGLE      0xF000  // Single block, one value
+#define VPC_ONE_SEMITRANS   0xE000  // Semi-transparent block
+#define VPC_SHORT_DUMP      0xD000  // Short literal dump
+#define VPC_LONG_DUMP       0xC000  // Long literal dump
+#define VPC_SHORT_RUN       0xB000  // Short run of same value
+#define VPC_LONG_RUN        0xA000  // Long run of same value
+</code></pre>
+<hr>
+<h3 id="vq-static-image-format-vqa-still-frames"><a class="header" href="#vq-static-image-format-vqa-still-frames">VQ Static Image Format (.vqa still frames)</a></h3>
+<p><strong>Source:</strong> <code>WINVQ/INCLUDE/VQFILE.H</code>, <code>VQ/INCLUDE/VQ.H</code> (CnC_Red_Alert repo)</p>
+<p>Separate from VQA movies, the VQ format handles single static vector-quantized images.</p>
+<h4 id="vq-header-vqfileh-variant"><a class="header" href="#vq-header-vqfileh-variant">VQ Header (VQFILE.H variant)</a></h4>
+<pre><code class="language-c">// From VQFILE.H
+typedef struct _VQHeader {
+    unsigned short Version;
+    unsigned short Flags;
+    unsigned short ImageWidth;
+    unsigned short ImageHeight;
+    unsigned char  BlockType;     // Block encoding type
+    unsigned char  BlockWidth;
+    unsigned char  BlockHeight;
+    unsigned char  BlockDepth;    // Bits per pixel
+    unsigned short CBEntries;     // Codebook entries
+    unsigned char  VPtrType;      // Vector pointer encoding type
+    unsigned char  PalStart;      // First palette index used
+    unsigned short PalLength;     // Number of palette entries
+    unsigned char  PalDepth;      // Palette bit depth
+    unsigned char  ColorModel;    // Color model (see below)
+} VQHeader;
+</code></pre>
+<h4 id="vq-header-vqh-variant--40-bytes-for-vq-encoder"><a class="header" href="#vq-header-vqh-variant--40-bytes-for-vq-encoder">VQ Header (VQ.H variant — 40 bytes, for VQ encoder)</a></h4>
+<pre><code class="language-c">// From VQ.H
+typedef struct _VQHeader {
+    long           ImageSize;     // Total image size in bytes
+    unsigned short ImageWidth;
+    unsigned short ImageHeight;
+    unsigned char  BlockWidth;
+    unsigned char  BlockHeight;
+    unsigned char  BlockType;     // Block encoding type
+    unsigned char  PaletteRange;  // Palette range
+    unsigned short Num1Color;     // Number of 1-color blocks
+    unsigned short CodebookSize;  // Codebook entries
+    unsigned char  CodingFlag;    // Coding method flag
+    unsigned char  FrameDiffMethod; // Frame difference method
+    unsigned char  ForcedPalette; // Forced palette flag
+    unsigned char  F555Palette;   // Use 555 palette format
+    unsigned short VQVersion;     // VQ codec version
+} VQHeader;
+</code></pre>
+<h4 id="vq-chunk-ids"><a class="header" href="#vq-chunk-ids">VQ Chunk IDs</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Chunk</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>VQHR</code></td><td>VQ header</td></tr>
+<tr><td><code>VQCB</code></td><td>VQ codebook data</td></tr>
+<tr><td><code>VQCT</code></td><td>VQ color table (palette)</td></tr>
+<tr><td><code>VQVP</code></td><td>VQ vector pointers</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="color-models"><a class="header" href="#color-models">Color Models</a></h4>
+<pre><code class="language-c">#define VQCM_PALETTED  0   // Palette-indexed (standard RA/TD)
+#define VQCM_RGBTRUE   1   // RGB true color
+#define VQCM_YBRTRUE   2   // YBR (luminance-chrominance) true color
+</code></pre>
+<hr>
+<h2 id="insights-from-eas-original-source-code"><a class="header" href="#insights-from-eas-original-source-code">Insights from EA’s Original Source Code</a></h2>
+<p>Repository: https://github.com/electronicarts/CnC_Red_Alert (GPL v3, archived Feb 2025)</p>
+<h3 id="code-statistics"><a class="header" href="#code-statistics">Code Statistics</a></h3>
+<ul>
+<li>290 C++ header files, 296 implementation files, 14 x86 assembly files</li>
+<li>~222,000 lines of C++ code</li>
+<li>430+ <code>#ifdef WIN32</code> checks (no other platform implemented)</li>
+<li>Built with Watcom C/C++ v10.6 and Borland Turbo Assembler v4.0</li>
+</ul>
+<h3 id="keep-eventorder-queue-system"><a class="header" href="#keep-eventorder-queue-system">Keep: Event/Order Queue System</a></h3>
+<p>The original uses <code>OutList</code> (local player commands) and <code>DoList</code> (confirmed orders from all players), both containing <code>EventClass</code> objects:</p>
+<pre><code class="language-cpp">// From CONQUER.CPP
+OutList.Add(EventClass(EventClass::IDLE, TargetClass(tech)));
+</code></pre>
+<p>Player actions → events → queue → deterministic processing each tick. This is the same pattern as our <code>PlayerOrder → TickOrders → Simulation::apply_tick()</code> pipeline. Westwood validated this in 1996.</p>
+<h3 id="keep-integer-math-for-determinism"><a class="header" href="#keep-integer-math-for-determinism">Keep: Integer Math for Determinism</a></h3>
+<p>The original uses integer math everywhere for game logic — positions, damage, timing. No floats in the simulation. This is why multiplayer worked. Our <code>FixedPoint</code> / <code>SimCoord</code> approach mirrors this.</p>
+<h3 id="keep-data-driven-rules-ini--miniyaml--yaml"><a class="header" href="#keep-data-driven-rules-ini--miniyaml--yaml">Keep: Data-Driven Rules (INI → MiniYAML → YAML)</a></h3>
+<p>Original reads unit stats and game rules from <code>.ini</code> files at runtime. This data-driven philosophy is what made C&amp;C so moddable. The lineage: <code>INI → MiniYAML → YAML</code> — each step more expressive, same philosophy.</p>
+<h3 id="keep-mix-archive-concept"><a class="header" href="#keep-mix-archive-concept">Keep: MIX Archive Concept</a></h3>
+<p>Simple flat archive with hash-based lookup. No compression in the archive itself (individual files may be compressed). For <code>ra-formats</code>: read MIX as-is for compatibility; native format can modernize.</p>
+<h3 id="keep-compression-flexibility"><a class="header" href="#keep-compression-flexibility">Keep: Compression Flexibility</a></h3>
+<p>Original implements LCW, LZO, and LZW compression. LZO was settled on for save games:</p>
+<pre><code class="language-cpp">// From SAVELOAD.CPP
+LZOPipe pipe(LZOPipe::COMPRESS, SAVE_BLOCK_SIZE);
+// LZWPipe pipe(LZWPipe::COMPRESS, SAVE_BLOCK_SIZE);  // tried, abandoned
+// LCWPipe pipe(LCWPipe::COMPRESS, SAVE_BLOCK_SIZE);   // tried, abandoned
+</code></pre>
+<h3 id="leave-behind-session-type-branching"><a class="header" href="#leave-behind-session-type-branching">Leave Behind: Session Type Branching</a></h3>
+<p>Original code is riddled with network-type checks embedded in game logic:</p>
+<pre><code class="language-cpp">if (Session.Type == GAME_IPX || Session.Type == GAME_INTERNET) { ... }
+</code></pre>
+<p>This is the anti-pattern our <code>NetworkModel</code> trait eliminates. Separate code paths for IPX, Westwood Online, MPlayer, TEN, modem — all interleaved with <code>#ifdef</code>. The developer disliked the Westwood Online API enough to write a complete wrapper around it.</p>
+<h3 id="leave-behind-platform-specific-rendering"><a class="header" href="#leave-behind-platform-specific-rendering">Leave Behind: Platform-Specific Rendering</a></h3>
+<p>DirectDraw surface management with comments like “Aaaarrgghh!” when hardware allocation fails. Manual VGA mode detection. Custom command-line parsing. <code>wgpu</code> solves all of this.</p>
+<h3 id="leave-behind-manual-memory-checking"><a class="header" href="#leave-behind-manual-memory-checking">Leave Behind: Manual Memory Checking</a></h3>
+<p>The game allocates 13MB and checks if it succeeds. Checks that <code>sleep(1000)</code> actually advances the system clock. Checks free disk space. None of this translates to modern development.</p>
+<h3 id="interesting-historical-details"><a class="header" href="#interesting-historical-details">Interesting Historical Details</a></h3>
+<ul>
+<li>Code path for 640x400 display mode with special VGA fallback</li>
+<li><code>#ifdef FIXIT_CSII</code> for Aftermath expansion — comment explains they broke the ability to build vanilla Red Alert executables and had to fix it later</li>
+<li>Developer comments reference “Counterstrike” in VCS headers (<code>$Header: /CounterStrike/...</code>)</li>
+<li>MPEG movie playback code exists but is disabled</li>
+<li>Game refuses to start if launched from <code>f:\projects\c&amp;c0</code> (the network share)</li>
+</ul>
+<h2 id="coordinate-system-translation"><a class="header" href="#coordinate-system-translation">Coordinate System Translation</a></h2>
+<p>For cross-engine compatibility, coordinate transforms must be explicit:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct CoordTransform {
+    pub our_scale: i32,       // our subdivisions per cell
+    pub openra_scale: i32,    // 1024 for OpenRA (WDist/WPos)
+    pub original_scale: i32,  // original game's lepton system
+}
+
+impl CoordTransform {
+    pub fn to_wpos(&amp;self, pos: &amp;CellPos) -&gt; (i32, i32, i32) {
+        ((pos.x * self.openra_scale) / self.our_scale,
+         (pos.y * self.openra_scale) / self.our_scale,
+         (pos.z * self.openra_scale) / self.our_scale)
+    }
+    pub fn from_wpos(&amp;self, x: i32, y: i32, z: i32) -&gt; CellPos {
+        CellPos {
+            x: (x * self.our_scale) / self.openra_scale,
+            y: (y * self.our_scale) / self.openra_scale,
+            z: (z * self.our_scale) / self.openra_scale,
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../05-FORMATS.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../formats/save-replay-formats.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../05-FORMATS.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../formats/save-replay-formats.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

@@ -4,24 +4,24 @@ This section proves that all netcode components defined above wire together into
 
 **Existing types referenced (not redefined):**
 
-| Type | Defined In | Crate |
-|------|-----------|-------|
-| `PlayerOrder`, `TimestampedOrder`, `TickOrders`, `PlayerId` | This chapter § "The Protocol" | `ic-protocol` |
-| `NetworkModel` trait | This chapter § "The NetworkModel Trait" | `ic-net` |
-| `RelayCore` | This chapter § "RelayCore: Library, Not Just a Binary" | `ic-net` |
-| `ClientMetrics` | This chapter § "Adaptive Run-Ahead" | `ic-net` |
-| `TimingFeedback` | This chapter § "Input Timing Feedback" | `ic-net` |
-| `MatchCalibration`, `PlayerCalibration`, `MatchQosProfile` | This chapter § "Match-Start Calibration" | `ic-net` |
-| `QosAdjustmentEvent` | This chapter § "QoS Audit Trail" | `ic-net` |
-| `ClockCalibration` | `research/relay-wire-protocol-design.md` | `ic-net` |
-| `TransportCrypto` | This chapter § "Transport Encryption" | `ic-net` |
-| `OrderBatcher` | This chapter § "Order Batching" | `ic-net` |
-| `AckVector` | This chapter § "Selective Acknowledgment" | `ic-net` |
-| `DesyncDebugLevel` | This chapter § "Desync Debugging" | `ic-net` |
-| `Transport` trait | `decisions/09d/D054-extended-switchability.md` | `ic-net` |
-| `RelayLockstepNetwork<T>` (struct header) | `decisions/09d/D054-extended-switchability.md` | `ic-net` |
-| `GameLoop<N, I>` (struct + `frame()`) | `architecture/game-loop.md` | `ic-game` |
-| `ReadyCheckState`, `MatchOutcome` | `netcode/match-lifecycle.md` | `ic-net` |
+| Type                                                        | Defined In                                             | Crate         |
+| ----------------------------------------------------------- | ------------------------------------------------------ | ------------- |
+| `PlayerOrder`, `TimestampedOrder`, `TickOrders`, `PlayerId` | This chapter § "The Protocol"                          | `ic-protocol` |
+| `NetworkModel` trait                                        | This chapter § "The NetworkModel Trait"                | `ic-net`      |
+| `RelayCore`                                                 | This chapter § "RelayCore: Library, Not Just a Binary" | `ic-net`      |
+| `ClientMetrics`                                             | This chapter § "Adaptive Run-Ahead"                    | `ic-net`      |
+| `TimingFeedback`                                            | This chapter § "Input Timing Feedback"                 | `ic-net`      |
+| `MatchCalibration`, `PlayerCalibration`, `MatchQosProfile`  | This chapter § "Match-Start Calibration"               | `ic-net`      |
+| `QosAdjustmentEvent`                                        | This chapter § "QoS Audit Trail"                       | `ic-net`      |
+| `ClockCalibration`                                          | `research/relay-wire-protocol-design.md`               | `ic-net`      |
+| `TransportCrypto`                                           | This chapter § "Transport Encryption"                  | `ic-net`      |
+| `OrderBatcher`                                              | This chapter § "Order Batching"                        | `ic-net`      |
+| `AckVector`                                                 | This chapter § "Selective Acknowledgment"              | `ic-net`      |
+| `DesyncDebugLevel`                                          | This chapter § "Desync Debugging"                      | `ic-net`      |
+| `Transport` trait                                           | `decisions/09d/D054-extended-switchability.md`         | `ic-net`      |
+| `RelayLockstepNetwork<T>` (struct header)                   | `decisions/09d/D054-extended-switchability.md`         | `ic-net`      |
+| `GameLoop<N, I>` (struct + `frame()`)                       | `architecture/game-loop.md`                            | `ic-game`     |
+| `ReadyCheckState`, `MatchOutcome`                           | `netcode/match-lifecycle.md`                           | `ic-net`      |
 
 ### ClientMetrics / PlayerMetrics Resolution
 

@@ -1,0 +1,469 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>IC Advantages &amp; Mapping - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/openra-features/ic-advantages-mapping.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="priority-assessment-for-modder-familiarity"><a class="header" href="#priority-assessment-for-modder-familiarity">Priority Assessment for Modder Familiarity</a></h2>
+<blockquote>
+<p><strong>Status: All gameplay systems below are now designed.</strong> See <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems (RA1 Module)” for full component definitions, Rust structs, YAML examples, and system logic. The tables below are retained for priority reference during implementation.</p>
+</blockquote>
+<h3 id="p0--critical-modders-cannot-work-without-these"><a class="header" href="#p0--critical-modders-cannot-work-without-these">P0 — CRITICAL (Modders cannot work without these)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>System</th><th>Status</th><th>Reference</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td><strong>Condition System</strong></td><td>✅ DESIGNED (D028)</td><td>Phase 2 exit criterion</td></tr>
+<tr><td>2</td><td><strong>Multiplier System</strong></td><td>✅ DESIGNED (D028)</td><td>Phase 2 exit criterion</td></tr>
+<tr><td>3</td><td><strong>Warhead System</strong></td><td>✅ DESIGNED (D028)</td><td>Full damage pipeline</td></tr>
+</tbody>
+</table>
+</div>
+<p>| 4   | <strong>Building mechanics</strong> | ✅ DESIGNED | <code>BuildArea</code>, <code>PrimaryBuilding</code>, <code>RallyPoint</code>, <code>Exit</code>, <code>Sellable</code>, <code>Repairable</code>, <code>Gate</code>, <code>LineBuild</code> |
+| 5   | <strong>Support Powers</strong>     | ✅ DESIGNED | <code>SupportPower</code> component + <code>SupportPowerManager</code> resource |
+| 6   | <strong>Damage Model</strong>       | ✅ DESIGNED (D028) | Full pipeline: Projectile → Warhead → Armor → Modifiers → Health |
+| 7   | <strong>Projectile System</strong>  | ✅ DESIGNED | <code>Projectile</code> component + <code>projectile_system()</code> in tick pipeline |</p>
+<h3 id="p1--high-core-gameplay-gaps--noticeable-to-players-immediately"><a class="header" href="#p1--high-core-gameplay-gaps--noticeable-to-players-immediately">P1 — HIGH (Core gameplay gaps — noticeable to players immediately)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>System</th><th>Status</th><th>Reference</th></tr>
+</thead>
+<tbody>
+<tr><td>8</td><td><strong>Transport / Cargo</strong></td><td>✅ DESIGNED</td><td><code>Cargo</code> / <code>Passenger</code> components</td></tr>
+<tr><td>9</td><td><strong>Capture / Engineers</strong></td><td>✅ DESIGNED</td><td><code>Capturable</code> / <code>Captures</code> components</td></tr>
+<tr><td>10</td><td><strong>Stealth / Cloak</strong></td><td>✅ DESIGNED</td><td><code>Cloak</code> / <code>DetectCloaked</code> components</td></tr>
+<tr><td>11</td><td><strong>Death mechanics</strong></td><td>✅ DESIGNED</td><td><code>SpawnOnDeath</code>, <code>ExplodeOnDeath</code>, <code>SelfDestruct</code>, <code>DamageStates</code></td></tr>
+<tr><td>12</td><td><strong>Infantry sub-cell positioning</strong></td><td>✅ DESIGNED</td><td><code>InfantryBody</code> / <code>SubCell</code> enum</td></tr>
+<tr><td>13</td><td><strong>Veterancy system</strong></td><td>✅ DESIGNED</td><td><code>GainsExperience</code> / <code>GivesExperience</code> + condition promotions</td></tr>
+<tr><td>14</td><td><strong>Docking system</strong></td><td>✅ DESIGNED</td><td><code>DockClient</code> / <code>DockHost</code> components</td></tr>
+<tr><td>15</td><td><strong>Transform / Deploy</strong></td><td>✅ DESIGNED</td><td><code>Transforms</code> component</td></tr>
+<tr><td>16</td><td><strong>Power System</strong></td><td>✅ DESIGNED</td><td><code>Power</code> component + <code>PowerManager</code> resource</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="p2--medium-important-for-full-experience"><a class="header" href="#p2--medium-important-for-full-experience">P2 — MEDIUM (Important for full experience)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>System</th><th>Status</th><th>Reference</th></tr>
+</thead>
+<tbody>
+<tr><td>17</td><td><strong>Crate System</strong></td><td>✅ DESIGNED</td><td><code>Crate</code> / <code>CrateAction</code></td></tr>
+<tr><td>18</td><td><strong>Mine System</strong></td><td>✅ DESIGNED</td><td><code>Mine</code> / <code>Minelayer</code></td></tr>
+<tr><td>19</td><td><strong>Guard Command</strong></td><td>✅ DESIGNED</td><td><code>Guard</code> / <code>Guardable</code></td></tr>
+<tr><td>20</td><td><strong>Crush Mechanics</strong></td><td>✅ DESIGNED</td><td><code>Crushable</code> / <code>Crusher</code></td></tr>
+<tr><td>21</td><td><strong>Notification System</strong></td><td>✅ DESIGNED</td><td><code>NotificationType</code> enum + <code>NotificationCooldowns</code></td></tr>
+<tr><td>22</td><td><strong>Cursor System</strong></td><td>✅ DESIGNED</td><td>YAML-defined, contextual resolution</td></tr>
+<tr><td>23</td><td><strong>Hotkey System</strong></td><td>✅ DESIGNED</td><td><code>HotkeyConfig</code> categories, profiles</td></tr>
+<tr><td>24</td><td><strong>Lua API</strong></td><td>✅ DESIGNED (D024)</td><td>Strict superset of OpenRA</td></tr>
+<tr><td>25</td><td><strong>Selection system</strong></td><td>✅ DESIGNED</td><td>Priority, double-click, tab cycle, control groups</td></tr>
+<tr><td>26</td><td><strong>Palette effects</strong></td><td>✅ DESIGNED</td><td><code>PaletteEffect</code> enum</td></tr>
+<tr><td>27</td><td><strong>Game speed presets</strong></td><td>✅ DESIGNED</td><td>5 presets (<code>SpeedPreset</code> enum), lobby-configurable</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="p3--lower-nice-to-have-can-defer"><a class="header" href="#p3--lower-nice-to-have-can-defer">P3 — LOWER (Nice to have, can defer)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>System</th><th>Status</th><th>Reference</th></tr>
+</thead>
+<tbody>
+<tr><td>28</td><td><strong>Demolition / C4</strong></td><td>✅ DESIGNED</td><td><code>Demolition</code> component</td></tr>
+<tr><td>29</td><td><strong>Plug System</strong></td><td>✅ DESIGNED</td><td><code>Pluggable</code> / <code>Plug</code></td></tr>
+<tr><td>30</td><td><strong>Encyclopedia</strong></td><td>✅ DESIGNED</td><td>Categories, stats, previews</td></tr>
+<tr><td>31</td><td><strong>Localization</strong></td><td>✅ DESIGNED</td><td>Fluent-based .ftl</td></tr>
+<tr><td>32</td><td><strong>Observer UI</strong></td><td>✅ DESIGNED</td><td>Overlays, player switching, broadcast delay</td></tr>
+<tr><td>33</td><td><strong>Replay browser UI</strong></td><td>⚠️ PARTIAL</td><td>Format designed; browser UI deferred to Phase 3</td></tr>
+<tr><td>34</td><td><strong>Debug tools</strong></td><td>✅ DESIGNED</td><td>DeveloperMode flags, overlays, profiler</td></tr>
+<tr><td>35</td><td><strong>Procedural map gen</strong></td><td>⚠️ PARTIAL</td><td>Phase 7; scenario editor provides building blocks</td></tr>
+<tr><td>36</td><td><strong>Faction system</strong></td><td>✅ DESIGNED</td><td><code>Faction</code> YAML type with sides and tech trees</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="what-iron-curtain-has-that-openra-doesnt"><a class="header" href="#what-iron-curtain-has-that-openra-doesnt">What Iron Curtain Has That OpenRA Doesn’t</a></h2>
+<p>The gap analysis is not one-directional. Iron Curtain’s design docs include features OpenRA lacks:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Feature</th><th>IC Design Doc</th><th>OpenRA Status</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>LLM-generated missions &amp; campaigns</strong></td><td><code>04-MODDING.md</code>, Phase 7</td><td>Not present</td></tr>
+<tr><td><strong>Branching campaigns with persistent state</strong></td><td>D021, <code>04-MODDING.md</code></td><td>Not present (linear campaigns only)</td></tr>
+<tr><td><strong>WASM mod runtime</strong></td><td><code>04-MODDING.md</code> Tier 3</td><td>Not present (C# DLLs only)</td></tr>
+<tr><td><strong>Switchable balance presets</strong></td><td>D019</td><td>Not present (one balance per mod)</td></tr>
+<tr><td><strong>Sub-tick timestamped orders</strong></td><td>D008, <code>03-NETCODE.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Relay server architecture</strong></td><td>D007, <code>03-NETCODE.md</code></td><td>Not present (P2P only)</td></tr>
+<tr><td><strong>Cross-engine compatibility</strong></td><td><code>07-CROSS-ENGINE.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Multi-game engine</strong> (RA1+RA2+TD on one engine)</td><td>D018, <code>02-ARCHITECTURE.md</code></td><td>Partial (3 games but tightly coupled)</td></tr>
+<tr><td><strong><code>llm:</code> metadata on all resources</strong></td><td><code>04-MODDING.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Weather system</strong> (with sim effects)</td><td><code>04-MODDING.md</code></td><td>Visual only (WeatherOverlay trait)</td></tr>
+<tr><td><strong>Workshop with semantic search</strong></td><td><code>04-MODDING.md</code></td><td>Forum-based mod sharing</td></tr>
+<tr><td><strong>Mod SDK with CLI tool</strong></td><td>D020, <code>04-MODDING.md</code></td><td>Exists but requires .NET</td></tr>
+<tr><td><strong>Competitive infrastructure</strong> (rated, ranked, tournaments)</td><td><code>01-VISION.md</code></td><td>Basic (no ranked, no leagues)</td></tr>
+<tr><td><strong>Platform portability</strong> (WASM, mobile, console)</td><td><code>02-ARCHITECTURE.md</code></td><td>Desktop only</td></tr>
+<tr><td><strong>3D rendering mod support</strong></td><td><code>02-ARCHITECTURE.md</code></td><td>Not architecturally possible</td></tr>
+<tr><td><strong>Signed/certified match results</strong></td><td><code>06-SECURITY.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Video as workshop resource</strong></td><td><code>04-MODDING.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Scene templates</strong> (parameterized mission building blocks)</td><td><code>04-MODDING.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Adaptive difficulty</strong> (via campaign state or LLM)</td><td><code>04-MODDING.md</code>, <code>01-VISION.md</code></td><td>Not present</td></tr>
+<tr><td><strong>In-game Workshop browser</strong> (search, filter, one-click)</td><td>D030, <code>04-MODDING.md</code></td><td>Not present (forum sharing only)</td></tr>
+<tr><td><strong>Auto-download on lobby join</strong> (CS:GO-style)</td><td>D030, <code>03-NETCODE.md</code></td><td>Not present (manual install)</td></tr>
+<tr><td><strong>Steam Workshop as source</strong> (optional, federated)</td><td>D030, <code>04-MODDING.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Creator reputation &amp; badges</strong></td><td>D030, <code>04-MODDING.md</code></td><td>Not present</td></tr>
+<tr><td><strong>DMCA/takedown policy</strong> (due process)</td><td>D030, <code>decisions/09e-community.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Creator recognition &amp; tipping</strong></td><td>D035, <code>04-MODDING.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Achievement system</strong> (engine + mod-defined)</td><td>D036, <code>decisions/09e-community.md</code></td><td>Not present</td></tr>
+<tr><td><strong>Community governance model</strong> (elected reps, RFC process)</td><td>D037, <code>decisions/09e-community.md</code></td><td>Not present</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="mapping-table-openra-trait--iron-curtain-equivalent"><a class="header" href="#mapping-table-openra-trait--iron-curtain-equivalent">Mapping Table: OpenRA Trait → Iron Curtain Equivalent</a></h2>
+<p>For modders migrating from OpenRA, this table shows where each familiar trait maps.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>OpenRA Trait</th><th>Iron Curtain Equivalent</th><th>Status</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Health</code></td><td><code>Health { current, max }</code></td><td>✅</td></tr>
+<tr><td><code>Armor</code></td><td><code>Attackable { armor }</code></td><td>✅</td></tr>
+<tr><td><code>Mobile</code></td><td><code>Mobile { speed, locomotor }</code></td><td>✅</td></tr>
+<tr><td><code>Building</code></td><td><code>Building { footprint }</code></td><td>✅</td></tr>
+<tr><td><code>Buildable</code></td><td><code>Buildable { cost, time, prereqs }</code></td><td>✅</td></tr>
+<tr><td><code>Selectable</code></td><td><code>Selectable { bounds, priority, voice_set }</code></td><td>✅</td></tr>
+<tr><td><code>Harvester</code></td><td><code>Harvester { capacity, resource }</code></td><td>✅</td></tr>
+<tr><td><code>Armament</code></td><td><code>Armament { weapon, cooldown }</code></td><td>✅</td></tr>
+<tr><td><code>Valued</code></td><td>Part of <code>Buildable.cost</code></td><td>✅</td></tr>
+<tr><td><code>Tooltip</code></td><td><code>display.name</code> in YAML</td><td>✅</td></tr>
+<tr><td><code>Voiced</code></td><td><code>display.voice</code> in YAML</td><td>✅</td></tr>
+<tr><td><code>ConditionalTrait</code></td><td><code>Conditions</code> component (D028)</td><td>✅</td></tr>
+<tr><td><code>GrantConditionOn*</code></td><td>Condition sources in YAML (D028)</td><td>✅</td></tr>
+<tr><td><code>*Multiplier</code></td><td><code>StatModifiers</code> component (D028)</td><td>✅</td></tr>
+<tr><td><code>AttackBase/Follow/Frontal/Omni/Turreted</code></td><td><code>AutoTarget</code>, <code>Turreted</code> components</td><td>✅</td></tr>
+<tr><td><code>AutoTarget</code></td><td><code>AutoTarget { stance, scan_range }</code></td><td>✅</td></tr>
+<tr><td><code>Turreted</code></td><td><code>Turreted { turn_speed, offset, default_facing }</code></td><td>✅</td></tr>
+<tr><td><code>AmmoPool</code></td><td><code>AmmoPool { max, current, reload_ticks }</code></td><td>✅</td></tr>
+<tr><td><code>Cargo</code> / <code>Passenger</code></td><td><code>Cargo { max_weight, slots }</code> / <code>Passenger { weight }</code></td><td>✅</td></tr>
+<tr><td><code>Capturable</code> / <code>Captures</code></td><td><code>Capturable { threshold }</code> / <code>Captures { types }</code></td><td>✅</td></tr>
+<tr><td><code>Cloak</code> / <code>DetectCloaked</code></td><td><code>Cloak { cloak_type, delay }</code> / <code>DetectCloaked { types }</code></td><td>✅</td></tr>
+<tr><td><code>Power</code> / <code>PowerManager</code></td><td><code>Power { provides, consumes }</code> / <code>PowerManager</code> resource</td><td>✅</td></tr>
+<tr><td><code>SupportPower*</code></td><td><code>SupportPower { charge_ticks, ready_sound, effect }</code></td><td>✅</td></tr>
+<tr><td><code>GainsExperience</code> / <code>GivesExperience</code></td><td><code>GainsExperience { levels }</code> / <code>GivesExperience { amount }</code></td><td>✅</td></tr>
+<tr><td><code>Locomotor</code></td><td><code>locomotor</code> field in <code>Mobile</code></td><td>✅</td></tr>
+<tr><td><code>Aircraft</code></td><td><code>locomotor: fly</code> + <code>Mobile</code> with air-type locomotor</td><td>⚠️</td></tr>
+<tr><td><code>ProductionQueue</code></td><td><code>ProductionQueue { queue_type, items }</code></td><td>✅</td></tr>
+<tr><td><code>Crate</code> / <code>CrateAction*</code></td><td><code>Crate { action_pool }</code> / <code>CrateAction</code> enum</td><td>✅</td></tr>
+<tr><td><code>Mine</code> / <code>Minelayer</code></td><td><code>Mine { trigger_types, warhead }</code> / <code>Minelayer { mine_type }</code></td><td>✅</td></tr>
+<tr><td><code>Guard</code> / <code>Guardable</code></td><td><code>Guard { target, leash_range }</code> / <code>Guardable</code> marker</td><td>✅</td></tr>
+<tr><td><code>Crushable</code> / <code>AutoCrusher</code></td><td><code>Crushable { crush_class }</code> / <code>Crusher { crush_classes }</code></td><td>✅</td></tr>
+<tr><td><code>Transforms</code></td><td><code>Transforms { into, delay, facing, condition }</code></td><td>✅</td></tr>
+<tr><td><code>Sellable</code></td><td><code>Sellable</code> marker + sell order</td><td>✅</td></tr>
+<tr><td><code>RepairableBuilding</code></td><td><code>Repairable { repair_rate, repair_cost_per_hp }</code> component</td><td>✅</td></tr>
+<tr><td><code>RallyPoint</code></td><td><code>RallyPoint { position }</code> component</td><td>✅</td></tr>
+<tr><td><code>PrimaryBuilding</code></td><td><code>PrimaryBuilding</code> marker component</td><td>✅</td></tr>
+<tr><td><code>Gate</code></td><td><code>Gate { open_ticks, close_delay }</code> component</td><td>✅</td></tr>
+<tr><td><code>LineBuild</code> (walls)</td><td><code>LineBuild { segment_types }</code> component</td><td>✅</td></tr>
+<tr><td><code>BaseProvider</code> / <code>GivesBuildableArea</code></td><td><code>BuildArea { range }</code> component</td><td>✅</td></tr>
+<tr><td><code>Faction</code></td><td><code>Faction { id, side, tech_tree }</code> YAML-defined</td><td>✅</td></tr>
+<tr><td><code>Encyclopedia</code></td><td>In-game encyclopedia (categories, stats, previews)</td><td>✅</td></tr>
+<tr><td><code>DeveloperMode</code></td><td><code>DeveloperMode</code> flags (<code>#[cfg(feature = "dev-tools")]</code>)</td><td>✅</td></tr>
+<tr><td><code>WithInfantryBody</code> (sub-cell)</td><td><code>InfantryBody { sub_cell }</code> with <code>SubCell</code> enum</td><td>✅</td></tr>
+<tr><td><code>ScaredyCat</code> / <code>TakeCover</code></td><td><code>ScaredyCat</code> / <code>TakeCover</code> components</td><td>✅</td></tr>
+<tr><td><code>KillsSelf</code></td><td><code>SelfDestruct { delay, warhead }</code> component</td><td>✅</td></tr>
+<tr><td><code>SpawnActorOnDeath</code></td><td><code>SpawnOnDeath { actor, probability }</code> component</td><td>✅</td></tr>
+<tr><td><code>Husk</code></td><td>Part of death mechanics (husk actor + <code>DamageStates</code>)</td><td>✅</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="recommended-action-plan"><a class="header" href="#recommended-action-plan">Recommended Action Plan</a></h2>
+<h3 id="phase-2-additions-sim--months-612"><a class="header" href="#phase-2-additions-sim--months-612">Phase 2 Additions (Sim — Months 6–12)</a></h3>
+<p>These gaps need to be designed <em>before or during</em> Phase 2 since they’re core simulation mechanics.</p>
+<blockquote>
+<p><strong>NOTE:</strong> Items 1–3 are now <strong>Phase 2 hard exit criteria</strong> per D028. Items marked with (D029) are Phase 2 deliverables per D029. The Lua API (#24) is specified per D024.</p>
+</blockquote>
+<ol>
+<li><strong>Condition system</strong> — ✅ DESIGNED (D028) — Phase 2 exit criterion</li>
+<li><strong>Multiplier system</strong> — ✅ DESIGNED (D028) — Phase 2 exit criterion</li>
+<li><strong>Full damage pipeline</strong> — ✅ DESIGNED (D028) — Phase 2 exit criterion (Projectile → Warhead → Armor table → Modifiers → Health)</li>
+<li><strong>Power system</strong> — ✅ DESIGNED — <code>Power</code> component + <code>PowerManager</code> resource</li>
+<li><strong>Building mechanics</strong> — ✅ DESIGNED — <code>BuildArea</code>, <code>PrimaryBuilding</code>, <code>RallyPoint</code>, <code>Exit</code>, <code>Sellable</code>, <code>Repairable</code>, <code>Gate</code>, <code>LineBuild</code></li>
+<li><strong>Transport/Cargo</strong> — ✅ DESIGNED — <code>Cargo</code> / <code>Passenger</code> components</li>
+<li><strong>Capture</strong> — ✅ DESIGNED — <code>Capturable</code> / <code>Captures</code> components</li>
+<li><strong>Stealth/Cloak</strong> — ✅ DESIGNED — <code>Cloak</code> / <code>DetectCloaked</code> components</li>
+<li><strong>Infantry sub-cell</strong> — ✅ DESIGNED — <code>InfantryBody</code> / <code>SubCell</code> enum</li>
+<li><strong>Death mechanics</strong> — ✅ DESIGNED — <code>SpawnOnDeath</code>, <code>ExplodeOnDeath</code>, <code>SelfDestruct</code>, <code>DamageStates</code></li>
+<li><strong>Transform/Deploy</strong> — ✅ DESIGNED — <code>Transforms</code> component</li>
+<li><strong>Veterancy</strong> (full system) — ✅ DESIGNED — <code>GainsExperience</code> / <code>GivesExperience</code> + condition-based promotions</li>
+<li><strong>Guard command</strong> — ✅ DESIGNED — <code>Guard</code> / <code>Guardable</code> components</li>
+<li><strong>Crush mechanics</strong> — ✅ DESIGNED — <code>Crushable</code> / <code>Crusher</code> components</li>
+</ol>
+<h3 id="phase-3-additions-ui--months-1216"><a class="header" href="#phase-3-additions-ui--months-1216">Phase 3 Additions (UI — Months 12–16)</a></h3>
+<ol start="15">
+<li><strong>Support Powers</strong> — ✅ DESIGNED — <code>SupportPower</code> component + <code>SupportPowerManager</code> resource</li>
+<li><strong>Cursor system</strong> — ✅ DESIGNED — YAML-defined cursors, contextual resolution, force-modifiers</li>
+<li><strong>Hotkey system</strong> — ✅ DESIGNED — <code>HotkeyConfig</code> categories, rebindable, profiles</li>
+<li><strong>Notification framework</strong> — ✅ DESIGNED — <code>NotificationType</code> enum + <code>NotificationCooldowns</code> + EVA mapping</li>
+<li><strong>Selection details</strong> — ✅ DESIGNED — Priority, double-click, tab cycle, control groups, selection limit</li>
+<li><strong>Game speed presets</strong> — ✅ DESIGNED — 5 presets (<code>SpeedPreset</code> enum), lobby-configurable, runtime adjustable in SP</li>
+<li><strong>Radar system</strong> (detailed) — ⚠️ PARTIAL — Minimap rendering is ic-ui responsibility; <code>AppearsOnRadar</code> implied but not a standalone component</li>
+<li><strong>Power bar UI</strong> — Part of ic-ui chrome design (Phase 3)</li>
+<li><strong>Observer UI</strong> — ✅ DESIGNED — Army/production/economy overlays, player switching, broadcast delay</li>
+</ol>
+<h3 id="phase-4-additions-scripting--months-1620"><a class="header" href="#phase-4-additions-scripting--months-1620">Phase 4 Additions (Scripting — Months 16–20)</a></h3>
+<ol start="24">
+<li><strong>Lua API specification</strong> — ✅ DESIGNED (D024) — strict superset of OpenRA’s 16 globals, identical signatures</li>
+<li><strong>Crate system</strong> — ✅ DESIGNED — <code>Crate</code> component + <code>CrateAction</code> variants</li>
+<li><strong>Mine system</strong> — ✅ DESIGNED — <code>Mine</code> / <code>Minelayer</code> components</li>
+<li><strong>Demolition/C4</strong> — ✅ DESIGNED — <code>Demolition</code> component</li>
+</ol>
+<h3 id="phase-6a6b-additions-modding--ecosystem--months-2632"><a class="header" href="#phase-6a6b-additions-modding--ecosystem--months-2632">Phase 6a/6b Additions (Modding &amp; Ecosystem — Months 26–32)</a></h3>
+<ol start="28">
+<li><strong>Debug/developer tools</strong> — ✅ DESIGNED — DeveloperMode flags, overlays, profiler, asset browser</li>
+<li><strong>Encyclopedia</strong> — ✅ DESIGNED — In-game encyclopedia with categories, stats, previews</li>
+<li><strong>Localization framework</strong> — ✅ DESIGNED — Fluent-based .ftl files, locale resource, CJK/RTL support</li>
+<li><strong>Faction system</strong> (formal) — ✅ DESIGNED — <code>Faction</code> YAML type with side grouping and tech trees</li>
+<li><strong>Palette effects</strong> (runtime) — ✅ DESIGNED — <code>PaletteEffect</code> enum (flash, fade, tint, cycle, remap)</li>
+<li><strong>Asset browser</strong> — ✅ DESIGNED — Part of IC SDK (D040)</li>
+</ol>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../openra-features/gap-analysis.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../12-MOD-MIGRATION.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../openra-features/gap-analysis.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../12-MOD-MIGRATION.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

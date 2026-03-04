@@ -16,23 +16,23 @@ The existing design already isolates I/O from the game thread (background writer
 
 Every disk I/O operation in the engine lifecycle, categorized by when it happens and how to minimize it:
 
-| Phase | I/O Operation | Current Design | RAM-First Optimization |
-|-------|--------------|----------------|----------------------|
-| **First launch** | Content detection & asset indexing | Scans known install paths | Index cached in SQLite after first scan; subsequent launches skip detection |
-| **Game start** | Asset loading (sprites, audio, maps, YAML rules) | Bevy async asset pipeline | **Load all game-session assets into RAM before match starts.** Loading screen waits for full load. No streaming during gameplay |
-| **Game start** | Mod loading (YAML + Lua + WASM) | Parsed and compiled at load time | Keep compiled mod state in RAM for entire session |
-| **Game start** | SQLite databases (gameplay.db, profile) | On-disk with WAL mode | **Open in-memory (`:memory:`) by default; populate from on-disk file at load.** Serialize back to disk at safe points |
-| **Gameplay** | Autosave (delta snapshot) | Background I/O thread, Fossilize pattern | Configurable: hold in RAM ring buffer, flush on configurable cycle or at match end |
-| **Gameplay** | Replay recording (.icrep) | Background writer via crossbeam channel | Configurable: buffer in RAM (default), flush periodically or at match end |
-| **Gameplay** | SQLite event writes (gameplay_events, telemetry) | Ring buffer → batch transaction on I/O thread | **In-memory SQLite by default during gameplay.** Batch flush to on-disk file at configurable intervals or at match end |
-| **Gameplay** | WAL checkpoint | Suppressed during gameplay on HDD (existing) | Extend: suppress on all storage during gameplay; checkpoint at match end or during pauses |
-| **Gameplay** | Screenshot capture | PNG encode + write | Queue to background thread; buffer if I/O is slow |
-| **Match end** | Final replay flush | Writer flushes remaining frames + header | Synchronous flush at match end (acceptable — player sees post-game screen) |
-| **Match end** | SQLite serialize to disk | Not yet designed | **Mandatory dump: all in-memory SQLite databases serialized to on-disk files at match end** |
-| **Match end** | Autosave final | Fossilize pattern | Final save at match end is mandatory regardless of I/O mode |
-| **Post-game** | Stats computation, rating update | Reads from gameplay.db | Already in RAM if using in-memory SQLite |
-| **Menu / Lobby** | Workshop downloads, mod installs | Background P2P download | No gameplay impact — full disk I/O acceptable |
-| **Menu / Lobby** | Config saves, profile updates | SQLite + TOML writes | No gameplay impact — direct disk writes acceptable |
+| Phase            | I/O Operation                                    | Current Design                                | RAM-First Optimization                                                                                                          |
+| ---------------- | ------------------------------------------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **First launch** | Content detection & asset indexing               | Scans known install paths                     | Index cached in SQLite after first scan; subsequent launches skip detection                                                     |
+| **Game start**   | Asset loading (sprites, audio, maps, YAML rules) | Bevy async asset pipeline                     | **Load all game-session assets into RAM before match starts.** Loading screen waits for full load. No streaming during gameplay |
+| **Game start**   | Mod loading (YAML + Lua + WASM)                  | Parsed and compiled at load time              | Keep compiled mod state in RAM for entire session                                                                               |
+| **Game start**   | SQLite databases (gameplay.db, profile)          | On-disk with WAL mode                         | **Open in-memory (`:memory:`) by default; populate from on-disk file at load.** Serialize back to disk at safe points           |
+| **Gameplay**     | Autosave (delta snapshot)                        | Background I/O thread, Fossilize pattern      | Configurable: hold in RAM ring buffer, flush on configurable cycle or at match end                                              |
+| **Gameplay**     | Replay recording (.icrep)                        | Background writer via crossbeam channel       | Configurable: buffer in RAM (default), flush periodically or at match end                                                       |
+| **Gameplay**     | SQLite event writes (gameplay_events, telemetry) | Ring buffer → batch transaction on I/O thread | **In-memory SQLite by default during gameplay.** Batch flush to on-disk file at configurable intervals or at match end          |
+| **Gameplay**     | WAL checkpoint                                   | Suppressed during gameplay on HDD (existing)  | Extend: suppress on all storage during gameplay; checkpoint at match end or during pauses                                       |
+| **Gameplay**     | Screenshot capture                               | PNG encode + write                            | Queue to background thread; buffer if I/O is slow                                                                               |
+| **Match end**    | Final replay flush                               | Writer flushes remaining frames + header      | Synchronous flush at match end (acceptable — player sees post-game screen)                                                      |
+| **Match end**    | SQLite serialize to disk                         | Not yet designed                              | **Mandatory dump: all in-memory SQLite databases serialized to on-disk files at match end**                                     |
+| **Match end**    | Autosave final                                   | Fossilize pattern                             | Final save at match end is mandatory regardless of I/O mode                                                                     |
+| **Post-game**    | Stats computation, rating update                 | Reads from gameplay.db                        | Already in RAM if using in-memory SQLite                                                                                        |
+| **Menu / Lobby** | Workshop downloads, mod installs                 | Background P2P download                       | No gameplay impact — full disk I/O acceptable                                                                                   |
+| **Menu / Lobby** | Config saves, profile updates                    | SQLite + TOML writes                          | No gameplay impact — direct disk writes acceptable                                                                              |
 
 ### Default I/O Policy: RAM-First
 
@@ -62,11 +62,11 @@ The default behavior is: **load everything you can into RAM, and only write to d
 
 RAM Mode is the default. Alternative modes exist for edge cases where RAM Mode is not ideal.
 
-| Mode | Behavior | Default for | When to use |
-|------|----------|-------------|-------------|
-| **RAM Mode** (default) | All gameplay data buffered in RAM. Zero disk I/O during matches. Flush at safe points. | All players (desktop, portable, store builds) | Normal gameplay. Works for everyone unless RAM is critically low. |
-| **Streaming Mode** | Write to disk continuously via background I/O threads. Existing behavior from the background-writer architecture. | Automatic fallback if RAM is insufficient | Systems with <4 GB RAM and large mods where RAM budget is exhausted. Also useful for relay servers (long-running processes that need persistent writes). |
-| **Minimal Mode** | Like RAM Mode but also suppresses autosave during gameplay. Replay buffer is the only recovery mechanism. | Never auto-selected | Extreme low-RAM scenarios or when the player explicitly wants maximum RAM savings. |
+| Mode                   | Behavior                                                                                                          | Default for                                   | When to use                                                                                                                                              |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **RAM Mode** (default) | All gameplay data buffered in RAM. Zero disk I/O during matches. Flush at safe points.                            | All players (desktop, portable, store builds) | Normal gameplay. Works for everyone unless RAM is critically low.                                                                                        |
+| **Streaming Mode**     | Write to disk continuously via background I/O threads. Existing behavior from the background-writer architecture. | Automatic fallback if RAM is insufficient     | Systems with <4 GB RAM and large mods where RAM budget is exhausted. Also useful for relay servers (long-running processes that need persistent writes). |
+| **Minimal Mode**       | Like RAM Mode but also suppresses autosave during gameplay. Replay buffer is the only recovery mechanism.         | Never auto-selected                           | Extreme low-RAM scenarios or when the player explicitly wants maximum RAM savings.                                                                       |
 
 **Edge cases where RAM Mode falls back to Streaming Mode automatically:**
 - Available RAM after loading is below 512 MB free (configurable threshold)
@@ -117,14 +117,14 @@ autosave_policy = "deferred"
 
 Disk writes during gameplay are batched and flushed only at **safe points** — moments where a brief I/O stall is invisible to the player:
 
-| Safe Point | When | What Gets Flushed |
-|------------|------|-------------------|
-| **Match end** (mandatory) | Victory/defeat screen | Everything: replay, SQLite, autosave, screenshots |
-| **Player pause** | When any player pauses (multiplayer: all clients paused) | Autosave, SQLite events |
-| **Flush interval** | Every N seconds if `flush_interval_seconds > 0` | SQLite events, autosave (on background thread) |
-| **Lobby return** | When returning to menu/lobby | Full SQLite serialize, config saves |
-| **Application exit** | Normal shutdown | Everything — mandatory |
-| **Crash recovery** | On next launch | Detect incomplete in-memory state via replay; replay file is always valid up to last flushed frame |
+| Safe Point                | When                                                     | What Gets Flushed                                                                                  |
+| ------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| **Match end** (mandatory) | Victory/defeat screen                                    | Everything: replay, SQLite, autosave, screenshots                                                  |
+| **Player pause**          | When any player pauses (multiplayer: all clients paused) | Autosave, SQLite events                                                                            |
+| **Flush interval**        | Every N seconds if `flush_interval_seconds > 0`          | SQLite events, autosave (on background thread)                                                     |
+| **Lobby return**          | When returning to menu/lobby                             | Full SQLite serialize, config saves                                                                |
+| **Application exit**      | Normal shutdown                                          | Everything — mandatory                                                                             |
+| **Crash recovery**        | On next launch                                           | Detect incomplete in-memory state via replay; replay file is always valid up to last flushed frame |
 
 **Crash safety under RAM-first mode:** If the game crashes during a match with `gameplay_write_policy = "ram_first"`, in-memory SQLite data (gameplay events, telemetry) from that match is lost. However:
 - The replay file is always valid up to the last buffered frame (replay buffer flushed periodically even in RAM-first mode, at a minimum every 60 seconds)
@@ -142,12 +142,12 @@ Portable mode (defined in `architecture/crate-graph.md` § `ic-paths`) stores al
 
 **Lifecycle with storage resilience:**
 
-| Phase | Storage needed? | What happens if storage is unavailable |
-|-------|----------------|---------------------------------------|
-| **Loading screen** | Yes — sequential reads | Cannot proceed. If storage disappears mid-load: pause loading, show reconnection dialog. |
-| **Gameplay** | No | Game runs entirely from RAM. Storage status is irrelevant. No I/O errors possible because no I/O is attempted. |
-| **Flush point** (match end, pause) | Yes — sequential writes | Attempt flush. If storage unavailable → Storage Recovery Dialog (see below). |
-| **Menu / Lobby** | Yes — direct reads/writes | If storage unavailable → Storage Recovery Dialog. |
+| Phase                              | Storage needed?           | What happens if storage is unavailable                                                                         |
+| ---------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Loading screen**                 | Yes — sequential reads    | Cannot proceed. If storage disappears mid-load: pause loading, show reconnection dialog.                       |
+| **Gameplay**                       | No                        | Game runs entirely from RAM. Storage status is irrelevant. No I/O errors possible because no I/O is attempted. |
+| **Flush point** (match end, pause) | Yes — sequential writes   | Attempt flush. If storage unavailable → Storage Recovery Dialog (see below).                                   |
+| **Menu / Lobby**                   | Yes — direct reads/writes | If storage unavailable → Storage Recovery Dialog.                                                              |
 
 **Storage Recovery Dialog** (shown when a flush or menu I/O fails):
 
@@ -247,19 +247,19 @@ max_total_bytes = 1_073_741_824
 
 All heap-allocated memory for gameplay should be allocated **before the match starts**, during the loading screen. This complements the existing zero-allocation hot path principle (Efficiency Pyramid Layer 5) with an explicit pre-allocation phase:
 
-| Resource | When Allocated | Lifetime |
-|----------|---------------|----------|
-| ECS component storage | Loading screen (Bevy `World` setup) | Entire match |
-| Scratch buffers (`TickScratch`) | Loading screen | Entire match (`.clear()` per tick, never deallocated) |
-| Pathfinding caches (flowfield, JPS open list) | Loading screen (sized to map dimensions) | Entire match |
-| Spatial index (`SpatialHash`) | Loading screen (sized to map dimensions) | Entire match |
-| String intern table | Loading screen (populated during YAML parse) | Entire session |
-| Replay write buffer | Loading screen (pre-sized ring buffer) | Entire match |
-| In-memory SQLite | Loading screen (populated from on-disk file) | Entire match |
-| Autosave buffer | Loading screen (pre-sized for max delta snapshot) | Entire match |
-| Audio decode buffers | Loading screen | Entire match |
-| Render buffers (sprite batches, etc.) | Loading screen (Bevy renderer init) | Entire match |
-| Fog of war / influence map (`DoubleBuffered<T>`) | Loading screen (sized to map grid) | Entire match |
+| Resource                                         | When Allocated                                    | Lifetime                                              |
+| ------------------------------------------------ | ------------------------------------------------- | ----------------------------------------------------- |
+| ECS component storage                            | Loading screen (Bevy `World` setup)               | Entire match                                          |
+| Scratch buffers (`TickScratch`)                  | Loading screen                                    | Entire match (`.clear()` per tick, never deallocated) |
+| Pathfinding caches (flowfield, JPS open list)    | Loading screen (sized to map dimensions)          | Entire match                                          |
+| Spatial index (`SpatialHash`)                    | Loading screen (sized to map dimensions)          | Entire match                                          |
+| String intern table                              | Loading screen (populated during YAML parse)      | Entire session                                        |
+| Replay write buffer                              | Loading screen (pre-sized ring buffer)            | Entire match                                          |
+| In-memory SQLite                                 | Loading screen (populated from on-disk file)      | Entire match                                          |
+| Autosave buffer                                  | Loading screen (pre-sized for max delta snapshot) | Entire match                                          |
+| Audio decode buffers                             | Loading screen                                    | Entire match                                          |
+| Render buffers (sprite batches, etc.)            | Loading screen (Bevy renderer init)               | Entire match                                          |
+| Fog of war / influence map (`DoubleBuffered<T>`) | Loading screen (sized to map grid)                | Entire match                                          |
 
 **Rule:** If `malloc` is called during `tick_system()` or any system that runs between tick start and tick end, it is a performance bug. The only acceptable runtime allocations during gameplay are:
 - Player chat messages (rare, small, outside sim)

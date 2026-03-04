@@ -1,0 +1,688 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Commands &amp; Catalog - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09g/D058/D058-commands-catalog.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h4 id="built-in-commands"><a class="header" href="#built-in-commands">Built-In Commands</a></h4>
+<p><strong>Always available (all players):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/help [command]</code></td><td>List commands or show detailed usage for one command</td></tr>
+<tr><td><code>/set</code>, <code>/get</code>, <code>/reset</code>, <code>/find</code>, <code>/toggle</code>, <code>/cvars</code></td><td>Cvar manipulation (non-dev cvars only)</td></tr>
+<tr><td><code>/version</code></td><td>Display engine version, game module, build info</td></tr>
+<tr><td><code>/ping</code></td><td>Show current latency to server</td></tr>
+<tr><td><code>/fps</code></td><td>Toggle FPS counter overlay</td></tr>
+<tr><td><code>/stats</code></td><td>Show current game statistics (score, resources, etc.)</td></tr>
+<tr><td><code>/time</code></td><td>Display current game time (sim tick + wall clock)</td></tr>
+<tr><td><code>/clear</code></td><td>Clear chat/console history</td></tr>
+<tr><td><code>/players</code></td><td>List connected players</td></tr>
+<tr><td><code>/mods</code></td><td>List active mods with versions</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Chat commands (multiplayer):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>(no prefix)</td><td>Team chat (default)</td></tr>
+<tr><td><code>/s &lt;message&gt;</code></td><td>Shout — all-chat visible to all players and observers</td></tr>
+<tr><td><code>/w &lt;player&gt; &lt;message&gt;</code></td><td>Whisper — private message to specific player</td></tr>
+<tr><td><code>/r &lt;message&gt;</code></td><td>Reply to last whisper sender</td></tr>
+<tr><td><code>/ignore &lt;player&gt;</code></td><td>Hide messages from a player (client-side)</td></tr>
+<tr><td><code>/unignore &lt;player&gt;</code></td><td>Restore messages from a player</td></tr>
+<tr><td><code>/mute &lt;player&gt;</code></td><td>Admin: prevent player from chatting</td></tr>
+<tr><td><code>/unmute &lt;player&gt;</code></td><td>Admin: restore player chat</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Host/Admin commands (multiplayer):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/kick &lt;player&gt; [reason]</code></td><td>Remove player from game</td></tr>
+<tr><td><code>/ban &lt;player&gt; [reason]</code></td><td>Ban player from rejoining</td></tr>
+<tr><td><code>/unban &lt;player&gt;</code></td><td>Remove ban</td></tr>
+<tr><td><code>/pause</code></td><td>Pause game (requires consent in ranked)</td></tr>
+<tr><td><code>/speed &lt;multiplier&gt;</code></td><td>Set game speed (non-ranked only)</td></tr>
+<tr><td><code>/config &lt;key&gt; &lt;value&gt;</code></td><td>Change server settings at runtime</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Developer commands (dev-tools feature flag + DeveloperMode active):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/c &lt;lua&gt;</code></td><td>Execute Lua code (Factorio-style)</td></tr>
+<tr><td><code>/sc &lt;lua&gt;</code></td><td>Silent Lua execution (output hidden from other players)</td></tr>
+<tr><td><code>/mc &lt;lua&gt;</code></td><td>Measured Lua execution (prints execution time)</td></tr>
+<tr><td><code>/give &lt;amount&gt;</code></td><td>Grant credits to your player</td></tr>
+<tr><td><code>/spawn &lt;unit_type&gt; [count] [player]</code></td><td>Create units at cursor position</td></tr>
+<tr><td><code>/kill</code></td><td>Destroy selected entities</td></tr>
+<tr><td><code>/reveal</code></td><td>Remove fog of war</td></tr>
+<tr><td><code>/instant_build</code></td><td>Toggle instant construction</td></tr>
+<tr><td><code>/invincible</code></td><td>Toggle invincibility for selected units</td></tr>
+<tr><td><code>/tp &lt;x,y&gt;</code></td><td>Teleport camera to coordinates</td></tr>
+<tr><td><code>/weather &lt;type&gt;</code></td><td>Force weather state (D022). Valid types defined by D022’s weather state machine — e.g., <code>clear</code>, <code>rain</code>, <code>snow</code>, <code>storm</code>, <code>sandstorm</code>; exact set is game-module-specific.</td></tr>
+<tr><td><code>/desync_check</code></td><td>Force full-state hash comparison across all clients</td></tr>
+<tr><td><code>/save_snapshot</code></td><td>Write sim state snapshot to disk</td></tr>
+<tr><td><code>/step [N]</code></td><td>Advance N sim ticks while paused (default: 1). Requires <code>/pause</code> first. Essential for determinism debugging — inspired by SAGE engine’s script debugger frame-stepping</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Diagnostic overlay commands (client-local, no network traffic):</strong></p>
+<p>These commands control the real-time diagnostic overlay described in <code>10-PERFORMANCE.md</code> § Diagnostic Overlay &amp; Real-Time Observability. They are <strong>client-local</strong> — they read telemetry data already being collected (D031) and do not produce <code>PlayerOrder</code>s. Level 1–2 commands are available to all players; Level 3 panels require <code>dev-tools</code>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th><th>Permission</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/diag</code> or <code>/diag 1</code></td><td>Toggle basic diagnostic overlay (FPS, tick time, RTT, entity count)</td><td>Player</td></tr>
+<tr><td><code>/diag 0</code></td><td>Turn off diagnostic overlay</td><td>Player</td></tr>
+<tr><td><code>/diag 2</code></td><td>Detailed overlay (per-system breakdown, pathfinding, memory, network)</td><td>Player</td></tr>
+<tr><td><code>/diag 3</code></td><td>Full developer overlay (ECS inspector, AI viewer, desync debugger)</td><td>Developer</td></tr>
+<tr><td><code>/diag net</code></td><td>Show only the network diagnostic panel</td><td>Player</td></tr>
+<tr><td><code>/diag sim</code></td><td>Show only the sim tick breakdown panel</td><td>Player</td></tr>
+<tr><td><code>/diag path</code></td><td>Show only the pathfinding statistics panel</td><td>Player</td></tr>
+<tr><td><code>/diag mem</code></td><td>Show only the memory usage panel</td><td>Player</td></tr>
+<tr><td><code>/diag ai</code></td><td>Show AI state viewer for selected unit(s)</td><td>Developer</td></tr>
+<tr><td><code>/diag orders</code></td><td>Show order queue inspector</td><td>Developer</td></tr>
+<tr><td><code>/diag fog</code></td><td>Toggle fog-of-war debug visualization on game world</td><td>Developer</td></tr>
+<tr><td><code>/diag desync</code></td><td>Show desync debugger panel</td><td>Developer</td></tr>
+<tr><td><code>/diag history</code></td><td>Toggle graph history mode (scrolling line graphs for key metrics)</td><td>Player</td></tr>
+<tr><td><code>/diag pos &lt;corner&gt;</code></td><td>Move overlay position: <code>tl</code>, <code>tr</code>, <code>bl</code>, <code>br</code> (default: <code>tr</code>)</td><td>Player</td></tr>
+<tr><td><code>/diag scale &lt;factor&gt;</code></td><td>Scale overlay text size, 0.5–2.0 (accessibility)</td><td>Player</td></tr>
+<tr><td><code>/diag export</code></td><td>Dump current overlay snapshot to timestamped JSON file</td><td>Player</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Note on DeveloperMode interaction:</strong> Dev commands check <code>DeveloperMode</code> sim state (V44). In multiplayer, dev mode must be unanimously enabled in the lobby before game start. Dev commands issued without active dev mode are rejected by the sim with an error message. This is enforced at the order validation layer (D012), not the UI layer.</p>
+<h4 id="comprehensive-command-catalog"><a class="header" href="#comprehensive-command-catalog">Comprehensive Command Catalog</a></h4>
+<p>The design principle: <strong>anything the GUI can do, the console can do.</strong> Every button, menu, slider, and toggle in the game UI has a console command equivalent. This enables scripting via <code>autoexec.cfg</code>, accessibility for players who prefer keyboard-driven interfaces, and full remote control for tournament administration. Commands are organized by functional domain — matching the system categories in <code>02-ARCHITECTURE.md</code>.</p>
+<p><strong>Engine-core vs. game-module commands:</strong> Per Invariant #9, the engine core is game-agnostic. Commands are split into two registration layers:</p>
+<ul>
+<li><strong>Engine commands</strong> (registered by the engine, available to all game modules): <code>/help</code>, <code>/set</code>, <code>/get</code>, <code>/version</code>, <code>/fps</code>, <code>/volume</code>, <code>/screenshot</code>, <code>/camera</code>, <code>/zoom</code>, <code>/ui_scale</code>, <code>/ui_theme</code>, <code>/locale</code>, <code>/save_game</code>, <code>/load_game</code>, <code>/clear</code>, <code>/players</code>, etc. These operate on engine-level concepts (rendering, audio, camera, files, cvars) and exist regardless of game module.</li>
+<li><strong>Game-module commands</strong> (registered by the RA1 module via <code>GameModule::register_commands()</code>): <code>/build</code>, <code>/sell</code>, <code>/deploy</code>, <code>/rally</code>, <code>/stance</code>, <code>/guard</code>, <code>/patrol</code>, <code>/power</code>, <code>/credits</code>, <code>/surrender</code>, <code>/power_activate</code>, etc. These operate on RA1-specific gameplay systems — a Dune II module or tower defense total conversion would register different commands. The tables below include both layers; game-module commands are marked with <strong>(RA1)</strong> where the command is game-module-specific rather than engine-generic.</li>
+</ul>
+<p><strong>Implementation phasing:</strong> This catalog is a <strong>reference target</strong>, not a Phase 3 deliverable. Commands are added incrementally as the systems they control are built — unit commands arrive with Phase 2 (simulation), production/building UI commands with Phase 3 (game chrome), observer commands with Phase 5 (multiplayer), etc. The Brigadier <code>CommandDispatcher</code> and cvar system are Phase 3; the full catalog grows across Phases 3–6.</p>
+<p><strong>Unit commands (require selection unless noted) (RA1):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/move &lt;x,y&gt;</code></td><td>Move selected units to world position</td></tr>
+<tr><td><code>/attack &lt;x,y&gt;</code></td><td>Attack-move to position</td></tr>
+<tr><td><code>/attack_unit &lt;unit_id&gt;</code></td><td>Attack specific target</td></tr>
+<tr><td><code>/force_fire &lt;x,y&gt;</code></td><td>Force-fire at ground position (Ctrl+click equivalent)</td></tr>
+<tr><td><code>/force_move &lt;x,y&gt;</code></td><td>Force-move, crushing obstacles in path (Alt+click equivalent)</td></tr>
+<tr><td><code>/stop</code></td><td>Stop all selected units</td></tr>
+<tr><td><code>/guard [unit_id]</code></td><td>Guard selected unit or target unit</td></tr>
+<tr><td><code>/patrol &lt;x1,y1&gt; [x2,y2] ...</code></td><td>Set patrol route through waypoints</td></tr>
+<tr><td><code>/scatter</code></td><td>Scatter selected units from current position</td></tr>
+<tr><td><code>/deploy</code></td><td>Deploy/undeploy selected units (MCV, siege units)</td></tr>
+<tr><td><code>/stance &lt;hold_fire|return_fire|defend|attack_anything&gt;</code></td><td>Set engagement stance</td></tr>
+<tr><td><code>/load</code></td><td>Load selected infantry into selected transport</td></tr>
+<tr><td><code>/unload</code></td><td>Unload all passengers from selected transport</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Selection commands:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/select &lt;filter&gt;</code></td><td>Select units by filter: <code>all</code>, <code>idle</code>, <code>military</code>, <code>harvesters</code>, <code>damaged</code>, <code>type:&lt;actor_type&gt;</code></td></tr>
+<tr><td><code>/deselect</code></td><td>Clear selection</td></tr>
+<tr><td><code>/select_all_type</code></td><td>Select all on-screen units matching the currently selected type (double-click equivalent)</td></tr>
+<tr><td><code>/group &lt;0-9&gt;</code></td><td>Select control group</td></tr>
+<tr><td><code>/group_set &lt;0-9&gt;</code></td><td>Assign current selection to control group (Ctrl+number equivalent)</td></tr>
+<tr><td><code>/group_add &lt;0-9&gt;</code></td><td>Add current selection to existing control group (Shift+Ctrl+number)</td></tr>
+<tr><td><code>/tab</code></td><td>Cycle through unit types within current selection</td></tr>
+<tr><td><code>/find_unit &lt;actor_type&gt;</code></td><td>Center camera on next unit of type (cycles through matches)</td></tr>
+<tr><td><code>/find_idle</code></td><td>Center on next idle unit (factory, harvester)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Production commands (RA1):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/build &lt;actor_type&gt; [count]</code></td><td>Queue production (default count: 1, or <code>inf</code> for infinite)</td></tr>
+<tr><td><code>/cancel &lt;actor_type|all&gt;</code></td><td>Cancel queued production</td></tr>
+<tr><td><code>/place &lt;actor_type&gt; &lt;x,y&gt;</code></td><td>Place completed building at position</td></tr>
+<tr><td><code>/set_primary [building_id]</code></td><td>Set selected or specified building as primary factory</td></tr>
+<tr><td><code>/rally &lt;x,y&gt;</code></td><td>Set rally point for selected production building</td></tr>
+<tr><td><code>/pause_production</code></td><td>Pause production queue on selected building</td></tr>
+<tr><td><code>/resume_production</code></td><td>Resume paused production queue</td></tr>
+<tr><td><code>/queue</code></td><td>Display current production queue contents</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Building commands (RA1):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/sell</code></td><td>Sell selected building</td></tr>
+<tr><td><code>/sell_mode</code></td><td>Toggle sell cursor mode (click buildings to sell)</td></tr>
+<tr><td><code>/repair_mode</code></td><td>Toggle repair cursor mode (click buildings to repair)</td></tr>
+<tr><td><code>/repair</code></td><td>Toggle auto-repair on selected building</td></tr>
+<tr><td><code>/power_down</code></td><td>Toggle power on selected building (disable to save power)</td></tr>
+<tr><td><code>/gate_open</code></td><td>Force gate open/closed</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Economy / resource commands (RA1):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/credits</code></td><td>Display current credits and storage capacity</td></tr>
+<tr><td><code>/income</code></td><td>Display income rate, expenditure rate, net flow</td></tr>
+<tr><td><code>/power</code></td><td>Display power capacity, drain, and status</td></tr>
+<tr><td><code>/silos</code></td><td>Display storage utilization and warn if near capacity</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Support power commands (RA1):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/power_activate &lt;power_name&gt; &lt;x,y&gt; [target_x,target_y]</code></td><td>Activate support power at position (second position for Chronoshift origin)</td></tr>
+<tr><td><code>/paradrop &lt;x,y&gt;</code></td><td>Activate Airfield paradrop at position (plane flies over, drops paratroopers)</td></tr>
+<tr><td><code>/powers</code></td><td>List all available support powers with charge status</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Camera and navigation commands:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/camera &lt;x,y&gt;</code></td><td>Move camera to world position</td></tr>
+<tr><td><code>/camera_follow [unit_id]</code></td><td>Follow selected or specified unit</td></tr>
+<tr><td><code>/camera_follow_stop</code></td><td>Stop following</td></tr>
+<tr><td><code>/bookmark_set &lt;1-9&gt;</code></td><td>Save current camera position to bookmark slot</td></tr>
+<tr><td><code>/bookmark &lt;1-9&gt;</code></td><td>Jump to bookmarked camera position</td></tr>
+<tr><td><code>/zoom &lt;in|out|level&gt;</code></td><td>Adjust zoom (level: 0.5–4.0, default 1.0; see <code>02-ARCHITECTURE.md</code> § Camera). In ranked/tournament, clamped to the competitive zoom range (default: 0.75–2.0). Zoom-toward-cursor when used with mouse wheel; zoom-toward-center when used via command</td></tr>
+<tr><td><code>/center</code></td><td>Center camera on current selection</td></tr>
+<tr><td><code>/base</code></td><td>Center camera on construction yard</td></tr>
+<tr><td><code>/alert</code></td><td>Jump to last alert position (base under attack, etc.)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Camera bookmarks (Generals-style navigation, client-local):</strong> IC formalizes camera bookmarks as a first-class navigation feature on all platforms. Slots <code>1-9</code> are <strong>local UI state only</strong> (not synced, not part of replay determinism, no simulation effect). Desktop exposes quick slots through hotkeys (see <code>17-PLAYER-FLOW.md</code>), while touch layouts expose a minimap-adjacent bookmark dock (tap = jump, long-press = save). The <code>/bookmark_set</code> and <code>/bookmark</code> commands remain the canonical full-slot interface and work consistently across desktop, touch, observer, replay, and editor playtest contexts. Local-only D031 telemetry events (<code>camera_bookmark.set</code>, <code>camera_bookmark.jump</code>) support UX tuning and tutorial hint validation.</p>
+<p><strong>Game state commands:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/save_game [name]</code></td><td>Save game (default: auto-named with timestamp)</td></tr>
+<tr><td><code>/load_game &lt;name&gt;</code></td><td>Load saved game</td></tr>
+<tr><td><code>/restart</code></td><td>Restart current mission/skirmish</td></tr>
+<tr><td><code>/surrender</code></td><td>Forfeit current match (alias for <code>/callvote surrender</code> in team games, immediate in 1v1)</td></tr>
+<tr><td><code>/gg</code></td><td>Alias for <code>/surrender</code></td></tr>
+<tr><td><code>/ff</code></td><td>Alias for <code>/surrender</code> (LoL/Valorant convention)</td></tr>
+<tr><td><code>/speed &lt;slowest|slower|normal|faster|fastest&gt;</code></td><td>Set game speed (single-player or host-only)</td></tr>
+<tr><td><code>/pause</code></td><td>Toggle pause (single-player instant; multiplayer requires consent)</td></tr>
+<tr><td><code>/score</code></td><td>Display current match score (units killed, resources, etc.)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Game speed and mobile tempo guidance:</strong> <code>/speed</code> remains the authoritative gameplay command surface for single-player and host-controlled matches. Any mobile “Tempo Advisor” or comfort warning UI is <strong>advisory only</strong> — it may recommend a range (for touch usability) but never changes or blocks the requested speed by itself. Ranked multiplayer continues to use server-enforced speed (see D055/D064 and <code>09b-networking.md</code>).</p>
+<p><strong>Vote commands (multiplayer — see <code>03-NETCODE.md</code> § “In-Match Vote Framework”):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/callvote surrender</code></td><td>Propose a surrender vote (team games) or surrender immediately (1v1)</td></tr>
+<tr><td><code>/callvote kick &lt;player&gt; &lt;reason&gt;</code></td><td>Propose to kick a teammate (team games only)</td></tr>
+<tr><td><code>/callvote remake</code></td><td>Propose to void the match (early game only)</td></tr>
+<tr><td><code>/callvote draw</code></td><td>Propose a mutual draw (requires cross-team unanimous agreement)</td></tr>
+<tr><td><code>/vote yes</code> (or <code>/vote y</code>)</td><td>Vote yes on the active vote (equivalent to F1)</td></tr>
+<tr><td><code>/vote no</code> (or <code>/vote n</code>)</td><td>Vote no on the active vote (equivalent to F2)</td></tr>
+<tr><td><code>/vote cancel</code></td><td>Cancel a vote you proposed</td></tr>
+<tr><td><code>/vote status</code></td><td>Display the current active vote (if any)</td></tr>
+<tr><td><code>/poll &lt;phrase_id|phrase_text&gt;</code></td><td>Propose a tactical poll (non-binding team coordination)</td></tr>
+<tr><td><code>/poll agree</code> (or <code>/poll yes</code>)</td><td>Agree with the active tactical poll</td></tr>
+<tr><td><code>/poll disagree</code> (or <code>/poll no</code>)</td><td>Disagree with the active tactical poll</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Audio commands:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/volume &lt;master|music|sfx|voice&gt; &lt;0-100&gt;</code></td><td>Set volume level</td></tr>
+<tr><td><code>/mute [master|music|sfx|voice]</code></td><td>Toggle mute (no argument = master)</td></tr>
+<tr><td><code>/music_next</code></td><td>Skip to next music track</td></tr>
+<tr><td><code>/music_prev</code></td><td>Skip to previous music track</td></tr>
+<tr><td><code>/music_stop</code></td><td>Stop music playback</td></tr>
+<tr><td><code>/music_play [track_name]</code></td><td>Play specific track (no argument = resume)</td></tr>
+<tr><td><code>/eva &lt;on|off&gt;</code></td><td>Toggle EVA voice notifications</td></tr>
+<tr><td><code>/music_list</code></td><td>List available music tracks</td></tr>
+<tr><td><code>/voice effect list</code></td><td>List available voice effect presets</td></tr>
+<tr><td><code>/voice effect set &lt;name&gt;</code></td><td>Apply voice effect preset</td></tr>
+<tr><td><code>/voice effect off</code></td><td>Disable voice effects</td></tr>
+<tr><td><code>/voice effect preview &lt;name&gt;</code></td><td>Play sample clip with effect applied</td></tr>
+<tr><td><code>/voice effect info &lt;name&gt;</code></td><td>Show DSP stages and parameters for preset</td></tr>
+<tr><td><code>/voice volume &lt;0-100&gt;</code></td><td>Set incoming voice volume</td></tr>
+<tr><td><code>/voice ptt &lt;key&gt;</code></td><td>Set push-to-talk keybind</td></tr>
+<tr><td><code>/voice toggle</code></td><td>Toggle voice on/off</td></tr>
+<tr><td><code>/voice diag</code></td><td>Open voice diagnostics overlay</td></tr>
+<tr><td><code>/voice isolation toggle</code></td><td>Toggle enhanced voice isolation</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Render and display commands:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/render_mode &lt;classic|remastered|modern&gt;</code></td><td>Switch render mode (D048)</td></tr>
+<tr><td><code>/screenshot [filename]</code></td><td>Capture screenshot</td></tr>
+<tr><td><code>/shadows &lt;on|off&gt;</code></td><td>Toggle shadow rendering</td></tr>
+<tr><td><code>/healthbars &lt;always|selected|damaged|never&gt;</code></td><td>Health bar visibility mode</td></tr>
+<tr><td><code>/names &lt;on|off&gt;</code></td><td>Toggle unit name labels</td></tr>
+<tr><td><code>/grid &lt;on|off&gt;</code></td><td>Toggle terrain grid overlay</td></tr>
+<tr><td><code>/palette &lt;name&gt;</code></td><td>Switch color palette (for classic render mode)</td></tr>
+<tr><td><code>/camera_shake &lt;on|off&gt;</code></td><td>Toggle screen shake effects</td></tr>
+<tr><td><code>/weather_fx &lt;on|off&gt;</code></td><td>Toggle weather visual effects (rain, snow particles)</td></tr>
+<tr><td><code>/post_fx &lt;on|off&gt;</code></td><td>Toggle post-processing effects (bloom, color grading)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Observer/spectator commands (observer mode only):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/observe [player_name]</code></td><td>Enter observer mode / follow specific player’s view</td></tr>
+<tr><td><code>/observe_free</code></td><td>Free camera (not following any player)</td></tr>
+<tr><td><code>/show army</code></td><td>Toggle army composition overlay</td></tr>
+<tr><td><code>/show production</code></td><td>Toggle production overlay (what each player is building)</td></tr>
+<tr><td><code>/show economy</code></td><td>Toggle economy overlay (income graph)</td></tr>
+<tr><td><code>/show powers</code></td><td>Toggle superweapon charge overlay</td></tr>
+<tr><td><code>/show score</code></td><td>Toggle score tracker</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>UI control commands:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/minimap &lt;on|off&gt;</code></td><td>Toggle minimap visibility</td></tr>
+<tr><td><code>/sidebar &lt;on|off&gt;</code></td><td>Toggle sidebar visibility</td></tr>
+<tr><td><code>/tooltip &lt;on|off&gt;</code></td><td>Toggle unit/building tooltips</td></tr>
+<tr><td><code>/clock &lt;on|off&gt;</code></td><td>Toggle game clock display</td></tr>
+<tr><td><code>/ui_scale &lt;50-200&gt;</code></td><td>Set UI scale percentage</td></tr>
+<tr><td><code>/ui_theme &lt;classic|remastered|modern|name&gt;</code></td><td>Switch UI theme (D032)</td></tr>
+<tr><td><code>/encyclopedia [actor_type]</code></td><td>Open encyclopedia (optionally to a specific entry)</td></tr>
+<tr><td><code>/hotkeys [profile]</code></td><td>Switch hotkey profile (classic, openra, modern) or list current bindings</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Map interaction commands:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/map_ping &lt;x,y&gt; [color]</code></td><td>Place a map ping visible to allies (with optional color)</td></tr>
+<tr><td><code>/map_draw &lt;on|off&gt;</code></td><td>Toggle minimap drawing mode for tactical markup</td></tr>
+<tr><td><code>/map_info</code></td><td>Display current map name, size, author, and game mode</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Localization commands:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/locale &lt;code&gt;</code></td><td>Switch language (e.g., <code>en</code>, <code>de</code>, <code>zh-CN</code>)</td></tr>
+<tr><td><code>/locale_list</code></td><td>List available locales</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Note:</strong> Commands that affect simulation state (<code>/move</code>, <code>/attack</code>, <code>/build</code>, <code>/sell</code>, <code>/deploy</code>, <code>/stance</code>, <code>/surrender</code>, <code>/callvote</code>, <code>/vote</code>, <code>/poll</code>, etc.) produce <code>PlayerOrder</code> variants and flow through the deterministic order pipeline — they are functionally identical to clicking the GUI button. Commands that affect only the local client (<code>/volume</code>, <code>/shadows</code>, <code>/zoom</code>, <code>/ui_scale</code>, etc.) take effect immediately without touching the sim. This distinction mirrors the cvar split: sim-affecting cvars require <code>DEV_ONLY</code> or <code>SERVER</code> flags and use the order pipeline; client-only cvars are immediate. In multiplayer, sim-affecting commands also respect D033 QoL toggle state — if a toggle is disabled in the lobby, the corresponding console command is rejected. See “Competitive Integrity in Multiplayer” below for the full framework.</p>
+<p><strong>PlayerOrder variant taxonomy:</strong> Commands map to <code>PlayerOrder</code> variants as follows:</p>
+<ul>
+<li><strong>GUI-equivalent commands</strong> (<code>/move</code>, <code>/attack</code>, <code>/build</code>, <code>/sell</code>, <code>/deploy</code>, <code>/stance</code>, <code>/select</code>, <code>/place</code>, etc.) produce the <strong>same native <code>PlayerOrder</code> variant</strong> as their GUI counterpart — e.g., <code>/move 120,80</code> produces <code>PlayerOrder::Move { target: WorldPos(120,80) }</code>, identical to right-clicking the map.</li>
+<li><strong>Cvar mutations</strong> (<code>/set &lt;name&gt; &lt;value&gt;</code>) produce <code>PlayerOrder::SetCvar(name, value)</code> when the cvar has <code>DEV_ONLY</code> or <code>SERVER</code> flags — these flow through order validation.</li>
+<li><strong>Cheat codes</strong> (hidden phrases typed in chat) produce <code>PlayerOrder::CheatCode(CheatId)</code> — see “Hidden Cheat Codes” below.</li>
+<li><strong>Chat messages</strong> (<code>/s</code>, <code>/w</code>, unprefixed text) produce <code>PlayerOrder::ChatMessage { channel, text }</code> — see D059 § Text Chat.</li>
+<li><strong>Coordination actions</strong> (pings, chat wheel, minimap drawing) produce their respective <code>PlayerOrder</code> variants (<code>TacticalPing</code>, <code>ChatWheelPhrase</code>, <code>MinimapDraw</code>) — see D059 § Coordination.</li>
+<li><strong>Meta-commands</strong> (<code>/help</code>, <code>/locale</code>, <code>/hotkeys</code>, <code>/voice diag</code>, etc.) are <strong>local-only</strong> — they produce no <code>PlayerOrder</code> and never touch the sim.</li>
+<li><strong><code>PlayerOrder::ChatCommand(cmd, args)</code></strong> is used only for mod-registered commands that produce custom sim-side effects not covered by a native variant. Engine commands never use <code>ChatCommand</code>.</li>
+</ul>
+<p><strong>Game-module registration example (RA1):</strong> The RA1 game module registers all RA1-specific commands during <code>GameModule::register_commands()</code>. A Tiberian Dawn module would register similar but distinct commands (e.g., <code>/sell</code> exists in both, but <code>/power_activate</code> with different superweapon names). A total conversion could register entirely novel commands (<code>/mutate</code>, <code>/terraform</code>, etc.) using the same <code>CommandDispatcher</code> infrastructure. This follows the “game is a mod” principle (13-PHILOSOPHY.md § Principle 4) — the base game uses the same registration API available to external modules.</p>
+<h4 id="mod-registered-commands"><a class="header" href="#mod-registered-commands">Mod-Registered Commands</a></h4>
+<p>Mods register commands via the Lua API (D004) or WASM host functions (D005):</p>
+<pre><code class="language-lua">-- Lua mod registration example
+Commands.register("spawn_reinforcements", {
+    description = "Spawn reinforcements at a location",
+    permission = "host",       -- only host can use
+    arguments = {
+        { name = "faction", type = "string", suggestions = {"allies", "soviet"} },
+        { name = "count",   type = "integer", min = 1, max = 50 },
+        { name = "location", type = "position" },
+    },
+    execute = function(source, args)
+        -- Mod logic here
+        SpawnReinforcements(args.faction, args.count, args.location)
+        return "Spawned " .. args.count .. " " .. args.faction .. " reinforcements"
+    end
+})
+</code></pre>
+<p><strong>Sandboxing:</strong> Mod commands execute within the same Lua sandbox as mission scripts. A mod command cannot access the filesystem, network, or memory outside its sandbox. The <code>CommandSource</code> tracks which mod registered the command — if a mod command crashes or times out, the error is attributed to the mod, not the engine.</p>
+<p><strong>Namespace collision:</strong> Mod commands are prefixed with the mod name by default: a mod named <code>cool_units</code> registering <code>spawn</code> creates <code>/cool_units:spawn</code>. Mods can request unprefixed registration (<code>/spawn</code>) but collisions are resolved by load order — last mod wins, with a warning logged. The convention follows Minecraft’s <code>namespace:command</code> pattern.</p>
+<h4 id="anti-trolling-measures"><a class="header" href="#anti-trolling-measures">Anti-Trolling Measures</a></h4>
+<p>Chat and commands create trolling surfaces. IC addresses each:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Trolling Vector</th><th>Mitigation</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Chat spam</strong></td><td>Rate limit: max 5 messages per 3 seconds, relay-enforced (see D059 § Text Chat). Client applies the same limit locally to avoid round-trip rejection. Exceeding the limit queues messages with a cooldown warning. Configurable by server.</td></tr>
+<tr><td><strong>Chat harassment</strong></td><td><code>/ignore</code> is client-side and instant. <code>/mute</code> is admin-enforced and server-side. Ignored players can’t whisper you.</td></tr>
+<tr><td><strong>Unicode abuse</strong> (oversized chars, bidi-spoof controls, invisible chars, zalgo)</td><td>Chat input is sanitized <strong>before</strong> order injection: preserve legitimate letters/numbers/punctuation (including Arabic/Hebrew/RTL text), but strip disallowed control/invisible characters used for spoofing, normalize Unicode to NFC, cap display width, and clamp combining-character abuse. Normalization happens on the sending client before the text enters <code>PlayerOrder::ChatMessage</code> — ensuring all clients receive identical normalized bytes (determinism requirement). Homoglyph detection warns admins of impersonation attempts.</td></tr>
+<tr><td><strong>Command abuse</strong> (admin runs <code>/kill</code> on all players)</td><td>Admin commands that affect other players are logged as telemetry events (D031). Community server governance (D037) allows reputation consequences.</td></tr>
+<tr><td><strong>Lua injection</strong> via chat</td><td>Chat messages never touch the command parser unless they start with <code>/</code>. A message like <code>hello /c game.destroy()</code> is plain text, not a command. Only the first <code>/</code> at position 0 triggers command parsing.</td></tr>
+<tr><td><strong>Fake command output</strong></td><td>System messages (command results, join/leave notifications) use a distinct visual style (color, icon) that players cannot replicate through chat.</td></tr>
+<tr><td><strong>Command spam</strong></td><td>Commands have the same rate limit as chat. Dev commands additionally logged with timestamps for abuse review.</td></tr>
+<tr><td><strong>Programmable spam</strong> (Factorio’s speaker problem)</td><td>IC doesn’t have programmable speakers, but any future mod-driven notification system should respect the same per-player mute controls.</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="achievement-and-ranking-interaction"><a class="header" href="#achievement-and-ranking-interaction">Achievement and Ranking Interaction</a></h4>
+<p>Following the universal convention (Factorio, AoE, OpenRA):</p>
+<ul>
+<li><strong>Using any dev command permanently flags the match/save</strong> as using cheats. This is recorded in the replay metadata and sim state.</li>
+<li><strong>Flagged games cannot count toward ranked matchmaking (D055)</strong> or achievements (D036).</li>
+<li><strong>The flag is irreversible</strong> for that save/match — even if you toggle dev mode off.</li>
+<li><strong>Non-dev commands</strong> (<code>/help</code>, <code>/set render.shadows false</code>, chat, <code>/ping</code>) do NOT flag the game. Only commands that affect simulation state through <code>DevCommand</code> orders trigger the flag.</li>
+<li><strong>Saved game cheated flag:</strong> The snapshot (D010) includes <code>cheats_used: bool</code> and <code>cosmetic_cheats_used: bool</code> fields. Loading a save with <code>cheats_used = true</code> displays a permanent “cheats used” indicator and disables achievements. Loading a save with only <code>cosmetic_cheats_used = true</code> displays a subtle “cosmetic mods active” indicator but achievements remain enabled. Both flags are irreversible per save and recorded in replay metadata.</li>
+</ul>
+<p>This follows Factorio’s model — the Lua console is immensely useful for testing and debugging, but using it has clear consequences for competitive integrity — while refining it with a proportional response: gameplay cheats carry full consequences, cosmetic cheats are recorded but don’t punish the player for having fun.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../decisions/09g/D058/D058-overview-architecture.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../decisions/09g/D058/D058-competitive-cheats-integration.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../decisions/09g/D058/D058-overview-architecture.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../decisions/09g/D058/D058-competitive-cheats-integration.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../../mark-09e88c2c.min.js"></script>
+        <script src="../../../searcher-c2a407aa.js"></script>
+
+        <script src="../../../clipboard-1626706a.min.js"></script>
+        <script src="../../../highlight-abc7f01d.js"></script>
+        <script src="../../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

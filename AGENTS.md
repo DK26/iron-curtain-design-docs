@@ -292,23 +292,23 @@ The mdbook is structured for efficient LLM/RAG retrieval. Every markdown file in
 
 **Existing directory structure for split files:**
 
-| Hub Page Pattern | Sub-File Directory |
-| --- | --- |
-| `src/02-ARCHITECTURE.md` | `src/architecture/` |
-| `src/03-NETCODE.md` | `src/netcode/` |
-| `src/04-MODDING.md` | `src/modding/` |
-| `src/05-FORMATS.md` | `src/formats/` |
-| `src/06-SECURITY.md` | `src/security/` |
-| `src/08-ROADMAP.md` | `src/roadmap/` |
-| `src/10-PERFORMANCE.md` | `src/performance/` |
-| `src/11-OPENRA-FEATURES.md` | `src/openra-features/` |
-| `src/14-METHODOLOGY.md` | `src/methodology/` |
-| `src/15-SERVER-GUIDE.md` | `src/server-guide/` |
-| `src/16-CODING-STANDARDS.md` | `src/coding-standards/` |
-| `src/17-PLAYER-FLOW.md` | `src/player-flow/` |
-| `src/18-PROJECT-TRACKER.md` | `src/tracker/` + `src/tracking/` |
-| `src/decisions/09X-*.md` | `src/decisions/09X/D0XX-*.md` |
-| Individual `D0XX-*.md` (if split further) | `src/decisions/09X/D0XX/` |
+| Hub Page Pattern                          | Sub-File Directory               |
+| ----------------------------------------- | -------------------------------- |
+| `src/02-ARCHITECTURE.md`                  | `src/architecture/`              |
+| `src/03-NETCODE.md`                       | `src/netcode/`                   |
+| `src/04-MODDING.md`                       | `src/modding/`                   |
+| `src/05-FORMATS.md`                       | `src/formats/`                   |
+| `src/06-SECURITY.md`                      | `src/security/`                  |
+| `src/08-ROADMAP.md`                       | `src/roadmap/`                   |
+| `src/10-PERFORMANCE.md`                   | `src/performance/`               |
+| `src/11-OPENRA-FEATURES.md`               | `src/openra-features/`           |
+| `src/14-METHODOLOGY.md`                   | `src/methodology/`               |
+| `src/15-SERVER-GUIDE.md`                  | `src/server-guide/`              |
+| `src/16-CODING-STANDARDS.md`              | `src/coding-standards/`          |
+| `src/17-PLAYER-FLOW.md`                   | `src/player-flow/`               |
+| `src/18-PROJECT-TRACKER.md`               | `src/tracker/` + `src/tracking/` |
+| `src/decisions/09X-*.md`                  | `src/decisions/09X/D0XX-*.md`    |
+| Individual `D0XX-*.md` (if split further) | `src/decisions/09X/D0XX/`        |
 
 **Files to update together when restructuring:** `src/SUMMARY.md`, `src/LLM-INDEX.md`, and the hub page's routing table. All three must stay in sync.
 

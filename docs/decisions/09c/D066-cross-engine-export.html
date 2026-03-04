@@ -1,0 +1,609 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>D066 — Cross-Engine Export - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09c/D066-cross-engine-export.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d066-cross-engine-export--editor-extensibility"><a class="header" href="#d066-cross-engine-export--editor-extensibility">D066: Cross-Engine Export &amp; Editor Extensibility</a></h2>
+<p><strong>Decision:</strong> The IC SDK (scenario editor + asset studio) can export complete content packages — missions, campaigns, cutscenes, music, audio, textures, animations, unit definitions — to original Red Alert and OpenRA formats. The SDK is itself extensible via the same tiered modding system (YAML → Lua → WASM) that powers the game, making it a fully moddable content creation platform.</p>
+<p><strong>Context:</strong> IC already imports from Red Alert and OpenRA (D025, D026, ra-formats). The Asset Studio (D040) converts between individual asset formats bidirectionally (.shp↔.png, .aud↔.wav, .vqa↔.mp4). But there is no holistic export pipeline — no way to author a complete mission in IC’s superior tooling and then produce a package that loads in original Red Alert or OpenRA. This is the “content authoring platform” step: IC becomes the tool that the C&amp;C community uses to create content for <em>any</em> C&amp;C engine, not just IC itself. This posture — creating value for the broader community regardless of which engine they play on — is core to the project’s philosophy (see <code>13-PHILOSOPHY.md</code> Principle #6: “Build with the community, not just for them”).</p>
+<p>Equally important: the editor itself must be extensible. If IC is a modding platform, then the tools that create mods must also be moddable. A community member building a RA2 game module needs custom editor panels for voxel placement. A total conversion might need a custom terrain brush. Editor extensions follow the same tiered model that game mods use.</p>
+<h3 id="export-targets"><a class="header" href="#export-targets">Export Targets</a></h3>
+<h4 id="target-1-original-red-alert-doswin95-format"><a class="header" href="#target-1-original-red-alert-doswin95-format">Target 1: Original Red Alert (DOS/Win95 format)</a></h4>
+<p>Export produces files loadable by the original Red Alert engine (including CnCNet-patched versions):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Content Type</th><th>IC Source</th><th>Export Format</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Maps</strong></td><td>IC scenario (.yaml)</td><td><code>ra.ini</code> (map section) + <code>.bin</code> (terrain binary)</td><td>Map dimensions, terrain tiles, overlay (ore/gems), waypoints, cell triggers. Limited to 128×128 grid, no IC-specific features (triggers export as best-effort match to RA trigger system)</td></tr>
+<tr><td><strong>Unit rules</strong></td><td>IC YAML unit definitions</td><td><code>rules.ini</code> sections</td><td>Cost, speed, armor, weapons, prerequisites. IC-only features (conditions, multipliers) stripped with warnings. Balance values remapped to RA’s integer scales</td></tr>
+<tr><td><strong>Missions</strong></td><td>IC scenario + Lua triggers</td><td><code>.mpr</code> mission file + <code>trigger</code>/<code>teamtype</code> ini blocks</td><td>Lua trigger logic is <em>downcompiled</em> to RA’s trigger/teamtype/action system where possible. Complex Lua with no RA equivalent generates a warning report</td></tr>
+<tr><td><strong>Sprites</strong></td><td>.png / sprite sheets</td><td>.shp + .pal (256-color palette-indexed)</td><td>Auto-quantization to target palette. Frame count/facing validation against RA expectations (8/16/32 facings)</td></tr>
+<tr><td><strong>Audio</strong></td><td>.wav / .ogg</td><td>.aud (IMA ADPCM)</td><td>Sample rate conversion to RA-compatible rates. Mono downmix if stereo.</td></tr>
+<tr><td><strong>Cutscenes</strong></td><td>.mp4 / .webm</td><td>.vqa (VQ compressed)</td><td>Resolution downscale to 320×200 or 640×400. Palette quantization. Audio track interleaved as Westwood ADPCM</td></tr>
+<tr><td><strong>Music</strong></td><td>.ogg / .wav</td><td>.aud (music format)</td><td>Full-length music tracks encoded as Westwood AUD. Alternative: export as standard .wav alongside custom <code>theme.ini</code></td></tr>
+<tr><td><strong>String tables</strong></td><td>IC YAML localization</td><td><code>.eng</code> / <code>.ger</code> / etc. string files</td><td>IC string keys mapped to RA string table offsets</td></tr>
+<tr><td><strong>Archives</strong></td><td>Loose files (from export pipeline)</td><td>.mix (optional packing)</td><td>All exported files optionally bundled into a .mix for distribution. CRC hash table generated per ra-formats § MIX</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Fidelity model:</strong> Export is <em>lossy by design</em>. IC supports features RA doesn’t (conditions, multipliers, 3D positions, complex Lua triggers, unlimited map sizes, advanced mission-phase tooling like segment unlock wrappers and sub-scenario portals, and IC-native asymmetric role orchestration such as D070 Commander/Field Ops support-request flows and role HUD/objective-channel semantics). The exporter produces the closest RA-compatible equivalent and generates a <strong>fidelity report</strong> — a structured log of every feature that was downgraded, stripped, or approximated. The creator sees: “3 triggers could not be exported (RA has no equivalent for <code>on_condition_change</code>). 2 unit abilities were removed (mind control requires engine support). Map was cropped from 200×200 to 128×128. Sub-scenario portal <code>lab_interior</code> exported as a separate mission stub with manual campaign wiring required. D070 support request queue and role HUD presets are IC-native and were stripped.” This is the same philosophy as exporting a Photoshop file to JPEG — you know what you’ll lose before you commit.</p>
+<h4 id="target-2-openra-oramod--oramap"><a class="header" href="#target-2-openra-oramod--oramap">Target 2: OpenRA (.oramod / .oramap)</a></h4>
+<p>Export produces content loadable by the current OpenRA release:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Content Type</th><th>IC Source</th><th>Export Format</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Maps</strong></td><td>IC scenario (.yaml)</td><td><code>.oramap</code> (ZIP: map.yaml + map.bin + lua/)</td><td>Full map geometry, actor placement, player definitions, Lua scripts. IC map features beyond OpenRA’s support generate warnings</td></tr>
+<tr><td><strong>Mod rules</strong></td><td>IC YAML unit/weapon definitions</td><td>MiniYAML rule files (tab-indented, <code>^</code>/<code>@</code> syntax)</td><td>IC YAML → MiniYAML via D025 reverse converter. IC trait names mapped back to OpenRA trait names via D023 alias table (bidirectional). IC-only traits stripped with warnings</td></tr>
+<tr><td><strong>Campaigns</strong></td><td>IC campaign graph (D021)</td><td>OpenRA campaign manifest + sequential mission <code>.oramaps</code></td><td>IC’s branching campaign graph is linearized (longest path or user-selected branch). Persistent state (roster carry-over, hero progression/skills, hero inventory/loadouts) is stripped or flattened into flags/stubs — OpenRA campaigns are stateless. IC sub-scenario portals are flattened into separate scenarios/steps when exportable; parent↔child outcome handoff may require manual rewrite.</td></tr>
+<tr><td><strong>Lua scripts</strong></td><td>IC Lua (D024 superset)</td><td>OpenRA-compatible Lua (D024 base API)</td><td>IC-only Lua API extensions stripped. The exporter validates that remaining Lua uses only OpenRA’s 16 globals + standard library</td></tr>
+<tr><td><strong>Sprites</strong></td><td>.png / sprite sheets</td><td>.png (OpenRA native) or .shp</td><td>OpenRA loads PNG natively — often no conversion needed. .shp export available for mods targeting the classic sprite pipeline</td></tr>
+<tr><td><strong>Audio</strong></td><td>.wav / .ogg</td><td>.wav / .ogg (OpenRA native) or .aud</td><td>OpenRA loads modern formats natively. .aud export for backwards-compatible mods</td></tr>
+<tr><td><strong>UI themes</strong></td><td>IC theme YAML + sprite sheets</td><td>OpenRA chrome YAML + sprite sheets</td><td>IC theme properties (D032) mapped to OpenRA’s chrome system. IC-only theme features stripped</td></tr>
+<tr><td><strong>String tables</strong></td><td>IC YAML localization</td><td>OpenRA <code>.ftl</code> (Fluent) localization files</td><td>IC string keys mapped to OpenRA Fluent message IDs</td></tr>
+<tr><td><strong>Mod manifest</strong></td><td>IC mod.yaml</td><td>OpenRA <code>mod.yaml</code> (D026 reverse)</td><td>IC mod manifest → OpenRA mod manifest. Dependency declarations, sprite sequences, rule file lists, chrome layout references</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>OpenRA version targeting:</strong> OpenRA’s modding API changes between releases. The exporter targets a configurable OpenRA version (default: latest stable). A <code>target_openra_version</code> field in the export config selects which trait names, Lua API surface, and manifest schema to use. The D023 alias table is version-aware — it knows which OpenRA release introduced or deprecated each trait name.</p>
+<h4 id="target-3-ic-native-default"><a class="header" href="#target-3-ic-native-default">Target 3: IC Native (Default)</a></h4>
+<p>Normal IC mod/map export is already covered by existing design (D030 Workshop, D062 profiles). Included here for completeness — the export pipeline is a unified system with format-specific backends, not three separate tools.</p>
+<h3 id="export-pipeline-architecture"><a class="header" href="#export-pipeline-architecture">Export Pipeline Architecture</a></h3>
+<pre><code>┌──────────────────────────────────────────────────────────────────┐
+│                     IC SDK Export Pipeline                        │
+│                                                                  │
+│  ┌─────────────┐                                                 │
+│  │ IC Scenario  │──┐                                             │
+│  │ + Assets     │  │    ┌──────────────────┐                     │
+│  └─────────────┘  ├──→│  ExportPlanner    │                     │
+│  ┌─────────────┐  │    │                  │                     │
+│  │ Export       │──┘    │ • Inventory all  │    ┌─────────────┐  │
+│  │ Config YAML  │       │   content        │    │  Fidelity   │  │
+│  │              │       │ • Detect feature │──→│  Report     │  │
+│  │ target: ra1  │       │   gaps per target│    │  (warnings) │  │
+│  │ version: 3.03│       │ • Plan transforms│    └─────────────┘  │
+│  └─────────────┘       └──────┬───────────┘                     │
+│                               │                                  │
+│             ┌─────────────────┼─────────────────┐               │
+│             ▼                 ▼                  ▼               │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │ RaExporter   │  │ OraExporter  │  │ IcExporter   │          │
+│  │              │  │              │  │              │          │
+│  │ rules.ini    │  │ MiniYAML     │  │ IC YAML      │          │
+│  │ .shp/.pal    │  │ .oramap      │  │ .png/.ogg    │          │
+│  │ .aud/.vqa    │  │ .png/.ogg    │  │ Workshop     │          │
+│  │ .mix         │  │ mod.yaml     │  │              │          │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
+│         │                 │                  │                  │
+│         ▼                 ▼                  ▼                  │
+│  ┌─────────────────────────────────────────────────┐           │
+│  │              Output Directory / Archive           │           │
+│  └─────────────────────────────────────────────────┘           │
+└──────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong><code>ExportTarget</code> trait:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Backend for exporting IC content to a specific target engine/format.
+/// Implementable via WASM for community-contributed export targets.
+pub trait ExportTarget: Send + Sync {
+    /// Human-readable name: "Original Red Alert", "OpenRA (release-20240315)", etc.
+    fn name(&amp;self) -&gt; &amp;str;
+
+    /// Which IC content types this target supports.
+    fn supported_content(&amp;self) -&gt; &amp;[ContentCategory];
+
+    /// Analyze the scenario and produce a fidelity report
+    /// listing what will be downgraded or lost.
+    fn plan_export(
+        &amp;self,
+        scenario: &amp;ExportableScenario,
+        config: &amp;ExportConfig,
+    ) -&gt; ExportPlan;
+
+    /// Execute the export, writing files to the output sink.
+    fn execute(
+        &amp;self,
+        plan: &amp;ExportPlan,
+        scenario: &amp;ExportableScenario,
+        output: &amp;mut dyn OutputSink,
+    ) -&gt; Result&lt;ExportResult, ExportError&gt;;
+}
+
+pub enum ContentCategory {
+    Map,
+    UnitRules,
+    WeaponRules,
+    Mission,        // scenario with triggers/scripting
+    Campaign,       // multi-mission with graph/state
+    Sprites,
+    Audio,
+    Music,
+    Cutscenes,
+    UiTheme,
+    StringTable,
+    ModManifest,
+    Archive,        // .mix, .oramod ZIP, etc.
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Key design choice:</strong> <code>ExportTarget</code> is a trait, not a hardcoded set of if/else branches. The built-in exporters (RA1, OpenRA, IC) ship with the SDK. Community members can add export targets for other engines — Tiberian Sun modding tools, Remastered Collection, or even non-C&amp;C engines like Stratagus — via WASM modules (Tier 3 modding). This makes the export pipeline itself extensible without engine changes.</p>
+<h3 id="trigger-downcompilation-lua--raopenra-triggers"><a class="header" href="#trigger-downcompilation-lua--raopenra-triggers">Trigger Downcompilation (Lua → RA/OpenRA triggers)</a></h3>
+<p>The hardest export problem. IC missions use Lua (D024) for scripting — a Turing-complete language. RA1 has a fixed trigger/teamtype/action system (~40 events, ~80 actions). OpenRA extends this with Lua but has a smaller standard library than IC.</p>
+<p><strong>Approach: pattern-based downcompilation, not general transpilation.</strong></p>
+<p>The exporter maintains a library of <strong>recognized Lua patterns</strong> that map to RA1 trigger equivalents:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>IC Lua Pattern</th><th>RA1 Trigger Equivalent</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Trigger.AfterDelay(ticks, fn)</code></td><td>Timed trigger (countdown)</td></tr>
+<tr><td><code>Trigger.OnEnteredFootprint(cells, fn)</code></td><td>Cell trigger (entered by)</td></tr>
+<tr><td><code>Trigger.OnKilled(actor, fn)</code></td><td>Destroyed trigger (specific unit/building)</td></tr>
+<tr><td><code>Trigger.OnAllKilled(actors, fn)</code></td><td>All destroyed trigger</td></tr>
+<tr><td><code>Actor.Create(type, owner, pos)</code></td><td>Teamtype + reinforcement action</td></tr>
+<tr><td><code>actor:Attack(target)</code></td><td>Teamtype attack waypoint action</td></tr>
+<tr><td><code>actor:Move(pos)</code></td><td>Teamtype move to waypoint action</td></tr>
+<tr><td><code>Media.PlaySpeech(name)</code></td><td>EVA speech action</td></tr>
+<tr><td><code>UserInterface.SetMissionText(text)</code></td><td>Mission text display action</td></tr>
+</tbody>
+</table>
+</div>
+<p>Lua that doesn’t match any known pattern → <strong>warning in fidelity report</strong> with the unmatched code highlighted. The creator can then simplify their Lua for RA1 export or accept the limitation. For OpenRA export, more patterns survive (OpenRA supports Lua natively), but IC-only API extensions are still flagged.</p>
+<p><strong>This is intentionally NOT a general Lua-to-trigger compiler.</strong> A general compiler would be fragile and produce trigger spaghetti. Pattern matching is predictable: the creator knows exactly which patterns export cleanly, and the SDK can provide “export-safe” template triggers in the scenario editor that are guaranteed to downcompile.</p>
+<h3 id="editor-extensibility"><a class="header" href="#editor-extensibility">Editor Extensibility</a></h3>
+<p>The IC SDK is a modding platform, not just a tool. The editor itself is extensible via the same three-tier system:</p>
+<h4 id="tier-1-yaml-editor-data-extensions"><a class="header" href="#tier-1-yaml-editor-data-extensions">Tier 1: YAML (Editor Data Extensions)</a></h4>
+<p>Custom editor panels, entity palettes, and property inspectors defined via YAML:</p>
+<pre><code class="language-yaml"># extensions/ra2_editor/editor_extension.yaml
+editor_extension:
+  name: "RA2 Editor Tools"
+  version: "1.0.0"
+  api_version: "1.0"              # editor plugin API version (stable surface)
+  min_sdk_version: "0.6.0"
+  tested_sdk_versions: ["0.6.x"]
+  capabilities:                   # declarative, deny-by-default
+    - editor.panels
+    - editor.palette_categories
+    - editor.terrain_brushes
+
+  # Custom entity palette categories
+  palette_categories:
+    - name: "Voxel Units"
+      icon: voxel_unit_icon
+      filter:
+        has_component: VoxelModel
+    - name: "Tech Buildings"
+      icon: tech_building_icon
+      filter:
+        tag: tech_building
+  
+  # Custom property panels for entity types
+  property_panels:
+    - entity_filter: { has_component: VoxelModel }
+      panel:
+        title: "Voxel Properties"
+        fields:
+          - { key: "voxel.turret_offset", type: vec3, label: "Turret Offset" }
+          - { key: "voxel.shadow_index", type: int, label: "Shadow Index" }
+          - { key: "voxel.remap_color", type: palette_range, label: "Faction Color Range" }
+  
+  # Custom terrain brush presets
+  terrain_brushes:
+    - name: "Urban Road"
+      tiles: [road_h, road_v, road_corner_ne, road_corner_nw, road_t, road_cross]
+      auto_connect: true
+    - name: "Tiberium Field"
+      tiles: [tib_01, tib_02, tib_03, tib_spread]
+      scatter: { density: 0.7, randomize_variant: true }
+  
+  # Custom export target configuration
+  export_targets:
+    - name: "Yuri's Revenge"
+      exporter_wasm: "ra2_exporter.wasm"  # Tier 3 WASM exporter
+      config_schema: "ra2_export_config.yaml"
+</code></pre>
+<h4 id="tier-2-lua-editor-scripting"><a class="header" href="#tier-2-lua-editor-scripting">Tier 2: Lua (Editor Scripting)</a></h4>
+<p>Editor automation, custom validators, batch operations:</p>
+<pre><code class="language-lua">-- extensions/quality_check/editor_scripts/validate_mission.lua
+
+-- Register a custom validation that runs before export
+Editor.RegisterValidator("balance_check", function(scenario)
+    local issues = {}
+    
+    -- Check that both sides have a base
+    for _, player in ipairs(scenario:GetPlayers()) do
+        local has_mcv = false
+        for _, actor in ipairs(scenario:GetActors(player)) do
+            if actor:HasComponent("BaseBuilding") then
+                has_mcv = true
+                break
+            end
+        end
+        if not has_mcv and player:IsPlayable() then
+            table.insert(issues, {
+                severity = "warning",
+                message = player:GetName() .. " has no base-building unit",
+                actor = nil,
+                fix = "Add an MCV or Construction Yard"
+            })
+        end
+    end
+    
+    return issues
+end)
+
+-- Register a batch operation available from the editor's command palette
+Editor.RegisterCommand("distribute_ore", {
+    label = "Distribute Ore Fields",
+    description = "Auto-place balanced ore around each player start",
+    execute = function(scenario, params)
+        for _, start_pos in ipairs(scenario:GetPlayerStarts()) do
+            -- Place ore in a ring around each start position
+            local radius = params.radius or 8
+            for dx = -radius, radius do
+                for dy = -radius, radius do
+                    local dist = math.sqrt(dx*dx + dy*dy)
+                    if dist &gt;= radius * 0.5 and dist &lt;= radius then
+                        local cell = start_pos:Offset(dx, dy)
+                        if scenario:GetTerrain(cell):IsPassable() then
+                            scenario:SetOverlay(cell, "ore", math.random(1, 3))
+                        end
+                    end
+                end
+            end
+        end
+    end
+})
+</code></pre>
+<h4 id="tier-3-wasm-editor-plugins"><a class="header" href="#tier-3-wasm-editor-plugins">Tier 3: WASM (Editor Plugins)</a></h4>
+<p>Full editor plugins for custom panels, renderers, format support, and export targets:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// A WASM plugin that adds a custom export target for Tiberian Sun
+#[wasm_export]
+fn register_editor_plugin(host: &amp;mut EditorHost) {
+    // Register a custom export target
+    host.register_export_target(TiberianSunExporter::new());
+    
+    // Register a custom asset viewer for .vxl files
+    host.register_asset_viewer("vxl", VoxelViewer::new());
+    
+    // Register a custom terrain tool
+    host.register_terrain_tool(TiberiumGrowthPainter::new());
+    
+    // Register a custom entity component editor
+    host.register_component_editor("SubterraneanUnit", SubUnitEditor::new());
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Editor extension distribution:</strong> Editor extensions are Workshop packages (D030) with <code>type: editor_extension</code> in their manifest. They install into the SDK’s extension directory and activate on SDK restart. Extensions declared in a mod profile (D062) auto-activate when that profile is active — a RA2 game module profile automatically loads RA2 editor extensions.</p>
+<p><strong>Plugin manifest compatibility &amp; capabilities (Phase 6b):</strong></p>
+<ul>
+<li><strong>API version contract</strong> — extensions declare an editor plugin API version (<code>api_version</code>) separate from engine internals. The SDK checks compatibility before load and disables incompatible extensions with a clear reason (“built for plugin API 0.x, this SDK provides 1.x”).</li>
+<li><strong>Capability manifest (deny-by-default)</strong> — extensions must declare requested editor capabilities (<code>editor.panels</code>, <code>editor.asset_viewers</code>, <code>editor.export_targets</code>, etc.). Undeclared capability usage is rejected.</li>
+<li><strong>Install-time permission review</strong> — the SDK shows the requested capabilities when installing/updating an extension. This is the only prompting point; normal editing sessions are not interrupted.</li>
+<li><strong>No VCS/process control capabilities by default</strong> — editor plugins do not get commit/rebase/shell execution powers. Git integration remains an explicit user workflow outside plugins unless a separately approved deferred capability is designed and placed in the execution overlay.</li>
+<li><strong>Version/provenance metadata</strong> — manifests may include signature/provenance information for Workshop trust badges; absence warns but does not prevent local development installs.</li>
+</ul>
+<h3 id="export-safe-authoring-mode"><a class="header" href="#export-safe-authoring-mode">Export-Safe Authoring Mode</a></h3>
+<p>The scenario editor offers an <strong>export-safe mode</strong> that constrains the authoring environment to features compatible with a chosen export target:</p>
+<ul>
+<li><strong>Select target:</strong> “I’m building this mission for OpenRA” (or RA1, or IC)</li>
+<li><strong>Feature gating:</strong> The editor grays out or hides features the target doesn’t support. If targeting RA1: no mind control triggers, no unlimited map size, no branching campaigns, no IC-native sub-scenario portals, no IC hero progression toolkit intermissions/skill progression, and no D070 asymmetric Commander/Field Ops role orchestration (role HUD presets, support request queues, objective-channel semantics beyond plain trigger/objective export). If targeting OpenRA: no IC-only Lua APIs; advanced <code>Map Segment Unlock</code> wrappers show yellow/red fidelity when they depend on IC-only phase orchestration beyond OpenRA-equivalent reveal/reinforcement scripting, hero progression/skill-tree tooling shows fidelity warnings because OpenRA campaigns are stateless, and D070 asymmetric role/support UX is treated as IC-native with strip/flatten warnings.</li>
+<li><strong>Live fidelity indicator:</strong> A traffic-light badge on each entity/trigger: green = exports perfectly, yellow = exports with approximation, red = will be stripped. The creator sees export fidelity as they build, not after.</li>
+<li><strong>Export-safe trigger templates:</strong> Pre-built trigger patterns guaranteed to downcompile cleanly to the target. “Timer → Reinforcement” template uses only Lua patterns with known RA1 equivalents.</li>
+<li><strong>Dual preview:</strong> Side-by-side preview showing “IC rendering” and “approximate target rendering” (e.g., palette-quantized sprites to simulate how it will look in original RA1).</li>
+</ul>
+<p>This mode doesn’t prevent using IC-only features — it informs the creator of consequences in real time. A creator building primarily for IC can still glance at the OpenRA fidelity indicator to know how much work a port would take.</p>
+<h3 id="cli-export"><a class="header" href="#cli-export">CLI Export</a></h3>
+<p>Export is available from the command line for batch processing and CI integration:</p>
+<pre><code class="language-bash"># Export a single mission to OpenRA format
+ic export --target openra --version release-20240315 mission.yaml -o ./openra-output/
+
+# Export an entire campaign to RA1 format
+ic export --target ra1 campaign.yaml -o ./ra1-output/ --fidelity-report report.json
+
+# Export all sprites in a mod to .shp+.pal for RA1 compatibility
+ic export --target ra1 --content sprites mod.yaml -o ./sprites-output/
+
+# Validate export without writing files (dry run)
+ic export --target openra --dry-run mission.yaml
+
+# Stronger export verification (checks exportability + target-facing validation rules)
+ic export --target openra --verify mission.yaml
+
+# Batch export: every map in a directory to all targets
+ic export --target ra1,openra,ic maps/ -o ./export/
+</code></pre>
+<p><strong>SDK integration:</strong> The Scenario/Campaign editor’s <code>Validate</code> and <code>Publish Readiness</code> flows call the same export planner/verifier used by <code>ic export --dry-run</code> / <code>--verify</code>. There is one export validation implementation surfaced through both CLI and GUI.</p>
+<h3 id="what-this-enables"><a class="header" href="#what-this-enables">What This Enables</a></h3>
+<ol>
+<li>
+<p><strong>IC as the C&amp;C community’s content creation hub.</strong> Build in IC’s superior editor, export to whatever engine your audience plays. A mission maker who targets both IC and OpenRA doesn’t maintain two copies — they maintain one IC project and export.</p>
+</li>
+<li>
+<p><strong>Gradual migration path.</strong> An OpenRA modder starts using IC’s editor for map creation (exporting .oramaps), discovers the asset tools, starts authoring rules in IC YAML (exporting MiniYAML), and eventually their entire workflow is in IC — even if their audience still plays OpenRA. When their audience migrates to IC, the mod is already native.</p>
+</li>
+<li>
+<p><strong>Editor as a platform.</strong> Workshop-distributed editor extensions mean the SDK improves with the community. Someone builds a RA2 voxel placement tool → everyone benefits. Someone builds a Tiberian Sun export target → the TS modding community gains a modern editor. Someone builds a mission quality validator → all mission makers benefit.</p>
+</li>
+<li>
+<p><strong>Preservation.</strong> Creating new content for the original 1996 Red Alert — missions, campaigns, even total conversions — using modern tools. The export pipeline keeps the original game alive as a playable target.</p>
+</li>
+</ol>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ol>
+<li>
+<p><strong>Export only to IC native format</strong> — Rejected. Misses the platform opportunity. The C&amp;C community spans multiple engines. Being useful to creators regardless of their target engine is how IC earns adoption.</p>
+</li>
+<li>
+<p><strong>General transpilation (Lua → any trigger system)</strong> — Rejected. A general Lua transpiler would be fragile, produce unreadable output, and give false confidence. Pattern-based downcompilation is honest about its limitations.</p>
+</li>
+<li>
+<p><strong>Editor extensions via C# (OpenRA compatibility)</strong> — Rejected. IC doesn’t use C# anywhere. WASM is the Tier 3 extension mechanism — Rust, C, AssemblyScript, or any WASM-targeting language. No C# runtime dependency.</p>
+</li>
+<li>
+<p><strong>Separate export tools (not integrated in SDK)</strong> — Rejected. Export is part of the creation workflow, not a post-processing step. The export-safe authoring mode only works if the editor knows the target while you’re building.</p>
+</li>
+<li>
+<p><strong>Bit-perfect re-creation of target engine behavior</strong> — Not a goal. Export produces valid content for the target engine, but doesn’t guarantee identical gameplay to what IC simulates (D011 — cross-engine compatibility is community-layer, not sim-layer). RA1 and OpenRA will simulate the exported content with their own engines.</p>
+</li>
+</ol>
+<h3 id="integration-with-existing-decisions"><a class="header" href="#integration-with-existing-decisions">Integration with Existing Decisions</a></h3>
+<ul>
+<li><strong>D023 (OpenRA Vocabulary Compatibility):</strong> The alias table is now bidirectional — used for import (OpenRA → IC) AND export (IC → OpenRA). The exporter reverses D023’s trait name mapping.</li>
+<li><strong>D024 (Lua API):</strong> Export validates Lua against the target’s API surface. IC-only extensions are flagged; OpenRA’s 16 globals are the safe subset.</li>
+<li><strong>D025 (Runtime MiniYAML Loading):</strong> The MiniYAML converter is now bidirectional: load at runtime (MiniYAML → IC YAML) and export (IC YAML → MiniYAML).</li>
+<li><strong>D026 (Mod Manifest Compatibility):</strong> <code>mod.yaml</code> parsing is now bidirectional — import OpenRA manifests AND generate them on export.</li>
+<li><strong>D030 (Workshop):</strong> Editor extensions are Workshop packages. Export presets/profiles are shareable via Workshop.</li>
+<li><strong>D038 (Scenario Editor):</strong> The scenario editor gains export-safe mode, fidelity indicators, export-safe trigger templates, and Validate/Publish Readiness integration that surfaces target compatibility before publish. Export is a first-class editor action, not a separate tool.</li>
+<li><strong>D070 (Asymmetric Commander &amp; Field Ops Co-op):</strong> D070 scenarios/templates are expected to be IC-native. Exporters may downcompile fragments (maps, units, simple triggers), but role orchestration, request/response HUD flows, and asymmetric role permissions require fidelity warnings and usually manual redesign.</li>
+<li><strong>D040 (Asset Studio):</strong> Asset conversion (D040’s Cross-Game Asset Bridge) is the per-file foundation. D066 orchestrates whole-project export using D040’s converters.</li>
+<li><strong>D062 (Mod Profiles):</strong> A mod profile can embed export target preference. “RA1 Compatible” profile constrains features to RA1-exportable subset.</li>
+<li><strong>ra-formats write support:</strong> D066 is the primary consumer of ra-formats write support (Phase 6a). The exporter calls into ra-formats encoders for .shp, .pal, .aud, .vqa, .mix generation.</li>
+</ul>
+<h3 id="phase"><a class="header" href="#phase">Phase</a></h3>
+<ul>
+<li><strong>Phase 6a:</strong> Core export pipeline ships alongside the scenario editor and asset studio. Built-in export targets: IC native (trivial), OpenRA (<code>.oramap</code> + MiniYAML rules). Export-safe authoring mode in scenario editor. <code>ic export</code> CLI.</li>
+<li><strong>Phase 6b:</strong> RA1 export target (requires .ini generation, trigger downcompilation, .mix packing). Campaign export (linearization for stateless targets). Editor extensibility API (YAML + Lua tiers). Editor extension Workshop distribution plus plugin capability manifests / compatibility checks / install-time permission review.</li>
+<li><strong>Phase 7:</strong> WASM editor plugins (Tier 3 extensibility). Community-contributed export targets (TS, RA2, Remastered). Agentic export assistance (LLM suggests how to simplify IC-only features for target compatibility).</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../decisions/09c/D062-mod-profiles.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../decisions/09c/D068-selective-install.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../decisions/09c/D062-mod-profiles.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../decisions/09c/D068-selective-install.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

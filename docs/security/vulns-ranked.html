@@ -1,0 +1,383 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Ranked Integrity (V26–V32) - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/security/vulns-ranked.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="vulnerability-26-ranked-rating-manipulation-via-win-trading--collusion"><a class="header" href="#vulnerability-26-ranked-rating-manipulation-via-win-trading--collusion">Vulnerability 26: Ranked Rating Manipulation via Win-Trading &amp; Collusion</a></h2>
+<h3 id="the-problem"><a class="header" href="#the-problem">The Problem</a></h3>
+<p>Two or more players coordinate to inflate one player’s rating. Techniques include: queue sniping (entering queue simultaneously to match each other), intentional loss by the colluding partner, and repeated pairings where a low-rated smurf farms losses. D055’s <code>min_distinct_opponents: 1</code> threshold is far too permissive — a player could reach the leaderboard by beating the same opponent repeatedly.</p>
+<p><strong>Real-world precedent:</strong> Every competitive game faces this. SC2’s GM ladder was inflamed by win-trading on low-population servers (KR off-hours). CS2 requires a minimum of 100 wins before Premier rank display. Dota 2’s Immortal leaderboard has been manipulated via region-hopping to low-population servers for easier matches.</p>
+<h3 id="defense"><a class="header" href="#defense">Defense</a></h3>
+<p><strong>Diminishing returns for repeated pairings:</strong></p>
+<ul>
+<li>When computing <code>update_rating()</code>, D041’s <code>MatchQuality.information_content</code> is reduced for repeated pairings with the same opponent. The first match contributes full weight. Subsequent matches within a rolling 30-day window receive exponentially decaying weight: <code>weight = base_weight * 0.5^(n-1)</code> where n is the number of recent matches against the same opponent. By the 4th rematch, rating gain is ~12% of the first match.</li>
+<li><code>min_distinct_opponents</code> raised from 1 to <strong>5</strong> for leaderboard eligibility and <strong>10</strong> for placement completion (soft requirement — if the population is too small for 10 distinct opponents within the placement window, the threshold degrades gracefully to <code>max(3, available_opponents * 0.5)</code>).</li>
+</ul>
+<p><strong>Server-side collusion detection:</strong></p>
+<ul>
+<li>The ranking authority flags accounts where &gt;50% of matches in a rolling 14-day window are against the same opponent (duo detection).</li>
+<li>Accounts that repeatedly enter queue within 3 seconds of each other AND match successfully &gt;30% of the time are flagged for queue sniping investigation.</li>
+<li>Flagged accounts are placed in a review queue (D052 community moderation). Automated restriction requires both statistical pattern match AND manual confirmation.</li>
+</ul>
+<p><strong>Phase:</strong> Diminishing returns and distinct-opponent thresholds ship with D055’s ranked system (Phase 5). Queue sniping detection Phase 5+.</p>
+<p><strong>Storage specification for opponent-pair tracking (audit finding F17):</strong></p>
+<p>The diminishing-returns system requires storing <code>(player_a, player_b, match_count, last_match_timestamp)</code> tuples in the ranking authority’s SQLite database (D034). Storage model:</p>
+<ul>
+<li><strong>Representation:</strong> Sparse — only pairs that have actually played are stored. No pre-allocated matrix.</li>
+<li><strong>Key:</strong> <code>(min(player_a, player_b), max(player_a, player_b))</code> — symmetric, canonical ordering.</li>
+<li><strong>Rolling window:</strong> 30 days. Entries older than 30 days are pruned by a scheduled <code>DELETE WHERE last_match_timestamp &lt; now() - 30d</code> job (daily, off-peak).</li>
+<li><strong>Expected storage:</strong> 10K active players × ~50 matches/season ÷ 2 (pairs) × 16 bytes/row ≈ <strong>4 MB</strong>. 100K players ≈ <strong>40 MB</strong> (sparse, not O(n²) because most players never face most others). Even pessimistic estimates stay within SQLite’s operational range.</li>
+<li><strong>Index:</strong> Composite index on <code>(player_a, player_b)</code> for O(log n) lookup during <code>update_rating()</code>. Secondary index on <code>last_match_timestamp</code> for efficient pruning.</li>
+<li><strong>Cleanup trigger:</strong> The pruning job also runs after each season reset (D055), dropping all entries from the previous season.</li>
+</ul>
+<p>This makes the storage cost proportional to <em>actual matches played</em>, not population size squared.</p>
+<h2 id="vulnerability-27-queue-sniping--dodge-exploitation"><a class="header" href="#vulnerability-27-queue-sniping--dodge-exploitation">Vulnerability 27: Queue Sniping &amp; Dodge Exploitation</a></h2>
+<h3 id="the-problem-1"><a class="header" href="#the-problem-1">The Problem</a></h3>
+<p>During D055’s map veto sequence, both players alternate banning maps from the pool. Once the veto begins, the client knows the opponent’s identity (visible in the veto UI). A player who recognizes a strong opponent or an unfavorable map pool state can disconnect before the veto completes, avoiding the match with no penalty.</p>
+<p>Additionally, astute players can infer their opponent’s identity from the matchmaking queue (based on timing, queue length display, or rating estimate) and dodge before the match begins.</p>
+<h3 id="defense-1"><a class="header" href="#defense-1">Defense</a></h3>
+<p><strong>Anonymous matchmaking until commitment point:</strong></p>
+<ul>
+<li>During the veto sequence, opponents are shown as “Opponent” (no username, no rating, no tier badge). Identity is revealed only after the final map is determined and both players confirm ready. This prevents identity-based queue dodging.</li>
+<li>The veto sequence itself is a commitment — once veto begins, both players have entered the match.</li>
+</ul>
+<p><strong>Dodge penalties:</strong></p>
+<ul>
+<li>Leaving during the veto sequence counts as a loss (rating penalty applied). This is the same approach used by LoL (dodge = LP loss + cooldown) and Valorant (dodge = RR loss + escalating timeout).</li>
+<li>Escalating cooldown: 1st dodge = 5-minute queue timeout. 2nd dodge within 24 hours = 30 minutes. 3rd+ = 2 hours. Cooldown resets after 24 hours without dodging.</li>
+<li>The relay server records the dodge event; the ranking authority applies the penalty. The client cannot avoid the penalty by terminating the process — the relay-side timeout is authoritative.</li>
+</ul>
+<p><strong>Phase:</strong> Anonymous veto and dodge penalties ship with D055’s matchmaking system (Phase 5).</p>
+<h2 id="vulnerability-28-communitybridge-phishing--redirect"><a class="header" href="#vulnerability-28-communitybridge-phishing--redirect">Vulnerability 28: CommunityBridge Phishing &amp; Redirect</a></h2>
+<h3 id="the-problem-2"><a class="header" href="#the-problem-2">The Problem</a></h3>
+<p>D055’s tracking server configuration (<code>tracking_servers:</code> in settings YAML) accepts arbitrary URLs. A social engineering attack directs players to add a malicious tracking server URL. The malicious server returns <code>GameListing</code> entries with <code>host: ConnectionInfo</code> pointing to attacker-controlled IPs. Players who join these games connect to a hostile server that could:</p>
+<ul>
+<li>Harvest IP addresses (combine with D053 profile to de-anonymize players)</li>
+<li>Attempt relay protocol exploits against the connecting client</li>
+<li>Display fake games that never start (griefing/confusion)</li>
+</ul>
+<h3 id="defense-2"><a class="header" href="#defense-2">Defense</a></h3>
+<p><strong>Protocol handshake verification:</strong></p>
+<ul>
+<li>When connecting to any address from a tracking server listing, the IC client performs a full protocol handshake (version check, encryption negotiation, identity verification) before revealing any user data. A non-IC server fails the handshake → connection aborted with a clear error message.</li>
+<li>The relay server’s Ed25519 identity key must be presented during handshake. Unknown relay keys trigger a trust-on-first-use (TOFU) prompt: “This relay server is not recognized. Connect anyway?” with the relay’s fingerprint displayed.</li>
+</ul>
+<p><strong>Trust indicators in the game browser UI:</strong></p>
+<ul>
+<li><strong>Verified sources:</strong> Tracking servers bundled with the game client (official, OpenRA, CnCNet) display a verified badge. User-added tracking servers display “Community” or “Unverified” labels.</li>
+<li><strong>Relay trust:</strong> Games hosted on relays with known Ed25519 keys (from previously trusted sessions) show “Trusted relay.” Games on unknown relays show “Unknown relay — first connection.”</li>
+<li><strong>IP exposure warning:</strong> When connecting directly to a player-hosted relay (direct IP), the UI warns: “Direct connection — your IP address may be visible to the host.”</li>
+</ul>
+<p><strong>Tracking server URL validation:</strong></p>
+<ul>
+<li>URLs must use HTTPS (not HTTP). Plain HTTP tracking servers are rejected.</li>
+<li>The client validates TLS certificates. Self-signed certificates trigger a warning.</li>
+<li>Rate limiting on tracking server additions: maximum 10 configured tracking servers to prevent configuration bloat from social engineering (“add these 50 servers for more games!”).</li>
+</ul>
+<p><strong>Phase:</strong> Protocol handshake verification and trust indicators ship with tracking server integration (Phase 5). HTTPS enforcement from Day 1.</p>
+<h2 id="vulnerability-29-scr-cross-community-rating-misrepresentation"><a class="header" href="#vulnerability-29-scr-cross-community-rating-misrepresentation">Vulnerability 29: SCR Cross-Community Rating Misrepresentation</a></h2>
+<h3 id="the-problem-3"><a class="header" href="#the-problem-3">The Problem</a></h3>
+<p>D052’s SCR (Signed Credential Record) format enables portable credentials across community servers. A player who earned “Supreme Commander” on a low-population, low-skill community server can present that credential in the lobby of a high-skill community server. The lobby displays the impressive tier badge, but the rating behind it was earned against much weaker competition. This creates misleading expectations and undermines trust in the tier system.</p>
+<h3 id="defense-3"><a class="header" href="#defense-3">Defense</a></h3>
+<p><strong>Community-scoped rating display:</strong></p>
+<ul>
+<li>The lobby and profile always display which community server issued the rating. “Supreme Commander (ClanX Server)” vs. “Supreme Commander (Official IC)”. Community name is embedded in the SCR and cannot be forged (signed by the issuing community’s Ed25519 key).</li>
+<li>Matchmaking uses only the <strong>current community’s</strong> rating, never imported ratings. When a player first joins a new community, they start at the default rating with placement deviation — regardless of credentials from other communities.</li>
+</ul>
+<p><strong>Visual distinction for foreign credentials:</strong></p>
+<ul>
+<li>Credentials from the current community show the full-color tier badge.</li>
+<li>Credentials from other communities show a desaturated/outlined badge with the community name in small text. This is immediately visually distinct — no one mistakes a foreign credential for a local one.</li>
+</ul>
+<p><strong>Optional credential weighting for seeding:</strong></p>
+<ul>
+<li>When a player with foreign credentials enters placement on a new community, the ranking authority MAY use the foreign rating as a seeding hint (weighted at 30% — a “Supreme Commander” from another server starts placement at ~1650 instead of 1500, not at 2400). This is configurable per community operator and disabled by default.</li>
+</ul>
+<p><strong>Phase:</strong> Community-scoped display ships with D052/D053 profile system (Phase 5). Foreign credential seeding is a Phase 5+ enhancement.</p>
+<h2 id="vulnerability-30-soft-reset-placement-disruption"><a class="header" href="#vulnerability-30-soft-reset-placement-disruption">Vulnerability 30: Soft Reset Placement Disruption</a></h2>
+<h3 id="the-problem-4"><a class="header" href="#the-problem-4">The Problem</a></h3>
+<p>At season start, D055’s soft reset compresses all ratings toward the default (1500). With <code>compression_factor: 700</code> (keep 70%), a 2400-rated player becomes ~2130, and a 1000-rated player becomes ~1150. Both now have placement-level deviation (350), meaning their ratings move fast. During placement, these players are matched based on their compressed ratings — a compressed 2130 can match against a compressed 1500, creating a massive skill mismatch. The first few days of each season become “placement carnage” where experienced players stomp newcomers.</p>
+<p><strong>Real-world precedent:</strong> This is a known problem in every game with seasonal resets. OW2’s season starts are notorious for one-sided matches. LoL’s placement period sees the highest player frustration.</p>
+<h3 id="defense-4"><a class="header" href="#defense-4">Defense</a></h3>
+<p><strong>Hidden matchmaking rating (HMR) during placement:</strong></p>
+<ul>
+<li>During the placement period (first 10 matches), matchmaking uses the player’s <strong>pre-reset rating</strong> as the search center, not the compressed rating. The compressed rating is used for rating updates (the Glicko-2 calculation), but the matchmaking search range is centered on where the player was last season.</li>
+<li>This means a former 2400 player searches for opponents near 2400 during placement (finding other former high-rated players also in placement), while a former 1200 player searches near 1200. Both converge to their true rating quickly without creating cross-skill matches.</li>
+<li>Brand-new players (no prior season) use the default 1500 center — unchanged from current design.</li>
+</ul>
+<p><strong>Minimum match quality threshold:</strong></p>
+<ul>
+<li><code>MatchmakingConfig</code> gains a new field: <code>min_match_quality: i64</code> (default: 200). A match is only created if <code>|player_a_rating - player_b_rating| &lt; max_range</code> AND the predicted match quality (from D041’s <code>MatchQuality.fairness</code>) exceeds a minimum threshold. During placement, the threshold is relaxed by 20% to account for high deviation.</li>
+<li>This prevents the desperation timeout from creating wildly unfair matches. At worst, a player waits the full <code>desperation_timeout_secs</code> and gets no match — which is better than a guaranteed stomp.</li>
+</ul>
+<p><strong>Phase:</strong> HMR during placement and min match quality ship with D055’s season system (Phase 5).</p>
+<h2 id="vulnerability-31-desperation-timeout-exploitation"><a class="header" href="#vulnerability-31-desperation-timeout-exploitation">Vulnerability 31: Desperation Timeout Exploitation</a></h2>
+<h3 id="the-problem-5"><a class="header" href="#the-problem-5">The Problem</a></h3>
+<p>D055’s <code>desperation_timeout_secs: 300</code> (5 minutes) means that after 5 minutes in queue, a player is matched with anyone available regardless of rating difference. On low-population servers or during off-peak hours, a smurf can deliberately queue at unusual times, wait 5 minutes, and get matched against much weaker players. Each win earns full rating points because <code>MatchQuality.information_content</code> isn’t reduced for skill mismatches — only for repeated pairings (V26).</p>
+<h3 id="defense-5"><a class="header" href="#defense-5">Defense</a></h3>
+<p><strong>Reduced <code>information_content</code> for skill-mismatched games:</strong></p>
+<ul>
+<li>When matchmaking creates a match with a rating difference exceeding <code>initial_range * 2</code> (i.e., the match was created after significant search widening), the <code>information_content</code> of the match is scaled down proportionally: <code>ic_scale = 1.0 - ((rating_diff - initial_range) / max_range).clamp(0.0, 0.7)</code>. A 500-point mismatch at <code>initial_range: 100</code> → <code>ic_scale ≈ 0.2</code> → the winner gains ~20% of normal points, the loser loses ~20% of normal points.</li>
+<li>The desperation match still happens (better than no match), but the rating impact is proportional to the match’s competitive validity.</li>
+</ul>
+<p><strong>Minimum players for desperation activation:</strong></p>
+<ul>
+<li>Desperation mode only activates if ≥3 players are in the queue. If only 1-2 players are queued at wildly different ratings, the queue continues searching without matching. This prevents a lone smurf from exploiting empty queues.</li>
+<li>The UI displays “Waiting for more players in your rating range” instead of silently widening.</li>
+</ul>
+<p><strong>Phase:</strong> Information content scaling and minimum desperation population ship with D055’s matchmaking (Phase 5).</p>
+<h2 id="vulnerability-32-relay-spof-for-ranked-match-certification"><a class="header" href="#vulnerability-32-relay-spof-for-ranked-match-certification">Vulnerability 32: Relay SPOF for Ranked Match Certification</a></h2>
+<h3 id="the-problem-6"><a class="header" href="#the-problem-6">The Problem</a></h3>
+<p>Ranked matches require relay-signed <code>CertifiedMatchResult</code> (V13). If the relay server crashes or loses connectivity during a mid-game, the match has no certified result. Both players’ time is wasted. In tournament scenarios, this can be exploited by targeting the relay with DDoS to prevent an opponent’s win from being recorded.</p>
+<h3 id="defense-6"><a class="header" href="#defense-6">Defense</a></h3>
+<p><strong>Client-side checkpoint hashes:</strong></p>
+<ul>
+<li>Both clients exchange periodic state hashes (every 120 ticks, existing desync detection) and the relay records these. If the relay fails, the last confirmed checkpoint hash establishes game state consensus up to that point.</li>
+<li>When the relay recovers (or the game is reassigned to a backup relay), the checkpoint data enables resumption or adjudication.</li>
+</ul>
+<p><strong>Degraded certification fallback:</strong></p>
+<ul>
+<li>If the relay dies and both clients detect connection loss within the same 10-second window, the game enters “unranked continuation” mode. Players can finish the game for completion (replay is saved locally), and the partial result is submitted to the ranking authority with a <code>degraded_certification</code> flag. The ranking authority MAY apply rating changes at reduced <code>information_content</code> (50%) based on the last checkpoint state, or MAY void the match entirely (no rating change).</li>
+<li>The choice between partial rating and void is a community operator configuration. Default: void (no rating change on relay failure). Competitive communities may prefer partial to prevent DDoS-as-dodge.</li>
+</ul>
+<p><strong>Relay health monitoring:</strong></p>
+<ul>
+<li>The ranking authority monitors relay health. If a relay instance has &gt;5% match failure rate within a 1-hour window, new ranked matches are not assigned to it. Ongoing matches continue on the failing relay (migration mid-game is not feasible), but the next matches go elsewhere.</li>
+<li>Multiple relay instances per region (K8s deployment — see <code>03-NETCODE.md</code>) provide redundancy. No single relay instance is a single point of failure for the region as a whole.</li>
+</ul>
+<p><strong>Phase:</strong> Degraded certification and relay health monitoring ship with ranked matchmaking (Phase 5).</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../security/vulns-workshop.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../security/vulns-infrastructure.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../security/vulns-workshop.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../security/vulns-infrastructure.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

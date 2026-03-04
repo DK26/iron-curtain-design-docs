@@ -9,7 +9,7 @@
 The model separates mod loading into three explicit phases, inspired by LVM's physical volumes → volume groups → logical volumes:
 
 | Layer              | LVM Analog      | IC Concept                       | What It Is                                                                                                                                                                               |
-| ------------------ | ---------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------ | --------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Source** (PV)    | Physical Volume | Registered mod/package/base game | A validated, installed content source — its files exist, its manifest is parsed, its dependencies are resolved. Immutable once registered.                                               |
 | **Profile** (VG)   | Volume Group    | Mod profile                      | A named composition: which sources, in what priority order, with what conflict resolutions and experience settings. Saved as a YAML file. Hashable.                                      |
 | **Namespace** (LV) | Logical Volume  | Virtual asset namespace          | The resolved lookup table: for every logical asset path, which blob (from which source) answers the query. Built from a profile at activation time. What the engine actually loads from. |

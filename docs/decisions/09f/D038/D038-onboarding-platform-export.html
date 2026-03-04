@@ -1,0 +1,780 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Onboarding, Platform &amp; Export - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09f/D038/D038-onboarding-platform-export.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h3 id="workshop-distributed-editor-plugins"><a class="header" href="#workshop-distributed-editor-plugins">Workshop-Distributed Editor Plugins</a></h3>
+<p>Garry’s Mod’s most powerful pattern: community-created tools appear alongside built-in tools in the same menu. The community doesn’t just create content — they <strong>extend the creation tools themselves.</strong> Wire Mod and Expression 2 are the canonical examples: community-built systems that became essential editor infrastructure, indistinguishable from first-party tools.</p>
+<p>IC supports this explicitly. Workshop-published packages can contain:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Plugin Type</th><th>What It Adds</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Custom modules</strong></td><td>New entries in the Modules panel (YAML definition + Lua implementation)</td><td>“Convoy System” module — defines waypoints + spawn + escort</td></tr>
+<tr><td><strong>Custom triggers</strong></td><td>New trigger condition/action types</td><td>“Music trigger” — plays specific track on activation</td></tr>
+<tr><td><strong>Compositions</strong></td><td>Pre-built reusable entity groups (see Compositions section)</td><td>“Tournament 1v1 Start” — balanced spawn with resources</td></tr>
+<tr><td><strong>Game mode templates</strong></td><td>Complete game mode setups (see Game Mode Templates section)</td><td>“MOBA Lanes” — 3-lane auto-spawner with towers and heroes</td></tr>
+<tr><td><strong>Editor tools</strong></td><td>New editing tools and panels (Lua-based UI extensions, Phase 7)</td><td>“Formation Arranger” — visual grid formation editor tool</td></tr>
+<tr><td><strong>Terrain brushes</strong></td><td>Custom terrain painting presets</td><td>“River Painter” — places water + bank tiles + bridge snaps</td></tr>
+</tbody>
+</table>
+</div>
+<p>All plugin types use the tiered modding system (invariant #3): YAML for data definitions, Lua for logic, WASM for complex tools. Plugins are sandboxed — an editor plugin cannot access the filesystem, network, or sim internals beyond the editor’s public API. They install via Workshop like any other resource and appear in the editor’s palettes automatically.</p>
+<p>This aligns with philosophy principle #19 (“Build for surprise — expose primitives, not just parameterized behaviors”): the module/trigger/composition system is powerful enough that community extensions can create things the engine developers never imagined.</p>
+<p><strong>Phase:</strong> Custom modules and compositions are publishable from Phase 6a (they use the existing YAML + Lua format). Custom editor tools (Lua-based UI extensions) are a Phase 7 capability that depends on the editor’s Lua plugin API.</p>
+<h3 id="editor-onboarding-for-veterans"><a class="header" href="#editor-onboarding-for-veterans">Editor Onboarding for Veterans</a></h3>
+<p>The IC editor’s concepts — triggers, waypoints, entities, layers — aren’t new. They’re the same ideas that OFP, AoE2, StarCraft, and WC3 editors have used for decades. But each editor uses different names, different hotkeys, and different workflows. A 20-year AoE2 scenario editor veteran has deep muscle memory that IC shouldn’t fight — it should channel.</p>
+<p><strong>“Coming From” profile (first-launch):</strong></p>
+<p>When the editor opens for the first time, a non-blocking welcome panel asks: “Which editor are you most familiar with?” Options:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Profile</th><th>Sets Default Keybindings</th><th>Sets Terminology Hints</th><th>Sets Tutorial Path</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>New to editing</strong></td><td>IC Default</td><td>IC terms only</td><td>Full guided tour, start with Simple mode</td></tr>
+<tr><td><strong>OFP / Eden</strong></td><td>F1–F7 mode switching</td><td>OFP equivalents shown</td><td>Skip basics, focus on RTS differences</td></tr>
+<tr><td><strong>AoE2</strong></td><td>AoE2 trigger workflow</td><td>AoE2 equivalents shown</td><td>Skip triggers, focus on Lua + modules</td></tr>
+<tr><td><strong>StarCraft / WC3</strong></td><td>WC3 trigger shortcuts</td><td>Location→Region, etc.</td><td>Skip locations, focus on compositions</td></tr>
+<tr><td><strong>Other / Skip</strong></td><td>IC Default</td><td>No hints</td><td>Condensed overview</td></tr>
+</tbody>
+</table>
+</div>
+<p>This is a <strong>one-time suggestion, not a lock-in.</strong> Profile can be changed anytime in settings. All it does is set initial keybindings and toggle contextual hints.</p>
+<p><strong>Customizable keybinding presets:</strong></p>
+<p>Full key remapping with shipped presets:</p>
+<pre><code>IC Default   — Tab cycles modes, 1-9 entity selection, Space preview
+OFP Classic  — F1-F7 modes, Enter properties, Space preview
+Eden Modern  — Ctrl+1-7 modes, double-click properties, P preview
+AoE2 Style   — T triggers, U units, R resources, Ctrl+C copy trigger
+WC3 Style    — Ctrl+T trigger editor, Ctrl+B triggers browser
+</code></pre>
+<p>Not just hotkeys — mode switching behavior and right-click context menus adapt to the profile. OFP veterans expect right-click on empty ground to deselect; AoE2 veterans expect right-click to open a context menu.</p>
+<p><strong>Terminology Rosetta Stone:</strong></p>
+<p>A toggleable panel (or contextual tooltips) that maps IC terms to familiar ones:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>IC Term</th><th>OFP / Eden</th><th>AoE2</th><th>StarCraft / WC3</th></tr>
+</thead>
+<tbody>
+<tr><td>Region</td><td>Trigger (area-only)</td><td>Trigger Area</td><td>Location</td></tr>
+<tr><td>Module</td><td>Module</td><td>Looping Trigger Pattern</td><td>GUI Trigger Template</td></tr>
+<tr><td>Composition</td><td>Composition</td><td>(Copy-paste group)</td><td>Template</td></tr>
+<tr><td>Variables Panel</td><td>(setVariable in SQF)</td><td>(Invisible unit on map edge)</td><td>Deaths counter / Switch</td></tr>
+<tr><td>Inline Script</td><td>Init field (SQF)</td><td>—</td><td>Custom Script</td></tr>
+<tr><td>Connection</td><td>Synchronize</td><td>—</td><td>—</td></tr>
+<tr><td>Layer</td><td>Layer</td><td>—</td><td>—</td></tr>
+<tr><td>Probability of Presence</td><td>Probability of Presence</td><td>—</td><td>—</td></tr>
+<tr><td>Named Character</td><td>Playable unit</td><td>Named hero (scenario)</td><td>Named hero</td></tr>
+</tbody>
+</table>
+</div>
+<p>Displayed as <strong>tooltips on hover</strong> — when an AoE2 veteran hovers over “Region” in the UI, a tiny tooltip says “AoE2: Trigger Area.” Not blocking, not patronizing, just a quick orientation aid. Tooltips disappear after the first few uses (configurable).</p>
+<p><strong>Interactive migration cheat sheets:</strong></p>
+<p>Context-sensitive help that recognizes familiar patterns:</p>
+<ul>
+<li>Designer opens Variables Panel → tip: “In AoE2, you might have used invisible units placed off-screen as variables. IC has native variables — no workarounds needed.”</li>
+<li>Designer creates first trigger → tip: “In OFP, triggers were areas on the map. IC triggers work the same way, but you can also use Regions for reusable areas across multiple triggers.”</li>
+<li>Designer writes first Lua line → tip: “Coming from SQF? Here’s a quick Lua comparison: <code>_myVar = 5</code> → <code>local myVar = 5</code>. <code>hint \"hello\"</code> → <code>Game.message(\"hello\")</code>. Full cheat sheet: Help → SQF to Lua.”</li>
+</ul>
+<p>These only appear once per concept. They’re dismissable and disable-all with one toggle. They’re not tutorials — they’re translation aids.</p>
+<p><strong>Scenario import (partial):</strong></p>
+<p>Full import of complex scenarios from other engines is unrealistic — but partial import of the most tedious-to-recreate elements saves real time:</p>
+<ul>
+<li><strong>AoE2 trigger import</strong> — parse AoE2 scenario trigger data, convert condition→effect pairs to IC triggers + modules. Not all triggers translate, but simple ones (timer, area detection, unit death) map cleanly.</li>
+<li><strong>StarCraft trigger import</strong> — parse StarCraft triggers, convert locations to IC Regions, convert trigger conditions/actions to IC equivalents.</li>
+<li><strong>OFP mission.sqm import</strong> — parse entity placements, trigger positions, and waypoint connections. SQF init scripts flag as “needs Lua conversion” but the spatial layout transfers.</li>
+<li><strong>OpenRA .oramap entities</strong> — already supported by the asset pipeline (D025/D026). Editor imports the map and entity placement directly.</li>
+</ul>
+<p>Import is always <strong>best-effort</strong> with clear reporting: “Imported 47 of 52 triggers. 5 triggers used features without IC equivalents — see import log.” Better to import 90% and fix 10% than to recreate 100% from scratch.</p>
+<p><strong>The 30-minute goal:</strong> A veteran editor from ANY background should feel productive within 30 minutes. Not expert — productive. They recognize familiar concepts wearing new names, their muscle memory partially transfers via keybinding presets, and the migration cheat sheet fills the gaps. The learning curve is a gentle slope, not a cliff.</p>
+<h3 id="sdk-live-tutorial-interactive-guided-tours"><a class="header" href="#sdk-live-tutorial-interactive-guided-tours">SDK Live Tutorial (Interactive Guided Tours)</a></h3>
+<p>“Coming From” profiles and keybinding presets help veterans orient. But brand-new creators — the “New to editing” profile — need more than tooltips and reference docs. They need a hands-on walkthrough that builds confidence through doing. The SDK Live Tutorial is an interactive guided tour system that walks creators through their first scenario, asset import, or campaign with step-by-step instructions and validation.</p>
+<p><strong>Design principles:</strong></p>
+<ul>
+<li><strong>Learn by doing</strong> — every tour step asks the creator to perform an action, not just read text</li>
+<li><strong>Spotlight focus</strong> — the surrounding UI dims while the relevant element is highlighted, reducing cognitive load</li>
+<li><strong>Validation before advancing</strong> — the engine confirms the creator actually completed the step (painted terrain, placed a unit, etc.) before moving on</li>
+<li><strong>Resumable</strong> — tours persist progress to SQLite; closing the SDK mid-tour resumes at the last completed step</li>
+<li><strong>Non-blocking</strong> — tours can be skipped, paused, or dismissed at any point with no penalty</li>
+</ul>
+<h4 id="tour-engine-architecture"><a class="header" href="#tour-engine-architecture">Tour Engine Architecture</a></h4>
+<pre><code>TourDefinition (YAML)
+    │
+    ▼
+TourStep ────► TourRenderer
+(highlight,      (spotlight overlay,
+ action,          callout bubble,
+ validation)      progress bar,
+                  skip/back/next)
+    │
+    ▼
+TourHistory (SQLite)  ◄──  TourFilter (suppression)
+</code></pre>
+<p>The tour engine reuses the suppression and history pattern from D065’s Layer 2 contextual hints, adapted for multi-step guided sequences in the editor context. The key difference: Layer 2 hints are single-shot contextual tips; tours are ordered multi-step sequences with validation gates.</p>
+<h4 id="tour-yaml-schema"><a class="header" href="#tour-yaml-schema">Tour YAML Schema</a></h4>
+<pre><code class="language-yaml"># sdk/tours/scenario-editor-basics.yaml
+tour:
+  id: scenario_editor_basics
+  title: "Scenario Editor Basics"
+  description: "Learn to create your first scenario in 10 minutes"
+  target_tool: scenario_editor
+  coming_from_profiles: [new_to_editing, all]
+  estimated_minutes: 10
+  prerequisite_tours: []              # optional: require another tour first
+
+  steps:
+    - id: welcome
+      title: "Welcome to the Scenario Editor"
+      text: "This is where you create missions. Let's build a simple skirmish map together."
+      highlight_ui: null              # no element highlighted (intro screen)
+      spotlight: false
+      position: screen_center
+      action: null                    # click Next to continue
+      validation: null                # no validation needed
+
+    - id: terrain_mode
+      title: "Terrain Painting"
+      text: "Click the Terrain tab to start painting your map."
+      highlight_ui: "mode_panel.terrain"
+      spotlight: true                 # dim everything except the highlighted element
+      action:
+        type: mode_switch
+        target_mode: terrain
+      validation:
+        type: action_performed
+        action: switch_to_terrain_mode
+
+    - id: paint_terrain
+      title: "Paint Some Terrain"
+      text: "Select a terrain type from the palette and paint on the viewport. Try creating a small island with grass and water."
+      highlight_ui: "terrain_palette"
+      spotlight: false                # highlight but don't dim (user needs full viewport)
+      action:
+        type: paint
+        min_cells: 20
+      validation:
+        type: cell_count
+        min: 20
+
+    - id: place_units
+      title: "Place Units"
+      text: "Switch to Entities mode and place some units on your map. Drag from the entity palette or double-click to place."
+      highlight_ui: "mode_panel.entities"
+      spotlight: true
+      action:
+        type: place_entity
+        min_count: 3
+      validation:
+        type: entity_count
+        min: 3
+
+    - id: place_buildings
+      title: "Place Buildings"
+      text: "Place a Construction Yard and a few base buildings. These give each player a starting base."
+      highlight_ui: "entity_palette.buildings"
+      spotlight: false
+      action:
+        type: place_entity
+        entity_category: building
+        min_count: 2
+      validation:
+        type: entity_count
+        category: building
+        min: 2
+
+    - id: assign_factions
+      title: "Assign Factions"
+      text: "Select a building, then look at the Properties panel. Change its Faction to assign it to a player. Make sure you have at least two factions."
+      highlight_ui: "properties_panel.faction"
+      spotlight: true
+      action:
+        type: set_attribute
+        attribute: faction
+      validation:
+        type: attribute_set
+        attribute: faction
+        distinct_values_min: 2
+
+    - id: preview
+      title: "Preview Your Scenario"
+      text: "Click Preview to see your scenario running! The editor will launch a quick simulation of your map."
+      highlight_ui: "workflow_buttons.preview"
+      spotlight: true
+      action:
+        type: click_button
+        button: preview
+      validation:
+        type: preview_launched
+
+    - id: complete
+      title: "Tour Complete!"
+      text: "You've created your first scenario! From here, explore triggers and modules to add mission logic. Press F1 on any element for detailed help."
+      position: screen_center
+      action: null
+      validation: null
+</code></pre>
+<p><strong>Tour step fields:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>id</code></td><td>string</td><td>Unique step identifier within the tour</td></tr>
+<tr><td><code>title</code></td><td>string</td><td>Step heading shown in the callout bubble</td></tr>
+<tr><td><code>text</code></td><td>string</td><td>Instructional text (kept short and action-oriented)</td></tr>
+<tr><td><code>highlight_ui</code></td><td>string?</td><td>Logical UI element ID to highlight (uses <code>UiAnchorAlias</code> resolution)</td></tr>
+<tr><td><code>spotlight</code></td><td>bool</td><td>If true, dim surrounding UI and spotlight the highlighted element</td></tr>
+<tr><td><code>position</code></td><td>string?</td><td>Override callout position (<code>screen_center</code>, <code>near_element</code>, <code>bottom_bar</code>)</td></tr>
+<tr><td><code>action.type</code></td><td>string</td><td>What the creator should do: <code>mode_switch</code>, <code>paint</code>, <code>place_entity</code>, <code>set_attribute</code>, <code>click_button</code>, <code>select_item</code>, <code>open_panel</code></td></tr>
+<tr><td><code>validation.type</code></td><td>string</td><td>How the engine confirms completion: <code>action_performed</code>, <code>cell_count</code>, <code>entity_count</code>, <code>attribute_set</code>, <code>preview_launched</code>, <code>file_saved</code>, <code>custom_lua</code></td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="tour-catalog"><a class="header" href="#tour-catalog">Tour Catalog</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tour ID</th><th>Tool</th><th>Steps</th><th>Target Profile</th><th>Est. Time</th></tr>
+</thead>
+<tbody>
+<tr><td><code>scenario_editor_basics</code></td><td>Scenario Editor</td><td>8</td><td>new_to_editing</td><td>10 min</td></tr>
+<tr><td><code>terrain_deep_dive</code></td><td>Scenario Editor</td><td>6</td><td>new_to_editing</td><td>8 min</td></tr>
+<tr><td><code>trigger_logic_101</code></td><td>Scenario Editor</td><td>7</td><td>new_to_editing, aoe2</td><td>12 min</td></tr>
+<tr><td><code>module_system</code></td><td>Scenario Editor</td><td>5</td><td>new_to_editing, ofp_eden</td><td>8 min</td></tr>
+<tr><td><code>lua_scripting_intro</code></td><td>Scenario Editor</td><td>6</td><td>new_to_editing</td><td>15 min</td></tr>
+<tr><td><code>asset_studio_basics</code></td><td>Asset Studio</td><td>6</td><td>new_to_editing</td><td>8 min</td></tr>
+<tr><td><code>campaign_editor_basics</code></td><td>Campaign Editor</td><td>5</td><td>new_to_editing</td><td>10 min</td></tr>
+<tr><td><code>aoe2_migration</code></td><td>Scenario Editor</td><td>4</td><td>aoe2</td><td>5 min</td></tr>
+<tr><td><code>ofp_migration</code></td><td>Scenario Editor</td><td>4</td><td>ofp_eden</td><td>5 min</td></tr>
+<tr><td><code>publish_workflow</code></td><td>All tools</td><td>5</td><td>all</td><td>8 min</td></tr>
+</tbody>
+</table>
+</div>
+<p>Migration tours (<code>aoe2_migration</code>, <code>ofp_migration</code>) are triggered automatically when the creator selects a “Coming From” profile on first SDK launch. They highlight IC equivalents for familiar concepts: “In AoE2 you use Triggers with Conditions and Effects. In IC, the same idea is split between Triggers (simple) and Modules (composable).”</p>
+<h4 id="tour-entry-points"><a class="header" href="#tour-entry-points">Tour Entry Points</a></h4>
+<ul>
+<li><strong>SDK Start Screen:</strong> “New to the SDK? [Start Guided Tour]” — shown on first launch or if no tours have been completed</li>
+<li><strong>Tab bar:</strong> Small tour icon (<code>?</code>) in the tool tab bar. Clicking it opens the relevant tour for that tool</li>
+<li><strong>Help menu:</strong> <code>Help → Guided Tours</code> lists all available tours with completion status</li>
+<li><strong>“Coming From” auto-trigger:</strong> Selecting a “Coming From” profile on first launch starts the corresponding migration tour</li>
+<li><strong>Console:</strong> <code>/tour list</code>, <code>/tour start &lt;id&gt;</code>, <code>/tour reset</code>, <code>/tour resume</code></li>
+</ul>
+<h4 id="tour-ux"><a class="header" href="#tour-ux">Tour UX</a></h4>
+<pre><code>┌──────────────────────────────────────────────────────────────────┐
+│                                                                  │
+│           ┌────────── dimmed ──────────┐                         │
+│           │                            │                         │
+│           │    ┌──────────────┐        │                         │
+│           │    │ ✦ SPOTLIGHT  │        │                         │
+│           │    │  (Terrain    │        │                         │
+│           │    │   tab)       │        │                         │
+│           │    └──────────────┘        │                         │
+│           │         ▼                  │                         │
+│           │  ┌─────────────────────┐   │                         │
+│           │  │ Step 2 of 8         │   │                         │
+│           │  │                     │   │                         │
+│           │  │ Terrain Painting    │   │                         │
+│           │  │ Click the Terrain   │   │                         │
+│           │  │ tab to start...     │   │                         │
+│           │  │                     │   │                         │
+│           │  │ [◄ Back] [Skip] [►] │   │                         │
+│           │  └─────────────────────┘   │                         │
+│           │                            │                         │
+│           └────────────────────────────┘                         │
+│                                                                  │
+│  ═══════════════════════════════════════                          │
+│  ●●○○○○○○  Scenario Editor Basics  [✕ Exit Tour]                 │
+│  ═══════════════════════════════════════                          │
+└──────────────────────────────────────────────────────────────────┘
+</code></pre>
+<ul>
+<li><strong>Progress bar</strong> at the bottom shows step dots and tour title</li>
+<li><strong>Callout bubble</strong> appears near the highlighted element with title, text, and navigation buttons</li>
+<li><strong>Back/Skip/Next</strong> buttons — Back replays the previous step, Skip advances without validation, Next advances after validation passes</li>
+<li><strong>Exit Tour</strong> (<code>✕</code>) pauses the tour and saves progress; the tour can be resumed later from the tab bar icon or console</li>
+</ul>
+<h4 id="tour-history-sqlite"><a class="header" href="#tour-history-sqlite">Tour History (SQLite)</a></h4>
+<pre><code class="language-sql">-- In editor.db (separate from player.db — ic-editor is a separate binary)
+CREATE TABLE sdk_tour_history (
+    tour_id       TEXT NOT NULL,
+    step_id       TEXT NOT NULL,
+    completed     BOOLEAN NOT NULL DEFAULT FALSE,
+    skipped       BOOLEAN NOT NULL DEFAULT FALSE,
+    completed_at  INTEGER,          -- Unix timestamp
+    PRIMARY KEY (tour_id, step_id)
+);
+</code></pre>
+<p>Tour completion unlocks a subtle “Tour Completed” badge in the SDK Start Screen’s tour list. No forced gatekeeping — completing tours is encouraged, not required.</p>
+<h4 id="tour-authoring-by-modders"><a class="header" href="#tour-authoring-by-modders">Tour Authoring by Modders</a></h4>
+<p>Modders can define tours for their editor extensions and total conversions using the same YAML schema. Tours are distributed via Workshop alongside the mod that defines them. The SDK discovers tour YAML files in the active mod’s <code>sdk/tours/</code> directory and adds them to <code>Help → Guided Tours</code>.</p>
+<p>This enables mod communities to ship onboarding for their custom editor modules, new terrain types, or unique trigger actions — the same way D065’s <code>mod_specific</code> hints let gameplay mods teach their mechanics.</p>
+<h4 id="relationship-to-d065"><a class="header" href="#relationship-to-d065">Relationship to D065</a></h4>
+<p>The SDK tour engine and D065’s Layer 2 hint system share architectural DNA:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Concept</th><th>D065 Layer 2 (Game Hints)</th><th>D038 Tours (SDK)</th></tr>
+</thead>
+<tbody>
+<tr><td>Definition format</td><td>YAML</td><td>YAML</td></tr>
+<tr><td>Trigger evaluation</td><td>Game-state + UI-context</td><td>Editor UI events</td></tr>
+<tr><td>Suppression/history</td><td><code>hint_history</code> in <code>player.db</code></td><td><code>sdk_tour_history</code> in <code>editor.db</code></td></tr>
+<tr><td>Dismissal</td><td>Per-hint “Don’t show again”</td><td>Per-tour “Exit Tour” + resume</td></tr>
+<tr><td>Multi-step</td><td>No (single-shot tips)</td><td>Yes (ordered step sequences with validation)</td></tr>
+<tr><td>Modder-extensible</td><td>Yes (YAML + Lua triggers)</td><td>Yes (YAML tours in mod <code>sdk/tours/</code>)</td></tr>
+<tr><td>QoL toggle</td><td>Per-category in Settings</td><td>Tour prompts toggle in SDK Preferences</td></tr>
+</tbody>
+</table>
+</div>
+<p>The two systems are deliberately separate implementations in separate binaries (<code>ic-game</code> vs <code>ic-editor</code>) but follow the same design language so creators who’ve played the game recognize the interaction pattern.</p>
+<h3 id="embedded-authoring-manual--context-help-d038--d037-knowledge-base-integration"><a class="header" href="#embedded-authoring-manual--context-help-d038--d037-knowledge-base-integration">Embedded Authoring Manual &amp; Context Help (D038 + D037 Knowledge Base Integration)</a></h3>
+<p>Powerful editors fail if users cannot discover what each flag, parameter, trigger action, module field, and script hook actually does. IC should ship an <strong>embedded authoring manual</strong> in the SDK, backed by the same D037 knowledge base content (no duplicate documentation system).</p>
+<p><strong>Design goals:</strong></p>
+<ul>
+<li><strong>“What is possible?” discoverability</strong> for advanced creators (OFP/ArmA-style reference depth)</li>
+<li><strong>Fast, contextual answers</strong> without leaving the editor</li>
+<li><strong>Single source of truth</strong> shared between web docs and SDK embedded help</li>
+<li><strong>Version-correct documentation</strong> for the SDK version/project schema the creator is using</li>
+</ul>
+<p><strong>Required SDK help surfaces:</strong></p>
+<ul>
+<li><strong>Global Documentation Browser</strong> (<code>Help</code> / SDK Start Screen → <code>Documentation</code>)
+<ul>
+<li>searchable by term, alias, and old-engine vocabulary (“trigger area”, “waypoint”, “SQF equivalent”, “OpenRA trait alias”)</li>
+<li>filters by domain (<code>Scenario Editor</code>, <code>Campaign Editor</code>, <code>Asset Studio</code>, <code>Lua</code>, <code>WASM</code>, <code>CLI</code>, <code>Export</code>)</li>
+</ul>
+</li>
+<li><strong>Context Help (<code>F1</code>)</strong>
+<ul>
+<li>opens the exact docs page/anchor for the selected field, module, trigger condition/action, command, or warning</li>
+</ul>
+</li>
+<li><strong>Inline <code>?</code> tooltips / “What is this?”</strong>
+<ul>
+<li>concise summary + constraints + defaults + “Open full docs”</li>
+</ul>
+</li>
+<li><strong>Examples panel</strong>
+<ul>
+<li>short snippets (YAML/Lua) and common usage patterns linked from the current feature</li>
+</ul>
+</li>
+</ul>
+<p><strong>Documentation coverage (authoring-focused):</strong></p>
+<ul>
+<li>every editor-exposed parameter/field: meaning, type, accepted values, default, range, side effects</li>
+<li>every trigger condition/action and module field</li>
+<li>every script command/API function (Lua, later WASM host calls)</li>
+<li>every CLI command/flag relevant to creator workflows (<code>ic mod</code>, <code>ic export</code>, validation, migration)</li>
+<li>export-safe / fidelity notes where a feature is IC-native or partially mappable (D066)</li>
+<li>deprecation/migration notes (<code>since</code>, <code>deprecated</code>, replacement)</li>
+</ul>
+<p><strong>Generation/source model (same source as D037 knowledge base):</strong></p>
+<ul>
+<li>Reference pages are generated from schema + API metadata where possible</li>
+<li>Hand-written pages/cookbook entries provide rationale, recipes, and examples</li>
+<li>SDK embeds a versioned offline snapshot and can optionally open/update from the online docs</li>
+<li>SDK docs and web docs must not drift — they are different <strong>views</strong> of the same content set</li>
+</ul>
+<p><strong>Editor metadata requirement (feeds docs + inline UX):</strong></p>
+<ul>
+<li>D038 module/trigger/field definitions should carry doc metadata (<code>summary</code>, <code>description</code>, constraints, examples, deprecation notes)</li>
+<li>Validation errors and warnings should link back to the same documentation anchors for fixes</li>
+<li>The same metadata should be available to future editor assistant features (D057) for grounded help</li>
+</ul>
+<p><strong>UX guardrail:</strong> Help must stay <strong>non-blocking</strong>. The editor should never force modal documentation before editing. Inline hints + F1 + searchable browser are the default pattern.</p>
+<h3 id="local-content-overlay--dev-profile-run-mode-d020d062-integration"><a class="header" href="#local-content-overlay--dev-profile-run-mode-d020d062-integration">Local Content Overlay &amp; Dev Profile Run Mode (D020/D062 Integration)</a></h3>
+<p>Creators should be able to test local scenarios/mod content through the <strong>real game runtime flow</strong> without packaging or publishing on every iteration. The SDK should expose this as a first-class workflow rather than forcing a package/install loop.</p>
+<p><strong>Principle: one runtime, two content-resolution contexts</strong></p>
+<ul>
+<li>The SDK does <strong>not</strong> launch a fake “editor-only runtime.”</li>
+<li><code>Play in Game</code> / <code>Run Local Content</code> launches the normal <code>ic-game</code> runtime path with a <strong>local development profile / overlay</strong> (D020 + D062).</li>
+<li>This keeps testing realistic (menus, loading, runtime init, D069 setup interactions where applicable) and avoids “works in preview, breaks in game” drift.</li>
+</ul>
+<p><strong>Required workflow behavior:</strong></p>
+<ul>
+<li><strong>One-click local playtest from SDK</strong> for the current scenario/campaign/mod context</li>
+<li><strong>Local overlay precedence</strong> for the active project/session only (local files override installed content for that session)</li>
+<li><strong>Clear indicators</strong> in the launched game and SDK session (“Local Content Overlay Active”, profile name/source)</li>
+<li><strong>Optional hot-reload handoff</strong> for YAML/Lua-friendly changes where supported (integrates with D020 <code>ic mod watch</code>)</li>
+<li><strong>No packaging/publish requirement</strong> before local testing</li>
+<li><strong>No silent mutation</strong> of installed Workshop packages or shared profiles</li>
+</ul>
+<p><strong>Relation to existing D038 surfaces:</strong></p>
+<ul>
+<li><code>Preview</code> remains the fastest in-editor loop</li>
+<li><code>Test</code> / <code>Play in Game</code> uses the real runtime path with the local dev overlay</li>
+<li><code>Validate</code> and <code>Publish</code> remain explicit downstream steps (Git-first and Publish Readiness rules unchanged)</li>
+</ul>
+<p><strong>UX guardrail:</strong> This workflow is a DX acceleration feature, not a new content source model. It must remain consistent with D062 profile/fingerprint boundaries and multiplayer compatibility rules (local dev overlays are local and non-canonical until packaged/published).</p>
+<h3 id="migration-workbench-sdk-ui-over-ic-mod-migrate"><a class="header" href="#migration-workbench-sdk-ui-over-ic-mod-migrate">Migration Workbench (SDK UI over <code>ic mod migrate</code>)</a></h3>
+<p>IC already commits to migration scripts and deprecation warnings at the CLI/API layer (see <code>04-MODDING.md</code> § “Mod API Stability &amp; Compatibility”). The SDK adds a <strong>Migration Workbench</strong> as a visual wrapper over that same migration engine — not a second migration system.</p>
+<p><strong>Phase 6a (read-only, low-friction):</strong></p>
+<ul>
+<li><strong>Upgrade Project</strong> action on the SDK start screen and project menu</li>
+<li><strong>Deprecation dashboard</strong> aggregating warnings from <code>ic mod check</code> / schema deprecations / editor file format deprecations</li>
+<li><strong>Migration preview</strong> showing what <code>ic mod migrate</code> would change (read-only diff/report)</li>
+<li><strong>Report export</strong> for code review or team handoff</li>
+</ul>
+<p><strong>Phase 6b (apply mode):</strong></p>
+<ul>
+<li>Apply migration from the SDK using the same backend as the CLI</li>
+<li>Automatic rollback snapshot before apply</li>
+<li>Prompt to run <code>Validate</code> after migration</li>
+<li>Prompt to re-check export compatibility (OpenRA/RA1) if export-safe mode is enabled</li>
+</ul>
+<p>The default SDK flow remains unchanged for casual creators. If a project opens cleanly, the Migration Workbench stays out of the way.</p>
+<h3 id="controller--steam-deck-support"><a class="header" href="#controller--steam-deck-support">Controller &amp; Steam Deck Support</a></h3>
+<p>Steam Deck is a target platform (Invariant #10), so the editor must be usable without mouse+keyboard — but it doesn’t need to be <em>equally</em> powerful. The approach: full functionality on mouse+keyboard, comfortable core workflows on controller.</p>
+<ul>
+<li><strong>Controller input mapping:</strong> Left stick for cursor movement (with adjustable acceleration), right stick for camera pan/zoom. D-pad cycles editing modes. Face buttons: place (A), delete (B), properties panel (X), context menu (Y). Triggers: undo (LT), redo (RT). Bumpers: cycle selected entity type</li>
+<li><strong>Radial menus</strong> — controller-optimized selection wheels for entity types, trigger types, and module categories (replacing mouse-dependent dropdowns)</li>
+<li><strong>Snap-to-grid</strong> — always active on controller (optional on mouse) to compensate for lower cursor precision</li>
+<li><strong>Touch input (Steam Deck / mobile):</strong> Tap to place, pinch to zoom, two-finger drag to pan. Long press for properties panel. Touch works as a complement to controller, not a replacement for mouse</li>
+<li><strong>Scope:</strong> Core editing (terrain, entity placement, triggers, waypoints, modules, preview) is controller-compatible at launch. Advanced features (inline Lua editing, campaign graph wiring, dialogue tree authoring) require keyboard and are flagged in the UI: “Connect a keyboard for this feature.” This is the same trade-off Eden Editor made — and Steam Deck has a built-in keyboard for occasional text entry</li>
+</ul>
+<p><strong>Phase:</strong> Controller input for the editor ships with Phase 6a. Touch input is Phase 7.</p>
+<h3 id="accessibility"><a class="header" href="#accessibility">Accessibility</a></h3>
+<p>The editor’s “accessibility through layered complexity” principle applies to disability access, not just skill tiers. These features ensure the editor is usable by the widest possible audience.</p>
+<p><strong>Visual accessibility:</strong></p>
+<ul>
+<li><strong>Colorblind modes</strong> — all color-coded elements (trigger folders, layer colors, region colors, connection lines, complexity meter) use a palette designed for deuteranopia, protanopia, and tritanopia. In addition to color, elements use distinct <strong>shapes and patterns</strong> (dashed vs solid lines, different node shapes) so color is never the only differentiator</li>
+<li><strong>High contrast mode</strong> — editor UI switches to high-contrast theme with stronger borders and larger text. Toggle in editor settings</li>
+<li><strong>Scalable UI</strong> — all editor panels respect the game’s global UI scale setting (50%–200%). Editor-specific elements (attribute labels, trigger text, node labels) scale independently if needed</li>
+<li><strong>Zoom and magnification</strong> — the isometric viewport supports arbitrary zoom levels. Combined with UI scaling, users with low vision can work at comfortable magnification</li>
+</ul>
+<p><strong>Motor accessibility:</strong></p>
+<ul>
+<li><strong>Full keyboard navigation</strong> — every editor operation is reachable via keyboard. Tab cycles panels, arrow keys navigate within panels, Enter confirms, Escape cancels. No operation requires mouse-only gestures</li>
+<li><strong>Adjustable click timing</strong> — double-click speed and drag thresholds are configurable for users with reduced dexterity</li>
+<li><strong>Sticky modes</strong> — editing modes (terrain, entity, trigger) stay active until explicitly switched, rather than requiring held modifier keys</li>
+</ul>
+<p><strong>Cognitive accessibility:</strong></p>
+<ul>
+<li><strong>Simple/Advanced mode</strong> (already designed) is the primary cognitive accessibility feature — it reduces the number of visible options from 30+ to ~10</li>
+<li><strong>Consistent layout</strong> — panels don’t rearrange based on context. The attributes panel is always on the right, the mode selector always on the left. Predictable layout reduces cognitive load</li>
+<li><strong>Tooltips with examples</strong> — every field in the attributes panel has a tooltip with a concrete example, not just a description. “Probability of Presence: 75” → tooltip: “75% chance this unit exists when the mission starts. Example: set to 50 for a coin-flip ambush.”</li>
+</ul>
+<p><strong>Phase:</strong> Colorblind modes, UI scaling, and keyboard navigation ship with Phase 6a. High contrast mode and motor accessibility refinements ship in Phase 6b–7.</p>
+<blockquote>
+<p><strong>Note:</strong> The accessibility features above cover the <strong>editor</strong> UI. <strong>Game-level accessibility</strong> — colorblind faction colors, minimap palettes, resource differentiation, screen reader support for menus, subtitle options for EVA/briefings, and remappable controls — is a separate concern that applies to <code>ic-render</code> and <code>ic-ui</code>, not <code>ic-editor</code>. Game accessibility ships in Phase 7 (see <code>08-ROADMAP.md</code>).</p>
+</blockquote>
+<h3 id="export-pipeline-integration-d066"><a class="header" href="#export-pipeline-integration-d066">Export Pipeline Integration (D066)</a></h3>
+<p>IC scenarios and campaigns can be exported to other Red Alert implementations. The full export architecture is defined in D066 (Cross-Engine Export &amp; Editor Extensibility, in <code>src/decisions/09c-modding.md</code>). This section summarizes the editor integration points.</p>
+<h4 id="export-targets"><a class="header" href="#export-targets">Export Targets</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Target</th><th>Output Format</th><th>Coverage</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>IC Native</strong></td><td><code>.icscn</code> / <code>.iccampaign</code> (YAML)</td><td>Full fidelity (default)</td></tr>
+<tr><td><strong>OpenRA</strong></td><td><code>.oramap</code> ZIP (map.yaml + map.bin + lua/) + MiniYAML rules + mod.yaml</td><td>High fidelity for standard RTS features; IC-specific features degrade with warnings</td></tr>
+<tr><td><strong>Original Red Alert</strong></td><td><code>rules.ini</code> + <code>.bin</code> (terrain) + <code>.mpr</code> (mission) + <code>.shp</code>/<code>.pal</code>/<code>.aud</code>/<code>.mix</code></td><td>Moderate fidelity; complex triggers downcompile via pattern matching</td></tr>
+</tbody>
+</table>
+</div>
+<p>Export is intentionally <strong>lossy</strong> — IC-specific features (sub-scenario portals, weather system, veterancy, conditions/multipliers, advanced Lua triggers) are stripped with structured fidelity warnings. The philosophy: honest about limitations, never silently drops content.</p>
+<h4 id="export-safe-authoring-mode"><a class="header" href="#export-safe-authoring-mode">Export-Safe Authoring Mode</a></h4>
+<p>When a creator selects an export target in the editor toolbar:</p>
+<ul>
+<li><strong>Feature gating</strong> — IC-only features are grayed out or hidden (same data model, reduced UI surface)</li>
+<li><strong>Live fidelity indicators</strong> — traffic-light badges (green/yellow/red) on each entity, trigger, and module:
+<ul>
+<li>Green: exports cleanly</li>
+<li>Yellow: exports with degradation (tooltip explains what changes)</li>
+<li>Red: cannot export (feature has no equivalent in the target)</li>
+</ul>
+</li>
+<li><strong>Export-safe trigger templates</strong> — pre-built trigger patterns guaranteed to downcompile cleanly to the target format. Available in the trigger palette when export mode is active</li>
+</ul>
+<h4 id="trigger-downcompilation-lua--target-triggers"><a class="header" href="#trigger-downcompilation-lua--target-triggers">Trigger Downcompilation (Lua → Target Triggers)</a></h4>
+<p>D066 uses <strong>pattern-based downcompilation</strong> (not general transpilation) for converting IC Lua triggers to target formats:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>IC Lua Pattern</th><th>RA1 / OpenRA Equivalent</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Trigger.AfterDelay(ticks, fn)</code></td><td>Timed trigger</td></tr>
+<tr><td><code>Trigger.OnEnteredFootprint(cells, fn)</code></td><td>Cell trigger</td></tr>
+<tr><td><code>Trigger.OnKilled(actor, fn)</code></td><td>Destroyed trigger</td></tr>
+<tr><td><code>Actor.Create(type, owner, pos)</code></td><td>Teamtype + reinforcement</td></tr>
+<tr><td><code>actor:Attack(target)</code></td><td>Teamtype attack waypoint</td></tr>
+<tr><td><code>Media.PlaySpeech(name)</code></td><td>EVA speech action</td></tr>
+<tr><td><code>Mission.Complete("victory")</code></td><td>Win trigger</td></tr>
+<tr><td><code>Mission.Complete("defeat")</code></td><td>Lose trigger</td></tr>
+</tbody>
+</table>
+</div>
+<p>Unrecognized Lua patterns → fidelity warning with the code highlighted. The creator can simplify the logic or accept the limitation.</p>
+<h4 id="editor-export-workflow"><a class="header" href="#editor-export-workflow">Editor Export Workflow</a></h4>
+<pre><code>┌─────────────┐    ┌──────────────────┐    ┌─────────────┐    ┌──────────┐
+│ Select       │───►│ Validate with     │───►│ Export       │───►│ Output   │
+│ Export Target│    │ target constraints │    │ Preview      │    │ files    │
+└─────────────┘    └──────────────────┘    │ (fidelity   │    └──────────┘
+                                           │  report)     │
+                                           └─────────────┘
+</code></pre>
+<ul>
+<li><strong>Validate</strong> checks the scenario against the export target’s constraints (map size limits, trigger compatibility, supported unit types)</li>
+<li><strong>Export Preview</strong> shows the fidelity report — what exports cleanly, what degrades, what is stripped</li>
+<li><strong>Export</strong> writes the output files to a directory</li>
+</ul>
+<h4 id="cli-export"><a class="header" href="#cli-export">CLI Export</a></h4>
+<pre><code class="language-bash">ic export --target openra mission.yaml -o ./output/
+ic export --target ra1 campaign.yaml -o ./output/ --fidelity-report report.json
+ic export --target openra --dry-run mission.yaml    # fidelity check only
+ic export --target ra1,openra,ic maps/ -o ./export/  # batch export to multiple targets
+</code></pre>
+<h4 id="extensible-export-targets"><a class="header" href="#extensible-export-targets">Extensible Export Targets</a></h4>
+<p>D066’s <code>ExportTarget</code> trait is a pluggable interface — not hardcoded for RA1/OpenRA. Community contributors can add export targets (Tiberian Sun, RA2, Remastered, etc.) via WASM (Tier 3) editor plugins distributed through Workshop. The pattern: the IC scenario editor becomes a <strong>universal C&amp;C mission authoring tool</strong> that can target any engine in the ecosystem.</p>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ol>
+<li><strong>In-game editor (original design, revised by D040):</strong> The original D038 design embedded the editor inside the game binary. Revised to SDK-separate architecture — players shouldn’t see creator tools. The SDK still reuses the same Bevy rendering and sim crates, so there’s no loss of live preview capability. See D040 § SDK Architecture for the full rationale.</li>
+<li><strong>Text-only editing (YAML + Lua):</strong> Already supported for power users and LLM generation. The visual editor is the accessibility layer on top of the same data format.</li>
+<li><strong>Node-based visual scripting (like Unreal Blueprints):</strong> Too complex for the casual audience. Modules + triggers cover the sweet spot. Advanced users write Lua directly. A node editor is a potential Phase 7+ community contribution.</li>
+<li><strong>LLM as editor assistant (structured tool-calling):</strong> Not an alternative — a complementary layer. See D016 § “LLM-Callable Editor Tool Bindings” for the Phase 7 design that exposes editor operations as LLM-invokable tools. The editor command registry (Phase 6a) should be designed with this future integration in mind.</li>
+</ol>
+<p><strong>Phase:</strong> Core scenario editor (terrain + entities + triggers + waypoints + modules + compositions + preview + autosave + controller input + accessibility) ships in <strong>Phase 6a</strong> alongside the modding SDK and full Workshop. Phase 6a also adds the low-friction <strong>Validate &amp; Playtest</strong> toolbar flow (<code>Preview</code> / <code>Test</code> / <code>Validate</code> / <code>Publish</code>), Quick/Publish validation presets, non-blocking validation execution with status badges, a Publish Readiness screen, Git-first collaboration foundations (stable IDs + canonical serialization + read-only Git status + semantic diff helper), Advanced-mode <strong>Profile Playtest</strong>, and the read-only Migration Workbench preview. <strong>Phase 6b</strong> ships campaign editor maturity features (graph/state/dashboard/intermissions/dialogue/named characters), game mode templates, multiplayer/co-op scenario tools, Game Master mode, advanced validation presets/batch validation, semantic merge helper + optional conflict resolver panel, Migration Workbench apply mode with rollback, and the Advanced-only Localization &amp; Subtitle Workbench. Editor onboarding (“Coming From” profiles, keybinding presets, migration cheat sheets, partial import) and touch input ship in <strong>Phase 7</strong>. The campaign editor’s graph, state dashboard, and intermission screens build on D021’s campaign system (Phase 4) — the sim-side campaign engine must exist before the visual editor can drive it.</p>
+<hr>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../decisions/09f/D038/D038-game-master-replay-multiplayer.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../decisions/09f/D040-asset-studio.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../decisions/09f/D038/D038-game-master-replay-multiplayer.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../decisions/09f/D040-asset-studio.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../../mark-09e88c2c.min.js"></script>
+        <script src="../../../searcher-c2a407aa.js"></script>
+
+        <script src="../../../clipboard-1626706a.min.js"></script>
+        <script src="../../../highlight-abc7f01d.js"></script>
+        <script src="../../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

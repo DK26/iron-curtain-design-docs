@@ -121,13 +121,13 @@ pub enum SignalingMessage {
 
 **Default implementations:**
 
-| Implementation        | Mechanism                      | When Used                   | Phase  |
-| --------------------- | ------------------------------ | --------------------------- | ------ |
-| `RelaySignaling`      | Relay server brokers           | Relay multiplayer (default) | 5      |
-| `RendezvousSignaling` | Lightweight rendezvous + punch | Join code / QR to hosted relay | 5   |
-| `DirectSignaling`     | Out-of-band (no server)        | Direct IP to host/dedicated relay | 5 |
-| `WebRtcSignaling`     | WebRTC signaling server        | Browser WASM hosted sessions | Future |
-| `MemorySignaling`     | In-process channels            | Tests                       | 2      |
+| Implementation        | Mechanism                      | When Used                         | Phase  |
+| --------------------- | ------------------------------ | --------------------------------- | ------ |
+| `RelaySignaling`      | Relay server brokers           | Relay multiplayer (default)       | 5      |
+| `RendezvousSignaling` | Lightweight rendezvous + punch | Join code / QR to hosted relay    | 5      |
+| `DirectSignaling`     | Out-of-band (no server)        | Direct IP to host/dedicated relay | 5      |
+| `WebRtcSignaling`     | WebRTC signaling server        | Browser WASM hosted sessions      | Future |
+| `MemorySignaling`     | In-process channels            | Tests                             | 2      |
 
 This decoupling means adding a new connection method (e.g., Steam Networking Sockets or Epic Online Services signaling backends) requires only implementing `Signaling`, not modifying `NetworkModel` or `Transport`. The GNS precedent validates this — GNS users can plug in custom signaling for non-Steam platforms while keeping the same transport and reliability layer.
 

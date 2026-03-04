@@ -1,0 +1,531 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>VoIP Relay &amp; Moderation - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09g/D059/D059-voip-relay-moderation.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h4 id="relay-voice-forwarding"><a class="header" href="#relay-voice-forwarding">Relay Voice Forwarding</a></h4>
+<p>The relay server forwards voice packets with minimal processing:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Relay-side voice forwarding. Per-client, per-tick.
+/// The relay does NOT decode Opus — it forwards opaque bytes.
+/// This keeps relay CPU cost near zero for voice.
+impl RelaySession {
+    fn forward_voice(&amp;mut self, from: PlayerId, packet: &amp;VoicePacket) {
+        // 1. Validate: is this player allowed to speak? (not muted, not observer in competitive)
+        if self.is_muted(from) { return; }
+
+        // 2. Rate limit: max voice_packets_per_second per player (default 50 = 1 per 20ms)
+        if !self.voice_rate_limiter.check(from) { return; }
+
+        // 3. Stamp speaker ID (overwrite whatever the client sent)
+        let mut forwarded = packet.clone();
+        forwarded.speaker = from;
+
+        // 4. Route based on VoiceTarget
+        match packet.target {
+            VoiceTarget::All =&gt; {
+                for client in &amp;self.clients {
+                    if client.id != from &amp;&amp; !client.has_muted(from) {
+                        client.send_voice(&amp;forwarded);
+                    }
+                }
+            }
+            VoiceTarget::Team =&gt; {
+                for client in &amp;self.clients {
+                    if client.id != from
+                        &amp;&amp; client.team == self.clients[from].team
+                        &amp;&amp; !client.has_muted(from)
+                    {
+                        client.send_voice(&amp;forwarded);
+                    }
+                }
+            }
+            VoiceTarget::Player(target) =&gt; {
+                if let Some(client) = self.clients.get(target) {
+                    if !client.has_muted(from) {
+                        client.send_voice(&amp;forwarded);
+                    }
+                }
+            }
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Relay bandwidth cost:</strong> The relay is a packet reflector for voice — it copies bytes without decoding. For an 8-player game where 2 players speak simultaneously at the default 32 kbps, the relay transmits: 2 speakers × 7 recipients × 5.4 KB/s = ~75.6 KB/s outbound. This is negligible for a server. The relay already handles order forwarding; voice adds proportionally small overhead.</p>
+<h4 id="spatial-audio-optional"><a class="header" href="#spatial-audio-optional">Spatial Audio (Optional)</a></h4>
+<p>Inspired by ioquake3’s <code>VOIP_SPATIAL</code> flag and Mumble’s positional audio plugin:</p>
+<p>When <code>VoiceFlags::SPATIAL</code> is set, the receiving client spatializes the voice based on the speaker’s in-game position. The speaker’s position is derived from their primary selection or camera center — NOT transmitted in the voice packet (that would leak tactical information). The receiver’s client already knows all unit positions (lockstep sim), so it can compute relative direction and distance locally.</p>
+<p><strong>Spatial audio is a D033 QoL toggle</strong> (<code>voice.spatial_audio: bool</code>, default <code>false</code>). When enabled, teammates’ voice is panned left/right based on where their units are on the map. This creates a natural “war room” effect — you hear your ally to your left when their base is left of yours.</p>
+<p><strong>Why disabled by default:</strong> Spatial voice is disorienting if unexpected. Players accustomed to centered voice chat need to opt in. Additionally, it only makes sense in team games with distinct player positions — 1v1 games get no benefit.</p>
+<h4 id="browser-wasm-voip"><a class="header" href="#browser-wasm-voip">Browser (WASM) VoIP</a></h4>
+<p>Native desktop clients use raw Opus-over-UDP through the <code>UdpTransport</code> (D054). Browser clients cannot use raw UDP — they use WebRTC for voice transport.</p>
+<p><strong>str0m</strong> (github.com/algesten/str0m) is the recommended Rust WebRTC library:</p>
+<ul>
+<li>Pure Rust, Sans I/O (no internal threads — matches IC’s architecture)</li>
+<li>Frame-level and RTP-level APIs</li>
+<li>Multiple crypto backends (aws-lc-rs, ring, OpenSSL, platform-native)</li>
+<li>Bandwidth estimation (BWE), NACK, Simulcast support</li>
+<li><code>&amp;mut self</code> pattern — no internal mutexes</li>
+<li>515+ stars, 43+ contributors, 602 dependents</li>
+</ul>
+<p>For browser builds, VoIP uses str0m’s WebRTC data channels routed through the relay. The relay bridges WebRTC ↔ raw UDP voice packets, enabling cross-platform voice between native and browser clients. The Opus payload is identical — only the transport framing differs.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// VoIP transport selection — the INITIAL transport chosen per platform.
+/// This is a static selection at connection time (platform-dependent).
+/// Runtime transport adaptation (e.g., UDP→TCP fallback) is handled by
+/// VoiceTransportState (see § "Connection Recovery" below), which is a
+/// separate state machine that manages degraded-mode transitions without
+/// changing the VoiceTransport enum.
+pub enum VoiceTransport {
+    /// Raw Opus frames on MessageLane::Voice over UdpTransport.
+    /// Desktop default. Lowest latency, lowest overhead.
+    Native,
+    /// Opus frames via WebRTC data channel (str0m).
+    /// Browser builds. Higher overhead but compatible with browser APIs.
+    WebRtc,
+}
+<span class="boring">}</span></code></pre>
+<h4 id="muting-and-moderation"><a class="header" href="#muting-and-moderation">Muting and Moderation</a></h4>
+<p>Per-player mute is client-side AND relay-enforced:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Action</th><th>Scope</th><th>Mechanism</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Player mutes</strong></td><td>Client-side</td><td>Receiver ignores voice from muted player. Also sends mute hint to relay.</td></tr>
+<tr><td><strong>Relay mute hint</strong></td><td>Server-side</td><td>Relay skips forwarding to the muting player — saves bandwidth.</td></tr>
+<tr><td><strong>Admin mute</strong></td><td>Server-side</td><td>Relay drops all voice from the muted player. Cannot be overridden.</td></tr>
+<tr><td><strong>Self-mute</strong></td><td>Client-side</td><td>PTT disabled, mic input stopped. “Muted” icon shown to other players.</td></tr>
+<tr><td><strong>Self-deafen</strong></td><td>Client-side</td><td>All incoming voice silenced. “Deafened” icon shown.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Mute persistence:</strong> Per-player mute decisions are stored in local SQLite (D034) keyed by the player’s Ed25519 public key (D052). Muting “Bob” in one game persists across future games with the same player. The relay does not store mute relationships — mute is a client preference, communicated to the relay as a routing hint.</p>
+<p><strong>Scope split (social controls vs matchmaking vs moderation):</strong></p>
+<ul>
+<li><strong>Mute</strong> (D059): communication routing and local comfort (voice/text)</li>
+<li><strong>Block</strong> (D059 + lobby/profile UI): social interaction preference (messages/invites/profile contact)</li>
+<li><strong>Avoid Player</strong> (D055): matchmaking preference, best-effort only (not a communication feature)</li>
+<li><strong>Report</strong> (D059 + D052 moderation): evidence-backed moderation signal for griefing/cheating/abuse</li>
+</ul>
+<p>This separation prevents UX confusion (“I blocked them, why did I still get matched?”) and avoids turning social tools into stealth matchmaking exploits.</p>
+<p><strong>Hotmic protection:</strong> If PTT is held continuously for longer than <code>voice.max_ptt_duration</code> (default 120 seconds, configurable), transmission is automatically cut and the player sees a “PTT timeout — release and re-press to continue” notification. This prevents stuck-key scenarios where a player unknowingly broadcasts for an entire match (keyboard malfunction, key binding conflict, cat on keyboard). Discord implements similar detection; CS2 cuts after ~60 seconds continuous transmission. The timeout resets immediately on key release — there is no cooldown.</p>
+<p><strong>Communication abuse penalties:</strong> Repeated mute/report actions against a player across multiple games trigger <strong>progressive communication restrictions</strong> on that player’s community profile (D052/D053). The community server (D052) tracks reports per player:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Threshold</th><th>Penalty</th><th>Duration</th><th>Scope</th></tr>
+</thead>
+<tbody>
+<tr><td>3 reports in 24h</td><td>Warning displayed to player</td><td>Immediate</td><td>Informational only</td></tr>
+<tr><td>5 reports in 72h</td><td>Voice-restricted: team-only voice, no all-chat voice</td><td>24 hours</td><td>Per community server</td></tr>
+<tr><td>10 reports in 7 days</td><td>Voice-muted: cannot transmit voice</td><td>72 hours</td><td>Per community server</td></tr>
+<tr><td>Repeated offenses</td><td>Escalated to community moderators (D037) for manual review</td><td>Until resolved</td><td>Per community server</td></tr>
+</tbody>
+</table>
+</div>
+<p>Thresholds are configurable per community server — tournament communities may be stricter. Penalties are community-scoped (D052 federation), not global. A player comm-banned on one community can still speak on others. Text chat follows the same escalation path. False report abuse is itself a reportable offense.</p>
+<h4 id="player-reports-and-community-review-handoff-d052-integration"><a class="header" href="#player-reports-and-community-review-handoff-d052-integration">Player Reports and Community Review Handoff (D052 integration)</a></h4>
+<p>D059 owns the <strong>reporting UX and event capture</strong>, but not final enforcement. Reports are routed to the community server’s moderation/review pipeline (D052).</p>
+<p><strong>Report categories (minimum):</strong></p>
+<ul>
+<li><code>cheating</code></li>
+<li><code>griefing / team sabotage</code></li>
+<li><code>afk / intentional idle</code></li>
+<li><code>harassment / abusive chat/voice</code></li>
+<li><code>spam / disruptive comms</code></li>
+<li><code>other</code> (freeform note)</li>
+</ul>
+<p><strong>Evidence attachment defaults (when available):</strong></p>
+<ul>
+<li>replay reference / signed replay ID (<code>.icrep</code>, D007)</li>
+<li>match ID / <code>CertifiedMatchResult</code> reference</li>
+<li>timestamps and player IDs</li>
+<li>communication context (muted/report counts, voice/text events) for abuse reports</li>
+<li>relay telemetry summary flags (disconnects/desyncs/timing anomalies) for cheating/griefing reports</li>
+</ul>
+<p><strong>UX and trust rules:</strong></p>
+<ul>
+<li>Reports are <strong>signals</strong>, not automatic guilt</li>
+<li>The UI should communicate “submitted for review” rather than “player punished”</li>
+<li>False/malicious reporting is itself sanctionable by the community server (D052/D037)</li>
+<li>Community review (Overwatch-style, if enabled) is advisory input to moderators/anti-cheat workflows, not a replacement for evidence and thresholds</li>
+</ul>
+<h4 id="jitter-buffer"><a class="header" href="#jitter-buffer">Jitter Buffer</a></h4>
+<p>Voice packets arrive with variable delay (network jitter). Without a jitter buffer, packets arriving late cause audio stuttering and packets arriving out-of-order cause gaps. Every production VoIP system uses a jitter buffer — Mumble, Discord, TeamSpeak, and WebRTC all implement one. D059 requires an <strong>adaptive jitter buffer</strong> per-speaker in <code>ic-audio</code>.</p>
+<p><strong>Design rationale:</strong> A fixed jitter buffer (constant delay) wastes latency on good networks and is insufficient on bad networks. An adaptive buffer dynamically adjusts delay based on observed inter-arrival jitter — expanding when jitter increases (prevents drops) and shrinking when jitter decreases (minimizes latency). This is the universal approach in production VoIP systems (see <code>research/open-source-voip-analysis.md</code> § 6).</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Adaptive jitter buffer for voice playback.
+/// Smooths variable packet arrival times into consistent playback.
+/// One instance per speaker, managed by ic-audio.
+///
+/// Design informed by Mumble's audio pipeline and WebRTC's NetEq.
+/// Mumble uses a similar approach with its Resynchronizer for echo
+/// cancellation timing — IC generalizes this to all voice playback.
+pub struct JitterBuffer {
+    /// Ring buffer of received voice frames, indexed by sequence number.
+    /// None entries represent lost or not-yet-arrived packets.
+    frames: VecDeque&lt;Option&lt;VoiceFrame&gt;&gt;,
+    /// Current playback delay in 20ms frame units.
+    /// E.g., delay=3 means 60ms of buffered audio before playback starts.
+    delay: u32,
+    /// Minimum delay (frames). Default: 1 (20ms).
+    min_delay: u32,
+    /// Maximum delay (frames). Default: 10 (200ms).
+    /// Above 200ms, voice feels too delayed for real-time conversation.
+    max_delay: u32,
+    /// Exponentially weighted moving average of inter-arrival jitter.
+    jitter_estimate: f32,   // f32 OK — this is I/O, not sim
+    /// Timestamp of last received frame for jitter calculation.
+    last_arrival: Instant,
+    /// Statistics: total frames received, lost, late, buffer expansions/contractions.
+    stats: JitterStats,
+}
+
+impl JitterBuffer {
+    /// Called when a voice packet arrives from the network.
+    pub fn push(&amp;mut self, sequence: u32, opus_data: &amp;[u8], now: Instant) {
+        // Update jitter estimate using EWMA
+        let arrival_delta = now - self.last_arrival;
+        let expected_delta = Duration::from_millis(20); // one frame period
+        let jitter = (arrival_delta.as_secs_f32() - expected_delta.as_secs_f32()).abs();
+        // Smoothing factor 0.9 — reacts within ~10 packets to jitter changes
+        self.jitter_estimate = 0.9 * self.jitter_estimate + 0.1 * jitter;
+        self.last_arrival = now;
+        
+        // Insert frame at correct position based on sequence number.
+        // Handles out-of-order delivery by placing in the correct slot.
+        self.insert_frame(sequence, opus_data);
+        
+        // Adapt buffer depth based on current jitter estimate
+        self.adapt_delay();
+    }
+    
+    /// Called every 20ms by the audio render thread.
+    /// Returns the next frame to play, or None if the frame is missing.
+    /// On None, the caller invokes Opus PLC (decoder with null input)
+    /// to generate concealment audio from the previous frame's spectral envelope.
+    pub fn pop(&amp;mut self) -&gt; Option&lt;VoiceFrame&gt; {
+        self.frames.pop_front().flatten()
+    }
+    
+    fn adapt_delay(&amp;mut self) {
+        // Target: 2× jitter estimate + 1 frame covers ~95% of variance
+        let target = ((2.0 * self.jitter_estimate * 50.0) as u32 + 1)
+            .clamp(self.min_delay, self.max_delay);
+        
+        if target &gt; self.delay {
+            // Increase delay: expand buffer immediately (insert silence frame)
+            self.delay += 1;
+        } else if target + 2 &lt; self.delay {
+            // Decrease delay: only when significantly over-buffered
+            // Hysteresis of 2 frames prevents oscillation on borderline networks
+            self.delay -= 1;
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Packet Loss Concealment (PLC) integration:</strong> When <code>pop()</code> returns <code>None</code> (missing frame due to packet loss), the Opus decoder is called with null input (<code>opus_decode(null, 0, ...)</code>) to generate PLC audio. Opus’s built-in PLC extrapolates from the previous frame’s spectral envelope, producing a smooth fade-out over 3-5 lost frames. At 5% packet loss, PLC is barely audible. At 15% loss, artifacts become noticeable — this is where the <code>VoiceBitrateAdapter</code> reduces bitrate and increases FEC allocation. Combined with dynamic <code>OPUS_SET_PACKET_LOSS_PERC</code> (see Adaptive Bitrate above), the encoder and decoder cooperate: the encoder allocates more bits to FEC when loss is high, and the decoder conceals any remaining gaps.</p>
+<h4 id="udp-connectivity-checks-and-tcp-tunnel-fallback"><a class="header" href="#udp-connectivity-checks-and-tcp-tunnel-fallback">UDP Connectivity Checks and TCP Tunnel Fallback</a></h4>
+<p>Learned from Mumble’s protocol (see <code>research/open-source-voip-analysis.md</code> § 7): some networks block or heavily throttle UDP (corporate firewalls, restrictive NATs, aggressive ISP rate limiting). D059 must not assume voice always uses UDP.</p>
+<p>Mumble solves this with a graceful fallback: the client sends periodic UDP ping packets; if responses stop, voice is tunneled through the TCP control connection transparently. IC adopts this pattern:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Voice transport state machine. Manages UDP/TCP fallback for voice.
+/// Runs on each client independently. The relay accepts voice from
+/// either transport — it doesn't care how the bytes arrived.
+pub enum VoiceTransportState {
+    /// UDP voice active. UDP pings succeeding.
+    /// Default state when connection is established.
+    UdpActive,
+    /// UDP pings failing. Testing connectivity.
+    /// Voice is tunneled through TCP/WebSocket during this state.
+    /// UDP pings continue in background to detect recovery.
+    UdpProbing {
+        last_ping: Instant,
+        consecutive_failures: u8,  // switch to TcpTunnel after 5 failures
+    },
+    /// UDP confirmed unavailable. Voice fully tunneled through TCP.
+    /// Higher latency (~20-50ms from TCP queuing) but maintains connectivity.
+    /// UDP pings continue every 5 seconds to detect recovery.
+    TcpTunnel,
+    /// UDP restored after tunnel period. Transitioning back.
+    /// Requires 3 consecutive successful UDP pings before switching.
+    UdpRestoring { consecutive_successes: u8 },
+}
+<span class="boring">}</span></code></pre>
+<p><strong>How TCP tunneling works:</strong> Voice frames use the same <code>VoicePacket</code> binary format regardless of transport. When tunneled through TCP, voice packets are sent as a distinct message type on the existing control connection — the relay identifies the message type and forwards the voice payload normally. The relay doesn’t care whether voice arrived via UDP or TCP; it stamps the speaker ID and forwards to recipients.</p>
+<p><strong>UI indicator:</strong> A small icon in the voice overlay shows the transport state — “Direct” (UDP, normal) or “Tunneled” (TCP, yellow warning icon). Tunneled voice has ~20-50ms additional latency from TCP head-of-line blocking but is preferable to no voice at all.</p>
+<p><strong>Implementation phasing note (from Mumble documentation):</strong> “When implementing the protocol it is easier to ignore the UDP transfer layer at first and just tunnel the UDP data through the TCP tunnel. The TCP layer must be implemented for authentication in any case.” This matches IC’s phased approach — TCP-tunneled voice can ship in Phase 3 (alongside text chat), with UDP voice optimization in Phase 5.</p>
+<h4 id="audio-preprocessing-pipeline"><a class="header" href="#audio-preprocessing-pipeline">Audio Preprocessing Pipeline</a></h4>
+<p>The audio capture-to-encode pipeline in <code>ic-audio</code>. Order matters — this sequence is the standard across Mumble, Discord, WebRTC, and every production VoIP system (see <code>research/open-source-voip-analysis.md</code> § 8):</p>
+<pre><code>Platform Capture (cpal) → Resample to 48kHz (rubato) →
+  Echo Cancellation (optional, speaker users only) →
+    Noise Suppression (nnnoiseless / RNNoise) →
+      Voice Activity Detection (for VAD mode) →
+        Opus Encode (audiopus, VOIP mode, FEC, DTX) →
+          VoicePacket → MessageLane::Voice
+</code></pre>
+<p><strong>Recommended Rust crates for the pipeline:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>Crate</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Audio I/O</td><td><code>cpal</code></td><td>Cross-platform (WASAPI, CoreAudio, ALSA/PulseAudio, WASM AudioWorklet). Already used by Bevy’s audio ecosystem.</td></tr>
+<tr><td>Resampler</td><td><code>rubato</code></td><td>Pure Rust, high quality async resampler. No C dependencies. Converts from mic sample rate to Opus’s 48kHz.</td></tr>
+<tr><td>Noise suppression</td><td><code>nnnoiseless</code></td><td>Pure Rust port of Mozilla’s RNNoise. ML-based (GRU neural network). Dramatically better than DSP-based Speex preprocessing for non-stationary noise (keyboard clicks, fans, traffic). ~0.3% CPU cost per core — negligible.</td></tr>
+<tr><td>Opus codec</td><td><code>audiopus</code></td><td>Safe Rust wrapper around libopus. Required. Handles encode/decode/PLC.</td></tr>
+<tr><td>Echo cancellation</td><td>Speex AEC via <code>speexdsp-rs</code>, or browser-native</td><td>Full AEC only matters for speaker/laptop users (not headset). Mumble’s <code>Resynchronizer</code> shows this requires a ~20ms mic delay queue to ensure speaker data reaches the canceller first. Browser builds can use WebRTC’s built-in AEC.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Why RNNoise (<code>nnnoiseless</code>) over Speex preprocessing:</strong> Mumble supports both. RNNoise is categorically superior — it uses a recurrent neural network trained on 80+ hours of noise samples, whereas Speex uses traditional FFT-based spectral subtraction. RNNoise handles non-stationary noise (typing, mouse clicks — common in RTS gameplay) far better than Speex. The <code>nnnoiseless</code> crate is pure Rust (no C dependency), adding ~0.3% CPU per core versus Speex’s ~0.1%. This is negligible on any hardware that can run IC. Noise suppression is a D033 QoL toggle (<code>voice.noise_suppression: bool</code>, default <code>true</code>).</p>
+<p><strong>Playback pipeline (receive side):</strong></p>
+<pre><code>MessageLane::Voice → VoicePacket → JitterBuffer →
+  Opus Decode (or PLC on missing frame) →
+    Per-speaker gain (user volume setting) →
+      Voice Effects Chain (if enabled — see below) →
+        Spatial panning (if VoiceFlags::SPATIAL) →
+          Mix with game audio → Platform Output (cpal/Bevy audio)
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../decisions/09g/D059/D059-overview-text-chat-voip-core.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../decisions/09g/D059/D059-voip-effects-ecs.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../decisions/09g/D059/D059-overview-text-chat-voip-core.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../decisions/09g/D059/D059-voip-effects-ecs.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../../mark-09e88c2c.min.js"></script>
+        <script src="../../../searcher-c2a407aa.js"></script>
+
+        <script src="../../../clipboard-1626706a.min.js"></script>
+        <script src="../../../highlight-abc7f01d.js"></script>
+        <script src="../../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

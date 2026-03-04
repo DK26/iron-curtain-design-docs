@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-da66c284.js";
+            window.path_to_searchindex_js = "../../searchindex-eb0f51f8.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-b6ee3c41.js"></script>
+        <script src="../../toc-2281c970.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -493,273 +493,19 @@ ic replay verify [file]    # verify relay signature chain + integrity (see 06-SE
 </ul>
 <p><strong>Phase:</strong> Phase 0 (alias registry built alongside <code>ra-formats</code> YAML parser). Phase 6a (deprecation warnings configurable in <code>mod.yaml</code>).</p>
 <hr>
-<h3 id="d024--lua-api-superset-of-openra"><a class="header" href="#d024--lua-api-superset-of-openra">D024 — Lua API Superset of OpenRA</a></h3>
-<p><strong>Decision:</strong> Iron Curtain’s Lua scripting API is a strict superset of OpenRA’s 16 global objects. Same function names, same parameter signatures, same return types. OpenRA Lua missions run unmodified. IC then extends with additional functionality.</p>
-<p><strong>Context:</strong> OpenRA has a mature Lua API used in hundreds of campaign missions across all C&amp;C game mods. Combined Arms alone has 34 Lua-scripted missions. The mod migration doc (12-MOD-MIGRATION.md) identified “API compatibility shim” as a migration requirement — this decision elevates it from “nice to have” to “hard requirement.”</p>
-<p><strong>OpenRA’s 16 globals (all must work identically in IC):</strong></p>
+<hr>
+<h2 id="sub-pages"><a class="header" href="#sub-pages">Sub-Pages</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Global</th><th>Purpose</th></tr>
+<tr><th>Section</th><th>Topic</th><th>File</th></tr>
 </thead>
 <tbody>
-<tr><td><code>Actor</code></td><td>Create, query, manipulate actors</td></tr>
-<tr><td><code>Map</code></td><td>Terrain, bounds, spatial queries</td></tr>
-<tr><td><code>Trigger</code></td><td>Event hooks (OnKilled, AfterDelay)</td></tr>
-<tr><td><code>Media</code></td><td>Audio, video, text display</td></tr>
-<tr><td><code>Player</code></td><td>Player state, resources, diplomacy</td></tr>
-<tr><td><code>Reinforcements</code></td><td>Spawn units at edges/drops</td></tr>
-<tr><td><code>Camera</code></td><td>Pan, position, shake</td></tr>
-<tr><td><code>DateTime</code></td><td>Game time queries</td></tr>
-<tr><td><code>Objectives</code></td><td>Mission objective management</td></tr>
-<tr><td><code>Lighting</code></td><td>Global lighting control</td></tr>
-<tr><td><code>UserInterface</code></td><td>UI text, notifications</td></tr>
-<tr><td><code>Utils</code></td><td>Math, random, table utilities</td></tr>
-<tr><td><code>Beacon</code></td><td>Map beacon management</td></tr>
-<tr><td><code>Radar</code></td><td>Radar ping control</td></tr>
-<tr><td><code>HSLColor</code></td><td>Color construction</td></tr>
-<tr><td><code>WDist</code></td><td>Distance unit conversion</td></tr>
+<tr><td>Lua API &amp; Integration</td><td>D024 Lua API superset of OpenRA, D023 OpenRA vocabulary compatibility, D027 canonical enum compat, D028 condition/multiplier systems, D029 cross-game component library, rationale, alternatives, phase</td><td><a href="D019/D019-lua-api-integration.html">D019-lua-api-integration.md</a></td></tr>
 </tbody>
 </table>
 </div>
-<p><strong>IC extensions (additions, not replacements):</strong></p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Global</th><th>Purpose</th></tr>
-</thead>
-<tbody>
-<tr><td><code>Campaign</code></td><td>Branching campaign state (D021)</td></tr>
-<tr><td><code>Weather</code></td><td>Dynamic weather control (D022)</td></tr>
-<tr><td><code>Layer</code></td><td>Runtime layer activation/deaction</td></tr>
-<tr><td><code>Region</code></td><td>Named region queries</td></tr>
-<tr><td><code>Var</code></td><td>Mission/campaign variable access</td></tr>
-<tr><td><code>Workshop</code></td><td>Mod metadata queries</td></tr>
-<tr><td><code>LLM</code></td><td>LLM integration hooks (Phase 7)</td></tr>
-<tr><td><code>Commands</code></td><td>Command registration for mods (D058)</td></tr>
-<tr><td><code>Ping</code></td><td>Typed tactical pings (D059)</td></tr>
-<tr><td><code>ChatWheel</code></td><td>Auto-translated phrase system (D059)</td></tr>
-<tr><td><code>Marker</code></td><td>Persistent tactical markers (D059)</td></tr>
-<tr><td><code>Chat</code></td><td>Programmatic chat messages (D059)</td></tr>
-</tbody>
-</table>
-</div>
-<p><strong>Actor properties also match:</strong> Each actor reference exposes properties matching OpenRA’s property groups (<code>.Health</code>, <code>.Location</code>, <code>.Owner</code>, <code>.Move()</code>, <code>.Attack()</code>, <code>.Stop()</code>, <code>.Guard()</code>, <code>.Deploy()</code>, etc.) with identical semantics.</p>
-<p><strong>Rationale:</strong></p>
-<ul>
-<li>CA’s 34 missions + hundreds of community missions work on day one — no porting effort</li>
-<li>Reduces Lua migration from “moderate effort” to “zero effort” for standard missions</li>
-<li>IC’s extensions are additive — no conflicts, no breaking changes</li>
-<li>Modders who know OpenRA Lua immediately know IC Lua</li>
-<li>Future OpenRA missions created by the community are automatically IC-compatible</li>
-</ul>
-<p><strong>Alternatives considered:</strong></p>
-<ul>
-<li>Design our own API, provide shim (rejected — shim is always leaky, creates two mental models)</li>
-<li>Partial compatibility (rejected — partial breaks are worse than full breaks; either missions work or they don’t)</li>
-<li>No Lua compatibility (rejected — throws away hundreds of community missions for no gain)</li>
-</ul>
-<p><strong>Phase:</strong> Phase 4 (Lua scripting implementation). API surface documented during Phase 2 planning.</p>
-<hr>
-<h3 id="d025--runtime-miniyaml-loading"><a class="header" href="#d025--runtime-miniyaml-loading">D025 — Runtime MiniYAML Loading</a></h3>
-<p><strong>Decision:</strong> Support loading MiniYAML directly at runtime as a fallback format in <code>ra-formats</code>. When the engine encounters tab-indented files with <code>^</code> inheritance or <code>@</code> suffixes, it auto-converts in memory. The <code>miniyaml2yaml</code> CLI converter still exists for permanent migration, but is no longer a prerequisite for loading mods.</p>
-<p><strong>Revision of D003:</strong> D003 (“Real YAML, not MiniYAML”) remains the canonical format. All IC-native content uses standard YAML. D025 adds a compatibility loader — it does not change what IC produces, only what it accepts.</p>
-<p><strong>Key design points:</strong></p>
-<ol>
-<li><strong>Format detection:</strong> <code>ra-formats</code> checks the first few lines of each file. Tab-indented content with no YAML indicators triggers the MiniYAML parser path.</li>
-<li><strong>In-memory conversion:</strong> MiniYAML is parsed to an intermediate tree, then resolved to standard YAML structs. The result is identical to what <code>miniyaml2yaml</code> would produce.</li>
-<li><strong>Combined with D023:</strong> OpenRA trait name aliases (D023) apply after MiniYAML parsing — so the full chain is: MiniYAML → intermediate tree → alias resolution → typed Rust structs.</li>
-<li><strong>Performance:</strong> Conversion adds ~10-50ms per mod at load time (one-time cost). Cached after first load.</li>
-<li><strong>Warning output:</strong> Console logs <code>"Loaded MiniYAML file rules.yaml — consider converting to standard YAML with 'ic mod convert'"</code>.</li>
-</ol>
-<p><strong>Rationale:</strong></p>
-<ul>
-<li>Turns “migrate then play” into “play immediately, migrate when ready”</li>
-<li>Existing OpenRA mods become testable on IC within minutes, not hours</li>
-<li>Respects invariant #8 — the community’s existing work is sacred, including their file formats</li>
-<li>The converter CLI still exists for modders who want clean IC-native files</li>
-<li>No performance impact after initial load (conversion result is cached)</li>
-</ul>
-<p><strong>Alternatives considered:</strong></p>
-<ul>
-<li>Require pre-conversion (original plan — rejected as unnecessary friction; the converter runs in memory just as well as on disk)</li>
-<li>Support MiniYAML as a first-class format permanently (rejected — standard YAML is strictly better for tooling, validation, and editor support)</li>
-<li>Only support converted files (rejected — blocks quick experimentation and casual mod testing)</li>
-</ul>
-<p><strong>Phase:</strong> Phase 0 (MiniYAML parser already needed for <code>miniyaml2yaml</code>; making it a runtime loader is minimal additional work).</p>
-<hr>
-<h3 id="d026--openra-mod-manifest-compatibility"><a class="header" href="#d026--openra-mod-manifest-compatibility">D026 — OpenRA Mod Manifest Compatibility</a></h3>
-<p><strong>Decision:</strong> <code>ra-formats</code> can parse OpenRA’s <code>mod.yaml</code> manifest format and auto-map it to IC’s mod structure at load time. Combined with D023 (aliases), D024 (Lua API), and D025 (MiniYAML loading), this means a modder can point IC at an existing OpenRA mod directory and it loads — no restructuring needed.</p>
-<p><strong>Key design points:</strong></p>
-<ol>
-<li><strong>Manifest parsing:</strong> OpenRA’s <code>mod.yaml</code> declares <code>Packages</code>, <code>Rules</code>, <code>Sequences</code>, <code>Cursors</code>, <code>Chrome</code>, <code>Assemblies</code>, <code>ChromeLayout</code>, <code>Weapons</code>, <code>Voices</code>, <code>Notifications</code>, <code>Music</code>, <code>Translations</code>, <code>MapFolders</code>, <code>SoundFormats</code>, <code>SpriteFormats</code>. IC maps each section to its equivalent concept.</li>
-<li><strong>Directory convention mapping:</strong> OpenRA mods use <code>rules/</code>, <code>maps/</code>, <code>sequences/</code> etc. IC maps these to its own layout at load time without copying files.</li>
-<li><strong>Unsupported sections flagged:</strong> <code>Assemblies</code> (C# DLLs) cannot load — these are flagged as warnings listing which custom traits are unavailable and what WASM alternatives exist.</li>
-<li><strong>Partial loading:</strong> A mod with unsupported C# traits still loads — units using those traits get a visual placeholder and a “missing trait” debug overlay. The mod is playable with reduced functionality.</li>
-<li><strong><code>ic mod import</code>:</strong> CLI command that reads an OpenRA mod directory and generates an IC-native <code>mod.yaml</code> with proper structure, converting files to standard YAML and flagging C# dependencies for WASM migration.</li>
-</ol>
-<p><strong>Rationale:</strong></p>
-<ul>
-<li>Combined with D023/D024/D025, this completes the “zero-friction import” pipeline</li>
-<li>Modders can evaluate IC as a target without committing to migration</li>
-<li>Partial loading means even mods with C# dependencies are partially testable</li>
-<li>The <code>ic mod import</code> command provides a clean migration path when the modder is ready</li>
-<li>Validates our claim that “the community’s existing work is sacred”</li>
-</ul>
-<p><strong>Alternatives considered:</strong></p>
-<ul>
-<li>Require manual mod restructuring (rejected — unnecessary friction, blocks adoption)</li>
-<li>Only support IC mod format (rejected — makes evaluation impossible without migration effort)</li>
-<li>Full C# trait loading via .NET interop (rejected — violates D001/D002, reintroduces the problems Rust solves)</li>
-</ul>
-<p><strong>Phase:</strong> Phase 0 (manifest parsing) + Phase 6a (full <code>ic mod import</code> workflow).</p>
-<hr>
-<h3 id="d027--canonical-enum-compatibility-with-openra"><a class="header" href="#d027--canonical-enum-compatibility-with-openra">D027 — Canonical Enum Compatibility with OpenRA</a></h3>
-<p><strong>Decision:</strong> Use OpenRA’s canonical enum names for locomotor types, armor types, target types, damage states, and other enumerated values — or accept both OpenRA and IC-native names via the alias system (D023).</p>
-<p><strong>Specific enums aligned:</strong></p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Enum Type</th><th>OpenRA Names</th><th>IC Accepts</th></tr>
-</thead>
-<tbody>
-<tr><td>Locomotor</td><td><code>Foot</code>, <code>Wheeled</code>, <code>Tracked</code>, <code>Float</code>, <code>Fly</code></td><td>Same (canonical)</td></tr>
-<tr><td>Armor</td><td><code>None</code>, <code>Light</code>, <code>Medium</code>, <code>Heavy</code>, <code>Wood</code>, <code>Concrete</code></td><td>Same (canonical)</td></tr>
-<tr><td>Target Type</td><td><code>Ground</code>, <code>Air</code>, <code>Water</code>, <code>Underground</code></td><td>Same (canonical)</td></tr>
-<tr><td>Damage State</td><td><code>Undamaged</code>, <code>Light</code>, <code>Medium</code>, <code>Heavy</code>, <code>Critical</code>, <code>Dead</code></td><td>Same (canonical)</td></tr>
-<tr><td>Stance</td><td><code>AttackAnything</code>, <code>Defend</code>, <code>ReturnFire</code>, <code>HoldFire</code></td><td>Same (canonical)</td></tr>
-<tr><td>UnitType</td><td><code>Building</code>, <code>Infantry</code>, <code>Vehicle</code>, <code>Aircraft</code>, <code>Ship</code></td><td>Same (canonical)</td></tr>
-</tbody>
-</table>
-</div>
-<p><strong>Why this matters:</strong> The <code>Versus</code> damage table — which modders spend 80% of their balance time tuning — uses armor type names as keys. Locomotor types determine pathfinding behavior. Target types control weapon targeting. If these don’t match, every single weapon definition, armor table, and locomotor reference needs translation. By matching names, these definitions copy-paste directly.</p>
-<p><strong>Rationale:</strong></p>
-<ul>
-<li>Eliminates an entire category of conversion mapping</li>
-<li>Versus tables, weapon definitions, locomotor configs — all transfer without renaming</li>
-<li>OpenRA’s names are reasonable and well-known in the community</li>
-<li>No technical reason to rename these — they describe the same concepts</li>
-<li>Where IC needs additional values (e.g., <code>Hover</code>, <code>Amphibious</code>), they extend the enum without conflicting</li>
-</ul>
-<p><strong>Phase:</strong> Phase 2 (when enum types are formally defined in <code>ic-sim</code>).</p>
-<hr>
-<h3 id="d028--condition-and-multiplier-systems-as-phase-2-requirements"><a class="header" href="#d028--condition-and-multiplier-systems-as-phase-2-requirements">D028 — Condition and Multiplier Systems as Phase 2 Requirements</a></h3>
-<p><strong>Decision:</strong> The condition system and multiplier system identified as P0 critical gaps in <code>11-OPENRA-FEATURES.md</code> are promoted to hard Phase 2 exit criteria. Phase 2 cannot ship without both systems implemented and tested.</p>
-<p><strong>What this adds to Phase 2:</strong></p>
-<ol>
-<li>
-<p><strong>Condition system:</strong></p>
-<ul>
-<li><code>Conditions</code> component: <code>HashMap&lt;ConditionId, u32&gt;</code> (ref-counted named conditions per entity)</li>
-<li>Condition sources: <code>GrantConditionOnMovement</code>, <code>GrantConditionOnDamageState</code>, <code>GrantConditionOnDeploy</code>, <code>GrantConditionOnAttack</code>, <code>GrantConditionOnTerrain</code>, <code>GrantConditionOnVeterancy</code> — exposed in YAML</li>
-<li>Condition consumers: any component field can declare <code>requires:</code> or <code>disabled_by:</code> conditions</li>
-<li>Runtime: systems check <code>conditions.is_active("deployed")</code> via fast bitset or hash lookup</li>
-</ul>
-</li>
-<li>
-<p><strong>Multiplier system:</strong></p>
-<ul>
-<li><code>StatModifiers</code> component: per-entity stack of <code>(source, stat, modifier_value, condition)</code></li>
-<li>Every numeric stat (speed, damage, range, reload, build time, build cost, sight range, etc.) resolves through the modifier stack</li>
-<li>Modifiers from: veterancy, terrain, crates, conditions, player handicaps</li>
-<li>Fixed-point multiplication (no floats)</li>
-<li>YAML-configurable: modders add multipliers without code</li>
-</ul>
-</li>
-<li>
-<p><strong>Full damage pipeline:</strong></p>
-<ul>
-<li>Armament → Projectile entity → travel → impact → Warhead(s) → armor-versus-weapon table → DamageMultiplier resolution → Health reduction</li>
-<li>Composable warheads: each weapon can trigger multiple warheads (damage + condition + terrain effect)</li>
-</ul>
-</li>
-</ol>
-<p><strong>Rationale:</strong></p>
-<ul>
-<li>Without conditions, 80% of OpenRA YAML mods cannot express their behavior at all — conditions are the fundamental modding primitive</li>
-<li>Without multipliers, veterancy/crates/terrain bonuses don’t work — critical gameplay systems are broken</li>
-<li>Without the full damage pipeline, weapons are simplistic and balance modding is impossible</li>
-<li>These three systems are the foundation that P1–P3 features build on (stealth, veterancy, transport, support powers all use conditions and multipliers)</li>
-<li>Promoting from “identified gap” to “exit criteria” ensures they’re not deferred</li>
-</ul>
-<p><strong>Prior art — Unciv’s “Uniques” system:</strong> The open-source Civilization V reimplementation <a href="https://github.com/yairm210/Unciv">Unciv</a> independently arrived at a declarative conditional modifier DSL called <strong>Uniques</strong>. Every game effect — stat bonuses, abilities, terrain modifiers, era scaling — is expressed as a structured text string with <code>[parameters]</code> and <code>&lt;conditions&gt;</code>:</p>
-<pre><code>"[+15]% Strength &lt;when attacking&gt; &lt;vs [Armored] units&gt;"
-"[+1] Movement &lt;for [Mounted] units&gt;"
-"[+20]% Production &lt;when constructing [Military] units&gt; &lt;during [Golden Age]&gt;"
-</code></pre>
-<p>Key lessons for IC:</p>
-<ul>
-<li><strong>Declarative composition eliminates code.</strong> Unciv’s ~600 unique types cover virtually all Civ V mechanics without per-mechanic code. Modders combine parameters and conditions freely — the engine resolves the modifier stack.</li>
-<li><strong>Typed filters replace magic strings.</strong> Unciv defines filter types (unit type, terrain, building, tech, era, resource) with formal matching rules. IC’s attribute tags and condition system should adopt similarly typed filter categories.</li>
-<li><strong>Conditional stacking is the modding primitive.</strong> The pattern <code>effect [magnitude] &lt;condition₁&gt; &lt;condition₂&gt;</code> maps directly to IC’s <code>StatModifiers</code> component — each unique becomes a <code>(source, stat, modifier_value, condition)</code> tuple. D028’s condition system is the right foundation; the Unciv pattern validates extending it with a YAML surface syntax (see <code>04-MODDING.md</code> § “Conditional Modifiers”).</li>
-<li><strong>GitHub-as-Workshop works at scale.</strong> Unciv’s mod ecosystem (~400 mods) runs on plain GitHub repos with JSON rulesets. This validates IC’s Workshop design (federated registry with Git-compatible distribution) and suggests that low-friction plain-data mods drive adoption more than scripting power.</li>
-</ul>
-<p><strong>Phase:</strong> Phase 2 (hard exit criteria — no Phase 3 starts without these).</p>
-<hr>
-<h3 id="d029--cross-game-component-library-phase-2-targets"><a class="header" href="#d029--cross-game-component-library-phase-2-targets">D029 — Cross-Game Component Library (Phase 2 Targets)</a></h3>
-<p><strong>Decision:</strong> The seven first-party component systems identified in <code>12-MOD-MIGRATION.md</code> (from Combined Arms and Remastered case studies) are Phase 2 targets. They are high priority and independently scoped — any that don’t land by Phase 2 exit are early Phase 3 work, not deferred indefinitely. (The D028 systems — conditions, multipliers, damage pipeline — are the hard Phase 2 gate; see <code>08-ROADMAP.md</code> § Phase 2 exit criteria.)</p>
-<p><strong>The seven systems:</strong></p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>System</th><th>Needed For</th><th>Phase 2 Scope</th></tr>
-</thead>
-<tbody>
-<tr><td><strong>Mind Control</strong></td><td>CA (Yuri), RA2 game module, Scrin</td><td>Controller/controllable components, capacity limits, override</td></tr>
-<tr><td><strong>Carrier/Spawner</strong></td><td>CA, RA2 (Aircraft Carrier, Kirov drones)</td><td>Master/slave with respawn, recall, autonomous attack</td></tr>
-<tr><td><strong>Teleport Networks</strong></td><td>CA, Nod tunnels (TD/TS), Chronosphere</td><td>Multi-node network with primary exit designation</td></tr>
-<tr><td><strong>Shield System</strong></td><td>CA, RA2 force shields, Scrin</td><td>Absorb-before-health, recharge timer, depletion</td></tr>
-<tr><td><strong>Upgrade System</strong></td><td>CA, C&amp;C3 game module</td><td>Per-unit tech research via building, condition grants</td></tr>
-<tr><td><strong>Delayed Weapons</strong></td><td>CA (radiation, poison), RA2 (terror drones)</td><td>Timer-attached effects on targets</td></tr>
-<tr><td><strong>Dual Asset Rendering</strong></td><td>Remastered recreation, HD mod packs</td><td>Superseded by the Resource Pack system (<code>04-MODDING.md</code> § “Resource Packs”) which generalizes this to N asset tiers, not just two. Phase 2 scope: <code>ic-render</code> supports runtime-switchable asset source per entity; Resource Pack manifests resolve at load time.</td></tr>
-</tbody>
-</table>
-</div>
-<p><strong>Evidence from OpenRA mod ecosystem:</strong> Analysis of six major OpenRA community mods (see <code>research/openra-mod-architecture-analysis.md</code> and <code>research/openra-ra2-mod-architecture.md</code>) validates and extends this list. Cross-game component reuse is the most consistent pattern across mods — the same mechanics appear independently in 3–5 mods each:</p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Component</th><th>Mods Using It</th><th>Notes</th></tr>
-</thead>
-<tbody>
-<tr><td>Mind Control</td><td>RA2, Romanovs-Vengeance</td><td>MindController/MindControllable with capacity limits, DiscardOldest policy, ArcLaserZap visual</td></tr>
-<tr><td>Carrier/Spawner</td><td>RA2, OpenHV, OpenSA</td><td>BaseSpawnerParent→CarrierParent hierarchy; OpenHV uses for drone carriers; OpenSA for colony spawning</td></tr>
-<tr><td>Infection</td><td>RA2, Romanovs-Vengeance</td><td>InfectableInfo with damage/kill triggers</td></tr>
-<tr><td>Disguise/Mirage</td><td>RA2, Romanovs-Vengeance</td><td>MirageInfo with configurable reveal triggers (attack, damage, deploy, unload, infiltrate, heal)</td></tr>
-<tr><td>Temporal Weapons</td><td>RA2, Romanovs-Vengeance</td><td>ChronoVortexInfo with return-to-start mechanics</td></tr>
-<tr><td>Radiation</td><td>RA2</td><td>World-level TintedCellsLayer with sparse storage and logarithmic decay</td></tr>
-<tr><td>Hacking</td><td>OpenHV</td><td>HackerInfo with delay, condition grant on target</td></tr>
-<tr><td>Periodic Discharge</td><td>OpenHV</td><td>PeriodicDischargeInfo with damage/effects on timer</td></tr>
-<tr><td>Colony Capture</td><td>OpenSA</td><td>ColonyBit with conversion mechanics</td></tr>
-</tbody>
-</table>
-</div>
-<p>This validates that IC’s seven systems are necessary but reveals two additional patterns that appear cross-game: <strong>infection</strong> (delayed damage/conversion — distinct from “delayed weapons” in that the infected unit carries the effect) and <strong>disguise/mirage</strong> (appearance substitution with configurable reveal triggers). These are candidates for promotion from WASM-only to first-party components.</p>
-<p><strong>Rationale:</strong></p>
-<ul>
-<li>These aren’t CA-specific — they’re needed for RA2 (the likely second game module). Building them in Phase 2 means they’re available when RA2 development starts.</li>
-<li>CA can migrate to IC the moment the engine is playable, rather than waiting for Phase 6a</li>
-<li>Without these as built-in components, CA modders would need to write WASM for basic mechanics like mind control — unacceptable for adoption</li>
-<li>The seven systems cover ~60% of CA’s custom C# code — collapsing the WASM tier from ~15% to ~5% of migration effort</li>
-<li>Each system is independently useful and well-scoped (2-5 days engineering each)</li>
-</ul>
-<p><strong>Impact on migration estimates:</strong></p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Migration Tier</th><th>Before D029</th><th>After D029</th></tr>
-</thead>
-<tbody>
-<tr><td>Tier 1 (YAML)</td><td>~40%</td><td>~45%</td></tr>
-<tr><td>Built-in</td><td>~30%</td><td>~40%</td></tr>
-<tr><td>Tier 2 (Lua)</td><td>~15%</td><td>~10%</td></tr>
-<tr><td>Tier 3 (WASM)</td><td>~15%</td><td>~5%</td></tr>
-</tbody>
-</table>
-</div>
-<p><strong>Phase:</strong> Phase 2 (sim-side components and dual asset rendering in <code>ic-render</code>).</p>
-<hr>
-<hr>
+
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
@@ -768,7 +514,7 @@ ic replay verify [file]    # verify relay signature chain + integrity (see 06-SE
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../../decisions/09d/D021-branching-campaigns.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../decisions/09d/D019/D019-lua-api-integration.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -782,7 +528,7 @@ ic replay verify [file]    # verify relay signature chain + integrity (see 06-SE
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../../decisions/09d/D021-branching-campaigns.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../decisions/09d/D019/D019-lua-api-integration.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

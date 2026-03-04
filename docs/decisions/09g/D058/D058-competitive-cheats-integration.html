@@ -1,0 +1,552 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Competitive, Cheats &amp; Integration - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09g/D058/D058-competitive-cheats-integration.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h4 id="competitive-integrity-in-multiplayer"><a class="header" href="#competitive-integrity-in-multiplayer">Competitive Integrity in Multiplayer</a></h4>
+<p>Dev commands and cheat codes are handled. But what about the ~120 <em>normal</em> commands available to every player in multiplayer — <code>/move</code>, <code>/attack</code>, <code>/build</code>, <code>/select</code>, <code>/place</code>? These produce the same <code>PlayerOrder</code> variants as clicking the GUI, but they make external automation trivially easy. A script that sends <code>/select idle</code> → <code>/build harvester</code> → <code>/rally 120,80</code> every 3 seconds is functionally a perfect macro player. Does this create an unfair advantage for scripters?</p>
+<h5 id="the-open-source-competitive-dilemma"><a class="header" href="#the-open-source-competitive-dilemma">The Open-Source Competitive Dilemma</a></h5>
+<p>This section documents a fundamental, irreconcilable tension that shapes every competitive integrity decision in IC. It is written as a permanent reference for future contributors, so the reasoning does not need to be re-derived.</p>
+<p><strong>The dilemma in one sentence:</strong> An open-source game engine cannot prevent client-side cheating, but a competitive community demands competitive integrity.</p>
+<p>In a closed-source game (StarCraft 2, CS2, Valorant), the developer controls the client binary. They can:</p>
+<ul>
+<li>Obfuscate the protocol and memory layout so reverse-engineering is expensive</li>
+<li>Deploy kernel-level anti-cheat (Warden, VAC, Vanguard) to detect modified clients</li>
+<li>Ban players whose clients fail integrity checks</li>
+<li>Update obfuscation faster than hackers can reverse-engineer</li>
+</ul>
+<p><strong>What commercial anti-cheat products actually do:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Product</th><th>Technique</th><th>How It Works</th><th>Why It Fails for Open-Source GPL</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>VAC</strong> (Valve Anti-Cheat)</td><td>Memory scanning + process hashing</td><td>Scans client RAM for known cheat signatures; hashes game binaries to detect tampering; delayed bans to obscure detection vectors</td><td>Source is public — cheaters know exactly what memory layouts to avoid. Binary hashing is meaningless when every user compiles from source. Delayed bans rely on secrecy of detection methods; GPL eliminates that secrecy.</td></tr>
+<tr><td><strong>PunkBuster</strong> (Even Balance)</td><td>Screenshot capture + hash checks + memory scanning</td><td>Takes periodic screenshots to detect overlays/wallhacks; hashes client files; scans process memory for known cheat DLLs</td><td>Screenshots assume a single canonical renderer — IC’s switchable render modes (D048) make “correct” screenshots undefined. Client file hashing fails when users compile their own binaries. GPL means the scanning logic itself is public, trivially bypassed.</td></tr>
+<tr><td><strong>EAC / BattlEye</strong></td><td>Kernel-mode driver (ring-0)</td><td>Loads a kernel driver at boot that monitors all system calls, blocks known cheat tools from loading, detects memory manipulation from outside the game process</td><td>Kernel drivers are incompatible with Linux (where they’d need custom kernel modules), impossible on WASM, antithetical to user trust in open-source software, and unenforceable when users can simply remove the driver from source and recompile. Ring-0 access also creates security liability — EAC and BattlEye vulnerabilities have been exploited as privilege escalation vectors.</td></tr>
+<tr><td><strong>Vanguard</strong> (Riot Games)</td><td>Always-on kernel driver + client integrity</td><td>Runs from system boot (not just during gameplay); deep system introspection; hardware fingerprinting; client binary attestation</td><td>The most invasive model — requires the developer to be more trusted than the user’s OS. Fundamentally incompatible with GPL’s guarantee that users control their own software. Also requires a dedicated security team maintaining driver compatibility across OS versions — organizations like Riot spend millions annually on this infrastructure.</td></tr>
+</tbody>
+</table>
+</div>
+<p>The common thread: every commercial anti-cheat product depends on <strong>information asymmetry</strong> (the developer knows things the cheater doesn’t) or <strong>privilege asymmetry</strong> (the anti-cheat has deeper system access than the cheat). GPL v3 eliminates both. The source code is public. The user controls the binary. These are features, not flaws — but they make client-side anti-cheat a solved impossibility.</p>
+<p>None of these are available to IC:</p>
+<ul>
+<li>The engine is GPL v3 (D051). The source code is public. There is nothing to reverse-engineer — anyone can read the protocol, the order format, and the sim logic directly.</li>
+<li>Kernel-level anti-cheat is antithetical to GPL, Linux support, user privacy, and community trust. It is also unenforceable when users can compile their own client.</li>
+<li>Client integrity checks are meaningless when the “legitimate” client is whatever the user compiled from source.</li>
+<li>Obfuscation is impossible — the source repository IS the documentation.</li>
+</ul>
+<p><strong>What a malicious player can do</strong> (and no client-side measure can prevent):</p>
+<ul>
+<li>Read the source to understand exactly what <code>PlayerOrder</code> variants exist and what the sim accepts</li>
+<li>Build a modified client that sends orders directly to the relay server, bypassing all GUI and console input</li>
+<li>Fake any <code>CommandOrigin</code> tag (<code>Keybinding</code>, <code>MouseClick</code>) to disguise scripted input as human</li>
+<li>Automate any action the game allows: perfect split micro, instant building placement, zero-delay production cycling</li>
+<li>Implement maphack if fog-of-war is client-side (which is why fog-authoritative mode via the relay is critical — see <code>06-SECURITY.md</code>)</li>
+</ul>
+<p><strong>What a malicious player cannot do</strong> (architectural defenses that work regardless of client modification):</p>
+<ul>
+<li>Send orders that fail validation (D012). The sim rejects invalid orders deterministically — every client agrees on the rejection. Modified clients can send orders faster, but they can’t send orders the sim wouldn’t accept from any client.</li>
+<li>Spoof their order volume at the relay server (D007). The relay counts orders per player per tick server-side. A modified client can lie about <code>CommandOrigin</code>, but it can’t hide the fact that it sent 500 orders in one tick.</li>
+<li>Avoid replay evidence. Every order, every tick, is recorded in the deterministic replay (D010). Post-match analysis can detect inhuman patterns regardless of what the client reported as its input source.</li>
+<li>Bypass server-side fog-authoritative mode. When enabled, the relay only forwards entity data within each player’s vision — the client physically doesn’t receive information about units it shouldn’t see.</li>
+</ul>
+<p><strong>The resolution — what IC chooses:</strong></p>
+<p>IC does not fight this arms race. Instead, it adopts a four-part strategy modeled on the most successful open-source competitive platforms (Lichess, FAF, DDNet):</p>
+<ol>
+<li><strong>Architectural defense.</strong> Make cheating impossible where we can (order validation, relay integrity, fog authority) rather than improbable (obfuscation, anti-tamper). These defenses work even against a fully modified client.</li>
+<li><strong>Equalization through features.</strong> When automation provides an advantage, build it into the game as a D033 QoL toggle available to everyone. The script advantage disappears when everyone has the feature.</li>
+<li><strong>Total transparency.</strong> Record everything. Expose everything. Every order, every input source, every APM metric, every active script — in the replay and in the lobby. Make scripting visible, not secret.</li>
+<li><strong>Community governance.</strong> Let communities enforce their own competitive norms (D037, D052). Engine-enforced rules are minimal and architectural. Social rules — what level of automation is acceptable, what APM patterns trigger investigation — belong to the community.</li>
+</ol>
+<p>This is the Lichess model applied to RTS. Lichess is fully open-source, cannot prevent engine-assisted play through client-side measures, and is the most successful competitive gaming platform in its genre. Its defense is behavioral analysis (Irwin + Kaladin AI systems), statistical pattern matching, community reporting, and permanent reputation consequences — not client-side policing. IC adapts this approach for real-time strategy: server-side order analysis replaces move-time analysis, APM patterns replace centipawn-loss metrics, and replay review replaces PGN review. See <code>research/minetest-lichess-analysis.md</code> § Lichess for detailed analysis of Lichess’s anti-cheat architecture.</p>
+<p><strong>Why documenting this matters:</strong> Without this explicit rationale, future contributors will periodically propose “just add anti-cheat” or “just disable the console in ranked” or “just detect scripts.” These proposals are not wrong because they’re technically difficult — they’re wrong because they’re architecturally impossible in an open-source engine and create a false sense of security that is worse than no protection at all. This dilemma is settled. The resolution is the six principles below.</p>
+<h5 id="what-other-games-teach-us"><a class="header" href="#what-other-games-teach-us">What Other Games Teach Us</a></h5>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Game</th><th>Console in MP</th><th>Automation Stance</th><th>Anti-Cheat Model</th><th>Key Lesson for IC</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>StarCraft 2</strong></td><td>No console</td><td>APM is competitive skill — manual micro required</td><td>Warden (kernel, closed-source)</td><td>Works for closed-source; impossible for GPL. SC2 treats mechanical speed as a competitive dimension. IC must decide if it does too</td></tr>
+<tr><td><strong>AoE2 DE</strong></td><td>No console</td><td>Added auto-reseed farms, auto-queue — initially controversial, now widely accepted</td><td>Server-side + reporting</td><td>Give automation AS a feature (QoL toggle), not as a script advantage. Community will accept it when everyone has it</td></tr>
+<tr><td><strong>SupCom / FAF</strong></td><td>UI mods, SimMods</td><td>Strategy &gt; APM — extensive automation accepted</td><td>Lobby-agreed mods, all visible</td><td>If mods automate, require lobby consent. FAF’s community embraces this because SupCom’s identity is strategic, not mechanical. <strong>All UI mods are listed in the lobby</strong> — every player sees what every other player is running</td></tr>
+<tr><td><strong>Factorio</strong></td><td><code>/c</code> Lua in MP — visible to all, flags game</td><td>Blueprints, logistics bots, and circuit networks ARE the automation</td><td>Peer transparency</td><td>Build automation INTO the game as first-class systems. When the game provides it, scripts are unnecessary</td></tr>
+<tr><td><strong>CS2</strong></td><td>Full console + autoexec.cfg</td><td>Config/preference commands fine; gameplay macros banned</td><td>VAC (kernel)</td><td>Distinguish <strong>personalization</strong> (sensitivity, crosshair) from <strong>automation</strong> (playing the game for you)</td></tr>
+<tr><td><strong>OpenRA</strong></td><td>No console beyond chat</td><td>No scripting API; community self-policing</td><td>Trust + reports</td><td>Works at small scale; doesn’t scale. IC aims larger</td></tr>
+<tr><td><strong>Minecraft</strong></td><td>Operator-only in MP</td><td>Redstone and command blocks ARE the automation</td><td>Permission system</td><td>Gate powerful commands behind roles/permissions</td></tr>
+<tr><td><strong>Lichess</strong></td><td>N/A (turn-based)</td><td>Cannot prevent engine use — fully open source</td><td>Dual AI analysis (Irwin + Kaladin) + statistical flags + community reports</td><td><strong>The gold standard for open-source competitive integrity.</strong> No client-side anti-cheat at all. Detection is entirely behavioral and server-side. 100M+ games played. Proves the model works at massive scale</td></tr>
+<tr><td><strong>DDNet</strong></td><td>No console</td><td>Cooperative game — no adversarial scripting problem</td><td>Optional antibot plugin (relay-side, swappable ABI)</td><td>Server-side behavioral hooks with a swappable plugin architecture. IC’s relay server should support similar pluggable analysis</td></tr>
+<tr><td><strong>Minetest</strong></td><td>Server-controlled</td><td>CSM (Client-Side Mod) restriction flags sent by server</td><td>LagPool time-budget + server-side validation</td><td>Server tells client which capabilities are allowed. IC’s WASM capability model is architecturally stronger (capabilities are enforced, not requested), but the flag-based transparency is a good UX pattern</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>The lesson across all of these:</strong> The most successful approach is the Factorio/FAF/Lichess model — build the automation people want INTO the game as features available to everyone, make all actions transparent and auditable, and let communities enforce their own competitive norms. The open-source projects (Lichess, FAF, DDNet, Minetest) all converge on the same insight: <strong>you cannot secure the client, so secure the server and empower the community.</strong></p>
+<h5 id="ics-competitive-integrity-principles"><a class="header" href="#ics-competitive-integrity-principles">IC’s Competitive Integrity Principles</a></h5>
+<p><strong>CI-1: Console = GUI parity, never superiority.</strong></p>
+<p>Every console command must produce exactly the same <code>PlayerOrder</code> as its GUI equivalent. No command may provide capability that the GUI doesn’t offer. This is already the design (noted at the end of the Command Catalog) — this principle makes it an explicit invariant.</p>
+<p>Specific implications:</p>
+<ul>
+<li><code>/select all</code> selects everything in the current <strong>screen viewport</strong>, matching box-select behavior — NOT all units globally, unless the player has them in a control group (which the GUI also supports via D033’s <code>control_group_limit</code>).</li>
+<li><code>/build &lt;type&gt; inf</code> (infinite queue) is only available when D033’s <code>multi_queue</code> toggle is enabled in the lobby. If the lobby uses the vanilla preset (<code>multi_queue: false</code>), infinite queuing is rejected.</li>
+<li><code>/attack &lt;x,y&gt;</code> (attack-move) is only available when D033’s <code>attack_move</code> toggle is enabled. A vanilla preset lobby rejects it.</li>
+<li>Every console command respects the D033 QoL toggle state. <strong>The console is an alternative input method, not a QoL override.</strong></li>
+</ul>
+<p><strong>CI-2: D033 QoL toggles govern console commands.</strong></p>
+<p>Console commands are bound by the same lobby-agreed QoL configuration as GUI actions. When a D033 toggle is disabled:</p>
+<ul>
+<li>The corresponding console command is rejected with: <code>"[feature] is disabled in this lobby's rule set."</code></li>
+<li>The command does not produce a <code>PlayerOrder</code>. It is rejected at the command dispatcher layer, before reaching the order pipeline.</li>
+<li>The help text for disabled commands shows their disabled status: <code>"/attack — Attack-move to position [DISABLED: attack_move toggle off]"</code>.</li>
+</ul>
+<p>This ensures the console cannot bypass lobby agreements. If the lobby chose the vanilla preset, console users get the vanilla feature set.</p>
+<p><strong>CI-3: Order rate monitoring, not blocking.</strong></p>
+<p>Hard-blocking input rates punishes legitimately fast players (competitive RTS players regularly exceed 300 APM). Instead, IC monitors and exposes:</p>
+<ul>
+<li><strong>Orders-per-tick tracking.</strong> The sim records orders-per-tick per player in replay metadata. This is always recorded, not opt-in.</li>
+<li><strong>Input source tagging.</strong> Each <code>PlayerOrder</code> in the replay includes an <code>InputSource</code> tag: <code>Keybinding</code>, <code>MouseClick</code>, <code>ChatCommand</code>, <code>ConfigFile</code>, <code>Script</code>, <code>Touch</code>, <code>Controller</code>. A player issuing 300 orders/minute via <code>Keybinding</code> and <code>MouseClick</code> is playing fast. A player issuing 300 orders/minute via <code>ChatCommand</code> or <code>Script</code> is scripting. Note: <code>InputSource</code> is client-reported and advisory only — see the <code>InputSource</code> enum definition above.</li>
+<li><strong>APM display.</strong> Observers and replay viewers see per-player APM, broken down by input source. This is standard competitive RTS practice (SC2, AoE2, OpenRA all display APM).</li>
+<li><strong>Community-configurable thresholds.</strong> Community servers (D052) can define APM alerts or investigation triggers for ranked play. The engine does not hard-enforce these — communities set their own competitive norms. A community that values APM skill sets no cap. A community that values strategy over speed sets a 200 APM soft cap with admin review.</li>
+</ul>
+<p><strong>Why not hard-block:</strong> In an open-source engine, a modified client can send orders with any <code>CommandOrigin</code> tag — faking <code>Keybinding</code> when actually scripted. Hard-blocking based on unverifiable client-reported data gives a false sense of security. The relay server (D007) can count order volume server-side (where it can’t be spoofed), but the input source tag is client-reported and advisory only.</p>
+<p><strong>Note on V17 transport-layer caps:</strong> The <code>ProtocolLimits</code> hard ceilings (256 orders/tick, 4 KB/order — see <code>06-SECURITY.md</code> § V17) still apply as anti-flooding protection at the relay layer. These are not APM caps — they’re DoS prevention. Normal RTS play peaks at 5–10 orders/tick even at professional APM levels, so the 256/tick ceiling is never reached by legitimate play. The distinction: V17 prevents network flooding (relay-enforced, spoofing-proof); Principle 3 here addresses <em>gameplay</em> APM policy (community-governed, not engine-enforced).</p>
+<p><strong>CI-4: Automate the thing, not the workaround.</strong></p>
+<p>When the community discovers that a script provides an advantage, the correct response is not to ban the script — it’s to build the scripted behavior into the game as a D033 QoL toggle, making it available to everyone with a single checkbox in the lobby settings. Not buried in a config file. Not requiring a Workshop download. Not needing technical knowledge. <strong>A toggle in the settings menu that any player can find and enable.</strong></p>
+<p>This is the most important competitive integrity principle for an open-source engine: <strong>if someone has to script it, the game’s UX has failed.</strong> Every popular script is evidence of a feature the game should have provided natively. The script author identified a need; the game should absorb the solution.</p>
+<p>The AoE2 DE lesson is the clearest example: auto-reseed farms were a popular mod/script for years. Players who knew about it had an economic advantage — their farms never went idle. Players who didn’t know the script existed fell behind. Forgotten Empires eventually built it into the game as a toggle. Controversy faded immediately. Everyone uses it now. The automation advantage disappeared because it stopped being an advantage — it became a baseline feature.</p>
+<p>This principle applies proactively, not just reactively:</p>
+<p><strong>Reactive (minimum):</strong> When a Workshop script becomes popular, evaluate it for D033 promotion. The criteria: (a) widely used by script authors, (b) not controversial when available to everyone, (c) reduces tedious repetition without removing strategic decision-making. D037’s governance process (community RFCs) is the mechanism.</p>
+<p><strong>Proactive (better):</strong> When designing any system, ask: “will players script this?” If the answer is yes — if there’s a repetitive task that rewards automation — build the automation in from the start. Don’t wait for the scripting community to solve it. Design the feature with a D033 toggle so lobbies can enable or disable it as they see fit.</p>
+<p>Examples of automation candidates for IC:</p>
+<ul>
+<li><strong>Auto-harvest:</strong> Idle harvesters automatically return to the nearest ore field → D033 toggle <code>auto_harvest</code>. Without this, scripts that re-dispatch idle harvesters provide a measurable economic advantage. With the toggle, every player gets perfect harvester management.</li>
+<li><strong>Auto-repair:</strong> Damaged buildings near repair facilities automatically start repairing → D033 toggle <code>auto_repair</code>. Eliminates the tedious click-each-damaged-building loop that scripts handle perfectly.</li>
+<li><strong>Production auto-repeat:</strong> Re-queue the last built unit type automatically → D033 toggle <code>production_repeat</code>. Prevents the “forgot to queue another tank” problem that scripts never have.</li>
+<li><strong>Idle unit alert:</strong> Notification when production buildings have been idle for N seconds → D033 toggle <code>idle_alert</code>. A script can monitor every building simultaneously; a player can’t. The alert makes the information accessible to everyone.</li>
+<li><strong>Smart rally:</strong> Rally points that automatically assign new units to the nearest control group → D033 toggle <code>smart_rally</code>. Avoids the need for scripts that intercept newly produced units.</li>
+</ul>
+<p>These are NOT currently in D033’s catalog — they are examples of both the reactive adoption process and the proactive design mindset. The game should be designed so that someone who has never heard of console scripts or the Workshop has the same access to automation as someone who writes custom <code>.iccmd</code> files.</p>
+<p><strong>The accessibility test:</strong> For any automation feature, ask: “Can a player who doesn’t know what a script is get this benefit?” If the answer is no — if the only path to the automation is technical knowledge — the game has created an unfair advantage that favors technical literacy over strategic skill. IC should always be moving toward yes.</p>
+<p><strong>CI-5: If you can’t beat them, host them.</strong></p>
+<p>Console scripts are shareable on the Workshop (D030) as a first-class resource category. Not reluctantly tolerated — actively supported with the same publishing, versioning, dependency, and discovery infrastructure as maps, mods, and music.</p>
+<p>The reasoning is simple: players WILL write automation scripts. In a closed-source engine, that happens underground — in forums, Discord servers, private AutoHotKey configs. The developers can’t see what’s being shared, can’t ensure quality or safety, can’t help users find good scripts, and can’t detect which automations are becoming standard practice. In an open-source engine, the underground is even more pointless — anyone can read the source and write a script trivially.</p>
+<p>So instead of pretending scripts don’t exist, IC makes them a Workshop resource:</p>
+<ul>
+<li><strong>Published scripts are visible.</strong> The development team (and community) can see which automations are popular — direct signal for which behaviors to promote to D033 QoL toggles.</li>
+<li><strong>Published scripts are versioned.</strong> When the engine updates, script authors can update their packages. Users get notified of compatibility issues.</li>
+<li><strong>Published scripts are sandboxed.</strong> Workshop console scripts are sequences of console commands (<code>.iccmd</code> files), not arbitrary executables. They run through the same <code>CommandDispatcher</code> — they can’t do anything the console can’t do. They’re macros, not programs.</li>
+<li><strong>Published scripts are rated and reviewed.</strong> Community quality filtering applies — same as maps, mods, and balance presets.</li>
+<li><strong>Published scripts carry lobby disclosure.</strong> In multiplayer, active Workshop scripts are listed in the lobby alongside active mods. All players see what automations each player is running. This is the FAF model — UI mods are visible to all players in the lobby.</li>
+<li><strong>Published scripts respect D033 toggles.</strong> A script that issues <code>/attack</code> commands is rejected in a vanilla-preset lobby where <code>attack_move</code> is disabled — just like typing the command manually.</li>
+</ul>
+<p><strong>Script format — <code>.iccmd</code> files:</strong></p>
+<pre><code># auto-harvest.iccmd — Auto-queue harvesters when income drops
+# Workshop: community/auto-harvest@1.0.0
+# Category: Script Libraries &gt; Economy Automation
+# Lobby visibility: shown as active script to all players
+
+@on income_below 500
+  /select type:war_factory idle
+  /build harvester 1
+@end
+
+@on building_idle war_factory 10s
+  /build harvester 1
+@end
+</code></pre>
+<p>The <code>.iccmd</code> format is deliberately limited — event triggers + console commands, not a programming language. Complex automation belongs in Lua mods (D004), not console scripts. <strong>Boundary with Lua:</strong> <code>.iccmd</code> triggers are pre-defined patterns (event name + threshold), not arbitrary conditionals. If a script needs <code>if/else</code>, loops, variables, or access to game state beyond trigger parameters, it should be a Lua mod. The triggers shown above (<code>@on income_below</code>, <code>@on building_idle</code>) are the <em>ceiling</em> of <code>.iccmd</code> expressiveness — they fire when a named condition crosses a threshold, nothing more. Event triggers must have a per-trigger cooldown (minimum interval between firings) to prevent rapid-fire order generation — without cooldowns, a trigger that fires every tick could consume the player’s entire order budget (V17: 256 orders/tick hard ceiling) and crowd out intentional commands. The format details are illustrative — final syntax is a Phase 5+ design task.</p>
+<p><strong>The promotion pipeline:</strong> Workshop script popularity directly feeds the D033 adoption process:</p>
+<ol>
+<li><strong>Community creates</strong> — someone publishes <code>auto-harvest.iccmd</code> on the Workshop</li>
+<li><strong>Community adopts</strong> — it becomes the most-downloaded script in its category</li>
+<li><strong>Community discusses</strong> — D037 RFC: “should auto-harvest be a built-in QoL toggle?”</li>
+<li><strong>Design team evaluates</strong> — does it reduce tedium without removing decisions?</li>
+<li><strong>Engine absorbs</strong> — if yes, it becomes <code>D033 toggle auto_harvest</code>, the Workshop script becomes redundant, and the community moves on to the next automation frontier</li>
+</ol>
+<p>This is how healthy open-source ecosystems work. npm packages become Node.js built-ins. Popular Vim plugins become Neovim defaults. Community Firefox extensions become browser features. The Workshop is IC’s proving ground for automation features.</p>
+<p><strong>CI-6: Transparency over restriction.</strong></p>
+<p>Every action a player takes is recorded in the replay — including the commands they used and their input source. The community can see exactly how each player played. This is the most powerful competitive integrity tool available to an open-source project:</p>
+<ul>
+<li>Post-match replays show full APM breakdown with input source tags</li>
+<li>Tournament casters can display “console commands used” alongside APM</li>
+<li>Community server admins can review flagged matches</li>
+<li>The community decides what level of automation is acceptable for their competitive scene</li>
+</ul>
+<p>This mirrors how chess handles engine cheating online: no client can be fully trusted, so the detection is behavioral/statistical, reviewed by humans or automated analysis, and enforced by the community.</p>
+<h5 id="player-transparency--what-players-see"><a class="header" href="#player-transparency--what-players-see">Player Transparency — What Players See</a></h5>
+<p>Principle 6 states transparency over restriction. This subsection specifies exactly what players see — the concrete UX that makes automation visible rather than hidden.</p>
+<p><strong>Lobby (pre-game):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Element</th><th>Visibility</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Active mods</strong></td><td>All loaded mods listed per player (name + version). Mismatches highlighted. Same model as Factorio/FAF</td></tr>
+<tr><td><strong>Active <code>.iccmd</code> scripts</strong></td><td>Workshop scripts listed by name with link to Workshop page. Custom (non-Workshop) scripts show “Local script”</td></tr>
+<tr><td><strong>QoL preset</strong></td><td>Player’s active experience profile (D033) displayed — e.g., “OpenRA Purist,” “IC Standard,” or custom</td></tr>
+<tr><td><strong>D033 toggles summary</strong></td><td>Expandable panel: which automations are enabled (auto-harvest, auto-repair, production repeat, idle alerts, etc.)</td></tr>
+<tr><td><strong>Input devices</strong></td><td>Not shown — input hardware is private. Only the <em>commands issued</em> are tracked, not the device</td></tr>
+</tbody>
+</table>
+</div>
+<p>The lobby is the first line of defense against surprise: if your opponent has auto-repair and production repeat enabled, you see that <em>before</em> clicking Ready. This is the FAF model — every UI mod is listed in the lobby, and opponents can inspect the full list.</p>
+<p><strong>In-game HUD:</strong></p>
+<ul>
+<li><strong>No real-time script indicators for opponents.</strong> Showing “Player 2 is using a script” mid-game would be distracting, potentially misleading (is auto-harvest a “script” or a QoL toggle?), and would create incentive to game the indicator. The lobby disclosure is sufficient.</li>
+<li><strong>Own-player indicators:</strong> Your own enabled automations appear as small icons near the minimap (same UI surface as stance icons). You see what <em>you</em> have active, always.</li>
+<li><strong>Observer/caster mode:</strong> Observers and casters see a per-player APM counter with source breakdown (GUI clicks vs. console commands vs. script-issued orders). This is a spectating feature, not a player-facing one — competitive players don’t get distracted, but casters can narrate automation differences.</li>
+</ul>
+<p><strong>Post-match score screen:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Metric</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>APM (total)</strong></td><td>Raw actions per minute, standard RTS metric</td></tr>
+<tr><td><strong>APM by source</strong></td><td>Breakdown: GUI / console / <code>.iccmd</code> script / config file. Shows how each player issued orders</td></tr>
+<tr><td><strong>D033 toggles active</strong></td><td>Which automations were enabled during the match</td></tr>
+<tr><td><strong>Workshop scripts active</strong></td><td>Named list of <code>.iccmd</code> scripts used, with Workshop links</td></tr>
+<tr><td><strong>Order volume graph</strong></td><td>Timeline of orders-per-second, color-coded by source — spikes from scripts are visually obvious</td></tr>
+</tbody>
+</table>
+</div>
+<p>The post-match screen answers “how did they play?” without judgment. A player who used auto-repair and a build-order script can be distinguished from one who micro’d everything manually — but neither is labeled “cheater.” The community decides what level of automation they respect.</p>
+<p><strong>Replay viewer:</strong></p>
+<ul>
+<li>Full command log with <code>CommandOrigin</code> tags (GUI, Console, Script, ConfigFile)</li>
+<li>APM timeline graph with source-coded coloring</li>
+<li>Script execution markers on the timeline (when each <code>.iccmd</code> trigger fired)</li>
+<li>Exportable match data (JSON/CSV) for community statistical analysis tools</li>
+<li>Same observer APM overlay available during replay playback</li>
+</ul>
+<p><strong>Why no “script detected” warnings?</strong></p>
+<p>The user asked: “should we do something to let players know scripts are in use?” The answer is: yes — <em>before the game starts</em> (lobby) and <em>after it ends</em> (score screen, replay), but <em>not during the game</em>. Mid-game warnings create three problems:</p>
+<ol>
+<li><strong>Classification ambiguity.</strong> Where is the line between “D033 QoL toggle” and “script”? Auto-harvest is engine-native. A <code>.iccmd</code> that does the same thing is functionally identical. Warning about one but not the other is arbitrary.</li>
+<li><strong>False security.</strong> A warning that says “no scripts detected” when running an open-source client is meaningless — any modified client can suppress the flag. The lobby disclosure is opt-in honesty backed by replay verification, not a trust claim.</li>
+<li><strong>Distraction.</strong> Players should focus on playing, not monitoring opponent automation status. Post-match review is the right time for analysis.</li>
+</ol>
+<p><strong>Lessons from open-source games on client trust:</strong></p>
+<p>The comparison table above includes Lichess, DDNet, and Minetest. The cross-cutting lesson from all open-source competitive games:</p>
+<ul>
+<li><strong>You cannot secure the client.</strong> Any GPL codebase can be modified to lie about anything client-side. Lichess knows this — their entire anti-cheat (Irwin + Kaladin) is server-side behavioral analysis. DDNet’s antibot plugin runs server-side. Minetest’s CSM restriction flags are server-enforced.</li>
+<li><strong>Embrace the openness.</strong> Rather than fighting modifications, make the <em>legitimate</em> automation excellent so there’s no incentive to use shady external tools. Factorio’s mod system is so good that cheating is culturally irrelevant. FAF’s sim mod system is so transparent that the community self-polices.</li>
+<li><strong>The server is the only trust boundary.</strong> Order validation (D012), relay-side order counting (D007), and replay signing (D052) are the real anti-cheat. Client-side anything is theater.</li>
+</ul>
+<p>IC’s position: we don’t pretend the client is trustworthy. We make automation visible, accessible, and community-governed — then let the server and the replay be the source of truth.</p>
+<h5 id="ranked-mode-restrictions"><a class="header" href="#ranked-mode-restrictions">Ranked Mode Restrictions</a></h5>
+<p>Ranked matchmaking (D055) enforces additional constraints beyond casual play:</p>
+<ul>
+<li><strong>DeveloperMode is unavailable.</strong> The lobby option is hidden in ranked queue — dev commands cannot be enabled.</li>
+<li><strong>Mod commands require ranked certification.</strong> Community servers (D052) maintain a whitelist of mod commands approved for ranked play. Uncertified mod commands are rejected in ranked matches. The default: only engine-core commands are permitted; game-module commands (those registered by the built-in game module, e.g., RA1) are permitted; third-party mod commands require explicit whitelist entry.</li>
+<li><strong>Order volume is recorded server-side.</strong> The relay server counts orders per player per tick. This data is included in match certification (D055) and available for community review. It cannot be spoofed by modified clients.</li>
+<li><strong><code>autoexec.cfg</code> commands execute normally.</strong> Cvar-setting commands (<code>/set</code>, <code>/get</code>, <code>/toggle</code>) from autoexec execute as preferences. Gameplay commands (<code>/build</code>, <code>/move</code>, etc.) from autoexec are rejected in ranked — <code>CommandOrigin::ConfigFile</code> is not a valid origin for sim-affecting orders in ranked mode. You can set your sensitivity in autoexec; you can’t script your build order.</li>
+<li><strong>Zoom range is clamped.</strong> The competitive zoom range (default: 0.75–2.0) overrides the render mode’s <code>CameraConfig.zoom_min/zoom_max</code> (see <code>02-ARCHITECTURE.md</code> § “Camera System”) in ranked matches. This prevents extreme zoom-out from providing disproportionate map awareness. The default range is configured per ranked queue by the competitive committee (D037) and stored in the seasonal ranked configuration YAML. Tournament organizers can set their own zoom range via <code>TournamentConfig</code>. The <code>/zoom</code> command respects these bounds.</li>
+</ul>
+<h5 id="tournament-mode"><a class="header" href="#tournament-mode">Tournament Mode</a></h5>
+<p>Tournament organizers (via community server administration, D052) can enable a stricter <strong>tournament mode</strong> in the lobby:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Restriction</th><th>Effect</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Command whitelist</strong></td><td>Only whitelisted commands accepted; all others rejected</td><td>Organizers control exactly which console commands are legal</td></tr>
+<tr><td><strong>ConfigFile gameplay rejection</strong></td><td><code>autoexec.cfg</code> sim-affecting commands rejected (same as ranked)</td><td>Level playing field — no pre-scripted build orders</td></tr>
+<tr><td><strong>Input source logging</strong></td><td>All <code>CommandOrigin</code> tags recorded in match data, visible to admins</td><td>Post-match review for scripting investigation</td></tr>
+<tr><td><strong>APM cap (optional)</strong></td><td>Configurable orders-per-minute soft cap; exceeding triggers admin alert, not hard block</td><td>Communities that value strategy over APM can set limits</td></tr>
+<tr><td><strong>Forced replay recording</strong></td><td>Match replay saved automatically; both players receive copies</td><td>Evidence for dispute resolution</td></tr>
+<tr><td><strong>No mod commands</strong></td><td>Third-party mod commands disabled entirely</td><td>Pure vanilla/IC experience for competition</td></tr>
+<tr><td><strong>Workshop scripts (configurable)</strong></td><td>Organizer chooses: allow all, whitelist specific scripts, or disable all <code>.iccmd</code> scripts</td><td>Some tournaments embrace automation (FAF-style); others require pure manual play. Organizer’s call</td></tr>
+</tbody>
+</table>
+</div>
+<p>Tournament mode is a superset of ranked restrictions — it’s ranked plus organizer-defined rules. The <code>CommandDispatcher</code> checks a <code>TournamentConfig</code> resource (if present) before executing any command.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Additional Tournament Option</th><th>Effect</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Zoom range override</strong></td><td>Custom min/max zoom bounds</td><td>Same as ranked (0.75–2.0)</td></tr>
+<tr><td><strong>Resolution cap</strong></td><td>Maximum horizontal resolution for game viewport</td><td>Disabled (no cap)</td></tr>
+<tr><td><strong>Weather sim effects</strong></td><td>Force <code>sim_effects: false</code> on all maps</td><td>Off (use map’s setting)</td></tr>
+</tbody>
+</table>
+</div>
+<h5 id="visual-settings--competitive-fairness"><a class="header" href="#visual-settings--competitive-fairness">Visual Settings &amp; Competitive Fairness</a></h5>
+<p>Client-side visual settings — <code>/weather_fx</code>, <code>/shadows</code>, graphics quality presets, and render quality tiers — can affect battlefield visibility. A player who disables weather particles sees more clearly during a storm; a player on Low shadows has cleaner unit silhouettes.</p>
+<p>This is a <strong>conscious design choice, not an oversight.</strong> Nearly every competitive game exhibits this pattern: CS2 players play on low settings for visibility, SC2 players minimize effects for performance. The access is symmetric (every player can toggle the same settings), the tradeoff is aesthetics vs. clarity, and restricting visual preferences would be hostile to players on lower-end hardware who <em>need</em> reduced effects to maintain playable frame rates.</p>
+<p><strong>Resolution and aspect ratio</strong> follow the same principle. A 32:9 ultrawide player sees more horizontal area than a 16:9 player. In an isometric RTS, this advantage is modest — the sidebar and minimap consume significant screen space, and the critical information (unit positions, fog of war) is available to all players via the minimap regardless of viewport size. Restricting resolution would punish players for their hardware. Tournament organizers can set resolution caps via <code>TournamentConfig</code> if their ruleset demands hardware parity, but engine-level ranked play does not restrict this.</p>
+<p><strong>Principle:</strong> Visual settings that are universally accessible, symmetrically available, and involve a meaningful aesthetic tradeoff are not restricted. Settings that provide information not available to other players (hypothetical: a shader that reveals cloaked units) would be restricted. The line is <strong>information equivalence</strong>, not visual equivalence.</p>
+<h5 id="what-we-explicitly-do-not-do"><a class="header" href="#what-we-explicitly-do-not-do">What We Explicitly Do NOT Do</a></h5>
+<ul>
+<li><strong>No kernel anti-cheat.</strong> Warden, VAC, Vanguard, EasyAntiCheat — none of these are compatible with GPL, Linux, community trust, or open-source principles. We accept that the client cannot be trusted and design our competitive integrity around server-side verification and community governance instead.</li>
+<li><strong>No hard APM cap for all players.</strong> Fast players exist. Punishing speed punishes skill. APM is monitored and exposed, not limited (except in tournament mode where organizers opt in).</li>
+<li><strong>No “you used the console, achievements disabled” for non-dev commands.</strong> Typing <code>/move 100,200</code> instead of right-clicking is a UX preference, not cheating. Only dev commands trigger the cheat flag.</li>
+<li><strong>No script detection heuristics in the engine.</strong> Attempting to distinguish “human typing fast” from “script typing” is an arms race the open-source side always loses. Detection belongs to the community layer (replay review, statistical analysis), not the engine layer.</li>
+<li><strong>No removal of the console in multiplayer.</strong> The console is an accessibility and power-user feature. Removing it doesn’t prevent scripting (external tools exist); it just removes a legitimate interface. The answer to automation isn’t removing tools — it’s making the automation available to everyone (D033) and transparent to the community (replays).</li>
+</ul>
+<h5 id="cross-reference-summary"><a class="header" href="#cross-reference-summary">Cross-Reference Summary</a></h5>
+<ul>
+<li><strong>D012 (Order Validation):</strong> The architectural defense — every <code>PlayerOrder</code> is validated by the sim regardless of origin. Invalid orders are rejected deterministically.</li>
+<li><strong>D007 (Relay Server):</strong> Server-side order counting cannot be spoofed by modified clients. The relay sees the real order volume.</li>
+<li><strong>D030 (Workshop):</strong> Console scripts are a first-class Workshop resource category. Visibility, versioning, and community review make underground scripting unnecessary. Popular scripts feed the D033 promotion pipeline.</li>
+<li><strong>D033 (QoL Toggles):</strong> The great equalizer — when automation becomes standard community practice, promote it to a QoL toggle so everyone benefits equally. Workshop script popularity is the primary signal for which automations to promote.</li>
+<li><strong>D037 (Community Governance):</strong> Communities define their own competitive norms via RFCs. APM policies, script policies, and tournament rules are community decisions, not engine-enforced mandates.</li>
+<li><strong>D052 (Community Servers):</strong> Server operators configure ranked restrictions, tournament mode, and mod command whitelists.</li>
+<li><strong>D055 (Ranked Tiers):</strong> Ranked mode automatically applies the competitive integrity restrictions described above.</li>
+<li><strong>D048 (Render Modes):</strong> Information equivalence guarantee — all render modes display identical game-state information. See D048 § “Information Equivalence Across Render Modes.”</li>
+<li><strong>D022 (Weather):</strong> Weather sim effects on ranked maps are a map pool curation concern — see D055 § “Map pool curation guidelines.”</li>
+<li><strong>D018 (Experience Profiles):</strong> Profile locking table specifies which axes are fixed in ranked. See D018 § profile locking table.</li>
+</ul>
+<hr>
+<h2 id="sub-pages"><a class="header" href="#sub-pages">Sub-Pages</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Section</th><th>File</th></tr>
+</thead>
+<tbody>
+<tr><td>Classic Cheat Codes, Config, Security &amp; Integration</td><td><a href="D058-cheats-config.html">D058-cheats-config.md</a></td></tr>
+</tbody>
+</table>
+</div>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../decisions/09g/D058/D058-commands-catalog.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../decisions/09g/D058/D058-cheats-config.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../decisions/09g/D058/D058-commands-catalog.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../decisions/09g/D058/D058-cheats-config.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../../mark-09e88c2c.min.js"></script>
+        <script src="../../../searcher-c2a407aa.js"></script>
+
+        <script src="../../../clipboard-1626706a.min.js"></script>
+        <script src="../../../highlight-abc7f01d.js"></script>
+        <script src="../../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

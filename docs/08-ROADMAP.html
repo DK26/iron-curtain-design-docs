@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-da66c284.js";
+            window.path_to_searchindex_js = "searchindex-eb0f51f8.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-b6ee3c41.js"></script>
+        <script src="toc-2281c970.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -455,6 +455,7 @@
 <li><code>CertifiedMatchResult</code> with Ed25519 relay signatures</li>
 <li>Spectator feed: relay forwards tick orders to observers with configurable delay</li>
 <li>Behavioral analysis pipeline on relay server</li>
+<li><strong><code>p2p-distribute</code> standalone crate (D076 Tier 3):</strong> Purpose-built P2P engine for Workshop/lobby/server content delivery; core engine + config + peer discovery start M8 (parallel with main sim); IC integration wires into <code>workshop-core</code> and <code>ic-server</code> Workshop capability; see <code>research/p2p-distribute-crate-design.md</code> for full design and build-vs-adopt rationale</li>
 <li><strong>Server-side SQLite telemetry (D031):</strong> Relay, tracking, and workshop servers record structured events to local <code>telemetry.db</code> using unified schema; server event taxonomy (game lifecycle, player join/leave, per-tick processing, desync detection, lag switch detection, behavioral analysis, listing lifecycle, dependency resolution); <code>/analytics</code> commands on servers; same export/inspect workflow as client; no OTEL infrastructure required for basic server observability</li>
 <li><strong>Relay compression config (D063):</strong> Advanced compression parameters (<code>compression.advanced.*</code>) active on relay servers via env vars and CLI flags; relay compression config fingerprinting in lobby handshake; reconnection-specific parameters (<code>reconnect_pre_compress</code>, <code>reconnect_max_snapshot_bytes</code>, <code>reconnect_stall_budget_ms</code>) operational; deployment profile presets (tournament archival, caster/observer, large mod server, low-power hardware)</li>
 <li><strong>Full server configuration (D064):</strong> All ~200 <code>server_config.toml</code> parameters active across all subsystems (relay, match lifecycle, pause, penalties, spectator, vote framework, protocol limits, communication, anti-cheat, ranking, matchmaking, AI tuning, telemetry, database, Workshop/P2P, compression); environment variable override mapping (<code>IC_RELAY_*</code>, <code>IC_MATCH_*</code>, etc.); hot reload via SIGHUP and <code>/reload_config</code>; four deployment profile templates (tournament LAN, casual community, competitive league, training/practice) ship with relay binary; cross-parameter consistency validation</li>
@@ -475,196 +476,18 @@
 <li>Ranked 1v1 queue functional with ratings, placement, and leaderboard</li>
 <li>Spectator can watch a live game with broadcast delay</li>
 </ul>
-<h2 id="phase-6a-core-modding--scenario-editor-months-2630"><a class="header" href="#phase-6a-core-modding--scenario-editor-months-2630">Phase 6a: Core Modding &amp; Scenario Editor (Months 26–30)</a></h2>
-<p><strong>Goal:</strong> Ship the modding SDK, core scenario editor, and full Workshop — the three pillars that enable community content creation.</p>
-<blockquote>
-<p><strong>Phased Workshop delivery (D030):</strong> A minimal Workshop (central server + <code>ic mod publish</code> + <code>ic mod install</code> + in-game browser + auto-download on lobby join) should ship during Phase 4–5 alongside the <code>ic</code> CLI. Phase 6a adds the full Artifactory-level features: federation, community servers, replication, promotion channels, CI/CD token scoping, creator reputation, DMCA process. This avoids holding Workshop infrastructure hostage until month 26.</p>
-</blockquote>
-<h3 id="deliverables--modding-sdk"><a class="header" href="#deliverables--modding-sdk">Deliverables — Modding SDK</a></h3>
-<ul>
-<li>Full OpenRA YAML rule compatibility (existing mods load)</li>
-<li>WASM mod scripting with full capability system</li>
-<li>Asset hot-reloading for mod development</li>
-<li>Mod manager + workshop-style distribution</li>
-<li>Tera templating for YAML generation (nice-to-have)</li>
-<li><strong><code>ic</code> CLI tool (full release):</strong> <code>ic mod init/check/test/run/server/package/publish/watch/lint</code> plus Git-first helpers (<code>ic git setup</code>, <code>ic content diff</code>) — complete mod development workflow (D020)</li>
-<li><strong>Mod templates:</strong> <code>data-mod</code>, <code>scripted-mod</code>, <code>total-conversion</code>, <code>map-pack</code>, <code>asset-pack</code> via <code>ic mod init</code></li>
-<li><strong><code>mod.yaml</code> manifest</strong> with typed schema, semver engine version pinning, dependency declarations</li>
-<li><strong>VS Code extension</strong> for mod development: YAML schema validation, Lua LSP, <code>ic</code> integration</li>
-</ul>
-<h3 id="deliverables--scenario-editor-d038-core"><a class="header" href="#deliverables--scenario-editor-d038-core">Deliverables — Scenario Editor (D038 Core)</a></h3>
-<ul>
-<li><strong>SDK scenario editor (D038):</strong> OFP/Eden-inspired visual editor for maps AND mission logic — ships as part of the IC SDK (separate application from the game — D040). Terrain painting, unit placement, triggers (area-based with countdown/timeout timers and min/mid/max randomization), waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives, weather change, time of day, day/night cycle, season, etc.), visual connection lines between triggers/modules/waypoints, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers with lock/visibility, Simple/Advanced mode toggle, <strong>Preview/Test/Validate/Publish</strong> toolbar flow, autosave with crash recovery, undo/redo, direct Workshop publishing</li>
-<li><strong>Resource stacks (D038):</strong> Ordered media candidates with per-entry conditions and fallback chains — every media property (video, audio, music, portrait) supports stacking. External streaming URIs (YouTube, Spotify, Google Drive) as optional stack entries with mandatory local fallbacks. Workshop publish validation enforces fallback presence.</li>
-<li><strong>Environment panel (D038):</strong> Consolidated time/weather/atmosphere setup — clock dial for time of day, day/night cycle toggle with speed slider, weather dropdown with D022 state machine editor, temperature, wind, ambient light, fog style. Live preview in editor viewport.</li>
-<li><strong>Achievement Trigger module (D036/D038):</strong> Connects achievements to the visual trigger system — no Lua required for standard achievement unlock logic</li>
-<li><strong>Editor vocabulary schema:</strong> Auto-generated machine-readable description of all modules, triggers, compositions, templates, and properties — powers documentation, mod tooling, and the Phase 7 Editor AI Assistant</li>
-<li><strong>Git-first collaboration support (D038):</strong> Stable content IDs + canonical serialization for editor-authored files, read-only Git status strip (branch/dirty/conflicts), <code>ic git setup</code> repo-local helpers, <code>ic content diff</code> semantic diff viewer/CLI. <strong>No commit/branch/push/pull UI in the SDK</strong> (Git remains the source of truth).</li>
-<li><strong>Validate &amp; Playtest workflow (D038):</strong> Quick Validate and Publish Validate presets, async/cancelable validation runs, status badges (<code>Valid/Warnings/Errors/Stale/Running</code>), and a single Publish Readiness screen aggregating validation/export/license/metadata warnings</li>
-<li><strong>Profile Playtest v1 (D038):</strong> Advanced-mode only performance profiling from <code>Test</code> dropdown with summary-first output (avg/max tick time, top hotspots, low-end target budget comparison)</li>
-<li><strong>Migration Workbench v1 (D038 + D020):</strong> “Upgrade Project” flow in SDK (read-only migration preview/report wrapper over <code>ic mod migrate</code>)</li>
-<li><strong>Resource Manager panel (D038):</strong> Unified resource browser with three tiers — Default (game module assets indexed from <code>.mix</code> archives, always available), Workshop (inline browsing/search/install from D030), Local (drag-and-drop / file import into project <code>assets/</code>); drag-to-editor workflow for all resource types; cross-tier search; duplicate detection; inline preview (sprites, audio playback, palette swatches, video thumbnails); format conversion on import via <code>ra-formats</code></li>
-<li>Controller input mapping for core editing workflows (Steam Deck compatible)</li>
-<li>Accessibility: colorblind palette, UI scaling, full keyboard navigation</li>
-</ul>
-<h3 id="deliverables--full-workshop-d030"><a class="header" href="#deliverables--full-workshop-d030">Deliverables — Full Workshop (D030)</a></h3>
-<ul>
-<li><strong>Workshop resource registry (D030):</strong> Federated multi-source workshop server with crates.io-style dependency resolution; backed by embedded SQLite with FTS5 search (D034)</li>
-<li><strong>Dependency management CLI:</strong> <code>ic mod resolve/install/update/tree/lock/audit</code> — full dependency lifecycle</li>
-<li><strong>License enforcement:</strong> Every published resource requires SPDX license; <code>ic mod audit</code> checks dependency tree compatibility</li>
-<li><strong>Individual resource publishing:</strong> Music, sprites, textures, voice lines, cutscenes, palettes, UI themes — all publishable as independent versioned resources</li>
-<li><strong>Lockfile system:</strong> <code>ic.lock</code> for reproducible dependency resolution across machines</li>
-<li><strong>Steam Workshop integration (D030):</strong> Optional distribution channel — subscribe via Steam, auto-sync, IC Workshop remains primary; no Steam lock-in</li>
-<li><strong>In-game Workshop browser (D030):</strong> Search, filter by category/game-module/rating, preview screenshots, one-click subscribe, dependency auto-resolution</li>
-<li><strong>Auto-download on lobby join (D030):</strong> CS:GO-style automatic mod/map download when joining a game that requires content the player doesn’t have; progress UI with cancel option</li>
-<li><strong>Creator reputation system (D030):</strong> Trust scores from download counts, ratings, curation endorsements; tiered badges (New/Trusted/Verified/Featured); influences search ranking</li>
-<li><strong>Content moderation &amp; DMCA/takedown policy (D030):</strong> Community reporting, automated scanning for known-bad content, 72-hour response window, due process with appeal path; Workshop moderator tooling</li>
-<li><strong>Creator tipping &amp; sponsorship (D035):</strong> Optional tip links in resource metadata (Ko-fi/Patreon/GitHub Sponsors); IC never processes payments; no mandatory paywalls on mods</li>
-<li><strong>Local CAS dedup (D049):</strong> Content-addressed blob store for Workshop packages — files stored by SHA-256 hash, deduplicated across installed mods; <code>ic mod gc</code> garbage collection; upgrades from Phase 4–5 simple <code>.icpkg</code>-on-disk storage</li>
-<li><strong><code>ic replay recompress</code> CLI (D063):</strong> Offline replay recompression at different compression levels for archival/sharing; <code>ic mod build --compression-level</code> flag for Workshop package builds</li>
-<li><strong>Annotated replay format &amp; replay coach mode (D065):</strong> Workshop-publishable annotated replays (<code>.icrep</code> + YAML annotation track with narrator text, highlights, quizzes); replay coach mode applies post-game tip rules in real-time during any replay playback; “Learning” tab in replay browser for community tutorial replays; <code>Tutorial</code> Lua API available in user-created scenarios for community tutorial creation</li>
-<li><strong><code>ic server validate-config</code> CLI (D064):</strong> Validates a <code>server_config.toml</code> file for errors, range violations, cross-parameter inconsistencies, and unknown keys without starting a server; useful for CI/CD pipelines and pre-deployment checks</li>
-<li><strong>Mod profile publishing (D062):</strong> <code>ic mod publish-profile</code> publishes a local mod profile as a Workshop modpack; <code>ic profile import</code> imports Workshop modpacks as local profiles; in-game mod manager gains profile dropdown for one-click switching; editor provenance tooltips and per-source hot-swap for sub-second rule iteration</li>
-</ul>
-<h3 id="deliverables--cross-engine-export-d066"><a class="header" href="#deliverables--cross-engine-export-d066">Deliverables — Cross-Engine Export (D066)</a></h3>
-<ul>
-<li><strong>Export pipeline core (D066):</strong> <code>ExportTarget</code> trait with built-in IC native and OpenRA backends; <code>ExportPlanner</code> produces fidelity reports listing downgraded/stripped features; export-safe authoring mode in scenario editor (feature gating, live fidelity indicators, export-safe trigger templates)</li>
-<li><strong>OpenRA export (D066):</strong> IC scenario → <code>.oramap</code> (ZIP: map.yaml + map.bin + lua/); IC YAML rules → MiniYAML via bidirectional D025 converter; IC trait names → OpenRA trait names via bidirectional D023 alias table; IC Lua scripts validated against OpenRA’s 16-global API surface; mod manifest generation via D026 reverse</li>
-<li><strong><code>ic export</code> CLI (D066):</strong> <code>ic export --target openra mission.yaml -o ./output/</code>; <code>--dry-run</code> for validation-only; <code>--verify</code> for exportability + target-facing checks; <code>--fidelity-report</code> for structured loss report; batch export for directories</li>
-<li><strong>Export-safe trigger templates (D066):</strong> Pre-built trigger patterns in scenario editor guaranteed to downcompile cleanly to target engine trigger systems</li>
-</ul>
-<h3 id="exit-criteria-6"><a class="header" href="#exit-criteria-6">Exit Criteria</a></h3>
-<ul>
-<li>Someone ports an existing OpenRA mod (Tiberian Dawn, Dune 2000) and it runs</li>
-<li>SDK scenario editor supports terrain painting, unit placement, triggers with timers, waypoints, modules, compositions, undo/redo, autosave, <strong>Preview/Test/Validate/Publish</strong>, and Workshop publishing</li>
-<li>Quick Validate runs asynchronously and surfaces actionable errors/warnings without blocking Preview/Test</li>
-<li><code>ic git setup</code> and <code>ic content diff</code> work on an editor-authored scenario in a Git repo (no SDK commit UI)</li>
-<li>A mod can declare 3+ Workshop resource dependencies and <code>ic mod install</code> resolves, downloads, and caches them correctly</li>
-<li><code>ic mod audit</code> correctly identifies license incompatibilities in a dependency tree</li>
-<li>An individual resource (e.g., a music track) can be published to and pulled from the Workshop independently</li>
-<li>In-game Workshop browser can search, filter, and install resources with dependency auto-resolution</li>
-<li>Joining a lobby with required mods triggers auto-download with progress UI</li>
-<li>Creator reputation badges display correctly on resource listings</li>
-<li>DMCA/takedown process handles a test case end-to-end within 72 hours</li>
-<li>SDK shows read-only Git status (branch/dirty/conflict) for a project repo without blocking editing workflows</li>
-<li><code>ic content diff</code> produces an object-level diff for an <code>.icscn</code> file with stable IDs preserved across reordering/renames</li>
-<li>Visual diff displays structured YAML changes and syntax-highlighted Lua changes</li>
-<li>Resource Manager shows Default resources from installed game files, supports Workshop search/install inline, and accepts manual file drag-and-drop import</li>
-<li>A resource dragged from the Resource Manager onto the editor viewport creates the expected entity/assignment</li>
-<li><code>ic export --target openra</code> produces a valid <code>.oramap</code> from an IC scenario that loads in the current OpenRA release</li>
-<li>Export fidelity report correctly identifies at least 5 IC-only features that cannot export to the target</li>
-<li>Export-safe authoring mode hides/grays out features incompatible with the selected target</li>
-</ul>
-<h2 id="phase-6b-campaign-editor--game-modes-months-3034"><a class="header" href="#phase-6b-campaign-editor--game-modes-months-3034">Phase 6b: Campaign Editor &amp; Game Modes (Months 30–34)</a></h2>
-<p><strong>Goal:</strong> Extend the scenario editor into a full campaign authoring platform, ship game mode templates, and multiplayer scenario tools. These all build on Phase 6a’s editor and Workshop foundations.</p>
-<h3 id="deliverables--campaign-editor-d038"><a class="header" href="#deliverables--campaign-editor-d038">Deliverables — Campaign Editor (D038)</a></h3>
-<ul>
-<li><strong>Visual campaign graph editor:</strong> missions as nodes, outcomes as directed edges, weighted/conditional paths, mission pools</li>
-<li><strong>Persistent state dashboard:</strong> roster flow visualization, story flag cross-references, campaign variable scoping</li>
-<li><strong>Intermission screen editor:</strong> briefing, roster management, base screen, shop/armory, dialogue, world map, debrief+stats, credits, custom layout</li>
-<li><strong>Campaign mission transitions:</strong> briefing-overlaid asset loading, themed loading screens, cinematic-as-loading-mask, progress indicator within briefing</li>
-<li><strong>Dialogue editor:</strong> branching trees with conditions, effects, variable substitution, per-character portraits</li>
-<li><strong>Named characters:</strong> persistent identity across missions, traits, inventory, must-survive flags</li>
-<li><strong>Campaign inventory:</strong> persistent items with category, quantity, assignability to characters</li>
-<li><strong>Campaign testing tools:</strong> graph validation, jump-to-mission, path coverage visualization, state inspector</li>
-<li><strong>Advanced validation &amp; Publish Readiness refinements (D038):</strong> preset picker (<code>Quick/Publish/Export/Multiplayer/Performance</code>), batch validation across scenarios/campaign nodes, validation history panel</li>
-<li><strong>Campaign assembly workflow (D038):</strong> Quick Start templates (Linear, Two-Path Branch, Hub and Spoke, Roguelike Pool, Full Branch Tree), Scenario Library panel (workspace/original campaigns/Workshop with search/favorites), drag-to-add nodes, one-click connections with auto-outcome mapping, media drag targets on campaign nodes, campaign property sheets in sidebar, end-to-end “New → Publish” pipeline under 15 minutes for a basic campaign</li>
-<li><strong>Original Campaign Asset Library (D038):</strong> Game Asset Index (auto-catalogs all original campaign assets by mission), Campaign Browser panel (browse original RA1/TD campaigns with maps/videos/music/EVA organized per-mission), one-click asset reuse (drag from Campaign Browser to campaign node), Campaign Import / “Recreate” mode (import entire original campaign as editable starting point with pre-filled graph, asset references, and sequencing)</li>
-<li><strong>Achievement Editor (D036/D038):</strong> Visual achievement definition and management — campaign-scoped achievements, incremental progress tracking, achievement coverage view, playthrough tracker. Integrates with Achievement Trigger modules from Phase 6a.</li>
-<li><strong>Git-first collaboration refinements (D038):</strong> <code>ic content merge</code> semantic merge helper, optional conflict resolver panels (including campaign graph conflict view), and richer visual diff overlays (terrain cell overlays, side-by-side image comparison)</li>
-<li><strong>Migration Workbench apply mode (D038 + D020):</strong> Apply migrations from SDK with rollback snapshots and post-migration Validate/export-compatibility prompts</li>
-<li><strong>Localization &amp; Subtitle Workbench (D038):</strong> Advanced-only string table editor, subtitle timeline editor, pseudolocalization preview, translation coverage report</li>
-</ul>
-<h3 id="deliverables--game-mode-templates--multiplayer-scenario-tools-d038"><a class="header" href="#deliverables--game-mode-templates--multiplayer-scenario-tools-d038">Deliverables — Game Mode Templates &amp; Multiplayer Scenario Tools (D038)</a></h3>
-<ul>
-<li><strong>8 core game mode templates:</strong> Skirmish, Survival/Horde, King of the Hill, Regicide, Free for All, Co-op Survival, Sandbox, Base Defense</li>
-<li><strong>Multiplayer scenario tools:</strong> player slot configuration, per-player objectives/triggers/briefings, co-op mission modes (allied factions, shared command, split objectives, asymmetric), multi-slot preview with AI standin, slot switching, lobby preview</li>
-<li><strong>Co-op campaign properties:</strong> shared roster draft/split/claim, drop-in/drop-out, solo fallback configuration</li>
-<li><strong>Game Master mode (D038):</strong> Zeus-inspired real-time scenario manipulation during live gameplay — one player controls enemy faction strategy, places reinforcements, triggers events, adjusts difficulty; uses editor UI on a live sim; budget system prevents flooding</li>
-<li><strong>Achievement packs (D036):</strong> Mod-defined achievements via YAML + Lua triggers, publishable as Workshop resources; achievement browser in game UI</li>
-</ul>
-<h3 id="deliverables--ra1-export--editor-extensibility-d066"><a class="header" href="#deliverables--ra1-export--editor-extensibility-d066">Deliverables — RA1 Export &amp; Editor Extensibility (D066)</a></h3>
-<ul>
-<li><strong>RA1 export target (D066):</strong> IC scenario → <code>rules.ini</code> + <code>.mpr</code> mission files + <code>.shp</code>/<code>.pal</code>/<code>.aud</code>/<code>.vqa</code>/<code>.mix</code>; balance values remapped to RA integer scales; Lua trigger downcompilation via pattern library (recognized patterns → RA1 trigger/teamtype/action equivalents; unmatched patterns → fidelity warnings)</li>
-<li><strong>Campaign export (D066):</strong> IC branching campaign graph → linearized sequential missions for stateless targets (RA1, OpenRA); user selects branch path or exports longest path; persistent state stripped with warnings</li>
-<li><strong>Editor extensibility — YAML + Lua tiers (D066):</strong> Custom entity palette categories, property panels, terrain brush presets via YAML; editor automation, custom validators, batch operations via Lua (<code>Editor.RegisterValidator</code>, <code>Editor.RegisterCommand</code>); editor extensions distributed as Workshop packages (<code>type: editor_extension</code>)</li>
-<li><strong>Editor extension Workshop distribution (D066):</strong> Editor extensions install into SDK extension directory; mod-profile-aware auto-activation (RA2 profile activates RA2 editor extensions)</li>
-<li><strong>Editor plugin hardening (D066):</strong> Plugin API version compatibility checks, capability manifests (deny-by-default), and install-time permission review for editor extensions</li>
-<li><strong>Asset provenance / rights checks in Publish Readiness (D040/D038):</strong> Advanced-mode provenance metadata in Asset Studio surfaced primarily during publish with stricter release-channel gating than beta/private workflows</li>
-</ul>
-<h3 id="exit-criteria-7"><a class="header" href="#exit-criteria-7">Exit Criteria</a></h3>
-<ul>
-<li>Campaign editor can create a branching 5+ mission campaign with persistent roster, story flags, and intermission screens</li>
-<li>A first-time user can assemble a basic 5-mission campaign from Quick Start template + drag-and-drop in under 15 minutes</li>
-<li>Original RA1 Allied campaign can be imported via Campaign Import and opened in the graph editor with all asset references intact</li>
-<li>At least 3 game mode templates produce playable matches out-of-the-box</li>
-<li>A 2-player co-op mission works with per-player objectives, AI fallback for unfilled slots, and drop-in/drop-out</li>
-<li>Game Master mode allows one player to direct enemy forces in real-time with budget constraints</li>
-<li>At least one mod-defined achievement pack loads and triggers correctly</li>
-<li><code>ic export --target ra1</code> produces <code>rules.ini</code> + mission files that load in CnCNet-patched Red Alert</li>
-<li>At least 5 Lua trigger patterns downcompile correctly to RA1 trigger/teamtype equivalents</li>
-<li>A YAML editor extension adds a custom entity palette category visible in the SDK</li>
-<li>A Lua editor script registers and executes a batch operation via <code>Editor.RegisterCommand</code></li>
-<li>Incompatible editor extension plugin API versions are rejected with a clear compatibility message</li>
-</ul>
-<h2 id="phase-7-ai-content-ecosystem--polish-months-3436"><a class="header" href="#phase-7-ai-content-ecosystem--polish-months-3436">Phase 7: AI Content, Ecosystem &amp; Polish (Months 34–36+)</a></h2>
-<p><strong>Goal:</strong> Optional LLM-generated missions (BYOLLM), visual modding infrastructure, ecosystem polish, and feature parity.</p>
-<h3 id="deliverables--ai-content-generation-optional--byollm"><a class="header" href="#deliverables--ai-content-generation-optional--byollm">Deliverables — AI Content Generation (Optional — BYOLLM)</a></h3>
-<p>All LLM features require the player to configure their own LLM provider. The game is fully functional without one.</p>
-<ul>
-<li><code>ic-llm</code> crate: optional LLM integration for mission generation</li>
-<li>In-game mission generator UI: describe scenario → playable mission</li>
-<li>Generated output: standard YAML map + Lua trigger scripts + briefing text</li>
-<li>Difficulty scaling: same scenario at different challenge levels</li>
-<li>Mission sharing: rate, remix, publish generated missions</li>
-<li>Campaign generation: connected multi-mission storylines (experimental)</li>
-<li><strong>World Domination campaign mode (D016):</strong> LLM-driven narrative across a world map; world map renderer in <code>ic-ui</code> (region overlays, faction colors, frontline animation, briefing panel); mission generation from campaign state; template fallback without LLM; strategic AI for non-player WD factions; per-region force pool and garrison management</li>
-<li><strong>Template fallback system (D016):</strong> Built-in mission templates per terrain type and action type (urban assault, rural defense, naval landing, arctic recon, mountain pass, etc.); template selection from strategic state; force pool population; deterministic progression rules for no-LLM mode</li>
-<li>Adaptive difficulty: AI observes playstyle, generates targeted challenges (experimental)</li>
-<li><strong>LLM-driven Workshop resource discovery (D030):</strong> When LLM provider is configured, LLM can search Workshop by <code>llm_meta</code> tags, evaluate fitness, auto-pull resources as dependencies for generated content; license-aware filtering</li>
-<li><strong>LLM player-aware generation (D034):</strong> When LLM provider is configured, <code>ic-llm</code> reads local SQLite for player context — faction preferences, unit usage patterns, win/loss streaks, campaign roster state; generates personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives</li>
-<li><strong>LLM coaching loop (D042):</strong> When LLM provider is configured, <code>ic-llm</code> reads <code>training_sessions</code> + <code>player_profiles</code> for structured training plans (“Week 1: expansion timing”), post-session natural language coaching, multi-session arc tracking, and contextual tips during weakness review; builds on Phase 4–5 rule-based training system</li>
-<li><strong>AI training data pipeline (D031):</strong> gameplay event stream → OTEL collector → Parquet/Arrow columnar format → ML training; build order learning, engagement patterns, balance analysis from aggregated match telemetry</li>
-</ul>
-<h3 id="deliverables--wasm-editor-plugins--community-export-targets-d066"><a class="header" href="#deliverables--wasm-editor-plugins--community-export-targets-d066">Deliverables — WASM Editor Plugins &amp; Community Export Targets (D066)</a></h3>
-<ul>
-<li><strong>WASM editor plugins (D066 Tier 3):</strong> Full editor plugins via WASM — custom asset viewers, terrain tools, component editors, export targets; <code>EditorHost</code> API for plugin registration; community-contributed export targets for Tiberian Sun, RA2, Remastered Collection</li>
-<li><strong>Agentic export assistance (D066/D016):</strong> When LLM provider is configured, LLM suggests how to simplify IC-only features for target compatibility; auto-generates fidelity-improving alternatives for flagged triggers/features</li>
-</ul>
-<h3 id="deliverables--visual-modding-infrastructure-bevy-rendering"><a class="header" href="#deliverables--visual-modding-infrastructure-bevy-rendering">Deliverables — Visual Modding Infrastructure (Bevy Rendering)</a></h3>
-<p>These are optional visual enhancements that ship as engine capabilities for modders and community content creators. The base game uses the classic isometric aesthetic established in Phase 1.</p>
-<ul>
-<li>Post-processing pipeline available to modders: bloom, color grading, ambient occlusion</li>
-<li>Dynamic lighting infrastructure: explosions, muzzle flash, day/night cycle (optional game mode)</li>
-<li>GPU particle system infrastructure: smoke trails, fire propagation, weather effects (rain, snow, sandstorm, fog, blizzard, storm — see <code>04-MODDING.md</code> § “weather scene template”)</li>
-<li>Weather system: per-map or trigger-based, render-only or with optional sim effects (visibility, speed modifiers)</li>
-<li>Shader effect library: chrono-shift, iron curtain, gap generator, nuke flash</li>
-<li>Cinematic replay camera with smooth interpolation</li>
-</ul>
-<h3 id="deliverables--ecosystem-polish-deferred-from-phase-6b"><a class="header" href="#deliverables--ecosystem-polish-deferred-from-phase-6b">Deliverables — Ecosystem Polish (deferred from Phase 6b)</a></h3>
-<ul>
-<li><strong>Mod balance dashboard (D034):</strong> Unit win-rate contribution, cost-efficiency scatter plots, engagement outcome distributions from SQLite <code>gameplay_events</code>; <code>ic mod stats</code> CLI reads same database</li>
-<li><strong>Community governance tooling (D037):</strong> Workshop moderator dashboard, community representative election system, game module steward roles</li>
-<li><strong>Editor AI Assistant (D038):</strong> Copilot-style AI-powered editor assistant — <code>EditorAssistant</code> trait (defined in Phase 6a) + <code>ic-llm</code> implementation; natural language prompts → editor actions (place entities, create triggers, build campaign graphs, configure intermissions); ghost preview before execution; full undo/redo integration; context-aware suggestions based on current editor state; prompt pattern library for scenario, campaign, and media tasks; discoverable capability hints</li>
-<li><strong>Editor onboarding:</strong> “Coming From” profiles (OFP/AoE2/StarCraft/WC3), keybinding presets, terminology Rosetta Stone, interactive migration cheat sheets, partial scenario import from other editors</li>
-<li><strong>Game accessibility:</strong> colorblind faction/minimap/resource palettes, screen reader support for menus, remappable controls, subtitle options for EVA/briefings</li>
-</ul>
-<h3 id="deliverables--platform"><a class="header" href="#deliverables--platform">Deliverables — Platform</a></h3>
-<ul>
-<li>Feature parity checklist vs OpenRA</li>
-<li>Web build via WASM (play in browser)</li>
-<li>Mobile touch controls</li>
-<li>Community infrastructure: website, mod registry, matchmaking server</li>
-</ul>
-<h3 id="exit-criteria-8"><a class="header" href="#exit-criteria-8">Exit Criteria</a></h3>
-<ul>
-<li>A competitive OpenRA player can switch and feel at home</li>
-<li>When an LLM provider is configured, the mission generator produces varied, fun, playable missions</li>
-<li>Browser version is playable</li>
-<li>At least one total conversion mod exists on the platform</li>
-<li>A veteran editor from AoE2, OFP, or StarCraft backgrounds reports feeling productive within 30 minutes (user testing)</li>
-<li>Game is playable by a colorblind user without information loss</li>
-</ul>
+<hr>
+<h2 id="sub-pages"><a class="header" href="#sub-pages">Sub-Pages</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Section</th><th>Topic</th><th>File</th></tr>
+</thead>
+<tbody>
+<tr><td>Phases 6a-7</td><td>Phase 6a (Core Modding + Scenario Editor), Phase 6b (Campaign Editor + Game Modes), Phase 7 (LLM Missions + Ecosystem + Polish), post-Phase 7 vision, risk matrix</td><td><a href="roadmap/phases-6-7.html">phases-6-7.md</a></td></tr>
+</tbody>
+</table>
+</div>
 
                     </main>
 
@@ -674,7 +497,7 @@
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="18-PROJECT-TRACKER.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="roadmap/phases-6-7.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -688,7 +511,7 @@
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="18-PROJECT-TRACKER.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="roadmap/phases-6-7.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

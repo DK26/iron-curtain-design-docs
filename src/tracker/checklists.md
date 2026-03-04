@@ -109,7 +109,7 @@ Use this checklist to keep the multiplayer path architecture-faithful and staged
 
 ### `M4` Checklist (Minimal Online Slice)
 
-| Step    | Work Package (Implementation Bundle)                                                          | Suggested Verification / Proof Artifact                                 | Completion Notes                                                   |
+| Step    | Work Package (Implementation Bundle)                                                          | Suggested Verification / Proof Artifact                                 | Completion Notes                                   |
 | ------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------- |
 | `G17.1` | Minimal host/join path (`direct connect` or `join code`) on final `NetworkModel` architecture | Two-client connect test (same LAN + remote path where possible)         | Do not pull in tracker/browser/ranked assumptions  |
 | `G17.2` | Relay time authority + sub-tick normalization/clamping + sim-side validation path             | Timing/fairness test logs + deterministic reject consistency checks     | Keep trust claims bounded to `M4` slice guarantees |

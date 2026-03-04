@@ -12,14 +12,14 @@
 
 IC ships a **single Rust binary** (`ic-server`) with six independently toggleable capabilities (D074):
 
-| Capability | State model | I/O pattern | Persistence |
-|---|---|---|---|
-| **Relay** | Per-game session state in memory | Persistent WebSocket/UDP connections, sub-ms latency critical | SQLite (match results, replay metadata) |
-| **Tracker** | Ephemeral listings in memory | Request-response (REST/WebSocket), TTL expiry | None — pure in-memory with heartbeat |
-| **Workshop** | BitTorrent swarm state, piece maps | Long-lived TCP/uTP/WebRTC peer connections | SQLite (package metadata), filesystem (`.icpkg` blobs) |
-| **Ranking** | Glicko-2 player ratings | Request-response + event-driven (match result callbacks) | SQLite (ratings, SCRs, season history) |
-| **Matchmaking** | Queue state in memory | Persistent connections (waiting players) | SQLite (queue analytics) |
-| **Moderation** | Review queue, case history | Mixed (review submission + async processing) | SQLite (cases, verdicts) |
+| Capability      | State model                        | I/O pattern                                                   | Persistence                                            |
+| --------------- | ---------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------ |
+| **Relay**       | Per-game session state in memory   | Persistent WebSocket/UDP connections, sub-ms latency critical | SQLite (match results, replay metadata)                |
+| **Tracker**     | Ephemeral listings in memory       | Request-response (REST/WebSocket), TTL expiry                 | None — pure in-memory with heartbeat                   |
+| **Workshop**    | BitTorrent swarm state, piece maps | Long-lived TCP/uTP/WebRTC peer connections                    | SQLite (package metadata), filesystem (`.icpkg` blobs) |
+| **Ranking**     | Glicko-2 player ratings            | Request-response + event-driven (match result callbacks)      | SQLite (ratings, SCRs, season history)                 |
+| **Matchmaking** | Queue state in memory              | Persistent connections (waiting players)                      | SQLite (queue analytics)                               |
+| **Moderation**  | Review queue, case history         | Mixed (review submission + async processing)                  | SQLite (cases, verdicts)                               |
 
 The core deployment philosophy is **"Just a Binary"** (D072): download, run, server is live. Docker and Kubernetes are optional layers for operators who want horizontal scaling. The target operator persona is a "$5 VPS community member" — not a professional SRE team.
 
@@ -44,12 +44,12 @@ The WASM server-side ecosystem has matured significantly since its WebAssembly S
 
 ### 2b. Application Frameworks
 
-| Framework | Model | Notable properties |
-|---|---|---|
-| **Fermyon Spin** | Request-response handlers compiled to WASM. HTTP trigger → WASM component → response. | Sub-millisecond cold start, built-in key-value/SQLite storage (Spin's own, not raw `rusqlite`), Redis/Postgres outbound connectors, composable components. |
-| **wasmCloud** | Actor model with capability providers. WASM actors communicate via NATS messaging. | Lattice-based distribution, hot-swappable capability providers, declarative linking, NATS dependency. |
-| **Cloudflare Workers** | V8 isolates (not pure WASM, but runs WASM). | Global edge network, <5ms cold start, Workers KV / Durable Objects for state, 128MB memory limit, CPU time limits (10-50ms free tier). |
-| **Fastly Compute** | Pure WASM on Lucet/Wasmtime. | Edge compute, <1ms startup, KV store, limited outbound networking. |
+| Framework              | Model                                                                                 | Notable properties                                                                                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Fermyon Spin**       | Request-response handlers compiled to WASM. HTTP trigger → WASM component → response. | Sub-millisecond cold start, built-in key-value/SQLite storage (Spin's own, not raw `rusqlite`), Redis/Postgres outbound connectors, composable components. |
+| **wasmCloud**          | Actor model with capability providers. WASM actors communicate via NATS messaging.    | Lattice-based distribution, hot-swappable capability providers, declarative linking, NATS dependency.                                                      |
+| **Cloudflare Workers** | V8 isolates (not pure WASM, but runs WASM).                                           | Global edge network, <5ms cold start, Workers KV / Durable Objects for state, 128MB memory limit, CPU time limits (10-50ms free tier).                     |
+| **Fastly Compute**     | Pure WASM on Lucet/Wasmtime.                                                          | Edge compute, <1ms startup, KV store, limited outbound networking.                                                                                         |
 
 ### 2c. Kubernetes Integration
 
@@ -225,25 +225,25 @@ wasmCloud's actor model and mandatory NATS dependency add significant operationa
 
 ## 6. Relationship to Existing Decisions
 
-| Decision | Impact |
-|---|---|
-| **D007 (relay server)** | Explicitly excluded from WASM deployment. Relay stays native. |
-| **D034 (SQLite)** | SQLite-dependent capabilities stay native. Only the tracker (no SQLite) is a clean WASM candidate. |
-| **D054 (extended switchability)** | The `Transport` trait already abstracts transport for WASM browser multiplayer. Server-side WASM would use the same trait boundary. |
-| **D072 (server management)** | "Just a Binary" philosophy is preserved. WASM tracker is an additional deployment option, not a replacement. |
-| **D074 (unified binary)** | The unified binary remains canonical. A WASM-deployed tracker is an architectural variant, not a replacement for the tracker capability in `ic-server`. |
-| **D005/D041 (WASM mods/trait subsystems)** | Server-side WASM extensions (Area 2) would extend the existing `wasmtime` dependency and trait-abstracted interfaces to server context. |
+| Decision                                   | Impact                                                                                                                                                  |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **D007 (relay server)**                    | Explicitly excluded from WASM deployment. Relay stays native.                                                                                           |
+| **D034 (SQLite)**                          | SQLite-dependent capabilities stay native. Only the tracker (no SQLite) is a clean WASM candidate.                                                      |
+| **D054 (extended switchability)**          | The `Transport` trait already abstracts transport for WASM browser multiplayer. Server-side WASM would use the same trait boundary.                     |
+| **D072 (server management)**               | "Just a Binary" philosophy is preserved. WASM tracker is an additional deployment option, not a replacement.                                            |
+| **D074 (unified binary)**                  | The unified binary remains canonical. A WASM-deployed tracker is an architectural variant, not a replacement for the tracker capability in `ic-server`. |
+| **D005/D041 (WASM mods/trait subsystems)** | Server-side WASM extensions (Area 2) would extend the existing `wasmtime` dependency and trait-abstracted interfaces to server context.                 |
 
 ---
 
 ## 7. Summary & Recommendation
 
-| Area | Fit | Value | Phase | Decision |
-|---|---|---|---|---|
-| **Edge-deployed tracker** | Excellent | High (latency, cost, scale-to-zero) | Phase 5 | **Explore — build a prototype** |
-| **WASM server extensions** | Good | Medium (extensibility, sandboxing) | Phase 6a+ | **Design interfaces now, implement later** |
-| **SpinKube mixed-mode K8s** | Adequate | Low-Medium (marginal improvement) | Phase 6a | **Defer — revisit when K8s operator is built** |
-| **WASM relay/workshop/ranking** | Poor | Negative (added complexity, reduced performance) | Never | **Reject** |
+| Area                            | Fit       | Value                                            | Phase     | Decision                                       |
+| ------------------------------- | --------- | ------------------------------------------------ | --------- | ---------------------------------------------- |
+| **Edge-deployed tracker**       | Excellent | High (latency, cost, scale-to-zero)              | Phase 5   | **Explore — build a prototype**                |
+| **WASM server extensions**      | Good      | Medium (extensibility, sandboxing)               | Phase 6a+ | **Design interfaces now, implement later**     |
+| **SpinKube mixed-mode K8s**     | Adequate  | Low-Medium (marginal improvement)                | Phase 6a  | **Defer — revisit when K8s operator is built** |
+| **WASM relay/workshop/ranking** | Poor      | Negative (added complexity, reduced performance) | Never     | **Reject**                                     |
 
 The tracker is the one service where WASM server-side deployment offers clear, measurable benefits without fighting IC's architecture. Start there. Use it as a proving ground for WASM operational maturity. If successful, expand to server-side extensions (Area 2) where the WASM Component Model provides genuine sandboxing value for community-contributed server logic.
 

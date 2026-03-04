@@ -1,0 +1,384 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Workshop Security (V18–V25) - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/security/vulns-workshop.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="vulnerability-18-workshop-supply-chain-compromise"><a class="header" href="#vulnerability-18-workshop-supply-chain-compromise">Vulnerability 18: Workshop Supply Chain Compromise</a></h2>
+<h3 id="the-problem"><a class="header" href="#the-problem">The Problem</a></h3>
+<p>A trusted mod author’s account is compromised (or goes rogue), and a malicious update is pushed to a widely-depended-upon Workshop resource. Thousands of players auto-update and receive the compromised package.</p>
+<p><strong>Precedent:</strong> The Minecraft <strong>fractureiser</strong> incident (June 2023). A malware campaign compromised CurseForge and Bukkit accounts, injecting a multi-stage downloader into popular mods. The malware stole browser credentials, Discord tokens, and cryptocurrency wallets. It propagated through the dependency chain — mods depending on compromised libraries inherited the payload. The incident affected millions of potential downloads before detection. CurseForge had SHA-256 checksums and author verification, but neither helped because the attacker <em>was</em> the authenticated author pushing a “legitimate” update.</p>
+<p>IC’s WASM sandbox (Vulnerability 5) prevents runtime exploits — a malicious WASM mod cannot access the filesystem or network without explicit capabilities. But the supply chain threat is broader than WASM: YAML rules can reference malicious asset URLs, Lua scripts execute within the Lua sandbox, and even non-code resources (sprites, audio) could exploit parser vulnerabilities.</p>
+<p><strong>Console script coverage (F8 closure):</strong> Workshop-shareable <code>.iccmd</code> console scripts (D058) are executable content distributed through the Workshop. They are explicitly subject to the same supply chain security as all other Workshop content: SHA-256 integrity verification, author Ed25519 signing (V49), quarantine for popular packages (V51), and anomaly detection. Console scripts execute through the command parser — they can only invoke registered commands, never arbitrary code. Each command within an <code>.iccmd</code> script respects D058’s permission model: <code>DEV_ONLY</code>, <code>SERVER</code>, achievement/ranked flags apply per-command. A script containing a forbidden command (e.g., a <code>DEV_ONLY</code> command in a non-dev context) is rejected at parse time, not silently skipped.</p>
+<blockquote>
+<p><strong>Lua sandbox surface:</strong> Lua scripts are sandboxed via selective standard library loading (see <code>04-MODDING.md</code> § “Lua Sandbox Rules” for the full inclusion/exclusion table). The <code>io</code>, <code>os</code>, <code>package</code>, and <code>debug</code> modules are never loaded. Dangerous <code>base</code> functions (<code>dofile</code>, <code>loadfile</code>, <code>load</code>) are removed. <code>math.random</code> is replaced by the engine’s deterministic PRNG. This approach follows the precedent set by Stratagus, which excludes <code>io</code> and <code>package</code> in release builds — IC is stricter, also excluding <code>os</code> and <code>debug</code> entirely. Execution is bounded by <code>LuaExecutionLimits</code> (instruction count, memory, host call budget). The primary defense against malicious Lua is the sandbox + capability model, not code review.</p>
+</blockquote>
+<h3 id="mitigation-defense-in-depth-supply-chain-security"><a class="header" href="#mitigation-defense-in-depth-supply-chain-security">Mitigation: Defense-in-Depth Supply Chain Security</a></h3>
+<p><strong>Layer 1 — Reproducible builds and build provenance:</strong></p>
+<ul>
+<li>Workshop server records build metadata: source repository URL, commit hash, build environment, and builder identity.</li>
+<li><code>ic mod publish --provenance</code> attaches a signed build attestation (inspired by SLSA/Sigstore). Consumers can verify that the published artifact was built from a specific commit in a public repository.</li>
+<li>Provenance is encouraged, not required — solo modders without CI/CD can still publish directly. But provenance-verified resources get a visible badge in the Workshop browser.</li>
+</ul>
+<p><strong>Layer 2 — Update anomaly detection (Workshop server-side):</strong></p>
+<ul>
+<li><strong>Size delta alerts:</strong> If a mod update changes package size by &gt;50%, flag for review before making it available as <code>release</code>. Small balance tweaks don’t triple in size.</li>
+<li><strong>New capability requests:</strong> If a WASM module’s declared capabilities change between versions (e.g., suddenly requests <code>network: AllowList</code>), flag for moderator review.</li>
+<li><strong>Dependency injection:</strong> If an update adds new transitive dependencies that didn’t exist before, flag. This was fractureiser’s propagation vector.</li>
+<li><strong>Rapid-fire updates:</strong> Multiple publishes within minutes to the same resource trigger rate limiting and moderator notification.</li>
+</ul>
+<p><strong>Layer 3 — Author identity and account security:</strong></p>
+<ul>
+<li><strong>Two-factor authentication</strong> required for Workshop publishing accounts (TOTP or WebAuthn).</li>
+<li><strong>Scoped API tokens</strong> (D030) — CI/CD tokens can publish but not change account settings or transfer namespace ownership. A compromised CI token cannot escalate to full account control.</li>
+<li><strong>Namespace transfer requires manual moderator approval</strong> — prevents silent account takeover.</li>
+<li><strong>Verified author badge</strong> — linked GitHub/GitLab identity provides a second factor of trust. If a Workshop account is compromised but the linked Git identity is not, the community has a signal.</li>
+</ul>
+<p><strong>Layer 4 — Client-side verification:</strong></p>
+<ul>
+<li><code>ic.lock</code> pins exact versions AND SHA-256 checksums. <code>ic mod install</code> refuses mismatches. A supply chain attacker who replaces a package on the server cannot affect users who have already locked their dependencies.</li>
+<li><strong>Update review mode:</strong> <code>ic mod update --review</code> shows a diff of what changed in each dependency before applying updates. Human review of changes before accepting is the last line of defense.</li>
+<li><strong>Rollback:</strong> <code>ic mod rollback [resource] [version]</code> instantly reverts a dependency to a known-good version.</li>
+</ul>
+<p><strong>Layer 5 — Incident response:</strong></p>
+<ul>
+<li>Workshop moderators can <strong>yank</strong> a specific version (remove from download but not from existing <code>ic.lock</code> files — users who already have it keep it, new installs get the previous version).</li>
+<li><strong>Security advisory system:</strong> Workshop server can push advisories for specific resource versions. <code>ic mod audit</code> checks for advisories. The in-game mod manager displays warnings for affected resources.</li>
+<li>Community-hosted Workshop servers replicate advisories from the official server (opt-in).</li>
+</ul>
+<p><strong>What this does NOT include:</strong></p>
+<ul>
+<li>Bytecode analysis or static analysis of WASM modules — too complex, too many false positives, and the capability sandbox is the real defense.</li>
+<li>Mandatory code review for all updates — doesn’t scale. Anomaly detection targets the high-risk cases.</li>
+<li>Blocking updates entirely — that fragments the ecosystem. The goal is detection and fast response, not prevention of all possible attacks.</li>
+</ul>
+<p><strong>Phase:</strong> Basic SHA-256 verification and scoped tokens ship with initial Workshop (Phase 4–5). Anomaly detection and provenance attestation in Phase 6a. Security advisory system in Phase 6a. 2FA requirement for publishing accounts from Phase 5 onward.</p>
+<h2 id="vulnerability-19-workshop-package-name-confusion-typosquatting"><a class="header" href="#vulnerability-19-workshop-package-name-confusion-typosquatting">Vulnerability 19: Workshop Package Name Confusion (Typosquatting)</a></h2>
+<h3 id="the-problem-1"><a class="header" href="#the-problem-1">The Problem</a></h3>
+<p>An attacker registers a Workshop package with a name confusingly similar to a popular one — hyphen/underscore swap (<code>tanks-mod</code> vs <code>tanks_mod</code>), letter substitution (<code>l</code>/<code>1</code>/<code>I</code>), added/removed prefix. Users install the malicious package by mistake. Unlike traditional package registries, game mod platforms attract users who are less likely to scrutinize exact package names.</p>
+<p><strong>Real-world precedent:</strong> npm <code>crossenv</code> (2017, typosquat of <code>cross-env</code>, stole CI tokens), crates.io <code>rustdecimal</code> (2022, typosquat of <code>rust_decimal</code>, exfiltrated environment variables), PyPI mass campaigns (2023–2024, thousands of auto-generated typosquats).</p>
+<h3 id="defense"><a class="header" href="#defense">Defense</a></h3>
+<p><strong>Publisher-scoped naming</strong> is the structural defense: all packages use <code>publisher/package</code> format. Typosquatting <code>alice/tanks</code> requires spoofing the <code>alice</code> publisher identity — which means compromising authentication, not just picking a similar name. This converts a name-confusion attack into an account-takeover attack, which is guarded by V18’s 5-layer defense.</p>
+<p><strong>Additional mitigations:</strong></p>
+<ul>
+<li><strong>Name similarity check at publish time:</strong> Levenshtein distance + common substitution patterns checked against existing packages within the same category. Flag for manual review if edit distance ≤ 2 from an existing package with &gt;100 downloads. Automated rejection for exact homoglyph substitution.</li>
+<li><strong>Git-index CI enforcement:</strong> Workshop-index CI rejects new package manifests whose names trigger the similarity checker. Manual override by moderator if it’s a false positive.</li>
+<li><strong>Display warnings in mod manager:</strong> When a user searches for <code>tanks-mod</code> and <code>tanks_mod</code> both exist, show a disambiguation notice with download counts and publisher reputation.</li>
+</ul>
+<p><strong>Phase:</strong> Publisher-scoped naming ships with Workshop Phase 0–3 (git-index). Similarity detection Phase 4+.</p>
+<h2 id="vulnerability-20-manifest-confusion-registrypackage-metadata-mismatch"><a class="header" href="#vulnerability-20-manifest-confusion-registrypackage-metadata-mismatch">Vulnerability 20: Manifest Confusion (Registry/Package Metadata Mismatch)</a></h2>
+<h3 id="the-problem-2"><a class="header" href="#the-problem-2">The Problem</a></h3>
+<p>The git-hosted Workshop index stores a manifest summary per package. The actual <code>.icpkg</code> archive contains its own <code>manifest.yaml</code>. If these can diverge, an attacker submits a clean manifest to the git-index (passes review) while the actual <code>.icpkg</code> contains a different manifest with malicious dependencies or undeclared files. Auditors see the clean index entry; installers get the real (malicious) contents.</p>
+<p><strong>Real-world precedent:</strong> npm manifest confusion (2023) — JFrog discovered 800+ npm packages where registry metadata diverged from the actual <code>package.json</code> inside tarballs. 18 packages actively exploited this to hide malicious dependencies. Root cause: npm’s publish API accepted manifest metadata separately from the tarball and never cross-verified them.</p>
+<h3 id="defense-1"><a class="header" href="#defense-1">Defense</a></h3>
+<p><strong>Canonical manifest is inside the <code>.icpkg</code>.</strong> The git-index entry is a derived summary, not a replacement. The package’s <code>manifest.yaml</code> inside the archive is the source of truth.</p>
+<p><strong>Verification chain:</strong></p>
+<ol>
+<li><strong>At publish time (CI validation):</strong> CI downloads the <code>.icpkg</code> from the declared URL, extracts the internal <code>manifest.yaml</code>, computes <code>manifest_hash = SHA-256(manifest.yaml)</code>, and verifies it matches the <code>manifest_hash</code> field in the git-index entry. Mismatch → PR rejected.</li>
+<li><strong>New field: <code>manifest_hash</code></strong> in the git-index entry — SHA-256 of the <code>manifest.yaml</code> file itself, separate from the full-package SHA-256. This lets clients verify manifest integrity independently of full package integrity.</li>
+<li><strong>Client-side verification:</strong> After downloading and extracting <code>.icpkg</code>, <code>ic mod install</code> verifies that the internal <code>manifest.yaml</code> matches the index’s <code>manifest_hash</code> before processing any mod content. Mismatch → abort with clear error.</li>
+<li><strong>Immutable publish pipeline:</strong> No API accepts manifest metadata separately from the package archive. The index entry is always derived from the archive contents, never independently submitted.</li>
+</ol>
+<p><strong>Phase:</strong> Ships with initial Workshop (Phase 0–3 git-index includes manifest_hash validation).</p>
+<h2 id="vulnerability-21-git-index-poisoning-via-cross-scope-pr"><a class="header" href="#vulnerability-21-git-index-poisoning-via-cross-scope-pr">Vulnerability 21: Git-Index Poisoning via Cross-Scope PR</a></h2>
+<h3 id="the-problem-3"><a class="header" href="#the-problem-3">The Problem</a></h3>
+<p>IC’s git-hosted Workshop index (<code>workshop-index</code> repository) accepts package manifests via pull request. An attacker submits a PR that, in addition to adding their own package, subtly modifies another package’s manifest — changing SHA-256 hashes to redirect downloads to malicious versions, altering dependency declarations, or modifying version metadata.</p>
+<p><strong>Real-world precedent:</strong> This is a novel attack surface specific to git-hosted package indexes (used by Cargo/crates.io’s index, Homebrew, and IC). The closest analogs are Homebrew formula PR attacks and npm registry cache poisoning. GitHub Actions supply chain compromises (2023–2024, <code>tj-actions/changed-files</code> affecting 23,000+ repos, Codecov bash uploader affecting 29,000+ customers) demonstrate that CI trust boundaries are actively exploited.</p>
+<h3 id="defense-2"><a class="header" href="#defense-2">Defense</a></h3>
+<p><strong>Path-scoped PR validation:</strong> CI must reject PRs that modify files outside the submitter’s own package directory. If a PR adds <code>packages/alice/tanks/1.0.0.yaml</code>, it may ONLY modify files under <code>packages/alice/</code>. Any modification to other paths → automatic CI failure with detailed explanation.</p>
+<p><strong>Additional mitigations:</strong></p>
+<ul>
+<li><strong>CODEOWNERS file:</strong> Maps package paths to GitHub usernames (<code>packages/alice/** @alice-github</code>). GitHub enforces that only the owner can approve changes to their packages.</li>
+<li><strong>Consolidated index is CI-generated.</strong> The aggregated <code>index.yaml</code> is deterministically rebuilt from per-package manifests by CI — never hand-edited. Any contributor can reproduce the build locally to verify.</li>
+<li><strong>Index signing:</strong> CI generates the consolidated index and signs it with an Ed25519 key. Clients verify this signature. Even if the repository is compromised, the attacker cannot produce a valid signature without the signing key (stored outside GitHub — hardware security module or separate signing service).</li>
+<li><strong>CI hardening:</strong> Pin all GitHub Actions to commit SHAs (tags are mutable). Minimal <code>GITHUB_TOKEN</code> permissions. No secrets in the PR validation pipeline — it only reads the diff, downloads a package from a public URL, and verifies hashes.</li>
+<li><strong>Two-maintainer rule for popular packages:</strong> Packages with &gt;500 downloads require approval from both the package author AND a Workshop index maintainer for manifest changes.</li>
+</ul>
+<p><strong>Phase:</strong> Path-scoped validation and CODEOWNERS ship with Workshop Phase 0 (git-index creation). Index signing Phase 3–4. CI hardening from Day 1.</p>
+<h2 id="vulnerability-22-dependency-confusion-in-federated-workshop"><a class="header" href="#vulnerability-22-dependency-confusion-in-federated-workshop">Vulnerability 22: Dependency Confusion in Federated Workshop</a></h2>
+<h3 id="the-problem-4"><a class="header" href="#the-problem-4">The Problem</a></h3>
+<p>IC’s Workshop supports federation — multiple package sources via <code>sources.yaml</code> (D050). A package <code>core/utils</code> could exist on both a local/private source and the official Workshop server with different content. Build resolution that checks public sources first (or doesn’t distinguish sources) installs the attacker’s public version instead of the intended private one.</p>
+<p><strong>Real-world precedent:</strong> Alex Birsan’s dependency confusion research (2021) demonstrated this against 35+ companies including Apple, Microsoft, PayPal, and Uber — earning $130,000+ in bug bounties. npm, PyPI, and RubyGems were all vulnerable. The attack exploits the assumption that package names are globally unique across all sources.</p>
+<h3 id="defense-3"><a class="header" href="#defense-3">Defense</a></h3>
+<p><strong>Fully-qualified identifiers in lockfiles:</strong> <code>ic.lock</code> records <code>source:publisher/package@version</code>, not just <code>publisher/package@version</code>. Resolution uses exact source match first, falls back to source priority order only for new (unlocked) dependencies.</p>
+<p><strong>Additional mitigations:</strong></p>
+<ul>
+<li><strong>Explicit source priority:</strong> <code>sources.yaml</code> defines strict priority order. Well-documented default resolution behavior: lockfile source → highest-priority source → error (never silently falls through to lower-priority).</li>
+<li><strong>Shadow package warnings:</strong> If a dependency exists on multiple configured sources with different content (different SHA-256), <code>ic mod install</code> warns: “Package X exists on SOURCE_A and SOURCE_B with different content. Lockfile pins SOURCE_A.”</li>
+<li><strong>Reserved namespace prefixes:</strong> The official Workshop allows publishers to reserve namespace prefixes. <code>ic-core/*</code> packages can only be published by the IC team. Prevents squatting on engine-related namespaces.</li>
+<li><strong><code>ic mod audit</code> source check:</strong> Reports any dependency where the lockfile source differs from the highest-priority source — potential sign of confusion.</li>
+</ul>
+<p><strong>Phase:</strong> Lockfile source pinning ships with initial multi-source support (Phase 4–5). Shadow warnings Phase 5. Reserved namespaces Phase 4.</p>
+<h2 id="vulnerability-23-version-immutability-violation"><a class="header" href="#vulnerability-23-version-immutability-violation">Vulnerability 23: Version Immutability Violation</a></h2>
+<h3 id="the-problem-5"><a class="header" href="#the-problem-5">The Problem</a></h3>
+<p>A package author (or compromised account) re-publishes the same version number with different content. Users who install “version 1.0.0” get different code depending on when they installed.</p>
+<p><strong>Real-world precedent:</strong> npm pre-2022 allowed version overwrites within 24 hours. The <code>left-pad</code> incident (2016) exposed that npm had no immutability guarantees and led to <code>npm unpublish</code> restrictions.</p>
+<h3 id="defense-4"><a class="header" href="#defense-4">Defense</a></h3>
+<p><strong>Explicit immutability rule:</strong> Once version X.Y.Z is published, its content CANNOT be modified or overwritten. The SHA-256 hash recorded at publish time is permanent and immutable.</p>
+<ul>
+<li><strong>Yanking ≠ deletion:</strong> Yanked versions are hidden from new <code>ic mod install</code> searches but remain downloadable for existing lockfiles that reference them. Their SHA-256 remains valid.</li>
+<li><strong>Git-index enforcement:</strong> CI rejects PRs that modify fields in existing version manifest files (only additions of new version files are accepted). Checksum fields are append-only.</li>
+<li><strong>Registry enforcement (Phase 4+):</strong> The Workshop server API rejects publish requests for existing version numbers with HTTP 409 Conflict. No override flag. No admin backdoor.</li>
+</ul>
+<p><strong>Phase:</strong> Immutability enforcement from Workshop Day 1 (git-index CI rule). Registry enforcement Phase 4.</p>
+<h2 id="vulnerability-24-relay-connection-exhaustion"><a class="header" href="#vulnerability-24-relay-connection-exhaustion">Vulnerability 24: Relay Connection Exhaustion</a></h2>
+<h3 id="the-problem-6"><a class="header" href="#the-problem-6">The Problem</a></h3>
+<p>An attacker opens many connections to the relay server, exhausting its connection pool and memory, preventing legitimate players from connecting. Unlike bandwidth-based DDoS (mitigated by upstream providers), connection exhaustion targets application-level resources.</p>
+<h3 id="defense-5"><a class="header" href="#defense-5">Defense</a></h3>
+<p><strong>Layered connection limits at the relay:</strong></p>
+<ul>
+<li><strong>Max total connections per relay instance:</strong> configurable, default 1000. Relay returns 503 when at capacity.</li>
+<li><strong>Max connections per IP address:</strong> configurable, default 5.</li>
+<li><strong>New connection rate per IP:</strong> max 10/sec, implemented as token bucket.</li>
+<li><strong>Memory budget per connection:</strong> bounded; connection torn down if buffer allocations exceed limit.</li>
+<li><strong>Idle connection timeout:</strong> connections with no game activity for &gt;60 seconds are closed. Authenticated connections get a longer timeout (5 minutes).</li>
+<li><strong>Half-open connection defense</strong> (existing, from Minetest): prevents UDP amplification. Combined with these limits, prevents both amplification and exhaustion.</li>
+</ul>
+<p>These limits are in addition to the order rate control (V15) and bandwidth throttle, which handle abuse from established connections.</p>
+<p><strong>Phase:</strong> Ships with relay server implementation (Phase 5).</p>
+<h2 id="vulnerability-25-desync-as-denial-of-service"><a class="header" href="#vulnerability-25-desync-as-denial-of-service">Vulnerability 25: Desync-as-Denial-of-Service</a></h2>
+<h3 id="the-problem-7"><a class="header" href="#the-problem-7">The Problem</a></h3>
+<p>A player with a modified client intentionally causes desyncs to disrupt games. Since desync detection requires investigation (state hash comparison, desync reports), repeated intentional desyncs can effectively grief matches — forcing game restarts or frustrating other players into leaving.</p>
+<h3 id="defense-6"><a class="header" href="#defense-6">Defense</a></h3>
+<p><strong>Per-player desync attribution:</strong> The existing dual-mode state hashing (RNG comparison + periodic full hash) already identifies WHICH player’s state diverges. Build on this:</p>
+<ul>
+<li><strong>Desync scoring:</strong> Track which player’s hash diverges in each desync event. If one player consistently diverges while all others agree, that player is the source.</li>
+<li><strong>Automatic disconnect:</strong> If a single player causes the hash mismatch in 3 consecutive desync checks within one game, disconnect that player (not the entire game). Remaining players continue.</li>
+<li><strong>Cross-game strike system:</strong> Parallel to anti-lag-switch strikes. Players who cause desyncs in 3+ games within a 24-hour window receive a temporary matchmaking cooldown (1 hour → 24 hours → 7 days escalation).</li>
+<li><strong>Replay evidence:</strong> The desync report is attached to the match replay, allowing post-game review by moderators for ranked/competitive matches.</li>
+</ul>
+<p><strong>Phase:</strong> Per-player attribution ships with desync detection (Phase 5). Strike system Phase 5. Cross-game tracking requires account system.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../security/vulns-protocol.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../security/vulns-ranked.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../security/vulns-protocol.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../security/vulns-ranked.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

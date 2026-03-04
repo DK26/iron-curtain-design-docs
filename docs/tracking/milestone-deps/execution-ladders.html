@@ -1,0 +1,431 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Execution Ladders - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/tracking/milestone-deps/execution-ladders.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="granular-foundational-execution-ladder-ra-first-mission-loop---project-completion"><a class="header" href="#granular-foundational-execution-ladder-ra-first-mission-loop---project-completion">Granular Foundational Execution Ladder (RA First Mission Loop -&gt; Project Completion)</a></h2>
+<blockquote>
+<p>This section refines the early critical path into a <strong>build-order ladder</strong> for the first playable Red Alert mission loop. It does not replace <code>M0–M11</code>; it decomposes the early milestones into implementation steps and then reconnects them to the milestone sequence through completion.</p>
+</blockquote>
+<h3 id="a-first-ra-mission-loop-detailed-build-order-m1m3"><a class="header" href="#a-first-ra-mission-loop-detailed-build-order-m1m3">A. First RA Mission Loop (Detailed Build Order, <code>M1–M3</code>)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Step ID</th><th>Build Step (What to Implement)</th><th>Primary Milestone</th><th>Priority</th><th>Hard Depends On</th><th>Exit Artifact / Proof</th></tr>
+</thead>
+<tbody>
+<tr><td><code>G1</code></td><td><code>ra-formats</code> can parse core RA asset formats (<code>.mix</code>, <code>.shp</code>, <code>.pal</code>) and enumerate assets from real data dirs</td><td><code>M1</code></td><td><code>P-Core</code></td><td><code>M0</code></td><td>Parser corpus test pass + asset listing on real RA data</td></tr>
+<tr><td><code>G2</code></td><td>Bevy can load parsed map tiles/sprites and render a RA map scene correctly (camera + palette-correct sprite draw)</td><td><code>M1</code></td><td><code>P-Core</code></td><td><code>G1</code></td><td>Static map render slice (faithful map + sprite placement)</td></tr>
+<tr><td><code>G3</code></td><td>Unit sprite animation playback baseline (idle/move/fire/death sequences)</td><td><code>M1</code></td><td><code>P-Core</code></td><td><code>G2</code></td><td>Animated units visible in rendered scene with correct sequence timing</td></tr>
+<tr><td><code>G4</code></td><td>Input/cursor baseline in gameplay scene (cursor state changes, hover hit-test, click targeting primitives)</td><td><code>M2</code> (early UI seam work)</td><td><code>P-Core</code></td><td><code>G2</code></td><td>Cursor + hover feedback working on entities/cells</td></tr>
+<tr><td><code>G5</code></td><td>Unit selection baseline (single select, multi-select/box select minimum, selection markers)</td><td><code>M2</code> (feeds <code>M3</code>)</td><td><code>P-Core</code></td><td><code>G4</code>, <code>G3</code></td><td>Selectable units with visible selection feedback</td></tr>
+<tr><td><code>G6</code></td><td>Deterministic sim tick loop + order application skeleton (<code>move</code>, <code>stop</code>, state transitions)</td><td><code>M2</code></td><td><code>P-Core</code></td><td><code>G2</code>, <code>PG.P002.FIXED_POINT_SCALE</code></td><td>Repeatable sim ticks with stable state hashes</td></tr>
+<tr><td><code>G7</code></td><td>Pathfinder + spatial query baseline (<code>Pathfinder</code>/<code>SpatialIndex</code>) integrated into unit movement order execution</td><td><code>M2</code></td><td><code>P-Core</code></td><td><code>G6</code>, <code>PG.P002.FIXED_POINT_SCALE</code></td><td>Units can receive move orders and path around blockers deterministically</td></tr>
+<tr><td><code>G8</code></td><td>Movement presentation sync (render follows sim state: facing/animation/state transitions)</td><td><code>M2</code></td><td><code>P-Core</code></td><td><code>G7</code>, <code>G3</code></td><td>Units visibly move correctly under player orders</td></tr>
+<tr><td><code>G9</code></td><td>Combat baseline: targeting + projectile/hit resolution (or direct-fire hit pipeline for first slice)</td><td><code>M2</code></td><td><code>P-Core</code></td><td><code>G7</code>, <code>G6</code></td><td>Units can attack and reduce enemy health deterministically</td></tr>
+<tr><td><code>G10</code></td><td>Death/destruction baseline (unit death state, removal, death animation/cleanup)</td><td><code>M2</code></td><td><code>P-Core</code></td><td><code>G9</code>, <code>G3</code></td><td>Combat kills units cleanly with deterministic removal</td></tr>
+<tr><td><code>G11</code></td><td>Mission-state baseline: victory/failure evaluators (<code>all enemies dead</code>, <code>all player units dead</code>)</td><td><code>M3</code> (mission loop UX)</td><td><code>P-Core</code></td><td><code>G10</code>, <code>G6</code></td><td>Win/loss condition fires from sim state, not UI heuristics</td></tr>
+<tr><td><code>G12</code></td><td>Mission-end UX shell (<code>Mission Accomplished</code> / <code>Mission Failed</code> screens + flow pause/transition)</td><td><code>M3</code></td><td><code>P-Core</code></td><td><code>G11</code>, <code>M3.UX.GAME_CHROME_CORE</code></td><td>Mission-end screen appears with correct result and blocks/resumes flow correctly</td></tr>
+<tr><td><code>G13</code></td><td>EVA/VO mission-end audio integration (<code>Mission Accomplished</code> / <code>Mission Failed</code>)</td><td><code>M3</code></td><td><code>P-Core</code></td><td><code>G12</code>, <code>M3.CORE.AUDIO_EVA_MUSIC</code>, <code>PG.P003.AUDIO_LIBRARY</code></td><td>Correct VO plays on mission result with no duplicate/late triggers</td></tr>
+<tr><td><code>G14</code></td><td>Minimal mission restart/exit loop (replay same mission / return to menu)</td><td><code>M3</code></td><td><code>P-Core</code></td><td><code>G12</code></td><td>First complete single-mission play loop (start -&gt; play -&gt; end -&gt; replay/exit)</td></tr>
+<tr><td><code>G15</code></td><td>RA “feel” pass for first mission loop (cursor feedback, selection readability, audio timing, result pacing)</td><td><code>M3</code></td><td><code>P-Core</code></td><td><code>G14</code>, <code>G13</code></td><td>Internal playtest says “recognizably RA-like” for mission loop baseline</td></tr>
+<tr><td><code>G16</code></td><td>Promote to <code>M3</code> skirmish path by widening from fixed mission slice to local skirmish loop + basic AI subset (<code>D043</code>)</td><td><code>M3</code></td><td><code>P-Core</code></td><td><code>G15</code>, <code>M3.CORE.GAP_P1_GAMEPLAY_SYSTEMS</code>, <code>M3.CORE.GAP_P2_SKIRMISH_FAMILIARITY</code></td><td>Local skirmish playable milestone exit (<code>M3.SP.SKIRMISH_LOCAL_LOOP</code>)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="a1-g1x-substeps-owned-source-importextract-foundations-m1---m3-handoff"><a class="header" href="#a1-g1x-substeps-owned-source-importextract-foundations-m1---m3-handoff">A.1 <code>G1.x</code> Substeps (Owned-Source Import/Extract Foundations, <code>M1</code> -&gt; <code>M3</code> Handoff)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Substep</th><th>Build Step (What to Implement)</th><th>Primary Milestone</th><th>Priority</th><th>Hard Depends On</th><th>Exit Artifact / Proof</th></tr>
+</thead>
+<tbody>
+<tr><td><code>G1.1</code></td><td>Source-adapter probe contract + source-manifest snapshot schema (Steam/GOG/EA/manual/Remastered normalized probe output)</td><td><code>M1</code></td><td><code>P-Core</code></td><td><code>G1</code></td><td>Probe fixtures + source-manifest snapshot examples match D069 setup expectations</td></tr>
+<tr><td><code>G1.2</code></td><td><code>.mix</code> extraction primitives for importer staging (enumerate, validate entries, extract without source mutation)</td><td><code>M1</code></td><td><code>P-Core</code></td><td><code>G1.1</code></td><td><code>.mix</code> extraction corpus tests + corrupt-entry handling assertions</td></tr>
+<tr><td><code>G1.3</code></td><td><code>.shp/.pal</code> importer-ready validation and parser-to-render handoff metadata</td><td><code>M1</code></td><td><code>P-Core</code></td><td><code>G1.2</code>, <code>G2</code></td><td>Validation fixtures + palette/sprite handoff smoke tests for render slice</td></tr>
+<tr><td><code>G1.4</code></td><td><code>.aud/.vqa</code> header/chunk integrity validation and importer result diagnostics (pre-playback checks)</td><td><code>M1</code></td><td><code>P-Core</code></td><td><code>G1.2</code></td><td>Import diagnostics distinguish valid/invalid media payloads with actionable reasons</td></tr>
+<tr><td><code>G1.5</code></td><td>Importer artifact outputs (source manifest snapshots, per-item results, provenance, retry/re-scan metadata)</td><td><code>M3</code></td><td><code>P-Core</code></td><td><code>G1.1</code>, <code>M1.CORE.DATA_DIR_AND_PORTABILITY_BASE</code></td><td>Import artifact samples align with <code>05-FORMATS</code> owned-source import pipeline and D069 repair flows</td></tr>
+<tr><td><code>G1.6</code></td><td>Remastered Collection source adapter probe + normalized importer handoff (out-of-the-box D069 import path)</td><td><code>M3</code></td><td><code>P-Core</code></td><td><code>G1.5</code>, <code>M3.CORE.PROPRIETARY_ASSET_IMPORT_AND_EXTRACT</code></td><td>D069 setup demo imports Remastered assets without manual conversion or source-install mutation</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="b-continuation-chain-after-the-first-mission-loop-milestone-level-through-completion"><a class="header" href="#b-continuation-chain-after-the-first-mission-loop-milestone-level-through-completion">B. Continuation Chain After the First Mission Loop (Milestone-Level, Through Completion)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Step ID</th><th>Next Logical Step</th><th>Primary Milestone</th><th>Priority</th><th>Hard Depends On</th><th>Why This Is Next</th></tr>
+</thead>
+<tbody>
+<tr><td><code>G17</code></td><td>Minimal online skirmish slice (relay/direct connect, no tracker/ranked)</td><td><code>M4</code></td><td><code>P-Core</code></td><td><code>G16</code>, <code>M2.CORE.SNAPSHOT_HASH_REPLAY_BASE</code></td><td>Proves finalized netcode architecture in the smallest real deployment slice</td></tr>
+<tr><td><code>G18</code></td><td>Campaign runtime vertical slice (briefing -&gt; mission -&gt; debrief -&gt; next mission)</td><td><code>M5</code></td><td><code>P-Differentiator</code></td><td><code>G16</code>, <code>M5.SP.LUA_MISSION_RUNTIME</code></td><td>Proves campaign graph/runtime flow before scaling campaign content</td></tr>
+<tr><td><code>G19</code></td><td>Full campaign correctness/completeness (Allied/Soviet + media fallback-safe flow)</td><td><code>M6</code></td><td><code>P-Differentiator</code></td><td><code>G18</code></td><td>Delivers the campaign-first product promise and stabilizes SP maturity</td></tr>
+<tr><td><code>G20</code></td><td>Multiplayer productization (browser, ranked, trust labels, reports/review, spectator)</td><td><code>M7</code></td><td><code>P-Differentiator</code> / <code>P-Scale</code></td><td><code>G17</code>, <code>G19</code>, <code>PG.P004.LOBBY_WIRE_DETAILS</code></td><td>Expands “it works online” into a trustworthy multiplayer product</td></tr>
+<tr><td><code>G21</code></td><td>Creator foundation lane (CLI + minimal Workshop + profiles/namespace)</td><td><code>M8</code></td><td><code>P-Creator</code></td><td><code>M2</code> (can run in parallel before <code>G20</code>)</td><td>Reduces creator-loop friction without waiting for full SDK</td></tr>
+<tr><td><code>G22</code></td><td>Scenario editor core + full Workshop + OpenRA export core</td><td><code>M9</code></td><td><code>P-Creator</code></td><td><code>G20</code>, <code>G21</code></td><td>Delivers the first full creator-platform promise</td></tr>
+<tr><td><code>G23</code></td><td>Campaign editor + advanced game modes + RA1 export + editor extensibility</td><td><code>M10</code></td><td><code>P-Creator</code> / <code>P-Differentiator</code></td><td><code>G22</code></td><td>Enables advanced authored experiences and D070-family mode tooling</td></tr>
+<tr><td><code>G24</code></td><td>Ecosystem polish + optional BYOLLM + visual/render-mode expansion + platform breadth</td><td><code>M11</code></td><td><code>P-Optional</code> / <code>P-Scale</code></td><td><code>G20</code>, <code>G23</code></td><td>Keeps optional/polish systems after core gameplay/multiplayer/editor foundations are stable</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="c-dependency-notes-for-the-first-mission-loop-non-obvious-blockers"><a class="header" href="#c-dependency-notes-for-the-first-mission-loop-non-obvious-blockers">C. Dependency Notes for the First Mission Loop (Non-Obvious Blockers)</a></h3>
+<ul>
+<li><strong><code>PG.P002.FIXED_POINT_SCALE</code> is a hard gate before <code>G6/G7/G9</code>.</strong>
+<ul>
+<li>Do not start serious sim/path/combat implementation before this is resolved.</li>
+</ul>
+</li>
+<li><strong><code>PG.P003.AUDIO_LIBRARY</code> is a hard gate before <code>G13</code> and a practical gate before <code>G15</code>.</strong>
+<ul>
+<li>You can prototype mission-end UI (<code>G12</code>) before audio is finalized.</li>
+</ul>
+</li>
+<li><strong><code>M3</code> AI scope must be frozen before <code>G16</code>.</strong>
+<ul>
+<li>Use the documented “dummy/basic AI baseline” subset from <code>D043</code>; do not pull full <code>M6</code> AI sophistication into the <code>M3</code> exit.</li>
+</ul>
+</li>
+<li><strong><code>G11</code> mission-end evaluators should be implemented as sim-derived logic, then surfaced through UI (<code>G12</code>).</strong>
+<ul>
+<li>Prevents UI-side win/loss heuristics from diverging from the authoritative state model.</li>
+</ul>
+</li>
+<li><strong><code>G17</code> online slice must keep strict <code>M4</code> boundaries.</strong>
+<ul>
+<li>No tracker browser, no ranked queue, no broad community infra assumptions in the <code>M4</code> exit.</li>
+</ul>
+</li>
+<li><strong><code>G21.5–G21.7</code> (<code>p2p-distribute</code>) can start independently of the game engine but IC integration (<code>G21.7</code>) requires <code>G21.2</code> (minimal Workshop).</strong>
+<ul>
+<li>The standalone P2P crate has no IC dependencies and lives in a separate MIT/Apache-2.0 repo. However, wiring it into Workshop delivery requires the publish/install baseline from <code>G21.2</code> to exist first.</li>
+</ul>
+</li>
+</ul>
+<h3 id="d-campaign-execution-ladder-campaign-runtime-slice---full-campaign-completeness-m5m6"><a class="header" href="#d-campaign-execution-ladder-campaign-runtime-slice---full-campaign-completeness-m5m6">D. Campaign Execution Ladder (Campaign Runtime Slice -&gt; Full Campaign Completeness, <code>M5–M6</code>)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Step ID</th><th>Build Step (What to Implement)</th><th>Primary Milestone</th><th>Priority</th><th>Hard Depends On</th><th>Exit Artifact / Proof</th></tr>
+</thead>
+<tbody>
+<tr><td><code>G18.1</code></td><td>Lua mission runtime baseline (<code>D004</code>) with deterministic sandbox boundaries and mission script lifecycle</td><td><code>M5</code></td><td><code>P-Differentiator</code></td><td><code>G16</code>, <code>M2.CORE.SIM_FIXED_POINT_AND_ORDERS</code></td><td>Mission scripts run in real runtime with deterministic-safe APIs</td></tr>
+<tr><td><code>G18.2</code></td><td>Campaign graph runtime + persistent campaign state save/load (<code>D021</code>)</td><td><code>M5</code></td><td><code>P-Differentiator</code></td><td><code>G18.1</code>, <code>D010</code></td><td>Campaign state survives mission transitions and reloads</td></tr>
+<tr><td><code>G18.3</code></td><td>Briefing -&gt; mission -&gt; debrief -&gt; next flow (<code>D065</code> UX layer over <code>D021</code>)</td><td><code>M5</code></td><td><code>P-Differentiator</code></td><td><code>G18.2</code>, <code>M3.UX.FIRST_RUN_SETUP_AND_MAIN_MENU</code></td><td>One authored campaign chain is playable end-to-end</td></tr>
+<tr><td><code>G18.4</code></td><td>Failure/continue behavior, retry path, and campaign save/load correctness for the vertical slice</td><td><code>M5</code></td><td><code>P-Differentiator</code></td><td><code>G18.3</code></td><td><code>M5</code> campaign runtime slice exit proven with save/load and failure branches</td></tr>
+<tr><td><code>G19.1</code></td><td>Scale campaign runtime to full mission set (mission scripts, objectives, transitions, outcomes)</td><td><code>M6</code></td><td><code>P-Differentiator</code></td><td><code>G18.4</code></td><td>All shipped campaign missions load/run in campaign flow</td></tr>
+<tr><td><code>G19.2</code></td><td>Branching persistence, roster carryover, named-character/hero-state carryover correctness</td><td><code>M6</code></td><td><code>P-Differentiator</code></td><td><code>G19.1</code>, <code>D021</code> state model</td><td>Branching outcomes and carryover state validate across multi-mission chains</td></tr>
+<tr><td><code>G19.3</code></td><td>FMV/cutscene/media variant playback + fallback-safe campaign behavior (<code>D068</code>)</td><td><code>M6</code></td><td><code>P-Differentiator</code></td><td><code>G19.1</code>, <code>M3.CORE.AUDIO_EVA_MUSIC</code></td><td>Campaigns remain playable with/without optional media packs</td></tr>
+<tr><td><code>G19.4</code></td><td>Skirmish AI baseline maturity + campaign/tutorial script support (<code>D043/D042</code> baseline)</td><td><code>M6</code></td><td><code>P-Differentiator</code></td><td><code>G16</code>, <code>M6.SP.SKIRMISH_AI_BASELINE</code></td><td>AI is good enough for shipped SP content and onboarding use</td></tr>
+<tr><td><code>G19.5</code></td><td>D065 onboarding baseline for SP (Commander School, progressive hints, controls walkthrough integration)</td><td><code>M6</code></td><td><code>P-Differentiator</code></td><td><code>G19.4</code>, <code>M3.UX.FIRST_RUN_SETUP_AND_MAIN_MENU</code></td><td>New-player SP onboarding baseline is live and coherent</td></tr>
+<tr><td><code>G19.6</code></td><td>End-to-end validation of full RA campaigns (Allied + Soviet) with save/load, media fallback, and progression correctness</td><td><code>M6</code></td><td><code>P-Differentiator</code></td><td><code>G19.2</code>, <code>G19.3</code>, <code>G19.5</code></td><td><code>M6</code> exit: full campaign-complete SP milestone validated</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="e-multiplayer-execution-ladder-minimal-online-slice---productized-mp-m4m7"><a class="header" href="#e-multiplayer-execution-ladder-minimal-online-slice---productized-mp-m4m7">E. Multiplayer Execution Ladder (Minimal Online Slice -&gt; Productized MP, <code>M4–M7</code>)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Step ID</th><th>Build Step (What to Implement)</th><th>Primary Milestone</th><th>Priority</th><th>Hard Depends On</th><th>Exit Artifact / Proof</th></tr>
+</thead>
+<tbody>
+<tr><td><code>G17.1</code></td><td>Minimal host/join path (<code>direct connect</code> or <code>join code</code>) wired to final <code>NetworkModel</code> architecture</td><td><code>M4</code></td><td><code>P-Core</code></td><td><code>G16</code>, <code>D006</code>, <code>D007</code></td><td>Two local/remote clients can establish a match using the planned netcode seam</td></tr>
+<tr><td><code>G17.2</code></td><td>Relay time authority + sub-tick timestamp normalization/clamping + sim order validation path</td><td><code>M4</code></td><td><code>P-Core</code></td><td><code>G17.1</code>, <code>D008</code>, <code>D012</code></td><td>Online orders resolve consistently with bounded timing fairness and deterministic rejections</td></tr>
+<tr><td><code>G17.3</code></td><td>Minimal online skirmish end-to-end play (complete match, result, disconnect cleanly)</td><td><code>M4</code></td><td><code>P-Core</code></td><td><code>G17.2</code>, <code>G16</code></td><td><code>M4.NET.MINIMAL_LOCKSTEP_ONLINE</code> exit proven in real play sessions</td></tr>
+<tr><td><code>G17.4</code></td><td>Reconnect baseline decision and implementation or explicit defer contract (with user-facing wording)</td><td><code>M4</code></td><td><code>P-Core</code></td><td><code>G17.3</code>, <code>D010</code></td><td>Reconnect works in the documented baseline <strong>or</strong> defer contract is locked and reflected in UX/docs</td></tr>
+<tr><td><code>G20.1</code></td><td>Tracking/browser discovery + trust labels + lobby listings</td><td><code>M7</code></td><td><code>P-Differentiator</code></td><td><code>G17.3</code>, <code>G19</code>, <code>D052</code> baseline infrastructure</td><td>Browser-based discoverability works with correct trust label semantics</td></tr>
+<tr><td><code>G20.2</code></td><td>Signed credentials/results and certified community-server trust path (<code>D052</code>)</td><td><code>M7</code></td><td><code>P-Differentiator</code></td><td><code>G20.1</code>, <code>M2.COM.TELEMETRY_DB_FOUNDATION</code>, <code>PG.P004.LOBBY_WIRE_DETAILS</code></td><td>Signed identity/results path works and is reflected in lobby/trust UX</td></tr>
+<tr><td><code>G20.3</code></td><td>Ranked queue + tiers/seasons + queue health/degradation rules (<code>D055</code>)</td><td><code>M7</code></td><td><code>P-Differentiator</code></td><td><code>G20.2</code>, <code>PG.P004.LOBBY_WIRE_DETAILS</code></td><td>Ranked 1v1 queue works and is explainable to players</td></tr>
+<tr><td><code>G20.4</code></td><td>Report / block / avoid UX + moderation evidence attachment + optional review pipeline baseline</td><td><code>M7</code></td><td><code>P-Scale</code></td><td><code>G20.1</code>, <code>G20.2</code>, <code>D059</code>, <code>D052</code></td><td>Player moderation/reporting loop works without capability coupling confusion</td></tr>
+<tr><td><code>G20.5</code></td><td>Spectator + tournament basics + signed replay/exported evidence workflow</td><td><code>M7</code></td><td><code>P-Differentiator</code> / <code>P-Scale</code></td><td><code>G20.2</code>, <code>G20.3</code>, <code>D010</code> replay chain</td><td>Multiplayer productization milestone (<code>M7</code>) exit: browser, ranked, trust, moderation, spectator all coherent</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="f-creator-platform--long-tail-execution-ladder-m8m11"><a class="header" href="#f-creator-platform--long-tail-execution-ladder-m8m11">F. Creator Platform &amp; Long-Tail Execution Ladder (<code>M8–M11</code>)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Step ID</th><th>Build Step (What to Implement)</th><th>Primary Milestone</th><th>Priority</th><th>Hard Depends On</th><th>Exit Artifact / Proof</th></tr>
+</thead>
+<tbody>
+<tr><td><code>G21.1</code></td><td><code>ic</code> CLI foundation (init/check/test/run loops) + local content overlay/dev-profile run path</td><td><code>M8</code></td><td><code>P-Creator</code></td><td><code>M2</code>, <code>D020</code></td><td>Creators can iterate through real game runtime without packaging/publishing</td></tr>
+<tr><td><code>G21.2</code></td><td>Minimal Workshop delivery + package install/publish baseline (<code>D030/D049</code>)</td><td><code>M8</code></td><td><code>P-Creator</code></td><td><code>G21.1</code>, <code>M2.COM.TELEMETRY_DB_FOUNDATION</code></td><td>Minimal Workshop path works for creator iteration and sharing</td></tr>
+<tr><td><code>G21.3</code></td><td>Mod profiles + virtual namespace + selective install hooks (<code>D062/D068</code>)</td><td><code>M8</code></td><td><code>P-Creator</code></td><td><code>G21.2</code>, <code>D061</code> data-dir foundation</td><td>Profile activation/fingerprint/install-footprint behavior is stable</td></tr>
+<tr><td><code>G21.4</code></td><td>Authoring reference foundation (generated YAML/Lua/CLI docs; one-source docs pipeline)</td><td><code>M8</code></td><td><code>P-Creator</code></td><td><code>G21.1</code>, <code>D037</code> knowledge-base path</td><td>Canonical creator docs pipeline exists before full SDK embedding</td></tr>
+<tr><td><code>G21.1a</code></td><td>CLI import-plan inspection for owned-source imports (probe output, source selection, mode preview)</td><td><code>M8</code></td><td><code>P-Creator</code></td><td><code>G21.1</code>, <code>M3.CORE.PROPRIETARY_ASSET_IMPORT_AND_EXTRACT</code></td><td><code>ic</code> CLI can preview owned-source import plans before execution</td></tr>
+<tr><td><code>G21.2a</code></td><td>Owned-source import verify/retry diagnostics (distinct from Workshop package verify path)</td><td><code>M8</code></td><td><code>P-Creator</code></td><td><code>G21.2</code>, <code>G21.1a</code></td><td>Diagnostics output separates source probe/import/extract/index failures with recovery steps</td></tr>
+<tr><td><code>G21.3a</code></td><td>Repair/re-scan/re-extract tooling for owned-source imports (maintenance parity with D069)</td><td><code>M8</code></td><td><code>P-Creator</code></td><td><code>G21.3</code>, <code>G21.2a</code></td><td>CLI maintenance flows recover moved installs/stale indexes without mutating source installs</td></tr>
+<tr><td><code>G21.4a</code></td><td>Generated docs for import modes + format-by-format importer behavior (one-source pipeline from <code>05-FORMATS</code>)</td><td><code>M8</code></td><td><code>P-Creator</code></td><td><code>G21.4</code>, <code>G21.3a</code></td><td>Creator docs pipeline publishes importer/extractor reference used by SDK help later</td></tr>
+<tr><td><code>G21.5</code></td><td><code>p2p-distribute</code> core engine + tracker client + download→seed lifecycle (standalone crate, design milestones 1–2)</td><td><code>M8</code></td><td><code>P-Creator</code></td><td><code>M0.OPS.STANDALONE_CRATE_REPOS</code></td><td>Two instances transfer a torrent; HTTP tracker works; interop with ≥1 standard BT client</td></tr>
+<tr><td><code>G21.6</code></td><td><code>p2p-distribute</code> config system + profiles + peer discovery + NAT (design milestones 3–5, 7)</td><td><code>M8</code></td><td><code>P-Creator</code></td><td><code>G21.5</code></td><td>All config groups validated; DHT works; NAT traversal reachable; uTP functional</td></tr>
+<tr><td><code>G21.7</code></td><td><code>p2p-distribute</code> embedded tracker + IC integration baseline (Workshop <code>publish/install</code> via P2P, <code>ic-server</code> seeding)</td><td><code>M8</code></td><td><code>P-Creator</code></td><td><code>G21.6</code>, <code>G21.2</code></td><td>Workshop delivery uses P2P; auto-download on lobby join uses <code>embedded_minimal</code> profile</td></tr>
+<tr><td><code>G22.1</code></td><td>Scenario Editor core (<code>D038</code>) + validate/test/publish loop + resource manager basics</td><td><code>M9</code></td><td><code>P-Creator</code></td><td><code>G20.5</code>, <code>G21.3</code></td><td>Scenario authoring works end-to-end using real runtime/test flows</td></tr>
+<tr><td><code>G22.2</code></td><td>Asset Studio baseline (<code>D040</code>) + import/conversion + provenance plumbing + publish-readiness integration</td><td><code>M9</code></td><td><code>P-Creator</code></td><td><code>G22.1</code>, <code>G21.2</code></td><td>Asset creation/import supports scenario authoring and publish checks</td></tr>
+<tr><td><code>G22.3</code></td><td>Full Workshop/CAS + moderation tooling + OpenRA export core (<code>D049/D066</code>)</td><td><code>M9</code></td><td><code>P-Creator</code> / <code>P-Scale</code></td><td><code>G22.1</code>, <code>G22.2</code>, <code>G20.2</code></td><td><code>M9</code> exit: full creator platform baseline works (scenario editor + Workshop + OpenRA export core)</td></tr>
+<tr><td><code>G22.3a</code></td><td><code>p2p-distribute</code> hardening — fuzzing (1M+ iterations), chaos tests, v2/hybrid support, storage perf, control surfaces, <code>crates.io</code> publish (design milestones 6, 8–10)</td><td><code>M9</code></td><td><code>P-Creator</code></td><td><code>G21.7</code></td><td>Fuzz-clean; interop verified; fast resume &lt; 1s; web API + CLI operational; published to crates.io</td></tr>
+<tr><td><code>G22.4</code></td><td>SDK embedded authoring manual + context help (<code>F1</code>, <code>?</code>) from the generated doc source</td><td><code>M9</code></td><td><code>P-Creator</code></td><td><code>G21.4</code>, <code>G22.1</code></td><td>In-SDK docs are version-correct and searchable without creating a parallel manual</td></tr>
+<tr><td><code>G23.1</code></td><td>Campaign Editor + intermissions/dialogue/named characters + campaign test tools</td><td><code>M10</code></td><td><code>P-Creator</code></td><td><code>G22.3</code>, <code>G19</code></td><td>Branching campaign authoring works in the SDK</td></tr>
+<tr><td><code>G23.2</code></td><td>Game mode templates + D070 family toolkit (Commander &amp; SpecOps, Commander Avatar variants, experimental survival)</td><td><code>M10</code></td><td><code>P-Differentiator</code></td><td><code>G23.1</code>, <code>G22.1</code>, <code>D070</code></td><td>Advanced mode templates are authorable/testable with role-aware UX and validation</td></tr>
+<tr><td><code>G23.3</code></td><td>RA1 export + editor extensibility/plugin hardening + localization/subtitle workbench</td><td><code>M10</code></td><td><code>P-Creator</code></td><td><code>G22.3</code>, <code>G23.1</code>, <code>G22.2</code></td><td><code>M10</code> exit: advanced authoring platform maturity (campaign editor + modes + RA1 export + extensions)</td></tr>
+<tr><td><code>G24.1</code></td><td>Ecosystem governance polish + creator feedback recognition maturity + optional contributor cosmetic rewards</td><td><code>M11</code></td><td><code>P-Scale</code> / <code>P-Optional</code></td><td><code>G20.4</code>, <code>G23.3</code></td><td>Community governance/reputation features are mature and abuse-hardened</td></tr>
+<tr><td><code>G24.2</code></td><td>Optional BYOLLM stack (<code>D016/D047/D057</code>) with local/cloud prompt strategies and editor assistant surfaces</td><td><code>M11</code></td><td><code>P-Optional</code></td><td><code>G23.3</code>, <code>G22.4</code></td><td>LLM tooling is fully optional, schema-grounded, and does not block core workflows</td></tr>
+<tr><td><code>G24.3</code></td><td>Visual/render-mode infrastructure expansion (<code>D048</code>) + platform breadth polish (browser/mobile/Deck)</td><td><code>M11</code></td><td><code>P-Optional</code> / <code>P-Scale</code></td><td><code>G20.5</code>, <code>G23.3</code>, <code>D017</code> baseline</td><td><code>M11</code> exit: optional visual/platform breadth work lands without breaking low-end baseline</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="g-cross-lane-sequencing-rules-completion-planning-guardrails"><a class="header" href="#g-cross-lane-sequencing-rules-completion-planning-guardrails">G. Cross-Lane Sequencing Rules (Completion Planning Guardrails)</a></h3>
+<ul>
+<li><strong>Do not start <code>G22.*</code> (full visual SDK/editor platform) before <code>G20.5</code> + <code>G21.3</code>.</strong>
+<ul>
+<li>This prevents editor semantics and content schemas from outrunning runtime/network/product foundations.</li>
+</ul>
+</li>
+<li><strong><code>G21.*</code> is intentionally parallelizable after <code>M2</code>, but <code>G22.*</code> is not.</strong>
+<ul>
+<li>Early creator CLI/workshop foundations reduce rework; full visual SDK needs stabilized runtime semantics.</li>
+</ul>
+</li>
+<li><strong><code>G21.5–G21.7</code> (<code>p2p-distribute</code> crate) is parallelizable after <code>M0</code> standalone crate repos are bootstrapped.</strong>
+<ul>
+<li>The P2P crate is a standalone MIT/Apache-2.0 repo with no IC dependencies. Core engine work (<code>G21.5</code>) can begin as soon as the repo exists. IC integration (<code>G21.7</code>) depends on the minimal Workshop baseline (<code>G21.2</code>).</li>
+</ul>
+</li>
+<li><strong><code>G24.*</code> remains optional/polish unless explicitly promoted by a new decision and overlay remap.</strong>
+<ul>
+<li><code>M11</code> should not displace unfinished <code>M7–M10</code> exit criteria.</li>
+</ul>
+</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../tracking/milestone-dependency-map.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../tracking/milestone-deps/clusters-m0-m1.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../tracking/milestone-dependency-map.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../tracking/milestone-deps/clusters-m0-m1.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

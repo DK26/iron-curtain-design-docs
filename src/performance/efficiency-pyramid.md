@@ -300,15 +300,15 @@ The engine uses **mimalloc** (Microsoft, MIT license) as the global allocator on
 
 **Why mimalloc:**
 
-| Factor | mimalloc | System allocator | jemalloc |
-|--------|----------|------------------|----------|
-| Small-object speed | 5x faster than glibc | Baseline | Good but slower than mimalloc |
-| Multi-threaded (Bevy/rayon) | Per-thread free lists, single-CAS cross-thread free | Contended on Linux | Good but higher RSS |
-| Fragmentation (60+ min sessions) | Good (temporal cadence, periodic coalescing) | Varies by platform | Best, but not enough to justify trade-offs |
-| RSS overhead | Low (~50% reduction vs glibc in some workloads) | Platform-dependent | Moderate (arena-per-thread) |
-| Windows support | Native | Native | Weak (caveats) |
-| WASM support | No | Yes (dlmalloc) | No |
-| License | MIT | N/A | BSD 2-clause |
+| Factor                           | mimalloc                                            | System allocator   | jemalloc                                   |
+| -------------------------------- | --------------------------------------------------- | ------------------ | ------------------------------------------ |
+| Small-object speed               | 5x faster than glibc                                | Baseline           | Good but slower than mimalloc              |
+| Multi-threaded (Bevy/rayon)      | Per-thread free lists, single-CAS cross-thread free | Contended on Linux | Good but higher RSS                        |
+| Fragmentation (60+ min sessions) | Good (temporal cadence, periodic coalescing)        | Varies by platform | Best, but not enough to justify trade-offs |
+| RSS overhead                     | Low (~50% reduction vs glibc in some workloads)     | Platform-dependent | Moderate (arena-per-thread)                |
+| Windows support                  | Native                                              | Native             | Weak (caveats)                             |
+| WASM support                     | No                                                  | Yes (dlmalloc)     | No                                         |
+| License                          | MIT                                                 | N/A                | BSD 2-clause                               |
 
 **Alternatives rejected:**
 - **jemalloc:** Better fragmentation resistance but weaker Windows support, no WASM, higher RSS on many-core machines, slower for small objects (Bevy's dominant allocation pattern). Only advantage is profiling, which mimalloc's built-in stats + the counting wrapper replicate.
@@ -318,12 +318,12 @@ The engine uses **mimalloc** (Microsoft, MIT license) as the global allocator on
 
 **Per-target allocator selection:**
 
-| Target | Allocator | Rationale |
-|--------|-----------|-----------|
-| Windows / macOS / Linux | mimalloc | Best small-object perf, low RSS, native cross-platform |
-| WASM | dlmalloc (Rust default) | Built-in, adequate for single-threaded WASM context |
-| iOS / Android | mimalloc (fallback: system) | mimalloc builds for both; system is safe fallback if build issues arise |
-| CI / Debug builds | `CountingAllocator<MiMalloc>` | Wraps mimalloc with per-tick allocation counting (feature-gated) |
+| Target                  | Allocator                     | Rationale                                                               |
+| ----------------------- | ----------------------------- | ----------------------------------------------------------------------- |
+| Windows / macOS / Linux | mimalloc                      | Best small-object perf, low RSS, native cross-platform                  |
+| WASM                    | dlmalloc (Rust default)       | Built-in, adequate for single-threaded WASM context                     |
+| iOS / Android           | mimalloc (fallback: system)   | mimalloc builds for both; system is safe fallback if build issues arise |
+| CI / Debug builds       | `CountingAllocator<MiMalloc>` | Wraps mimalloc with per-tick allocation counting (feature-gated)        |
 
 **Implementation pattern:**
 

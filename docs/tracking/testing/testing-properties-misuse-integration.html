@@ -1,0 +1,407 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Properties, Misuse &amp; Integration - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/tracking/testing/testing-properties-misuse-integration.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="property-based-testing-specifications-proptest"><a class="header" href="#property-based-testing-specifications-proptest">Property-Based Testing Specifications (proptest)</a></h2>
+<p>Each property is a formal invariant verified across thousands of randomly generated inputs. Properties that fail produce a minimal counterexample for debugging.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Generator</th><th>Invariant Assertion</th><th>Shrink Target</th><th>Tier</th></tr>
+</thead>
+<tbody>
+<tr><td>Sim determinism</td><td>Random seed × random order sequence (up to 200 orders over 500 ticks)</td><td>Two runs with identical seed+orders produce identical <code>state_hash()</code> at every tick</td><td>Minimal divergent tick + minimal order sequence</td><td>T3</td></tr>
+<tr><td>Order validation purity</td><td>Random <code>PlayerOrder</code> × random <code>SimState</code></td><td><code>validate_order()</code> never mutates sim state (hash before == hash after)</td><td>Minimal order type that causes mutation</td><td>T3</td></tr>
+<tr><td>Order validation totality</td><td>Random <code>PlayerOrder</code> with arbitrary field values</td><td><code>validate_order()</code> always returns <code>OrderValidity</code> — never panics, never hangs</td><td>Minimal panicking order</td><td>T3</td></tr>
+<tr><td>Snapshot round-trip identity</td><td>Random sim state after N random ticks</td><td><code>restore(snapshot(state))</code> produces <code>state_hash()</code> identical to original</td><td>Minimal divergent component</td><td>T3</td></tr>
+<tr><td>Delta snapshot correctness</td><td>Random sim state + random mutations</td><td><code>apply_delta(delta_snapshot(baseline, current))</code> to baseline equals current state</td><td>Minimal mutation set that breaks delta</td><td>T3</td></tr>
+<tr><td>Fixed-point arithmetic closure</td><td>Random <code>FixedPoint</code> × <code>FixedPoint</code> for add/sub/mul/div</td><td>Result stays within <code>i32</code> range; no silent overflow; division by zero returns error</td><td>Minimal overflow pair</td><td>T3</td></tr>
+<tr><td>Pathfinding completeness</td><td>Random map topology × random start/end where path exists</td><td>Pathfinder always returns a path if one exists (checked against BFS ground truth)</td><td>Minimal topology where pathfinder fails</td><td>T3</td></tr>
+<tr><td>Pathfinding determinism</td><td>Random map × random start/end × two runs</td><td>Identical path output for identical input</td><td>Minimal map where paths diverge</td><td>T3</td></tr>
+<tr><td>Workshop dependency resolution termination</td><td>Random dependency graphs (1–100 packages, 0–10 deps each)</td><td>Resolver terminates within bounded time; returns valid order or error; no infinite loop</td><td>Minimal graph that causes non-termination</td><td>T3</td></tr>
+<tr><td>Campaign DAG validity</td><td>Random mission graphs (1–50 missions, 1–5 outcomes each)</td><td><code>CampaignGraph::new()</code> accepts iff acyclic, fully reachable, no dangling refs</td><td>Minimal invalid graph accepted or valid graph rejected</td><td>T3</td></tr>
+<tr><td>UnitTag generation safety</td><td>Random pool operations (alloc/free sequences, 10K ops)</td><td>No two live units ever share the same <code>UnitTag</code>; stale tags always resolve to <code>None</code></td><td>Minimal sequence producing tag collision</td><td>T3</td></tr>
+<tr><td>Chat scope isolation</td><td>Random chat messages × random scope assignments</td><td><code>ChatMessage&lt;TeamScope&gt;</code> is never delivered to non-team recipients</td><td>Minimal routing violation</td><td>T2</td></tr>
+<tr><td>BoundedVec overflow safety</td><td>Random push/pop sequences against <code>BoundedVec&lt;T, N&gt;</code></td><td>Length never exceeds N; push beyond N returns <code>Err</code>; no panic</td><td>Minimal violating sequence</td><td>T1</td></tr>
+<tr><td>BoundedCvar range enforcement</td><td>Random <code>set()</code> calls with values across full <code>T</code> range</td><td><code>get()</code> always returns value within <code>[min, max]</code>; no value escapes bounds</td><td>Minimal value that escapes bounds</td><td>T1</td></tr>
+<tr><td>Merkle tree consistency</td><td>Random component mutations × tree rebuild</td><td>Root hash changes iff at least one leaf changed; unchanged leaves produce same hash</td><td>Minimal mutation where root hash is wrong</td><td>T3</td></tr>
+<tr><td>Weather schedule determinism</td><td>Random weather configurations × two sim instances</td><td>Weather state identical at every tick across instances with same seed</td><td>Minimal divergent config</td><td>T2</td></tr>
+<tr><td>Anti-cheat NaN pipeline guard</td><td>Random f64 sequences (incl. NaN, Inf, subnormal) fed to all anti-cheat scoring paths (EWMA, behavioral_score, TrustFactors, PopulationBaseline)</td><td>No output field is ever NaN or Inf; NaN inputs produce fail-closed sentinel values (1.0 for suspicion scores, population median for trust factors)</td><td>Minimal input that produces NaN in any output field</td><td>T3</td></tr>
+<tr><td>WASM timing oracle resistance</td><td>Random spatial query inputs × random fog configurations (0–100% fogged entities in query region)</td><td><code>ic_query_units_in_range()</code> execution time does not vary beyond ±10% based on fogged entity count (measured over 1000 iterations per configuration; timer resolution ≥ microsecond)</td><td>Minimal fog configuration where timing variance exceeds threshold</td><td>T3</td></tr>
+<tr><td>Replay network isolation</td><td>Random replay file × random embedded YAML with external URLs</td><td>During <code>SelfContained</code> replay playback, zero network I/O syscalls are issued; all external asset references resolve to placeholder</td><td>Minimal replay content that triggers network access</td><td>T2</td></tr>
+<tr><td>Key rotation sequence monotonicity</td><td>Random concurrent rotation attempts × random timing</td><td><code>rotation_sequence_number</code> is strictly monotonically increasing; no two rotations share a sequence number; cooldown-violating rotations are rejected except Emergency</td><td>Minimal concurrent rotation pair that violates monotonicity</td><td>T2</td></tr>
+<tr><td>CRL tiered policy correctness</td><td>Random credential status × random match context (ranked/unranked/LAN)</td><td>Ranked context hard-fails on unknown CRL status; unranked grace-period allows 24h; LAN soft-fails with warning; no context allows revoked credentials</td><td>Minimal context where wrong policy is applied</td><td>T2</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>proptest configuration:</strong> 256 cases per property in T1/T2 (PR gate speed), 10,000 cases in T3 (nightly thoroughness). Regression files committed to repository — discovered failures are replayed in T1 forever.</p>
+<h2 id="api-misuse-test-matrix"><a class="header" href="#api-misuse-test-matrix">API Misuse Test Matrix</a></h2>
+<p>Systematic tests derived from the API misuse analysis in <code>architecture/api-misuse-defense.md</code>. Each test verifies that a specific misuse vector is blocked by either the type system (compile-time) or runtime validation.</p>
+<h3 id="compile-time-defense-verification"><a class="header" href="#compile-time-defense-verification">Compile-Time Defense Verification</a></h3>
+<p>These defenses are verified by the type system — no runtime test needed. They are verified during code review and tracked here for completeness. If a refactor accidentally removes the defense, <code>cargo check</code> will catch it.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Defense</th><th>Mechanism</th><th>What Would Break It</th><th>Monitoring</th></tr>
+</thead>
+<tbody>
+<tr><td>S5: <code>ReconcilerToken</code> prevents unauthorized corrections</td><td><code>_private: ()</code> field</td><td>Making field <code>pub</code> or adding <code>Default</code> derive</td><td>Code review checklist</td></tr>
+<tr><td>S8: <code>Simulation</code> is <code>!Sync</code></td><td><code>&amp;mut self</code> on all mutation methods</td><td>Adding <code>unsafe impl Sync</code></td><td><code>clippy</code> + code review</td></tr>
+<tr><td>O6: <code>OrderBudget</code> unconstructible externally</td><td><code>_private: ()</code> field</td><td>Making inner fields <code>pub</code></td><td>Code review checklist</td></tr>
+<tr><td>O7: <code>Verified&lt;PlayerOrder&gt;</code> restricted construction</td><td><code>pub(crate)</code> on <code>new_verified()</code></td><td>Changing to <code>pub</code></td><td>Code review checklist</td></tr>
+<tr><td>W1: <code>WasmTerminated</code> has no <code>execute()</code></td><td>Typestate pattern</td><td>Adding <code>execute()</code> to terminated state</td><td>Code review + trait audit</td></tr>
+<tr><td>W7: <code>FsReadCapability</code> unconstructible externally</td><td><code>_private: ()</code> field</td><td>Making field <code>pub</code></td><td>Code review checklist</td></tr>
+<tr><td>P1: Workshop <code>extract()</code> requires <code>PkgVerifying</code></td><td>Typestate consumes <code>self</code></td><td>Adding <code>extract()</code> to <code>PkgDownloading</code></td><td>Code review + trait audit</td></tr>
+<tr><td>C1: <code>MissionLoading</code> has no <code>complete()</code></td><td>Typestate pattern</td><td>Adding <code>complete()</code> to loading state</td><td>Code review + trait audit</td></tr>
+<tr><td>B4: Read buffer immutability</td><td><code>read()</code> returns <code>&amp;T</code></td><td>Returning <code>&amp;mut T</code> from <code>read()</code></td><td>Code review checklist</td></tr>
+<tr><td>N7: <code>SyncHash</code> ≠ <code>StateHash</code></td><td>Distinct newtypes, no <code>From</code> impl</td><td>Adding <code>From&lt;SyncHash&gt; for StateHash</code></td><td><code>clippy</code> + code review</td></tr>
+<tr><td>M1: Chat scope branding</td><td><code>ChatMessage&lt;TeamScope&gt;</code> ≠ <code>ChatMessage&lt;AllScope&gt;</code></td><td>Adding <code>From&lt;ChatMessage&lt;TeamScope&gt;&gt; for ChatMessage&lt;AllScope&gt;</code></td><td>Code review checklist</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="runtime-defense-test-specifications"><a class="header" href="#runtime-defense-test-specifications">Runtime Defense Test Specifications</a></h3>
+<p>Tests verifying runtime defenses against misuse vectors. Each test has a specific assertion, exact pass/fail criteria, and measurement metric.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>ID</th><th>Misuse Vector</th><th>Test Method</th><th>Exact Assertion</th><th>Measurement Metric</th><th>Tier</th></tr>
+</thead>
+<tbody>
+<tr><td>S1</td><td>Future-tick orders</td><td>Call <code>apply_tick(tick=N+2)</code> when sim is at tick N</td><td>Returns <code>TickMismatchError { expected: N, got: N+2 }</code></td><td>Error variant + field values match</td><td>T1</td></tr>
+<tr><td>S3</td><td>Cross-game snapshot restore</td><td><code>Simulation::restore()</code> with snapshot from different seed</td><td>Returns <code>SnapshotError::ConfigMismatch { field: "game_seed" }</code></td><td>Error variant, sim state_hash unchanged</td><td>T2</td></tr>
+<tr><td>S4</td><td>Corrupted snapshot</td><td>Flip random byte in serialized snapshot, call <code>restore()</code></td><td>Returns <code>SnapshotError::IntegrityCheckFailed</code></td><td>100 random bit-flips, 100% detection rate</td><td>T3</td></tr>
+<tr><td>S6</td><td>Float injection via snapshot</td><td>Embed <code>f32</code> bytes in snapshot where <code>FixedPoint</code> expected</td><td><code>serde</code> deserialization returns type error</td><td>Error type is <code>DeserializationError</code>, not panic</td><td>T3</td></tr>
+<tr><td>S7</td><td>Unknown player order</td><td><code>inject_orders()</code> with non-existent <code>PlayerId(999)</code></td><td><code>OrderRejection::UnknownPlayer { id: 999 }</code></td><td>Rejection logged in telemetry with player ID</td><td>T1</td></tr>
+<tr><td>S9</td><td>Out-of-bounds coordinates</td><td>Move order to <code>WorldPos { x: 999999, y: 999999, z: 0 }</code></td><td><code>OrderRejection::OutOfBounds { pos, map_bounds }</code></td><td>Both position and bounds included in error</td><td>T1</td></tr>
+<tr><td>O1</td><td>Stale UnitTag after death</td><td>Kill unit, send attack order targeting dead unit’s tag</td><td><code>OrderRejection::StaleTarget { tag, current_generation }</code></td><td>Generation mismatch detected</td><td>T1</td></tr>
+<tr><td>O2</td><td>Order rate limit</td><td>Send 201 orders in one tick (budget=200)</td><td>First 200 accepted, 201st returns <code>BudgetExhausted</code></td><td>Exact count: accepted=200, rejected=1</td><td>T2</td></tr>
+<tr><td>O3</td><td>Timestamp manipulation</td><td><code>sub_tick_time = 999999999</code> (far future)</td><td>Relay clamps to envelope max (e.g., 66667µs)</td><td>Clamped value ≤ tick_window_us; telemetry event fires</td><td>T2</td></tr>
+<tr><td>O8</td><td>Oversized unit selection</td><td>Move order with 100 UnitTags (max=40)</td><td><code>OrderRejection::SelectionTooLarge { count: 100, max: 40 }</code></td><td>Both count and max in error</td><td>T1</td></tr>
+<tr><td>N2</td><td>Handshake replay</td><td>Capture challenge response, replay on new connection</td><td>Connection terminated with <code>AuthError::NonceReused</code></td><td>Connection drops within 100ms of replay</td><td>T2</td></tr>
+<tr><td>N6</td><td>Half-open connection flood</td><td>Open 10,000 TCP connections, don’t complete handshake</td><td>All timeout within configured window (default: 5s); relay accepts new connections after cleanup</td><td>Peak memory &lt; 50MB during flood; recovery &lt; 1s</td><td>T3</td></tr>
+<tr><td>W3</td><td>WASM memory bomb</td><td><code>memory.grow(65536)</code> from WASM module</td><td>Growth denied; module receives trap; host continues</td><td>Host memory unchanged; module terminated cleanly</td><td>T3</td></tr>
+<tr><td>W5</td><td>WASM infinite loop</td><td><code>loop {}</code> in WASM entry point</td><td>Fuel exhausted; module trapped; host continues</td><td>Execution terminates within fuel budget; game tick completes</td><td>T3</td></tr>
+<tr><td>L1</td><td>Lua string bomb</td><td><code>string.rep("a", 2^30)</code></td><td>Memory limit hit; script receives error; host continues</td><td>Host memory unchanged; script terminated</td><td>T3</td></tr>
+<tr><td>L2</td><td>Lua infinite loop</td><td><code>while true do end</code></td><td>Instruction limit hit; script terminated</td><td>Script terminates within instruction budget</td><td>T3</td></tr>
+<tr><td>L3</td><td>Lua system access</td><td>Call <code>os.execute("rm -rf /")</code></td><td>Returns nil (function not registered)</td><td>No side effects on host filesystem</td><td>T1</td></tr>
+<tr><td>L5</td><td>Lua UnitTag forgery</td><td>Script creates tag value for enemy unit, calls host API</td><td><code>SandboxError::OwnershipViolation { tag, caller, owner }</code></td><td>Error includes all three IDs</td><td>T3</td></tr>
+<tr><td>U1</td><td>Stale UnitTag resolution</td><td>Alloc tag, free slot, resolve original tag</td><td><code>UnitPool::resolve()</code> returns <code>None</code></td><td>Generation mismatch, no panic</td><td>T1</td></tr>
+<tr><td>U2</td><td>Pool exhaustion</td><td>Allocate units beyond pool capacity (2049 for RA1)</td><td><code>UnitPoolError::PoolExhausted</code> after 2048th</td><td>Exact count: 2048 succeed, 2049th fails</td><td>T2</td></tr>
+<tr><td>F1</td><td>Negative health YAML</td><td><code>health: { max: -100 }</code> in unit definition</td><td><code>SchemaError::InvalidValue { field: "health.max", value: "-100", constraint: "&gt; 0" }</code></td><td>Error includes file path + line number</td><td>T1</td></tr>
+<tr><td>F2</td><td>Circular YAML inheritance</td><td><code>A inherits B inherits A</code></td><td><code>RuleLoadError::CircularInheritance { chain: "A → B → A" }</code></td><td>Chain string matches cycle path</td><td>T1</td></tr>
+<tr><td>F3</td><td>Unknown TOML key</td><td><code>unknwon_feld = true</code> in config.toml</td><td><code>DeserializationError::UnknownField { field: "unknwon_feld", valid: [...] }</code></td><td>Error lists available fields</td><td>T1</td></tr>
+<tr><td>A1</td><td>Zip Slip in .oramap</td><td>Entry path <code>../../etc/passwd</code> in archive</td><td><code>PathBoundaryError::EscapeAttempt { path, boundary }</code></td><td>Extract produces zero files outside boundary</td><td>T3</td></tr>
+<tr><td>A2</td><td>Truncated .mix</td><td>Header claims 47 files, data for 31</td><td><code>MixParseError::FileCountMismatch { declared: 47, actual: 31 }</code></td><td>Both counts in error</td><td>T1</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="integration-scenario-matrix"><a class="header" href="#integration-scenario-matrix">Integration Scenario Matrix</a></h2>
+<p>End-to-end scenarios testing multiple systems interacting. Each scenario has explicit setup, action sequence, and verification points.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Scenario</th><th>Systems Under Test</th><th>Setup</th><th>Action Sequence</th><th>Verification Points</th><th>Tier</th></tr>
+</thead>
+<tbody>
+<tr><td>Full match lifecycle</td><td>sim + net + replay</td><td>2-player game, relay network, 5-min scenario</td><td>Lobby → loading → 1000 ticks → surrender → post-game</td><td>(1) Replay file exists, (2) replay hash matches live hash, (3) post-game stats match sim query</td><td>T2</td></tr>
+<tr><td>Reconnection mid-combat</td><td>sim + net + snapshot</td><td>2-player game, combat in progress at tick 300</td><td>P2 disconnects → 200 ticks → P2 reconnects with snapshot → 500 more ticks</td><td>(1) Snapshot accepted, (2) state hashes match after reconnect, (3) no combat resolution errors</td><td>T2</td></tr>
+<tr><td>Mod load with conflicts</td><td>modding + YAML + sim</td><td>Two mods overriding <code>rifle_infantry.cost</code> with different values</td><td>Load profile with explicit priority → start game → build rifle infantry</td><td>(1) Conflict detected and logged, (2) higher-priority mod wins, (3) cost in game matches winner, (4) fingerprint identical across clients</td><td>T3</td></tr>
+<tr><td>Workshop install → gameplay</td><td>Workshop + sim + modding</td><td>Package with new unit type, dependency on base content</td><td>Install package → resolve deps → load mod → start game → build new unit</td><td>(1) Deps installed in order, (2) unit definition loaded, (3) unit buildable in game, (4) unit stats match YAML</td><td>T4</td></tr>
+<tr><td>Campaign transition with roster</td><td>campaign + sim + snapshot</td><td>Campaign with 2 missions, transition on victory</td><td>Play M1 → win with 5 units → transition → verify roster in M2</td><td>(1) 5 units in M2 roster, (2) health/veterancy preserved, (3) story flags accessible</td><td>T2</td></tr>
+<tr><td>Chat scope in multiplayer</td><td>chat + net + relay</td><td>4-player team game (2v2)</td><td>P1 sends team chat → P1 sends all-chat → verify delivery</td><td>(1) Team chat: P1+P2 receive, P3+P4 do not, (2) all-chat: all 4 receive, (3) observer sees all-chat only</td><td>T2</td></tr>
+<tr><td>WASM mod with sandbox limits</td><td>WASM + sim + modding</td><td>Malicious mod attempting memory bomb + file access + infinite loop</td><td>Load mod → trigger memory.grow → trigger file access → trigger loop</td><td>(1) Memory growth denied, (2) file access denied, (3) loop terminated by fuel, (4) game continues normally</td><td>T3</td></tr>
+<tr><td>Desync detection → diagnosis</td><td>sim + net + Merkle tree</td><td>2-player game, deliberate single-archetype mutation at tick 500</td><td>Run to tick 500 → corrupt one archetype on P2 → run to tick 510</td><td>(1) Desync detected within 10 ticks, (2) Merkle tree identifies exact archetype, (3) diagnosis payload &lt; 1KB</td><td>T2</td></tr>
+<tr><td>Anti-cheat → trust score flow</td><td>sim + net + telemetry + ranking</td><td>Player with 10 clean games, then 1 flagged game</td><td>Play 10 games cleanly → play 1 game with known-cheat replay pattern</td><td>(1) Trust score starts high, (2) flagged game triggers score drop, (3) subsequent clean games recover slowly</td><td>T4</td></tr>
+<tr><td>Save/load during weather</td><td>sim + weather + snapshot</td><td>Game with active blizzard at tick 300</td><td>Save at tick 300 → load → run 500 more ticks</td><td>(1) Weather state matches, (2) terrain surface conditions match, (3) state hash at tick 800 matches fresh run</td><td>T3</td></tr>
+<tr><td>Console dev-mode flagging</td><td>console + replay + ranking</td><td>Ranked game, player issues <code>/god_mode</code></td><td>Start ranked → exec dev command → complete match → check replay + ranking</td><td>(1) Dev flag set, (2) replay metadata shows dev-mode, (3) match excluded from ranked standings</td><td>T2</td></tr>
+<tr><td>Foreign replay import</td><td>replay + sim + format</td><td><code>.orarep</code> file from OpenRA</td><td>Import → play back via <code>ForeignReplayPlayback</code> → check divergence</td><td>(1) Import succeeds, (2) playback runs to completion, (3) divergences logged with tick+archetype detail</td><td>T3</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="measurement--metrics-framework"><a class="header" href="#measurement--metrics-framework">Measurement &amp; Metrics Framework</a></h2>
+<p>Every automated test produces structured output beyond pass/fail. These metrics feed into the release-readiness dashboard.</p>
+<h3 id="performance-metrics-collected-per-benchmark-run"><a class="header" href="#performance-metrics-collected-per-benchmark-run">Performance Metrics (collected per benchmark run)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Metric</th><th>Collection Method</th><th>Storage</th><th>Alert Threshold</th></tr>
+</thead>
+<tbody>
+<tr><td>Tick time (p50, p95, p99)</td><td><code>criterion</code> statistical analysis</td><td>Benchmark history DB (SQLite)</td><td>p99 exceeds budget by &gt;10%</td></tr>
+<tr><td>Heap allocations per tick</td><td>Custom global allocator wrapper counting <code>alloc</code> calls</td><td>Per-benchmark counter</td><td>Any allocation in designated zero-alloc path</td></tr>
+<tr><td>L1 cache miss rate</td><td><code>perf stat</code> / platform performance counters</td><td>Benchmark log</td><td>&gt; 5% in hot tick loop</td></tr>
+<tr><td>Peak RSS during scenario</td><td><code>/proc/self/status</code> sampling at 10ms intervals</td><td>Benchmark log</td><td>&gt; 2× expected for unit count</td></tr>
+<tr><td>Pathfinding nodes expanded</td><td>Internal counter in pathfinder</td><td>Per-benchmark metric</td><td>&gt; 2× optimal for known map</td></tr>
+<tr><td>Serialization throughput</td><td>Bytes/second for snapshot and replay frame writes</td><td>Benchmark log</td><td>Regression &gt; 15%</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="correctness-metrics-collected-per-test-suite-run"><a class="header" href="#correctness-metrics-collected-per-test-suite-run">Correctness Metrics (collected per test suite run)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Metric</th><th>Collection Method</th><th>Storage</th><th>Alert Threshold</th></tr>
+</thead>
+<tbody>
+<tr><td>Determinism violations</td><td>Hash comparison failures across repeated runs</td><td>Test result DB</td><td>Any violation is a P0 bug</td></tr>
+<tr><td>False positive rate (anti-cheat)</td><td><code>flagged_clean / total_clean</code> on labeled corpus</td><td>Corpus evaluation log</td><td>&gt; 0.1% (V54 threshold)</td></tr>
+<tr><td>False negative rate (anti-cheat)</td><td><code>missed_cheat / total_cheat</code> on labeled corpus</td><td>Corpus evaluation log</td><td>&gt; 5% (V54 threshold)</td></tr>
+<tr><td>Order rejection accuracy</td><td>Correct rejection variant rate across exhaustive matrix</td><td>Test result DB</td><td>&lt; 100% is a bug</td></tr>
+<tr><td>Fuzz coverage (edge/line)</td><td><code>cargo-fuzz</code> with <code>--sanitizer=coverage</code></td><td>Fuzz coverage report</td><td>&lt; 80% line coverage in target module</td></tr>
+<tr><td>Property test case count</td><td>proptest runner statistics</td><td>Test log</td><td>&lt; configured minimum (256 for T1, 10K for T3)</td></tr>
+<tr><td>Snapshot round-trip bit-exactness</td><td>Byte comparison of snapshot → restore → snapshot</td><td>Test result DB</td><td>Any byte difference is a P0 bug</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="security-metrics-collected-per-security-test-suite-run"><a class="header" href="#security-metrics-collected-per-security-test-suite-run">Security Metrics (collected per security test suite run)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Metric</th><th>Collection Method</th><th>Storage</th><th>Alert Threshold</th></tr>
+</thead>
+<tbody>
+<tr><td>Sandbox escape attempts blocked</td><td>Counter in WASM/Lua host</td><td>Security test log</td><td>Any unblocked attempt is a P0 bug</td></tr>
+<tr><td>Path traversal attempts blocked</td><td><code>StrictPath</code> rejection counter during fuzz</td><td>Fuzz log</td><td>Any unblocked traversal is a P0 bug</td></tr>
+<tr><td>Replay tampering detection rate</td><td>Tampered frames detected / total tampered frames</td><td>Security test log</td><td>&lt; 100% is a P0 bug</td></tr>
+<tr><td>SCR replay attack detection rate</td><td>Replayed credentials detected / total replays</td><td>Security test log</td><td>&lt; 100% is a P0 bug</td></tr>
+<tr><td>Rate limit enforcement accuracy</td><td>Orders dropped when budget exhausted / orders sent beyond budget</td><td>Test log</td><td>&lt; 100% is a bug</td></tr>
+<tr><td>Half-open connection cleanup time</td><td>Time from flood to full recovery</td><td>Stress test log</td><td>&gt; 5 seconds is a bug</td></tr>
+</tbody>
+</table>
+</div>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../tracking/testing/testing-infrastructure-subsystems.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../tracking/testing/testing-coverage-release.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../tracking/testing/testing-infrastructure-subsystems.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../tracking/testing/testing-coverage-release.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

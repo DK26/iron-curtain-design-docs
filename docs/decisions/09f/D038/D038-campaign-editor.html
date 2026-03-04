@@ -1,0 +1,702 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Campaign Editor - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09f/D038/D038-campaign-editor.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h3 id="campaign-editor"><a class="header" href="#campaign-editor">Campaign Editor</a></h3>
+<p>D021 defines the campaign <em>system</em> — branching mission graphs, persistent rosters, story flags. But a system without an editor means campaigns are hand-authored YAML, which limits who can create them. The Campaign Editor makes D021’s full power visual.</p>
+<p>Every RTS editor ever shipped treats missions as isolated units. Warcraft III’s World Editor came closest — it had a campaign screen with mission ordering and global variables — but even that was a flat list with linear flow. No visual branching, no state flow visualization, no intermission screens, no dialogue trees. The result: almost nobody creates custom RTS campaigns, because the tooling makes it miserable.</p>
+<p>The Campaign Editor operates at a level above the Scenario Editor. Where the Scenario Editor zooms into one mission, the Campaign Editor zooms out to see the entire campaign structure. Double-click a mission node → the Scenario Editor opens for that mission. Back out → you’re at the campaign graph again.</p>
+<h4 id="visual-campaign-graph"><a class="header" href="#visual-campaign-graph">Visual Campaign Graph</a></h4>
+<p>The core view: missions as nodes, outcomes as directed edges.</p>
+<pre><code>┌─────────────────────────────────────────────────────────────────┐
+│                    Campaign: Red Tide Rising                     │
+│                                                                  │
+│    ┌─────────┐   victory    ┌──────────┐   bridge_held           │
+│    │ Mission │─────────────→│ Mission  │───────────────→ ...     │
+│    │   1     │              │   2      │                         │
+│    │ Beach   │   defeat     │ Bridge   │   bridge_lost           │
+│    │ Landing │──────┐       │ Assault  │──────┐                  │
+│    └─────────┘      │       └──────────┘      │                  │
+│                     │                         │                  │
+│                     ▼                         ▼                  │
+│               ┌──────────┐             ┌──────────┐             │
+│               │ Mission  │             │ Mission  │             │
+│               │   1B     │             │   3B     │             │
+│               │ Retreat  │             │ Fallback │             │
+│               └──────────┘             └──────────┘             │
+│                                                                  │
+│   [+ Add Mission]  [+ Add Transition]  [Validate Graph]         │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Node (mission) properties:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Mission file</strong></td><td>Link to the scenario (created in Scenario Editor)</td></tr>
+<tr><td><strong>Display name</strong></td><td>Shown in campaign graph and briefing</td></tr>
+<tr><td><strong>Outcomes</strong></td><td>Named results this mission can produce (e.g., <code>victory</code>, <code>defeat</code>, <code>bridge_intact</code>)</td></tr>
+<tr><td><strong>Briefing</strong></td><td>Text/audio/portrait shown before the mission</td></tr>
+<tr><td><strong>Debriefing</strong></td><td>Text/audio shown after the mission, per outcome</td></tr>
+<tr><td><strong>Intermission</strong></td><td>Optional between-mission screen (see Intermission Screens below)</td></tr>
+<tr><td><strong>Roster in</strong></td><td>What units the player receives: <code>none</code>, <code>carry_forward</code>, <code>preset</code>, <code>merge</code></td></tr>
+<tr><td><strong>Roster out</strong></td><td>Carryover mode for surviving units: <code>none</code>, <code>surviving</code>, <code>extracted</code>, <code>selected</code>, <code>custom</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Edge (transition) properties:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>From outcome</strong></td><td>Which named outcome triggers this transition</td></tr>
+<tr><td><strong>To mission</strong></td><td>Destination mission node</td></tr>
+<tr><td><strong>Condition</strong></td><td>Optional Lua expression or story flag check (e.g., <code>Flag.get("scientist_rescued")</code>)</td></tr>
+<tr><td><strong>Weight</strong></td><td>Probability weight when multiple edges share the same outcome (see below)</td></tr>
+<tr><td><strong>Roster filter</strong></td><td>Override roster carryover for this specific path</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="randomized-and-conditional-paths"><a class="header" href="#randomized-and-conditional-paths">Randomized and Conditional Paths</a></h4>
+<p>D021 defines deterministic branching — outcome X always leads to mission Y. The Campaign Editor extends this with weighted and conditional edges, enabling randomized campaign structures.</p>
+<p><strong>Weighted random:</strong> When multiple edges share the same outcome, weights determine probability. The roll is seeded from the campaign save (deterministic for replays).</p>
+<pre><code class="language-yaml"># Mission 3 outcome "victory" → random next mission
+transitions:
+  - from_outcome: victory
+    to: mission_4a_snow      # weight 40%
+    weight: 40
+  - from_outcome: victory
+    to: mission_4b_desert    # weight 60%
+    weight: 60
+</code></pre>
+<p>Visually in the graph editor, weighted edges show their probability and use varying line thickness.</p>
+<p><strong>Conditional edges:</strong> An edge with a condition is only eligible if the condition passes. Conditions are evaluated before weights. This enables “if you rescued the scientist, always go to the lab mission; otherwise, random between two alternatives.”</p>
+<p><strong>Mission pools:</strong> A pool node represents “pick N missions from this set” — the campaign equivalent of side quests. The player gets a random subset, plays them in any order, then proceeds. Enables roguelike campaign structures.</p>
+<pre><code>┌──────────┐         ┌─────────────────┐         ┌──────────┐
+│ Mission  │────────→│   Side Mission   │────────→│ Mission  │
+│    3     │         │   Pool (2 of 5)  │         │    4     │
+└──────────┘         │                  │         └──────────┘
+                     │ ☐ Raid Supply    │
+                     │ ☐ Rescue POWs    │
+                     │ ☐ Sabotage Rail  │
+                     │ ☐ Defend Village │
+                     │ ☐ Naval Strike   │
+                     └─────────────────┘
+</code></pre>
+<p>Mission pools are a natural fit for the persistent roster system — side missions that strengthen (or deplete) the player’s forces before a major battle.</p>
+<h4 id="classic-globe-mission-select-ra1-style"><a class="header" href="#classic-globe-mission-select-ra1-style">Classic Globe Mission Select (RA1-Style)</a></h4>
+<p>The original Red Alert featured a <strong>globe screen</strong> between certain missions — the camera zooms to a region, and the player chooses between 2-3 highlighted countries to attack next. “Do we strike Greece or Turkey?” Each choice leads to a different mission variant, and the unchosen mission is skipped. This was one of RA1’s most memorable campaign features — the feeling that <em>you</em> decided where the war went next. It was also one of the things OpenRA never reproduced; OpenRA campaigns are strictly linear mission lists.</p>
+<p>IC supports this natively. It’s not a special mode — it falls out of the existing building blocks:</p>
+<p><strong>How it works:</strong> A campaign graph node has multiple outgoing edges. Instead of selecting the next mission via a text menu or automatic branching, the campaign uses a <strong>World Map intermission</strong> to present the choice visually. The player sees the map with highlighted regions, picks one, and that edge is taken.</p>
+<pre><code class="language-yaml"># Campaign graph — classic RA globe-style mission select
+nodes:
+  mission_5:
+    name: "Allies Regroup"
+    # After completing this mission, show the globe
+    post_intermission:
+      template: world-map
+      config:
+        zoom_to: "eastern_mediterranean"
+        choices:
+          - region: greece
+            label: "Strike Athens"
+            target_node: mission_6a_greece
+            briefing_preview: "Greek resistance is weak. Take the port city."
+          - region: turkey
+            label: "Assault Istanbul"
+            target_node: mission_6b_turkey
+            briefing_preview: "Istanbul controls the straits. High risk, strategic value."
+        display:
+          highlight_available: true      # glow effect on selectable regions
+          show_enemy_strength: true      # "Light/Medium/Heavy resistance"
+          camera_animation: globe_spin   # classic RA globe spin to region
+
+  mission_6a_greece:
+    name: "Mediterranean Assault"
+    # ... mission definition
+
+  mission_6b_turkey:
+    name: "Straits of War"
+    # ... mission definition
+</code></pre>
+<p>This is a <strong>D021 branching campaign</strong> with a <strong>D038 World Map intermission</strong> as the branch selector. The campaign graph has the branching structure; the world map is just the presentation layer for the player’s choice. No strategic territory tracking, no force pools, no turn-based meta-layer — just a map that asks “where do you want to fight next?”</p>
+<p><strong>Comparison to World Domination:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Aspect</th><th>Globe Mission Select (RA1-style)</th><th>World Domination</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Purpose</strong></td><td>Choose between pre-authored mission variants</td><td>Emergent strategic territory war</td></tr>
+<tr><td><strong>Number of choices</strong></td><td>2-3 per decision point</td><td>All adjacent regions</td></tr>
+<tr><td><strong>Missions</strong></td><td>Pre-authored (designer-created)</td><td>Generated from strategic state</td></tr>
+<tr><td><strong>Map role</strong></td><td>Presentation for a branch choice</td><td>Primary campaign interface</td></tr>
+<tr><td><strong>Territory tracking</strong></td><td>None — cosmetic only</td><td>Full (gains, losses, garrisons)</td></tr>
+<tr><td><strong>Complexity</strong></td><td>Simple — just a campaign graph + map UI</td><td>Complex — full strategic layer</td></tr>
+<tr><td><strong>OpenRA support</strong></td><td>No</td><td>No</td></tr>
+<tr><td><strong>IC support</strong></td><td>Yes — D021 graph + D038 World Map intermission</td><td>Yes — World Domination mode (D016)</td></tr>
+</tbody>
+</table>
+</div>
+<p>The globe mission select is the <strong>simplest</strong> use of the world map component — a visual branch selector for hand-crafted campaigns. World Domination is the most complex — a full strategic meta-layer. Everything in between is supported too: a map that shows your progress through a linear campaign (locations lighting up as you complete them), a map with side-mission markers, a map that shows enemy territory shrinking as you advance.</p>
+<p><strong>RA1 game module default:</strong> The Red Alert game module ships with a campaign that recreates the original RA1 globe-style mission select at the same decision points as the original game. When the original RA1 campaign asked “Greece or Turkey?”, IC’s RA1 campaign shows the same choice on the same map — but with IC’s modern World Map renderer instead of the original 320×200 pre-rendered globe FMV.</p>
+<h4 id="persistent-state-dashboard"><a class="header" href="#persistent-state-dashboard">Persistent State Dashboard</a></h4>
+<p>The biggest reason campaign creation is painful in every RTS editor: you can’t see what state flows between missions. Story flags are set in Lua buried inside mission scripts. Roster carryover is configured in YAML you never visualize. Variables disappear between missions unless you manually manage them.</p>
+<p>The <strong>Persistent State Dashboard</strong> makes campaign state visible and editable in the GUI.</p>
+<p><strong>Roster view:</strong></p>
+<pre><code>┌──────────────────────────────────────────────────────┐
+│  Campaign Roster                                      │
+│                                                       │
+│  Mission 1 → Mission 2:  Carryover: surviving         │
+│  ├── Tanya (named hero)     ★ Must survive            │
+│  ├── Medium Tanks ×4        ↝ Survivors carry forward  │
+│  └── Engineers ×2           ↝ Survivors carry forward  │
+│                                                       │
+│  Mission 2 → Mission 3:  Carryover: extracted          │
+│  ├── Extraction zone: bridge_south                    │
+│  └── Only units in zone at mission end carry forward  │
+│                                                       │
+│  Named Characters: Tanya, Volkov, Stavros              │
+│  Equipment Pool: Captured MiG, Prototype Chrono        │
+└──────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Story flags view:</strong> A table of every flag across the entire campaign — where it’s set, where it’s read, current value in test runs. See at a glance: “The flag <code>bridge_destroyed</code> is set in Mission 2’s trigger #14, read in Mission 4’s Condition of Presence on the bridge entity and Mission 5’s briefing text.”</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Flag</th><th>Set in</th><th>Read in</th><th>Type</th></tr>
+</thead>
+<tbody>
+<tr><td><code>bridge_destroyed</code></td><td>Mission 2, trigger 14</td><td>Mission 4 (CoP), Mission 5 (briefing)</td><td>switch</td></tr>
+<tr><td><code>scientist_rescued</code></td><td>Mission 3, Lua script</td><td>Mission 4 (edge condition)</td><td>switch</td></tr>
+<tr><td><code>tanks_captured</code></td><td>Mission 2, debrief</td><td>Mission 3 (roster merge)</td><td>counter</td></tr>
+<tr><td><code>player_reputation</code></td><td>Multiple missions</td><td>Mission 6 (dialogue branches)</td><td>counter</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Campaign variables:</strong> Separate from per-mission variables (Variables Panel). Campaign variables persist across ALL missions. Per-mission variables reset. The dashboard shows which scope each variable belongs to and highlights conflicts (same name in both scopes).</p>
+<h4 id="intermission-screens"><a class="header" href="#intermission-screens">Intermission Screens</a></h4>
+<p>Between missions, the player sees an intermission — not just a text briefing, but a customizable screen layout. This is where campaigns become more than “mission list” and start feeling like a <em>game within the game</em>.</p>
+<p><strong>Built-in intermission templates:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Template</th><th>Layout</th><th>Use Case</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Briefing Only</strong></td><td>Portrait + text + “Begin Mission” button</td><td>Simple campaigns, classic RA style</td></tr>
+<tr><td><strong>Roster Management</strong></td><td>Unit list with keep/dismiss, equipment assignment, formation arrangement</td><td>OFP: Resistance style unit management</td></tr>
+<tr><td><strong>Base Screen</strong></td><td>Persistent base view — spend resources on upgrades that carry forward</td><td>Between-mission base building (C&amp;C3 style)</td></tr>
+<tr><td><strong>Shop / Armory</strong></td><td>Campaign inventory + purchase panel + currency</td><td>RPG-style equipment management</td></tr>
+<tr><td><strong>Dialogue</strong></td><td>Portrait + branching text choices (see Dialogue Editor below)</td><td>Story-driven campaigns, RPG conversations</td></tr>
+<tr><td><strong>World Map</strong></td><td>Map with mission locations — player chooses next mission from available nodes. In World Domination campaigns (D016), shows faction territories, frontlines, and the LLM-generated briefing for the next mission</td><td>Non-linear campaigns, World Domination</td></tr>
+<tr><td><strong>Debrief + Stats</strong></td><td>Mission results, casualties, performance grade, story flag changes</td><td>Post-mission feedback</td></tr>
+<tr><td><strong>Credits</strong></td><td>Auto-scrolling text with section headers, role/name columns, optional background video/image and music track. Supports contributor photos, logo display, and “special thanks” sections. Speed and style (classic scroll / paginated / cinematic) configurable per-campaign.</td><td>Campaign completion, mod credits, jam credits</td></tr>
+<tr><td><strong>Custom</strong></td><td>Empty canvas — arrange any combination of panels via the layout editor</td><td>Total creative freedom</td></tr>
+</tbody>
+</table>
+</div>
+<p>Intermissions are defined per campaign node (between “finish Mission 2” and “start Mission 3”). They can chain: debrief → roster management → briefing → begin mission. A typical campaign ending chains: final debrief → credits → return to campaign select (or main menu).</p>
+<p><strong>Intermission panels (building blocks):</strong></p>
+<ul>
+<li><strong>Text panel</strong> — rich text with variable substitution (<code>"Commander, we lost {Var.get('casualties')} soldiers."</code>).</li>
+<li><strong>Portrait panel</strong> — character portrait + name. Links to Named Characters.</li>
+<li><strong>Roster panel</strong> — surviving units from previous mission. Player can dismiss, reorganize, assign equipment.</li>
+<li><strong>Inventory panel</strong> — campaign-wide items. Drag onto units to equip. Purchase from shop with campaign currency.</li>
+<li><strong>Choice panel</strong> — buttons that set story flags or campaign variables. “Execute the prisoner? [Yes] [No]” → sets <code>prisoner_executed</code> flag.</li>
+<li><strong>Map panel</strong> — shows campaign geography. Highlights available next missions if using mission pools. In World Domination mode, renders the world map with faction-colored regions, animated frontlines, and narrative briefing panel. The LLM presents the next mission through the briefing; the player sees their territory and the story context, not a strategy game menu.</li>
+<li><strong>Stats panel</strong> — mission performance: time, casualties, objectives completed, units destroyed.</li>
+<li><strong>Credits panel</strong> — auto-scrolling rich text optimized for credits display. Supports section headers (“Cast,” “Design,” “Special Thanks”), two-column role/name layout, contributor portraits, logo images, and configurable scroll speed. The text source can be inline, loaded from a <code>credits.yaml</code> file (for reuse across campaigns), or generated dynamically via Lua. Scroll style options: <code>classic</code> (continuous upward scroll, Star Wars / RA1 style), <code>paginated</code> (fade between pages), <code>cinematic</code> (camera-tracked text over background video). Music reference plays for the duration. The panel emits a <code>credits_finished</code> event when scrolling completes — chain to a Choice panel (“Play Again?” / “Return to Menu”) or auto-advance.</li>
+<li><strong>Custom Lua panel</strong> — advanced panel that runs arbitrary Lua to generate content dynamically.</li>
+</ul>
+<p>These panels compose freely. A “Base Screen” template is just a preset arrangement: roster panel on the left, inventory panel center, stats panel right, briefing text bottom. The Custom template starts empty and lets the designer arrange any combination.</p>
+<p><strong>Per-player intermission variants:</strong> In co-op campaigns, each intermission can optionally define per-player layouts. The intermission editor exposes a “Player Variant” selector: Default (all players see the same screen) or per-slot overrides (Player 1 sees layout A, Player 2 sees layout B). Per-player briefing text is always supported regardless of this setting. Per-player layouts go further — different panel arrangements, different choice options, different map highlights per player slot. This is what makes co-op campaigns feel like each player has a genuine role, not just a shared screen. Variant layouts share the same panel library; only the arrangement and content differ.</p>
+<h4 id="dialogue-editor"><a class="header" href="#dialogue-editor">Dialogue Editor</a></h4>
+<p>Branching dialogue isn’t RPG-exclusive — it’s what separates a campaign with a story from a campaign that’s just a mission list. “Commander, we’ve intercepted enemy communications. Do we attack now or wait for reinforcements?” That’s a dialogue tree. The choice sets a story flag that changes the next mission’s layout.</p>
+<p>The Dialogue Editor is a visual branching tree editor, similar to tools like Twine or Ink but built into the scenario editor.</p>
+<pre><code>┌──────────────────────────────────────────────────────┐
+│  Dialogue: Mission 3 Briefing                         │
+│                                                       │
+│  ┌────────────────────┐                               │
+│  │ STAVROS:            │                               │
+│  │ "The bridge is       │                               │
+│  │  heavily defended." │                               │
+│  └────────┬───────────┘                               │
+│           │                                            │
+│     ┌─────┴─────┐                                      │
+│     │           │                                      │
+│  ┌──▼───┐  ┌───▼────┐                                  │
+│  │Attack│  │Flank   │                                  │
+│  │Now   │  │Through │                                  │
+│  │      │  │Forest  │                                  │
+│  └──┬───┘  └───┬────┘                                  │
+│     │          │                                       │
+│  sets:       sets:                                     │
+│  approach=   approach=                                 │
+│  "direct"    "flank"                                   │
+│     │          │                                       │
+│  ┌──▼──────────▼──┐                                    │
+│  │ TANYA:          │                                    │
+│  │ "I'll take       │                                    │
+│  │  point."         │                                    │
+│  └─────────────────┘                                    │
+└──────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Dialogue node properties:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Speaker</strong></td><td>Character name + portrait reference</td></tr>
+<tr><td><strong>Text</strong></td><td>Dialogue line (supports variable substitution)</td></tr>
+<tr><td><strong>Audio</strong></td><td>Optional voice-over reference</td></tr>
+<tr><td><strong>Choices</strong></td><td>Player responses — each is an outgoing edge</td></tr>
+<tr><td><strong>Condition</strong></td><td>Node only appears if condition is true (enables adaptive dialogue)</td></tr>
+<tr><td><strong>Effects</strong></td><td>On reaching this node: set flags, adjust variables, give items</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Conditional dialogue:</strong> Nodes can have conditions — “Only show this line if <code>scientist_rescued</code> is true.” This means the same dialogue tree adapts to campaign state. A character references events from earlier missions without the designer creating separate trees per path.</p>
+<p><strong>Dialogue in missions:</strong> Dialogue trees aren’t limited to intermissions. They can trigger during a mission — an NPC unit triggers a dialogue when approached or when a trigger fires. The dialogue pauses the game (or runs alongside it, designer’s choice) and the player’s choice sets flags that affect the mission in real-time.</p>
+<h4 id="named-characters"><a class="header" href="#named-characters">Named Characters</a></h4>
+<p>A <strong>named character</strong> is a persistent entity identity that survives across missions. Not a specific unit instance (those die) — a character definition that can have multiple appearances.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>ID</strong></td><td>Stable identifier (<code>character_id</code>) used by campaign state, hero progression, and references; not shown to players</td></tr>
+<tr><td><strong>Name</strong></td><td>Display name (“Tanya”, “Commander Volkov”)</td></tr>
+<tr><td><strong>Portrait</strong></td><td>Image reference for dialogue and intermission screens</td></tr>
+<tr><td><strong>Unit type</strong></td><td>Default unit type when spawned (can change per mission)</td></tr>
+<tr><td><strong>Traits</strong></td><td>Arbitrary key-value pairs (strength, charisma, rank — designer-defined)</td></tr>
+<tr><td><strong>Inventory</strong></td><td>Items this character carries (from campaign inventory system)</td></tr>
+<tr><td><strong>Biography</strong></td><td>Text shown in roster screen, updated by Lua as the campaign progresses</td></tr>
+<tr><td><strong>Presentation</strong></td><td>Optional character-level overrides for portrait/icon/voice/skin/markers (convenience layer over unit defaults/resource packs)</td></tr>
+<tr><td><strong>Must survive</strong></td><td>If true, character death → mission failure (or specific outcome)</td></tr>
+<tr><td><strong>Death outcome</strong></td><td>Named outcome triggered if this character dies (e.g., <code>tanya_killed</code>)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Named characters bridge scenarios and intermissions. Tanya in Mission 1 is the same Tanya in Mission 5 — same <code>character_id</code>, same veterancy, same kill count, same equipment (even if the display name/portrait changes over time). If she dies in Mission 3 and doesn’t have “must survive,” the campaign continues without her — and future dialogue trees skip her lines via conditions.</p>
+<p>This is the primitive that makes RPG campaigns possible. A designer creates 6 named characters, gives them traits and portraits, writes dialogue between them, and lets the player manage their roster between missions. That’s an RPG party in an RTS shell — no engine changes required, just creative use of the campaign editor’s building blocks.</p>
+<p><strong>Optional character presentation overrides (convenience layer):</strong> D038 should expose a character-level presentation override panel so designers can make a unit clearly read as a unique hero/operative <strong>without</strong> creating a full custom mod stack for every case. These overrides sit on top of the character’s default unit type + resource pack selection and are intended for identity/readability:</p>
+<ul>
+<li><code>portrait_override</code> (dialogue/intermission/hero sheet portrait)</li>
+<li><code>unit_icon_override</code> (sidebar/build/roster icon where shown)</li>
+<li><code>voice_set_override</code> (selection/move/attack/deny response set)</li>
+<li><code>sprite_sequence_override</code> or <code>sprite_variant</code> (alternate sprite/sequence mapping for the same gameplay role)</li>
+<li><code>palette_variant</code> / tint or marker style (e.g., elite trim, stealth suit tint, squad color accent)</li>
+<li><code>selection_badge</code> / minimap marker variant (hero star, special task force glyph)</li>
+</ul>
+<p><strong>Design rule:</strong> gameplay-changing differences (weapons, stats, abilities) still belong in the unit definition + hero toolkit/skill system. The presentation override layer is a <strong>creator convenience</strong> for making unique characters legible and memorable. It can pair with a gameplay variant unit type, but it should not hide gameplay changes behind purely visual metadata.</p>
+<p><strong>Scope and layering:</strong> overrides may be defined as a campaign-wide default for a named character and optionally as mission-scoped variants (e.g., <code>disguise</code>, <code>winter_gear</code>, <code>captured_uniform</code>). Scenario bindings choose which variant to apply when spawning the character.</p>
+<blockquote>
+<p><strong>Canonical schema:</strong> The shared <code>CharacterPresentationOverrides</code> / variant model used by D038 authoring surfaces is documented in <code>src/modding/campaigns.md</code> § “Named Character Presentation Overrides (Optional Convenience Layer)” so the SDK and campaign runtime/docs stay aligned.</p>
+</blockquote>
+<h4 id="campaign-inventory"><a class="header" href="#campaign-inventory">Campaign Inventory</a></h4>
+<p>Persistent items that exist at the campaign level, not within any specific mission.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Name</strong></td><td>Item identifier (<code>prototype_chrono</code>, <code>captured_mig</code>)</td></tr>
+<tr><td><strong>Display</strong></td><td>Name, icon, description shown in intermission screens</td></tr>
+<tr><td><strong>Quantity</strong></td><td>Stack count (1 for unique items, N for consumables)</td></tr>
+<tr><td><strong>Category</strong></td><td>Grouping for inventory panel (equipment, intel, resources)</td></tr>
+<tr><td><strong>Effects</strong></td><td>Optional Lua — what happens when used/equipped</td></tr>
+<tr><td><strong>Assignable</strong></td><td>Can be assigned to named characters in roster screen</td></tr>
+</tbody>
+</table>
+</div>
+<p>Items are added via Lua (<code>Campaign.add_item("captured_mig", 1)</code>) or via debrief/intermission choices. They’re spent, equipped, or consumed in later missions or intermissions.</p>
+<p>Combined with named characters and the roster screen: a player captures enemy equipment in Mission 2, assigns it to a character in the intermission, and that character spawns with it in Mission 3. The system is general-purpose — “items” can be weapons, vehicles, intel documents, key cards, magical artifacts, or anything the designer defines.</p>
+<h4 id="hero-campaign-toolkit-optional-built-in-layer"><a class="header" href="#hero-campaign-toolkit-optional-built-in-layer">Hero Campaign Toolkit (Optional, Built-In Layer)</a></h4>
+<p>Warcraft III-style hero campaigns (for example, Tanya gaining XP, levels, skills, and persistent equipment) <strong>fit IC’s campaign design</strong> and should be authorable <strong>without engine modding</strong>. The common case should be handled entirely by D021 campaign state + D038 campaign/scenario/intermission tooling. Lua remains the escape hatch for unusual mechanics.</p>
+<blockquote>
+<p><strong>Canonical schema &amp; Lua API:</strong> The authoritative <code>HeroProfileState</code> struct, skill tree YAML schema, and Lua helper functions live in <code>src/modding/campaigns.md</code> § “Hero Campaign Toolkit”. This section covers only the <strong>editor/authoring UX</strong> — what the designer sees in the Campaign Editor and Scenario Editor.</p>
+</blockquote>
+<p>This is not a separate game mode. It’s an <strong>optional authoring layer</strong> that sits on top of:</p>
+<ul>
+<li><strong>Named Characters</strong> (persistent hero identities)</li>
+<li><strong>Campaign Inventory</strong> (persistent items/loadouts)</li>
+<li><strong>Intermission Screens</strong> (hero sheet, skill choice, armory)</li>
+<li><strong>Dialogue Editor</strong> (hero-conditioned lines and choices)</li>
+<li><strong>D021 persistent state</strong> (XP/level/skills/hero flags)</li>
+</ul>
+<p><strong>Campaign Editor authoring surfaces (Advanced mode):</strong></p>
+<ul>
+<li><strong>Hero Roster &amp; Progression tab</strong> in the Persistent State Dashboard: hero list, level/xp preview, skill trees, death/injury policy, carryover rules</li>
+<li><strong>XP / reward authoring</strong> on mission outcomes and debrief/intermission choices (award XP, grant item, unlock skill, set hero stat/flag)</li>
+<li><strong>Hero ability loadout editor</strong> (which unlocked abilities are active in the next mission, if the campaign uses ability slots)</li>
+<li><strong>Skill tree editor</strong> (graph or list view): prerequisites, costs, descriptions, icon, unlock effects</li>
+<li><strong>Character presentation override panel</strong> (portrait/icon/voice/skin/marker variants) with “global default” + mission-scoped variants and in-context preview</li>
+<li><strong>Hero-conditioned graph validation</strong>: warns if a branch requires a hero/skill that can never be obtained on any reachable path</li>
+</ul>
+<p><strong>Scenario Editor integration (mission-level hooks):</strong></p>
+<ul>
+<li>Trigger actions/modules for common hero-campaign patterns:
+<ul>
+<li><code>Award Hero XP</code></li>
+<li><code>Unlock Hero Skill</code></li>
+<li><code>Set Hero Flag</code></li>
+<li><code>Modify Hero Stat</code></li>
+<li><code>Branch on Hero Condition</code> (level/skill/flag)</li>
+</ul>
+</li>
+<li><code>Hero Spawn</code> / <code>Apply Hero Loadout</code> conveniences that bind a scenario actor to a D021 named character profile</li>
+<li><code>Apply Character Presentation Variant</code> convenience (optional): switch a named character between authored variants (<code>default</code>, <code>disguise</code>, <code>winter_ops</code>, etc.) without changing the underlying gameplay profile</li>
+<li>Preview/test helpers to simulate hero states (“Start with Tanya level 3 + Satchel Charge Mk2”)</li>
+</ul>
+<p><strong>Concrete mission example (Tanya AA sabotage → reinforcements → skill-gated infiltration):</strong></p>
+<p>This is a standard D038 scenario using built-in trigger actions/modules (no engine modding, no WASM required for the common case). See <code>src/modding/campaigns.md</code> for the full skill tree YAML schema that defines skills like <code>silent_step</code> referenced here.</p>
+<pre><code class="language-yaml"># Scenario excerpt (conceptual D038 serialization)
+hero_bindings:
+  - actor_tag: tanya_spawn
+    character_id: tanya
+    apply_campaign_profile: true      # loads level/xp/skills/loadout from D021 state
+
+objectives:
+  - id: destroy_aa_sites
+    type: compound
+    children: [aa_north, aa_east, aa_west]
+  - id: infiltrate_lab
+    hidden: true
+
+triggers:
+  - id: aa_sites_disabled
+    when:
+      objective_completed: destroy_aa_sites
+    actions:
+      - cinematic_sequence: aa_sabotage_success_pan
+      - award_hero_xp:
+          hero: tanya
+          amount: 150
+          reason: aa_sabotage
+      - set_hero_flag:
+          hero: tanya
+          key: aa_positions_cleared
+          value: true
+      - spawn_reinforcements:
+          faction: allies
+          group_preset: black_ops_team
+          entry_point: south_edge
+      - objective_reveal:
+          id: infiltrate_lab
+      - objective_set_active:
+          id: infiltrate_lab
+      - dialogue_trigger:
+          tree: tanya_aa_success_comm
+
+  - id: lab_side_entrance_interact
+    when:
+      actor_interacted: lab_side_terminal
+    branch:
+      if:
+        hero_condition:
+          hero: tanya
+          any_skill: [silent_step, infiltrator_clearance]
+      then:
+        - open_gate: lab_side_door
+        - set_flag: { key: lab_entry_mode, value: stealth }
+      else:
+        - spawn_patrol: lab_side_response_team
+        - set_flag: { key: lab_entry_mode, value: loud }
+        - advice_popup: "Tanya needs a stealth skill to bypass this terminal quietly."
+
+debrief_rewards:
+  on_outcome: victory
+  choices:
+    - id: field_upgrade
+      label: "Field Upgrade"
+      grant_skill_choice_from: [silent_step, satchel_charge_mk2]
+    - id: requisition_cache
+      label: "Requisition Cache"
+      grant_items:
+        - { id: remote_detonator_pack, qty: 1 }
+</code></pre>
+<p><strong>Visual-editor equivalent (what the designer sees):</strong></p>
+<ul>
+<li><code>Objective Completed (Destroy AA Sites)</code> → <code>Cinematic Sequence</code> → <code>Award Hero XP (Tanya, +150)</code> → <code>Spawn Reinforcements</code> → <code>Reveal Objective: Infiltrate Lab</code></li>
+<li><code>Interact: Lab Terminal</code> → <code>Branch on Hero Condition (Tanya has Silent Step OR Infiltrator Clearance)</code> → stealth path / loud path</li>
+<li><code>Debrief Outcome: Victory</code> → <code>Skill Choice or Requisition Cache</code> (intermission reward panel)</li>
+</ul>
+<p><strong>Intermission support (player-facing):</strong></p>
+<ul>
+<li><code>Hero Sheet</code> panel/template — portrait, level, stats, abilities, equipment, biography/progression summary</li>
+<li><code>Skill Choice</code> panel/template — choose one unlock from a campaign-defined set, spend points, preview effects</li>
+<li><code>Armory + Hero</code> combined layout presets for RPG-style between-mission management</li>
+</ul>
+<p><strong>Complexity policy (important):</strong></p>
+<ul>
+<li>Hidden in <strong>Simple mode</strong> by default (hero campaigns are advanced content)</li>
+<li>No hero progression UI appears unless the campaign enables the D021 hero toolkit</li>
+<li>Classic campaigns remain unaffected and as simple as today</li>
+</ul>
+<p><strong>Compatibility / export note (D066):</strong> Hero progression campaigns are often IC-native. Export to RA1/OpenRA may require flattening to flags/carryover stubs or manual rewrites; the SDK surfaces fidelity warnings in Export-Safe mode and Publish Readiness.</p>
+<h4 id="campaign-testing"><a class="header" href="#campaign-testing">Campaign Testing</a></h4>
+<p>The Campaign Editor includes tools for testing campaign flow without playing every mission to completion:</p>
+<ul>
+<li><strong>Graph validation</strong> — checks for dead ends (outcomes with no outgoing edge), unreachable missions, circular paths (unless intentional), and missing mission files</li>
+<li><strong>Jump to mission</strong> — start any mission with simulated campaign state (set flags, roster, and inventory to test a specific path)</li>
+<li><strong>Fast-forward state</strong> — manually set campaign variables and flags to simulate having played earlier missions</li>
+<li><strong>Hero state simulation</strong> — set hero levels, skills, equipment, and injury flags for branch testing (hero toolkit campaigns)</li>
+<li><strong>Path coverage</strong> — highlights which campaign paths have been test-played and which haven’t. Color-coded: green (tested), yellow (partially tested), red (untested)</li>
+<li><strong>Campaign playthrough</strong> — play the entire campaign with accelerated sim (or auto-resolve missions) to verify flow and state propagation</li>
+<li><strong>State inspector</strong> — during preview, shows live campaign state: current flags, roster, inventory, hero progression state (if enabled), variables, which path was taken</li>
+</ul>
+<h4 id="reference-material-campaign-editors"><a class="header" href="#reference-material-campaign-editors">Reference Material (Campaign Editors)</a></h4>
+<p>The campaign editor design draws from these (in addition to the scenario editor references above):</p>
+<ul>
+<li><strong>Warcraft III World Editor (2002):</strong> The closest any RTS came to campaign editing — campaign screen with mission ordering, cinematic editor, global variables persistent across maps. Still linear and limited: no visual branching, no roster management, no intermission screen customization. IC takes WC3’s foundation and adds the graph, state, and intermission layers.</li>
+<li><strong>RPG Maker (1992–present):</strong> Campaign-level persistent variables, party management, item/equipment systems, branching dialogue. Proves these systems work for non-programmers. IC adapts the persistence model for RTS context.</li>
+<li><strong>Twine / Ink (interactive fiction tools):</strong> Visual branching narrative editors. Twine’s node-and-edge graph directly inspired IC’s campaign graph view. Ink’s conditional text (“You remember the bridge{bridge_destroyed: ’s destruction| still standing}”) inspired IC’s variable substitution in dialogue.</li>
+<li><strong>Heroes of Might and Magic III (1999):</strong> Campaign with carryover — hero stats, army, artifacts persist between maps. Proved that persistent state between RTS-adjacent missions creates investment. Limited to linear ordering.</li>
+<li><strong>FTL / Slay the Spire (roguelikes):</strong> Randomized mission path selection, persistent resources, risk/reward side missions. Inspired IC’s mission pools and weighted random paths.</li>
+<li><strong>OFP: Resistance (2002):</strong> The gold standard for persistent campaigns — surviving soldiers, captured equipment, emotional investment. Every feature in IC’s campaign editor exists because OFP: Resistance proved persistent campaigns are transformative.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../decisions/09f/D038/D038-media-validation.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../decisions/09f/D038/D038-game-master-replay-multiplayer.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../decisions/09f/D038/D038-media-validation.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../decisions/09f/D038/D038-game-master-replay-multiplayer.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../../mark-09e88c2c.min.js"></script>
+        <script src="../../../searcher-c2a407aa.js"></script>
+
+        <script src="../../../clipboard-1626706a.min.js"></script>
+        <script src="../../../highlight-abc7f01d.js"></script>
+        <script src="../../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

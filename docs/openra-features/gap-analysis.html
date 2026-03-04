@@ -1,0 +1,754 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Gap Analysis (§1–39) - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/openra-features/gap-analysis.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="iron-curtain-gap-analysis"><a class="header" href="#iron-curtain-gap-analysis">Iron Curtain Gap Analysis</a></h1>
+<blockquote>
+<p><strong>Purpose:</strong> Cross-reference every OpenRA feature against Iron Curtain’s design docs.
+Identify what’s covered, what’s partially covered, and what’s completely missing.
+The goal: an OpenRA modder should feel <strong>at home</strong> — every concept they know has an equivalent.</p>
+</blockquote>
+<h2 id="coverage-legend"><a class="header" href="#coverage-legend">Coverage Legend</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Symbol</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td>✅</td><td><strong>Fully covered</strong> — designed at equivalent or better detail than OpenRA</td></tr>
+<tr><td>⚠️</td><td><strong>Partially covered</strong> — mentioned or implied, but not designed as a standalone system</td></tr>
+<tr><td>❌</td><td><strong>Missing</strong> — not addressed in any design doc; needs design work</td></tr>
+<tr><td>🔄</td><td><strong>Different by design</strong> — our architecture handles this differently (explained)</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="1-trait-system--ecs-components--structurally-different-equivalent-power"><a class="header" href="#1-trait-system--ecs-components--structurally-different-equivalent-power">1. Trait System → ECS Components ✅ (structurally different, equivalent power)</a></h2>
+<p><strong>OpenRA:</strong> ~130 C# trait classes attached to actors via MiniYAML. Modders compose actor behavior by listing traits.</p>
+<p><strong>Iron Curtain:</strong> Bevy ECS components attached to entities. Modders compose entity behavior by listing components in YAML. The <code>GameModule</code> trait registers components dynamically.</p>
+<p><strong>Modder experience:</strong> Nearly identical. Instead of:</p>
+<pre><code class="language-yaml"># OpenRA MiniYAML
+rifle_infantry:
+    Health:
+        HP: 50
+    Mobile:
+        Speed: 56
+    Armament:
+        Weapon: M1Carbine
+</code></pre>
+<p>They write:</p>
+<pre><code class="language-yaml"># Iron Curtain YAML
+rifle_infantry:
+    health:
+        current: 50
+        max: 50
+    mobile:
+        speed: 56
+        locomotor: foot
+    combat:
+        weapon: m1_carbine
+</code></pre>
+<p><strong>Gap:</strong> Our design docs only map ~9 components (Health, Mobile, Attackable, Armament, Building, Buildable, Selectable, Harvester, LlmMeta). OpenRA has ~130 traits. Many are render traits (covered by Bevy), but the following gameplay traits need explicit ECS component designs — see the per-system analysis below.</p>
+<hr>
+<h2 id="2-condition-system--designed-d028--phase-2-hard-requirement"><a class="header" href="#2-condition-system--designed-d028--phase-2-hard-requirement">2. Condition System ✅ DESIGNED (D028 — Phase 2 Hard Requirement)</a></h2>
+<p><strong>OpenRA:</strong> 34 <code>GrantCondition*</code> traits. This is <strong>the #1 modding tool</strong>. Modders create dynamic behavior by granting/revoking named boolean conditions that enable/disable <code>ConditionalTrait</code>-based components.</p>
+<p>Example: a unit becomes stealthed when stationary, gains a damage bonus when veterancy reaches level 2, deploys into a stationary turret — all done purely in YAML by composing condition traits.</p>
+<pre><code class="language-yaml"># OpenRA — no code needed for complex behaviors
+Cloak:
+    RequiresCondition: !moving
+GrantConditionOnMovement:
+    Condition: moving
+GrantConditionOnDamageState:
+    Condition: damaged
+    ValidDamageStates: Critical
+DamageMultiplier@CRITICAL:
+    RequiresCondition: damaged
+    Modifier: 150
+</code></pre>
+<p><strong>Iron Curtain status:</strong> <strong>Designed and scheduled as Phase 2 exit criterion (D028).</strong> The condition system is a core modding primitive:</p>
+<ul>
+<li><code>Conditions</code> component: <code>HashMap&lt;ConditionId, u32&gt;</code> (ref-counted named conditions per entity)</li>
+<li>Condition sources: <code>GrantConditionOnMovement</code>, <code>GrantConditionOnDamageState</code>, <code>GrantConditionOnDeploy</code>, <code>GrantConditionOnAttack</code>, <code>GrantConditionOnTerrain</code>, <code>GrantConditionOnVeterancy</code> — all exposed in YAML</li>
+<li>Condition consumers: any component field can declare <code>requires:</code> or <code>disabled_by:</code> conditions</li>
+<li>Runtime: systems check <code>conditions.is_active("deployed")</code> via fast bitset or hash lookup</li>
+<li>OpenRA trait names accepted as aliases (D023) — <code>GrantConditionOnMovement</code> works in IC YAML</li>
+</ul>
+<p><strong>Design sketch:</strong></p>
+<pre><code class="language-yaml"># Iron Curtain equivalent
+rifle_infantry:
+    conditions:
+        moving:
+            granted_by: [on_movement]
+        deployed:
+            granted_by: [on_deploy]
+        elite:
+            granted_by: [on_veterancy, { level: 3 }]
+    cloak:
+        disabled_by: moving      # conditional — disabled when "moving" condition is active
+    damage_multiplier:
+        requires: deployed
+        modifier: 1.5
+</code></pre>
+<p>ECS implementation: a <code>Conditions</code> component holding a <code>HashMap&lt;ConditionId, u32&gt;</code> (ref-counted). Systems check <code>conditions.is_active("deployed")</code>. YAML <code>disabled_by</code> / <code>requires</code> fields map to runtime condition checks.</p>
+<hr>
+<h2 id="3-multiplier-system--designed-d028--phase-2-hard-requirement"><a class="header" href="#3-multiplier-system--designed-d028--phase-2-hard-requirement">3. Multiplier System ✅ DESIGNED (D028 — Phase 2 Hard Requirement)</a></h2>
+<p><strong>OpenRA:</strong> ~20 multiplier traits that modify numeric values. All conditional. Modders stack multipliers from veterancy, terrain, crates, conditions, player handicaps.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Multiplier</th><th>Affects</th></tr>
+</thead>
+<tbody>
+<tr><td><code>DamageMultiplier</code></td><td>Incoming damage</td></tr>
+<tr><td><code>FirepowerMultiplier</code></td><td>Outgoing damage</td></tr>
+<tr><td><code>SpeedMultiplier</code></td><td>Movement speed</td></tr>
+<tr><td><code>RangeMultiplier</code></td><td>Weapon range</td></tr>
+<tr><td><code>ReloadDelayMultiplier</code></td><td>Weapon reload</td></tr>
+<tr><td><code>ProductionCostMultiplier</code></td><td>Build cost</td></tr>
+<tr><td><code>ProductionTimeMultiplier</code></td><td>Build time</td></tr>
+<tr><td><code>RevealsShroudMultiplier</code></td><td>Sight range</td></tr>
+<tr><td>…</td><td>(20 total)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Iron Curtain status:</strong> <strong>Designed and scheduled as Phase 2 exit criterion (D028).</strong> The multiplier system:</p>
+<ul>
+<li><code>StatModifiers</code> component: per-entity stack of <code>(source, stat, modifier_value, condition)</code> tuples</li>
+<li>Every numeric stat (speed, damage, range, reload, build time, cost, sight range) resolves through the modifier stack</li>
+<li>Modifiers from: veterancy, terrain, crates, conditions, player handicaps</li>
+<li>Fixed-point multiplication (no floats) — respects invariant #1</li>
+<li>YAML-configurable: modders add multipliers without code</li>
+<li>Integrates with condition system: multipliers can be conditional (<code>requires: elite</code>)</li>
+</ul>
+<hr>
+<h2 id="4-projectile-system--partial"><a class="header" href="#4-projectile-system--partial">4. Projectile System ⚠️ PARTIAL</a></h2>
+<p><strong>OpenRA:</strong> 8 projectile types (Bullet, Missile, LaserZap, Railgun, AreaBeam, InstantHit, GravityBomb, NukeLaunch) — each with distinct physics, rendering, and behavior.</p>
+<p><strong>Iron Curtain status:</strong> Weapons are mentioned (weapon definitions in YAML with range, damage, fire rate, AoE). But the <strong>projectile</strong> as a simulation entity with travel time, tracking, gravity, jinking, etc. is not designed.</p>
+<p><strong>Gap:</strong> Need to design:</p>
+<ul>
+<li>Projectile entity lifecycle (spawn → travel → impact → warhead application)</li>
+<li>Projectile types and their physics (ballistic arc, guided tracking, instant hit, beam)</li>
+<li>Projectile rendering (sprite, beam, trail, contrail)</li>
+<li>Missile guidance (homing, jinking, terrain following)</li>
+</ul>
+<hr>
+<h2 id="5-warhead-system--designed-d028--phase-2-hard-requirement"><a class="header" href="#5-warhead-system--designed-d028--phase-2-hard-requirement">5. Warhead System ✅ DESIGNED (D028 — Phase 2 Hard Requirement)</a></h2>
+<p><strong>OpenRA:</strong> 15 warhead types. Multiple warheads per weapon. Warheads define <em>what happens on impact</em> — damage, terrain modification, condition application, screen effects, resource creation/destruction.</p>
+<p><strong>Iron Curtain status:</strong> <strong>Designed as part of the full damage pipeline in D028 (Phase 2 exit criterion).</strong> The warhead system:</p>
+<ul>
+<li>Each weapon references one or more warheads — composable effects</li>
+<li>Warheads define: damage (with Versus table lookup), condition application, terrain effects, screen effects, resource modification</li>
+<li>Full pipeline: Armament → Projectile entity → travel → impact → Warhead(s) → Versus table → DamageMultiplier → Health</li>
+<li>Extensible via WASM for novel warhead types (WarpDamage, TintedCells, etc.)</li>
+</ul>
+<p>Warheads are how modders create multi-effect weapons, percentage-based damage, condition-applying attacks, and terrain-modifying impacts.</p>
+<hr>
+<h2 id="6-building-system--partial--multiple-gaps"><a class="header" href="#6-building-system--partial--multiple-gaps">6. Building System ⚠️ PARTIAL — MULTIPLE GAPS</a></h2>
+<p><strong>OpenRA has:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Feature</th><th>IC Status</th></tr>
+</thead>
+<tbody>
+<tr><td>Building footprint / cell occupation</td><td>✅ <code>Building { footprint }</code> component</td></tr>
+<tr><td>Build radius / base expansion</td><td>✅ <code>BuildArea { range }</code> component</td></tr>
+<tr><td>Building placement preview</td><td>✅ Placement validation pipeline designed</td></tr>
+<tr><td>Line building (walls)</td><td>✅ <code>LineBuild</code> marker component</td></tr>
+<tr><td>Primary building designation</td><td>✅ <code>PrimaryBuilding</code> marker component</td></tr>
+<tr><td>Rally points</td><td>✅ <code>RallyPoint { target: WorldPos }</code> component</td></tr>
+<tr><td>Building exits (unit spawn points)</td><td>✅ <code>Exit { offsets }</code> component</td></tr>
+<tr><td>Sell mechanic</td><td>✅ <code>Sellable { refund_percent, sell_time }</code> component</td></tr>
+<tr><td>Building repair</td><td>✅ <code>Repairable { repair_rate, repair_cost_per_hp }</code> component</td></tr>
+<tr><td>Landing pad reservation</td><td>✅ Covered by docking system (<code>DockHost</code> with <code>DockType::Helipad</code>)</td></tr>
+<tr><td>Gate (openable barriers)</td><td>✅ <code>Gate { open_delay, close_delay, state }</code> component</td></tr>
+<tr><td>Building transforms</td><td>✅ <code>Transforms { into, delay }</code> component (MCV ↔ ConYard)</td></tr>
+</tbody>
+</table>
+</div>
+<p>All building sub-systems designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Building Mechanics”.</p>
+<hr>
+<h2 id="7-power-system--designed"><a class="header" href="#7-power-system--designed">7. Power System ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>Power</code> trait (provides/consumes), <code>PowerManager</code> (player-level tracking), <code>AffectedByPowerOutage</code> (buildings go offline), <code>ScalePowerWithHealth</code>, power bar in UI.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Power System”:</p>
+<ul>
+<li><code>Power { provides, consumes }</code> component per building</li>
+<li><code>PowerManager</code> player-level resource (total capacity, total drain, low_power flag)</li>
+<li><code>AffectedByPowerOutage</code> marker component — integrates with condition system (D028) to halve production and reduce defense fire rate</li>
+<li><code>power_system()</code> runs as system #2 in the tick pipeline</li>
+<li>Power bar UI reads <code>PowerManager</code> from <code>ic-ui</code></li>
+</ul>
+<hr>
+<h2 id="8-support-powers--superweapons--designed"><a class="header" href="#8-support-powers--superweapons--designed">8. Support Powers / Superweapons ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>SupportPowerManager</code>, <code>AirstrikePower</code>, <code>NukePower</code>, <code>ParatroopersPower</code>, <code>SpawnActorPower</code>, <code>GrantExternalConditionPower</code>, directional targeting.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Support Powers / Superweapons”:</p>
+<ul>
+<li><code>SupportPower { charge_time, current_charge, ready, targeting }</code> component per building</li>
+<li><code>SupportPowerManager</code> player-level tracking</li>
+<li><code>TargetingMode</code> enum: <code>Point</code>, <code>Area { radius }</code>, <code>Directional</code></li>
+<li><code>support_power_system()</code> runs as system #6 in the tick pipeline</li>
+<li>Activation via player order → sim validates ownership + readiness → applies warheads/effects at target</li>
+<li>Power types are data-driven (YAML <code>Named(String)</code>) — extensible for custom powers via Lua/WASM</li>
+</ul>
+<hr>
+<h2 id="9-transport--cargo-system--designed"><a class="header" href="#9-transport--cargo-system--designed">9. Transport / Cargo System ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>Cargo</code> (carries passengers), <code>Passenger</code> (can be carried), <code>Carryall</code> (air transport), <code>ParaDrop</code>, <code>EjectOnDeath</code>, <code>EntersTunnels</code>.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Transport / Cargo”:</p>
+<ul>
+<li><code>Cargo { max_weight, current_weight, passengers, unload_delay }</code> component</li>
+<li><code>Passenger { weight, custom_pip }</code> component</li>
+<li><code>Carryall { carry_target }</code> for air transport</li>
+<li><code>EjectOnDeath</code> marker, <code>ParaDrop { drop_interval }</code> for paradrop capability</li>
+<li>Load/unload order processing in <code>apply_orders()</code> → <code>movement_system()</code> handles approach → add/remove from world</li>
+</ul>
+<hr>
+<h2 id="10-capture--ownership-system--designed"><a class="header" href="#10-capture--ownership-system--designed">10. Capture / Ownership System ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>Capturable</code>, <code>Captures</code>, <code>ProximityCapturable</code>, <code>CaptureManager</code>, capture progress bar, <code>TransformOnCapture</code>, <code>TemporaryOwnerManager</code>.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Capture / Ownership”:</p>
+<ul>
+<li><code>Capturable { capture_types, capture_threshold, current_progress, capturing_entity }</code> component</li>
+<li><code>Captures { speed, capture_type, consumed }</code> component (engineer consumed on capture for RA1)</li>
+<li><code>CaptureType</code> enum: <code>Infantry</code>, <code>Proximity</code></li>
+<li><code>capture_system()</code> runs as system #12 in tick pipeline</li>
+<li>Ownership transfer on threshold reached, progress reset on interruption</li>
+</ul>
+<hr>
+<h2 id="11-stealth--detection-system--designed"><a class="header" href="#11-stealth--detection-system--designed">11. Stealth / Detection System ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>Cloak</code>, <code>DetectCloaked</code>, <code>IgnoresCloak</code>, <code>IgnoresDisguise</code>, <code>RevealOnFire</code>.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Stealth / Cloak”:</p>
+<ul>
+<li><code>Cloak { cloak_delay, cloak_types, ticks_since_action, is_cloaked, reveal_on_fire, reveal_on_move }</code> component</li>
+<li><code>DetectCloaked { range, detect_types }</code> component</li>
+<li><code>CloakType</code> enum: <code>Stealth</code>, <code>Underwater</code>, <code>Disguise</code>, <code>GapGenerator</code></li>
+<li><code>cloak_system()</code> runs as system #13 in tick pipeline</li>
+<li>Fog integration: cloaked entities hidden from enemy unless <code>DetectCloaked</code> in range</li>
+</ul>
+<hr>
+<h2 id="12-crate-system--designed"><a class="header" href="#12-crate-system--designed">12. Crate System ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> 13 crate action types — cash, units, veterancy, heal, map reveal, explosions, conditions.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Crate System”:</p>
+<ul>
+<li><code>Crate { action_pool }</code> entity with weighted random actions</li>
+<li><code>CrateAction</code> enum: <code>Cash</code>, <code>Unit</code>, <code>Heal</code>, <code>LevelUp</code>, <code>MapReveal</code>, <code>Explode</code>, <code>Cloak</code>, <code>Speed</code></li>
+<li><code>CrateSpawner</code> world-level system (max count, spawn interval, spawn area)</li>
+<li><code>crate_system()</code> runs as system #17 in tick pipeline</li>
+<li>Crate tables fully configurable in YAML for modders</li>
+</ul>
+<hr>
+<h2 id="13-veterancy--experience-system--designed"><a class="header" href="#13-veterancy--experience-system--designed">13. Veterancy / Experience System ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>GainsExperience</code>, <code>GivesExperience</code>, <code>ProducibleWithLevel</code>, <code>ExperienceTrickler</code>, XP multipliers. Veterancy grants conditions which enable multipliers — deeply integrated with the condition system.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Veterancy / Experience”:</p>
+<ul>
+<li><code>GainsExperience { current_xp, level, thresholds, level_conditions }</code> component</li>
+<li><code>GivesExperience { value }</code> component (XP awarded to killer)</li>
+<li><code>VeterancyLevel</code> enum: <code>Rookie</code>, <code>Veteran</code>, <code>Elite</code>, <code>Heroic</code></li>
+<li><code>veterancy_system()</code> runs as system #15 in tick pipeline</li>
+<li>XP earned from kills (based on victim’s <code>GivesExperience.value</code>)</li>
+<li>Level-up grants conditions → triggers multipliers (veteran = +25% firepower/armor, elite = +50% + self-heal, heroic = +75% + faster fire)</li>
+<li>All values YAML-configurable, not hardcoded</li>
+<li>Campaign carry-over: XP and level are part of the roster snapshot (D021)</li>
+</ul>
+<hr>
+<h2 id="14-damage-model--designed"><a class="header" href="#14-damage-model--designed">14. Damage Model ✅ DESIGNED</a></h2>
+<p><strong>OpenRA damage flow:</strong></p>
+<pre><code>Armament → fires → Projectile → travels → hits → Warhead(s) applied
+    → target validity check (target types, stances)
+    → spread damage with falloff
+    → armor type lookup (Versus table)
+    → DamageMultiplier traits
+    → Health reduced
+</code></pre>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Full Damage Pipeline (D028)”:</p>
+<ul>
+<li><code>Projectile</code> entity with <code>ProjectileType</code> enum: <code>Bullet</code> (hitscan), <code>Missile</code> (homing), <code>Ballistic</code> (arcing), <code>Beam</code> (continuous)</li>
+<li><code>WarheadDef</code> with <code>VersusTable</code> (ArmorType × WarheadType → damage percentage), <code>spread</code>, <code>falloff</code> curves</li>
+<li><code>projectile_system()</code> runs as system #11 in tick pipeline</li>
+<li>Full chain: Armament fires → Projectile entity spawned → projectile advances → hit detection → warheads applied → Versus table → DamageMultiplier conditions → Health reduced</li>
+<li>YAML weapon definitions use OpenRA-compatible format (weapon → projectile → warhead)</li>
+</ul>
+<hr>
+<h2 id="15-death--destruction-mechanics--designed"><a class="header" href="#15-death--destruction-mechanics--designed">15. Death &amp; Destruction Mechanics ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>SpawnActorOnDeath</code> (husks, pilots), <code>ShakeOnDeath</code>, <code>ExplosionOnDamageTransition</code>, <code>FireWarheadsOnDeath</code>, <code>KillsSelf</code> (timed self-destruct), <code>EjectOnDeath</code>, <code>MustBeDestroyed</code> (victory condition).</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Death Mechanics”:</p>
+<ul>
+<li><code>SpawnOnDeath { actor_type, probability }</code> — spawn husks, eject pilots</li>
+<li><code>ExplodeOnDeath { warheads }</code> — explosion on destruction</li>
+<li><code>SelfDestruct { timer, warheads }</code> — timed self-destruct (demo trucks, C4)</li>
+<li><code>DamageStates { thresholds }</code> with <code>DamageState</code> enum: <code>Undamaged</code>, <code>Light</code>, <code>Medium</code>, <code>Heavy</code>, <code>Critical</code></li>
+<li><code>MustBeDestroyed</code> — victory condition marker</li>
+<li><code>death_system()</code> runs as system #16 in tick pipeline</li>
+</ul>
+<hr>
+<h2 id="16-docking-system--designed"><a class="header" href="#16-docking-system--designed">16. Docking System ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>DockHost</code> (refinery, repair pad, helipad), <code>DockClientBase</code>/<code>DockClientManager</code> (harvesters, aircraft).</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Docking System”:</p>
+<ul>
+<li><code>DockHost { dock_type, dock_position, queue, occupied }</code> component</li>
+<li><code>DockClient { dock_type }</code> component</li>
+<li><code>DockType</code> enum: <code>Refinery</code>, <code>Helipad</code>, <code>RepairPad</code></li>
+<li><code>docking_system()</code> runs as system #5 in tick pipeline</li>
+<li>Queue management (one unit docks at a time, others wait)</li>
+<li>Dock assignment (nearest available <code>DockHost</code> of matching type)</li>
+</ul>
+<hr>
+<h2 id="17-palette-system--designed"><a class="header" href="#17-palette-system--designed">17. Palette System ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> 13 palette source types + 9 palette effect types. Runtime palette manipulation for player colors, cloak shimmer, screen flash, palette rotation (water animation).</p>
+<p><strong>Iron Curtain status:</strong> Fully designed across <code>ra-formats</code> (<code>.pal</code> loading) and <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Palette Effects”:</p>
+<ul>
+<li><code>PaletteEffect</code> enum: <code>Flash</code>, <code>FadeToBlack/White</code>, <code>Tint</code>, <code>CycleRange</code>, <code>PlayerRemap</code></li>
+<li>Player color remapping via <code>PlayerRemap</code> (faction colors on units)</li>
+<li>Palette rotation animation (<code>CycleRange</code> for water, ore sparkle)</li>
+<li>Cloak shimmer via <code>Tint</code> effect + transparency</li>
+<li>Screen flash (nuke, chronoshift) via <code>Flash</code> effect</li>
+<li>Modern shader equivalents via Bevy’s material system — modder-facing YAML config is identical regardless of render backend</li>
+</ul>
+<hr>
+<h2 id="18-radar--minimap-system--partial"><a class="header" href="#18-radar--minimap-system--partial">18. Radar / Minimap System ⚠️ PARTIAL</a></h2>
+<p><strong>OpenRA:</strong> <code>AppearsOnRadar</code>, <code>ProvidesRadar</code>, <code>RadarColorFromTerrain</code>, <code>RadarPings</code>, <code>RadarWidget</code>.</p>
+<p><strong>Iron Curtain status:</strong> Minimap mentioned in Phase 3 sidebar. “Radar as multi-mode display” is an innovative addition. But the underlying systems aren’t designed:</p>
+<ul>
+<li>Which units appear on radar? (controlled by <code>AppearsOnRadar</code>)</li>
+<li><code>ProvidesRadar</code> — radar only works when a radar building exists</li>
+<li>Radar pings (alert markers)</li>
+<li>Radar rendering (terrain colors, unit dots, fog overlay)</li>
+</ul>
+<hr>
+<h2 id="19-infantry-mechanics--designed"><a class="header" href="#19-infantry-mechanics--designed">19. Infantry Mechanics ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>WithInfantryBody</code> (sub-cell positioning — 5 infantry share one cell), <code>ScaredyCat</code> (panic flee), <code>TakeCover</code> (prone behavior), <code>TerrainModifiesDamage</code> (infantry in cover).</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Infantry Mechanics”:</p>
+<ul>
+<li><code>InfantryBody { sub_cell }</code> with <code>SubCell</code> enum: <code>Center</code>, <code>TopLeft</code>, <code>TopRight</code>, <code>BottomLeft</code>, <code>BottomRight</code> (5 per cell)</li>
+<li><code>ScaredyCat { flee_range, panic_ticks }</code> — panic flee behavior</li>
+<li><code>TakeCover { damage_modifier, speed_modifier, prone_delay }</code> — prone/cover behavior</li>
+<li><code>movement_system()</code> handles sub-cell slot assignment when infantry enters a cell</li>
+<li>Prone auto-triggers on attack via condition system (“prone” condition → <code>DamageMultiplier</code> of 50%)</li>
+</ul>
+<hr>
+<h2 id="20-mine-system--designed"><a class="header" href="#20-mine-system--designed">20. Mine System ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>Mine</code>, <code>Minelayer</code>, mine detonation on contact.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Mine System”:</p>
+<ul>
+<li><code>Mine { trigger_types, warhead, visible_to_owner }</code> component</li>
+<li><code>Minelayer { mine_type, lay_delay }</code> component</li>
+<li><code>mine_system()</code> runs as system #9 in tick pipeline</li>
+<li>Mines invisible to enemy unless detected (uses <code>DetectCloaked</code> with <code>CloakType::Stealth</code>)</li>
+<li>Mine placement via player order</li>
+</ul>
+<hr>
+<h2 id="21-guard-command--designed"><a class="header" href="#21-guard-command--designed">21. Guard Command ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>Guard</code>, <code>Guardable</code> — unit follows and protects a target, engaging threats within range.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Guard Command”:</p>
+<ul>
+<li><code>Guard { target, leash_range }</code> behavior component</li>
+<li><code>Guardable</code> marker component</li>
+<li>Guard order processing in <code>apply_orders()</code></li>
+<li><code>combat_system()</code> integration: guarding units auto-engage attackers of their guarded target within leash range</li>
+</ul>
+<hr>
+<h2 id="22-crush-mechanics--designed"><a class="header" href="#22-crush-mechanics--designed">22. Crush Mechanics ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>Crushable</code>, <code>AutoCrusher</code> — vehicles crush infantry, walls.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Crush Mechanics”:</p>
+<ul>
+<li><code>Crushable { crush_class }</code> with <code>CrushClass</code> enum: <code>Infantry</code>, <code>Wall</code>, <code>Hedgehog</code></li>
+<li><code>Crusher { crush_classes }</code> component for vehicles</li>
+<li><code>crush_system()</code> runs as system #8 in tick pipeline (after <code>movement_system()</code>)</li>
+<li>Checks spatial index at new position for matching <code>Crushable</code> entities, applies instant kill</li>
+</ul>
+<hr>
+<h2 id="23-demolition-mechanics--designed"><a class="header" href="#23-demolition-mechanics--designed">23. Demolition Mechanics ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>Demolition</code>, <code>Demolishable</code> — C4 charges on buildings.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Demolition / C4”:</p>
+<ul>
+<li><code>Demolition { delay, warhead, required_target }</code> component</li>
+<li>Engineer places C4 → countdown → warhead detonates → building takes massive damage</li>
+<li>Engineer consumed on placement</li>
+</ul>
+<hr>
+<h2 id="24-plug-system--designed"><a class="header" href="#24-plug-system--designed">24. Plug System ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>Plug</code>, <code>Pluggable</code> — actors that plug into buildings (e.g., bio-reactor accepting infantry for power).</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Plug System”:</p>
+<ul>
+<li><code>Pluggable { plug_type, max_plugs, current_plugs, effect_per_plug }</code> component</li>
+<li><code>Plug { plug_type }</code> component</li>
+<li>Plug entry grants condition per plug (e.g., “+50 power per infantry in reactor”)</li>
+<li>Primarily RA2 mechanic, included for mod compatibility</li>
+</ul>
+<hr>
+<h2 id="25-transform-mechanics--designed"><a class="header" href="#25-transform-mechanics--designed">25. Transform Mechanics ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>Transforms</code> — actor transforms into another type (MCV ↔ Construction Yard, siege tank deploy/undeploy).</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Transform / Deploy”:</p>
+<ul>
+<li><code>Transforms { into, delay, facing, condition }</code> component</li>
+<li><code>transform_system()</code> runs as system #18 in tick pipeline</li>
+<li>Deploy and undeploy orders in <code>apply_orders()</code></li>
+<li>Grants conditions on deploy (e.g., MCV → ConYard, siege tank → deployed mode)</li>
+<li>Facing check — unit must face correct direction before transforming</li>
+</ul>
+<hr>
+<h2 id="26-notification-system--designed"><a class="header" href="#26-notification-system--designed">26. Notification System ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>ActorLostNotification</code> (“Unit lost”), <code>AnnounceOnSeen</code> (“Enemy unit spotted”), <code>DamageNotifier</code> (“Our base is under attack”), <code>HarvesterAttackNotifier</code>, <code>ResourceStorageWarning</code> (“Silos needed”), <code>StartGameNotification</code>, <code>CaptureNotification</code>.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Notification System”:</p>
+<ul>
+<li><code>NotificationType</code> enum with variants: <code>UnitLost</code>, <code>BaseUnderAttack</code>, <code>HarvesterUnderAttack</code>, <code>SilosNeeded</code>, <code>BuildingCaptured</code>, <code>EnemySpotted</code>, <code>LowPower</code>, <code>BuildingComplete</code>, <code>UnitReady</code>, <code>InsufficientFunds</code>, <code>NuclearLaunchDetected</code>, <code>ReinforcementsArrived</code></li>
+<li><code>NotificationCooldowns { cooldowns, default_cooldown }</code> resource — per-type cooldown to prevent spam</li>
+<li><code>notification_system()</code> runs as system #20 in tick pipeline</li>
+<li><code>ic-audio</code> EVA engine consumes notification events (event → audio file mapping)</li>
+<li>Text notifications rendered by <code>ic-ui</code></li>
+</ul>
+<hr>
+<h2 id="27-cursor-system--designed"><a class="header" href="#27-cursor-system--designed">27. Cursor System ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> Contextual cursors — different cursor sprites for move, attack, capture, enter, deploy, sell, repair, chronoshift, nuke, etc.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Cursor System”:</p>
+<ul>
+<li>YAML-defined cursor set with <code>name</code>, <code>sprite</code>, <code>hotspot</code>, <code>sequence</code></li>
+<li><code>CursorProvider</code> resource tracking current cursor based on hover context</li>
+<li>Built-in cursors: <code>default</code>, <code>move</code>, <code>attack</code>, <code>force_attack</code>, <code>capture</code>, <code>enter</code>, <code>deploy</code>, <code>sell</code>, <code>repair</code>, <code>chronoshift</code>, <code>nuke</code>, <code>harvest</code>, <code>c4</code>, <code>garrison</code>, <code>guard</code>, <code>patrol</code>, <code>waypoint</code></li>
+<li>Force-modifier cursors activated by holding Ctrl/Alt (force-fire on ground, force-move through obstacles)</li>
+<li>Cursor resolution logic: selected units’ abilities × hovered target → choose appropriate cursor</li>
+</ul>
+<hr>
+<h2 id="28-hotkey-system--designed"><a class="header" href="#28-hotkey-system--designed">28. Hotkey System ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> 8 hotkey config files. Fully rebindable. Categories: common, player, production, control-groups, observer, chat, music, map creation.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Hotkey System”:</p>
+<ul>
+<li><code>HotkeyConfig</code> with categories: <code>Unit</code>, <code>Production</code>, <code>ControlGroup</code>, <code>Camera</code>, <code>Chat</code>, <code>Debug</code>, <code>Observer</code>, <code>Music</code>, <code>Editor</code></li>
+<li>Default profiles: Classic RA, OpenRA, Modern RTS — selectable in settings</li>
+<li>Fully rebindable via settings UI</li>
+<li>Abstracted behind <code>InputSource</code> trait (D010 platform-agnostic) — gamepad/touch supported</li>
+</ul>
+<hr>
+<h2 id="29-lua-scripting-api--designed-d024--strict-superset"><a class="header" href="#29-lua-scripting-api--designed-d024--strict-superset">29. Lua Scripting API ✅ DESIGNED (D024 — Strict Superset)</a></h2>
+<p><strong>OpenRA:</strong> 16 global APIs + 34 actor property groups = comprehensive mission scripting.</p>
+<p><strong>Iron Curtain status:</strong> <strong>Lua API is a strict superset of OpenRA’s (D024).</strong> All 16 OpenRA globals (<code>Actor</code>, <code>Map</code>, <code>Trigger</code>, <code>Media</code>, <code>Player</code>, <code>Reinforcements</code>, <code>Camera</code>, <code>DateTime</code>, <code>Objectives</code>, <code>Lighting</code>, <code>UserInterface</code>, <code>Utils</code>, <code>Beacon</code>, <code>Radar</code>, <code>HSLColor</code>, <code>WDist</code>) are supported with identical function signatures and return types. OpenRA Lua missions run unmodified.</p>
+<p>IC extends with additional globals: <code>Campaign</code> (D021 branching campaigns), <code>Weather</code> (D022 dynamic weather), <code>Workshop</code> (mod queries), <code>LLM</code> (Phase 7 integration).</p>
+<p>Each actor reference exposes properties matching its components (<code>.Health</code>, <code>.Location</code>, <code>.Owner</code>, <code>.Move()</code>, <code>.Attack()</code>, <code>.Stop()</code>, <code>.Guard()</code>, <code>.Deploy()</code>, etc.) — identical to OpenRA’s actor property groups.</p>
+<hr>
+<h2 id="30-map-editor--resolved-d038--d040"><a class="header" href="#30-map-editor--resolved-d038--d040">30. Map Editor ✅ RESOLVED (D038 + D040)</a></h2>
+<p><strong>OpenRA:</strong> Full in-engine map editor with actor placement, terrain painting, resource placement, tile editing, undo/redo, script cell triggers, marker layers, road/path tiling tool.</p>
+<p><strong>Iron Curtain status:</strong> Resolved as D038+D040 — SDK scenario editor &amp; asset studio (OFP/Eden-inspired). Ships as part of the IC SDK (separate application from the game). Goes beyond OpenRA’s map editor to include full mission logic editing: triggers with countdown/timeout timers and min/mid/max randomization, waypoints, pre-built modules (wave spawner, patrol route, guard position, reinforcements, objectives), visual connection lines, Probability of Presence per entity for replayability, compositions (reusable prefabs), layers, Simple/Advanced mode toggle, Test button, Game Master mode, Workshop publishing. The asset studio (D040) adds visual browsing, editing, and generation of game assets (sprites, palettes, terrain, chrome). See <code>decisions/09f/D038-scenario-editor.md</code> and <code>decisions/09f/D040-asset-studio.md</code> for full design.</p>
+<hr>
+<h2 id="31-debug--developer-tools--designed"><a class="header" href="#31-debug--developer-tools--designed">31. Debug / Developer Tools ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>DeveloperMode</code> (instant build, give cash, unlimited power, build anywhere), combat debug overlay, pathfinder overlay, actor map overlay, performance graph, asset browser.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Debug / Developer Tools”:</p>
+<ul>
+<li>DeveloperMode flags: <code>instant_build</code>, <code>free_units</code>, <code>reveal_map</code>, <code>unlimited_power</code>, <code>invincibility</code>, <code>path_debug</code>, <code>combat_debug</code></li>
+<li>Debug overlays via <code>bevy_egui</code>: weapon ranges, target lines, pathfinder visualization (JPS paths, flow field tiles, sector graph), path costs, damage numbers, spatial index grid</li>
+<li>Performance profiler: per-system tick time, entity count, memory usage, ECS archetype stats</li>
+<li>Asset browser panel: preview sprites with palette application, play sounds, inspect YAML definitions</li>
+<li>All debug features compile-gated behind <code>#[cfg(feature = "dev-tools")]</code> — zero cost in release builds</li>
+</ul>
+<hr>
+<h2 id="32-selection-system--designed"><a class="header" href="#32-selection-system--designed">32. Selection System ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>Selection</code>, <code>Selectable</code> (bounds, priority, voice), <code>IsometricSelectable</code>, <code>ControlGroups</code>, selection decorations, double-click select-all-of-type, tab cycling.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Selection Details”:</p>
+<ul>
+<li><code>Selectable { bounds, priority, voice_set }</code> component with <code>SelectionPriority</code> enum (<code>Combat</code>, <code>Support</code>, <code>Harvester</code>, <code>Building</code>, <code>Misc</code>)</li>
+<li>Priority-based selection: when box covers mixed types, prefer higher-priority (Combat &gt; Harvester)</li>
+<li>Double-click: select all visible units of same type owned by same player</li>
+<li>Ctrl+click: add/remove from selection</li>
+<li>Tab cycling: rotate through unit types within selection</li>
+<li>Control groups: Ctrl+1..9 to assign, 1..9 to recall, double-tap to center camera</li>
+<li>Selection limit: configurable (default 40) — excess units excluded by distance from box center</li>
+<li>Isometric diamond selection boxes for proper 2.5D feel</li>
+</ul>
+<hr>
+<h2 id="33-observer--spectator-system--designed"><a class="header" href="#33-observer--spectator-system--designed">33. Observer / Spectator System ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> Observer widgets for army composition, production tracking, superweapon timers, strategic progress score.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Observer / Spectator UI”:</p>
+<ul>
+<li>Observer overlay panels: Army composition, production queues, economy (income/stockpile), support power timers</li>
+<li><code>ObserverState { followed_player, show_overlays }</code> resource</li>
+<li>Player switching: cycle through players or view “god mode” (all players visible)</li>
+<li>Broadcast delay: configurable (default 3 minutes for competitive, 0 for casual)</li>
+<li>Strategic score tracker: army value, buildings, income rate, kills/losses</li>
+<li>Tournament mode: relay-certified results + server-side replay archive</li>
+</ul>
+<hr>
+<h2 id="34-game-speed-system--designed"><a class="header" href="#34-game-speed-system--designed">34. Game Speed System ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> 6 game speed presets (Slowest 80ms → Fastest 20ms). Configurable in lobby.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Game Speed”:</p>
+<ul>
+<li><code>SpeedPreset</code> enum: <code>Slowest</code> (80ms), <code>Slower</code> (67ms, default), <code>Normal</code> (50ms), <code>Faster</code> (35ms), <code>Fastest</code> (20ms)</li>
+<li>Lobby-configurable; speed affects tick interval only (systems run identically at any speed)</li>
+<li>Single-player: speed adjustable at runtime via hotkey (+ / −)</li>
+<li>Pause support in single-player</li>
+</ul>
+<hr>
+<h2 id="35-faction-system--designed"><a class="header" href="#35-faction-system--designed">35. Faction System ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>Faction</code> trait (name, internal name, side). Factions determine tech trees, unit availability, starting configurations.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Faction System”:</p>
+<ul>
+<li><code>Faction { id, display_name, side, color_default, tech_tree }</code> YAML-defined</li>
+<li><code>Side</code> grouping (e.g., <code>allies</code> contains England/France/Germany subfactions in RA)</li>
+<li>Faction → available <code>Buildable</code> items via <code>tech_tree</code> (list of unlockable actor IDs)</li>
+<li>Faction → starting units configuration (map-defined or mod-default)</li>
+<li>Lobby faction selection with random option</li>
+<li>RA2+ subfaction support: each subfaction gets unique units/abilities while sharing the side’s base roster</li>
+</ul>
+<hr>
+<h2 id="36-replay-browser--partial"><a class="header" href="#36-replay-browser--partial">36. Replay Browser ⚠️ PARTIAL</a></h2>
+<p><strong>OpenRA:</strong> Full replay browser with filtering (by map, players, date), sorting, metadata display, replay playback with speed control.</p>
+<p><strong>Iron Curtain status:</strong> <code>ReplayPlayback</code> NetworkModel designed. Signed replays with hash chains. But the <strong>replay browser UI</strong> and metadata storage aren’t designed.</p>
+<hr>
+<h2 id="37-encyclopedia--asset-browser--designed"><a class="header" href="#37-encyclopedia--asset-browser--designed">37. Encyclopedia / Asset Browser ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> In-game encyclopedia with unit descriptions, stats, and previews. Asset browser for modders to preview sprites, sounds, videos.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Encyclopedia”:</p>
+<ul>
+<li>In-game encyclopedia with categories: Units, Structures, Weapons, Abilities, Terrain</li>
+<li>Each entry: name, description, sprite preview, stats table (HP, speed, cost, damage, range), prerequisite tree</li>
+<li>Populated from YAML definitions + <code>llm:</code> metadata when present</li>
+<li>Filtered by faction, searchable</li>
+<li>Asset browser is part of IC SDK (D040) — visual browsing/editing of sprites, palettes, terrain, sounds with format-aware import/export</li>
+</ul>
+<hr>
+<h2 id="38-procedural-map-generation--partial"><a class="header" href="#38-procedural-map-generation--partial">38. Procedural Map Generation ⚠️ PARTIAL</a></h2>
+<p><strong>OpenRA:</strong> <code>ClassicMapGenerator</code> (38KB) — procedural map generation with terrain types, resource placement, spawn points.</p>
+<p><strong>Iron Curtain status:</strong> Not explicitly designed as a standalone system, though multiple D038 features partially address this: game mode templates provide pre-configured map layouts, compositions provide reusable building blocks that could be randomly assembled, and the Probability of Presence system creates per-entity randomization. LLM-generated missions (Phase 7) provide full procedural generation when a provider is configured. A dedicated procedural map generator (terrain + resource placement + spawn balancing) is a natural Phase 7 addition to the scenario editor.</p>
+<hr>
+<h2 id="39-localization--i18n--designed"><a class="header" href="#39-localization--i18n--designed">39. Localization / i18n ✅ DESIGNED</a></h2>
+<p><strong>OpenRA:</strong> <code>FluentMessages</code> section in mod manifest — full localization support using Project Fluent.</p>
+<p><strong>Iron Curtain status:</strong> Fully designed in <code>02-ARCHITECTURE.md</code> § “Extended Gameplay Systems — Localization Framework”:</p>
+<ul>
+<li>Fluent-based (.ftl files) for parameterized messages and plural rules</li>
+<li><code>Localization { current_locale, bundles }</code> resource</li>
+<li>String keys in YAML reference <code>fluent:key.name</code> — resolved at load time</li>
+<li>Mods provide their own <code>.ftl</code> translation files</li>
+<li>CJK/RTL font support via Bevy’s font pipeline</li>
+<li>Language selection in settings UI</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../openra-features/player-game-state.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../openra-features/ic-advantages-mapping.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../openra-features/player-game-state.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../openra-features/ic-advantages-mapping.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,821 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Media &amp; Validation - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09f/D038/D038-media-validation.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h3 id="media--cinematics"><a class="header" href="#media--cinematics">Media &amp; Cinematics</a></h3>
+<p>Original Red Alert’s campaign identity was defined as much by its media as its gameplay — FMV briefings before missions, the radar panel switching to a video feed during gameplay, Hell March driving the combat tempo, EVA voice lines as constant tactical feedback. A campaign editor that can’t orchestrate media is a campaign editor that can’t recreate what made C&amp;C campaigns feel like C&amp;C campaigns.</p>
+<p>The modding layer (<code>04-MODDING.md</code>) defines the primitives: <code>video_playback</code> scene templates with display modes (<code>fullscreen</code>, <code>radar_comm</code>, <code>picture_in_picture</code>), <code>scripted_scene</code> templates, and the <code>Media</code> Lua global. The scenario editor surfaces all of these as <strong>visual modules</strong> — no Lua required for standard use, Lua available for advanced control.</p>
+<h4 id="two-cutscene-types-explicitly-distinct"><a class="header" href="#two-cutscene-types-explicitly-distinct">Two Cutscene Types (Explicitly Distinct)</a></h4>
+<p>IC treats <strong>video cutscenes</strong> and <strong>rendered cutscenes</strong> as two different content types with different pipelines and different authoring concerns:</p>
+<ul>
+<li><strong>Video cutscene</strong> (<code>Video Playback</code>): pre-rendered media (<code>.vqa</code>, <code>.mp4</code>, <code>.webm</code>) — classic RA/TD/C&amp;C-style FMV.</li>
+<li><strong>Rendered cutscene</strong> (<code>Cinematic Sequence</code>): a real-time scripted sequence rendered by the game engine in the active render mode (classic 2D, HD, or 3D if available) — Generals-style mission cinematics and in-engine character scenes.</li>
+</ul>
+<p>Both are valid for:</p>
+<ul>
+<li><strong>between-mission</strong> presentation (briefings, intros, transitions, debrief beats)</li>
+<li><strong>during-mission</strong> presentation</li>
+<li><strong>character dialogue/talking</strong> moments (at minimum: portrait + subtitle + audio via Dialogue/Radar Comm; optionally full video or rendered camera sequence)</li>
+</ul>
+<p>The distinction is important for tooling, Workshop packaging, and fallback behavior:</p>
+<ul>
+<li>Video cutscenes are media assets with playback/display settings.</li>
+<li>Rendered cutscenes are authored sequence data + dependencies on maps/units/portraits/audio/optional render-mode assets.</li>
+</ul>
+<h4 id="video-playback"><a class="header" href="#video-playback">Video Playback</a></h4>
+<p>The <strong>Video Playback</strong> module plays video files (<code>.vqa</code>, <code>.mp4</code>, <code>.webm</code>) at a designer-specified trigger point. Three display modes (from <code>04-MODDING.md</code>):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Display Mode</th><th>Behavior</th><th>Inspiration</th></tr>
+</thead>
+<tbody>
+<tr><td><code>fullscreen</code></td><td>Pauses gameplay, fills screen, letterboxed. Classic FMV briefing.</td><td>RA1 mission briefings</td></tr>
+<tr><td><code>radar_comm</code></td><td>Video replaces the radar/minimap panel. Game continues. Sidebar stays functional.</td><td>RA2 EVA / commander video calls</td></tr>
+<tr><td><code>picture_in_picture</code></td><td>Small floating video overlay in a corner. Game continues. Dismissible.</td><td>Modern RTS cinematics</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Module properties in the editor:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Video</strong></td><td>file picker</td><td>Video file reference (from mission assets or Workshop dependency)</td></tr>
+<tr><td><strong>Display mode</strong></td><td>dropdown</td><td><code>fullscreen</code> / <code>radar_comm</code> / <code>picture_in_picture</code></td></tr>
+<tr><td><strong>Trigger</strong></td><td>connection</td><td>When to play — connected to a trigger, module, or “mission start”</td></tr>
+<tr><td><strong>Skippable</strong></td><td>checkbox</td><td>Whether the player can press Escape to skip</td></tr>
+<tr><td><strong>Subtitle</strong></td><td>text (optional)</td><td>Subtitle text shown during playback (accessibility)</td></tr>
+<tr><td><strong>On Complete</strong></td><td>connection (optional)</td><td>Trigger or module to activate when the video finishes</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Radar Comm</strong> deserves special emphasis — it’s the feature that makes in-mission storytelling possible without interrupting gameplay. A commander calls in during a battle, their face appears in the radar panel, they deliver a line, and the radar returns. The designer connects a Video Playback (mode: <code>radar_comm</code>) to a trigger, and that’s it. No scripting, no timeline editor, no separate cinematic tool.</p>
+<p>For missions without custom video, the <strong>Radar Comm</strong> module (separate from Video Playback) provides the same radar-panel takeover using a static portrait + audio + subtitle text — the RA2 communication experience without requiring video production.</p>
+<h4 id="cinematic-sequences-rendered-cutscenes--real-time-sequences"><a class="header" href="#cinematic-sequences-rendered-cutscenes--real-time-sequences">Cinematic Sequences (Rendered Cutscenes / Real-Time Sequences)</a></h4>
+<p>Individual modules (Camera Pan, Video Playback, Dialogue, Music Trigger) handle single media events. A <strong>Cinematic Sequence</strong> chains them into a scripted multi-step sequence — the editor equivalent of a cutscene director.</p>
+<p>This is the <strong>rendered cutscene</strong> path: a sequence runs in-engine, using the game’s camera(s), entities, weather, audio, and overlays. In other words:</p>
+<ul>
+<li><strong>Video Playback</strong> = pre-rendered cutscene (classic FMV path)</li>
+<li><strong>Cinematic Sequence</strong> = real-time rendered cutscene (2D/HD/3D depending render mode and installed assets)</li>
+</ul>
+<p>The sequence can still embed video steps (<code>play_video</code>) for hybrid scenes.</p>
+<p><strong>Sequence step types:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Step Type</th><th>Parameters</th><th>What It Does</th></tr>
+</thead>
+<tbody>
+<tr><td><code>camera_pan</code></td><td>from, to, duration, easing</td><td>Smooth camera movement between positions</td></tr>
+<tr><td><code>camera_shake</code></td><td>intensity, duration</td><td>Screen shake (explosion, impact)</td></tr>
+<tr><td><code>dialogue</code></td><td>speaker, portrait, text, audio_ref, duration</td><td>Character speech bubble / subtitle overlay</td></tr>
+<tr><td><code>play_video</code></td><td>video_ref, display_mode</td><td>Video playback (any display mode)</td></tr>
+<tr><td><code>play_music</code></td><td>track, fade_in</td><td>Music change with crossfade</td></tr>
+<tr><td><code>play_sound</code></td><td>sound_ref, position (optional)</td><td>Sound effect — positional or global</td></tr>
+<tr><td><code>wait</code></td><td>duration</td><td>Pause between steps (in game ticks or seconds)</td></tr>
+<tr><td><code>spawn_units</code></td><td>units[], position, faction</td><td>Dramatic unit reveal (reinforcements arriving on-camera)</td></tr>
+<tr><td><code>destroy</code></td><td>target</td><td>Scripted destruction (building collapses, bridge blows)</td></tr>
+<tr><td><code>weather</code></td><td>type, intensity, transition_time</td><td>Weather change synchronized with the sequence</td></tr>
+<tr><td><code>letterbox</code></td><td>enable/disable, transition_time</td><td>Toggle cinematic letterbox bars</td></tr>
+<tr><td><code>set_variable</code></td><td>name, value</td><td>Set a mission or campaign variable during the sequence</td></tr>
+<tr><td><code>lua</code></td><td>script</td><td>Advanced: arbitrary Lua for anything not covered above</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Cinematic Sequence module properties:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Steps</strong></td><td>ordered list</td><td>Sequence of steps (drag-to-reorder in the editor)</td></tr>
+<tr><td><strong>Trigger</strong></td><td>connection</td><td>When to start the sequence</td></tr>
+<tr><td><strong>Skippable</strong></td><td>checkbox</td><td>Whether the player can skip the entire sequence</td></tr>
+<tr><td><strong>Presentation mode</strong></td><td>dropdown</td><td><code>world</code> / <code>fullscreen</code> / <code>radar_comm</code> / <code>picture_in_picture</code> (phased support; see below)</td></tr>
+<tr><td><strong>Pause sim</strong></td><td>checkbox</td><td>Whether gameplay pauses during the sequence (default: yes)</td></tr>
+<tr><td><strong>Letterbox</strong></td><td>checkbox</td><td>Auto-enter letterbox mode when sequence starts (default: yes)</td></tr>
+<tr><td><strong>Render mode policy</strong></td><td>dropdown</td><td><code>current</code> / <code>prefer:&lt;mode&gt;</code> / <code>require:&lt;mode&gt;</code> with fallback policy (phased support; see D048 integration note below)</td></tr>
+<tr><td><strong>On Complete</strong></td><td>connection (optional)</td><td>What fires when the sequence finishes</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Visual editing:</strong> Steps are shown as a vertical timeline in the module’s expanded properties panel. Each step has a colored icon by type. Drag steps to reorder. Click a camera_pan step to see from/to positions highlighted on the map. Click “Preview from step” to test a subsequence without playing the whole thing.</p>
+<h5 id="trigger-driven-camera-scene-authoring-ofp-style-property-driven"><a class="header" href="#trigger-driven-camera-scene-authoring-ofp-style-property-driven">Trigger-Driven Camera Scene Authoring (OFP-Style, Property-Driven)</a></h5>
+<p>IC should support an <strong>OFP-style trigger-camera workflow</strong> on top of <code>Cinematic Sequence</code>: designers can author a cutscene by connecting trigger conditions/properties to a camera-focused sequence without writing Lua.</p>
+<p>This is a <strong>D038 convenience layer</strong>, not a separate runtime system:</p>
+<ul>
+<li>runtime playback still uses the same <code>Cinematic Sequence</code> data path</li>
+<li>trigger conditions still use the same D038 Trigger system</li>
+<li>advanced users can still author/override the same behavior in Lua</li>
+</ul>
+<p><strong>Baseline camera-trigger properties (author-facing):</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Activation</strong></td><td>trigger connection / trigger preset</td><td>What starts the camera scene (<code>mission_start</code>, <code>objective_complete</code>, <code>enter_area</code>, <code>unit_killed</code>, <code>timer</code>, variable condition, etc.)</td></tr>
+<tr><td><strong>Audience Scope</strong></td><td>dropdown</td><td><code>local_player</code> / <code>all_players</code> / <code>allies</code> / <code>spectators</code> (multiplayer-safe visibility scope)</td></tr>
+<tr><td><strong>Shot Preset</strong></td><td>dropdown</td><td><code>intro_flyover</code>, <code>objective_reveal</code>, <code>target_focus</code>, <code>follow_unit</code>, <code>ambush_reveal</code>, <code>bridge_demolition</code>, <code>custom</code></td></tr>
+<tr><td><strong>Camera Targets</strong></td><td>target refs</td><td>Units, regions, markers, entities, composition anchors, or explicit points used by the shot</td></tr>
+<tr><td><strong>Sequence Binding</strong></td><td>sequence ref / inline sequence</td><td>Use an existing <code>Cinematic Sequence</code> or author inline under the trigger panel</td></tr>
+<tr><td><strong>Pause Policy</strong></td><td>dropdown</td><td><code>pause</code>, <code>continue</code>, <code>authored_override</code></td></tr>
+<tr><td><strong>Skippable</strong></td><td>checkbox</td><td>Allow player skip (<code>true</code> by default outside forced tutorial moments)</td></tr>
+<tr><td><strong>Interrupt Policy</strong></td><td>dropdown</td><td><code>none</code>, <code>on_mission_fail</code>, <code>on_subject_death</code>, <code>on_combat_alert</code>, <code>authored</code></td></tr>
+<tr><td><strong>Cooldown / Once</strong></td><td>trigger policy</td><td>One-shot, repeat, cooldown ticks/seconds</td></tr>
+<tr><td><strong>Fallback Presentation</strong></td><td>dropdown</td><td><code>briefing_text</code>, <code>radar_comm</code>, <code>notification</code>, <code>none</code> if required target/assets unavailable</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Design rule:</strong> The editor should expose common camera-scene patterns as trigger presets (property sheets), but always emit normal D038 trigger + cinematic data so the behavior stays transparent and portable across authoring surfaces.</p>
+<p><strong>Phasing (trigger-camera authoring):</strong></p>
+<ul>
+<li><strong><code>M6</code> / Phase 4 full (<code>P-Differentiator</code>) baseline:</strong> property-driven trigger bindings for rendered cutscenes using <code>world</code> / <code>fullscreen</code> presentation and shot presets (<code>intro_flyover</code>, <code>objective_reveal</code>, <code>target_focus</code>, <code>follow_unit</code>)
+<ul>
+<li><strong>Depends on:</strong> <code>M6.SP.MEDIA_VARIANTS_AND_FALLBACKS</code>, <code>M5.SP.CAMPAIGN_RUNTIME_SLICE</code>, <code>M6.UX.D038_TRIGGER_CAMERA_SCENES_BASELINE</code></li>
+<li><strong>Reason:</strong> campaign/runtime cutscenes need designer-friendly trigger authoring before full SDK camera tooling maturity</li>
+<li><strong>Not in current scope (M6 baseline):</strong> spline rails, multi-camera shot graphs, advanced per-shot framing preview UI</li>
+<li><strong>Validation trigger:</strong> <code>G19.3</code> campaign media/cutscene validation includes at least one trigger-authored rendered camera scene (no Lua)</li>
+</ul>
+</li>
+<li><strong>Deferred to <code>M10</code> / Phase 6b (<code>P-Creator</code>)</strong>: advanced camera-trigger authoring UI (shot graph, spline/anchor tools, trigger-context preview/simulate-fire, framing overlays for <code>radar_comm</code>/PiP)
+<ul>
+<li><strong>Depends on:</strong> <code>M10.SDK.D038_CAMPAIGN_EDITOR</code>, <code>M10.SDK.D038_CAMERA_TRIGGER_AUTHORING_ADVANCED</code>, <code>M10.UX.D038_RENDERED_CUTSCENE_DISPLAY_TARGETS</code></li>
+<li><strong>Reason:</strong> requires mature campaign editor graph UX and advanced cutscene preview surfaces</li>
+<li><strong>Not in current scope (M6):</strong> spline camera rails and graph editing in the baseline campaign runtime path</li>
+<li><strong>Validation trigger:</strong> D038 preview can simulate trigger firing and preview shot framing against authored targets without running the entire mission</li>
+</ul>
+</li>
+</ul>
+<p><strong>Multiplayer fairness note (D048/D059/D070):</strong></p>
+<p>Trigger-driven camera scenes must declare audience scope and may not reveal hidden information to unintended players. In multiplayer scenarios, <code>all_players</code> camera scenes are authored set-pieces; role/local scenes must remain visibility-safe and respect D048 information parity rules.</p>
+<p><strong>Presentation targets and phasing (explicit):</strong></p>
+<ul>
+<li><strong><code>M6</code> / Phase 4 full (<code>P-Differentiator</code>) baseline:</strong> <code>world</code> and <code>fullscreen</code> rendered cutscenes (pause/non-pause + letterbox + dialogue/radar-comm integration)
+<ul>
+<li><strong>Depends on:</strong> <code>M5.SP.CAMPAIGN_RUNTIME_SLICE</code>, <code>M3.CORE.AUDIO_EVA_MUSIC</code>, <code>M6.SP.MEDIA_VARIANTS_AND_FALLBACKS</code></li>
+<li><strong>Not in current scope (M6 baseline):</strong> rendered <code>radar_comm</code> and rendered <code>picture_in_picture</code> capture-surface targets</li>
+<li><strong>Validation trigger:</strong> <code>G19.3</code> campaign media/cutscene validation includes at least one rendered cutscene intro and one in-mission rendered sequence</li>
+</ul>
+</li>
+<li><strong>Deferred to <code>M10</code> / Phase 6b (<code>P-Creator</code>)</strong>: rendered <code>radar_comm</code> and rendered <code>picture_in_picture</code> targets with SDK preview support
+<ul>
+<li><strong>Depends on:</strong> <code>M10.SDK.D038_CAMPAIGN_EDITOR</code>, <code>M9.SDK.D040_ASSET_STUDIO</code>, <code>M10.UX.D038_RENDERED_CUTSCENE_DISPLAY_TARGETS</code></li>
+<li><strong>Reason:</strong> requires capture-surface authoring UX, panel-safe framing previews, and validation hooks</li>
+<li><strong>Validation trigger:</strong> D038 preview and publish validation can test all four presentation modes for rendered cutscenes</li>
+</ul>
+</li>
+<li><strong>Deferred to <code>M11</code> / Phase 7 (<code>P-Optional</code>)</strong>: advanced <code>Render mode policy</code> controls (<code>prefer/require</code>) and authored 2D/3D cutscene render-mode variants
+<ul>
+<li><strong>Depends on:</strong> <code>M11.VISUAL.D048_AND_RENDER_MOD_INFRA</code></li>
+<li><strong>Reason:</strong> render-mode-specific cutscene variants rely on mature D048 visual infrastructure and installed asset compatibility checks</li>
+<li><strong>Not in current scope (M6/M10):</strong> hard failure on unavailable optional 3D-only cinematic mode without author-declared fallback</li>
+<li><strong>Validation trigger:</strong> render-mode parity tests + fallback tests prove no broken campaign flow when preferred render mode is unavailable</li>
+</ul>
+</li>
+</ul>
+<p><strong>D048 integration (fairness / information parity):</strong></p>
+<p>Rendered cutscenes may use different visual modes (2D/HD/3D), but they still obey D048’s rule that render modes change presentation, not authoritative game-state information. A render-mode preference can change <em>how</em> a cinematic looks; it must not reveal sim information unavailable in the current mission state.</p>
+<p><strong>Example — mission intro rendered cutscene (real-time):</strong></p>
+<pre><code>Cinematic Sequence: "Mission 3 Intro"
+  Trigger: mission_start
+  Skippable: yes
+  Pause sim: yes
+
+  Steps:
+  1. [letterbox]   enable, 0.5s transition
+  2. [camera_pan]  from: player_base → to: enemy_fortress, 3s, ease_in_out
+  3. [dialogue]    Stavros: "The enemy has fortified the river crossing."
+  4. [play_sound]  artillery_distant.wav (global)
+  5. [camera_shake] intensity: 0.3, duration: 0.5s
+  6. [camera_pan]  to: bridge_crossing, 2s
+  7. [dialogue]    Tanya: "I see a weak point in their eastern wall."
+  8. [play_music]  "hell_march_v2", fade_in: 2s
+  9. [letterbox]   disable, 0.5s transition
+</code></pre>
+<p>This replaces what would be 40+ lines of Lua with a visual drag-and-drop sequence. The designer sees the whole flow, reorders steps, previews specific moments, and never touches code.</p>
+<p><strong>Workshop / packaging model for rendered cutscenes (D030/D049/D068 integration):</strong></p>
+<ul>
+<li>Video cutscenes are typically packaged as media resources (video files + subtitles/CC + metadata).</li>
+<li>Rendered cutscenes are typically packaged as:
+<ul>
+<li>sequence definitions (<code>Cinematic Sequence</code> data / templates)</li>
+<li>dialogue/portrait/audio dependencies</li>
+<li>optional visual dependencies (HD/3D render-mode asset packs)</li>
+</ul>
+</li>
+<li>Campaigns/scenarios can depend on either or both. Missing optional visual/media dependencies must degrade via the existing D068 fallback rules (briefing/text/radar-comm/static presentation), not hard-fail the campaign flow.</li>
+</ul>
+<h4 id="dynamic-music"><a class="header" href="#dynamic-music">Dynamic Music</a></h4>
+<p><code>ic-audio</code> supports dynamic music states (combat/ambient/tension) that respond to game state (see <code>13-PHILOSOPHY.md</code> — Klepacki’s game-tempo philosophy). The editor exposes this through two mechanisms:</p>
+<p><strong>1. Music Trigger module</strong> — simple track swap on trigger activation. Already in the module table. Good for scripted moments (“play Hell March when the tanks roll out”).</p>
+<p><strong>2. Music Playlist module</strong> — manages an active playlist with playback modes:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mode</th><th>Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td><code>sequential</code></td><td>Play tracks in order, loop</td></tr>
+<tr><td><code>shuffle</code></td><td>Random order, no immediate repeats</td></tr>
+<tr><td><code>dynamic</code></td><td>Engine selects track based on game state — <code>combat</code> / <code>ambient</code> / <code>tension</code> / <code>victory</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Dynamic mode</strong> is the key feature. The designer tags tracks by mood:</p>
+<pre><code class="language-yaml">music_playlist:
+  combat:
+    - hell_march
+    - grinder
+    - drill
+  ambient:
+    - fogger
+    - trenches
+    - mud
+  tension:
+    - radio_2
+    - face_the_enemy
+  victory:
+    - credits
+</code></pre>
+<p>The engine monitors game state (active combat, unit losses, base threat, objective progress) and crossfades between mood categories automatically. No triggers required — the music responds to what’s happening. The designer curates the playlist; the engine handles transitions.</p>
+<p><strong>Crossfade control:</strong> Music Trigger and Music Playlist modules both support <code>fade_time</code> — the duration of the crossfade between the current track and the new one. Default: 2 seconds. Set to 0 for a hard cut (dramatic moments).</p>
+<h4 id="ambient-sound-zones"><a class="header" href="#ambient-sound-zones">Ambient Sound Zones</a></h4>
+<p><strong>Ambient Sound Zone</strong> modules tie looping environmental audio to named regions. Walk units near a river — hear water. Move through a forest — hear birds and wind. Approach a factory — hear industrial machinery.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Region</strong></td><td>region picker</td><td>Named region this sound zone covers</td></tr>
+<tr><td><strong>Sound</strong></td><td>file picker</td><td>Looping audio file</td></tr>
+<tr><td><strong>Volume</strong></td><td>slider 0–100%</td><td>Base volume at the center of the region</td></tr>
+<tr><td><strong>Falloff</strong></td><td>slider</td><td>How quickly sound fades at region edges (sharp → gradual)</td></tr>
+<tr><td><strong>Active</strong></td><td>checkbox</td><td>Whether the zone starts active (can be toggled by triggers/Lua)</td></tr>
+<tr><td><strong>Layer</strong></td><td>text</td><td>Optional layer assignment — zone activates/deactivates with its layer</td></tr>
+</tbody>
+</table>
+</div>
+<p>Ambient Sound Zones are <strong>render-side only</strong> (<code>ic-audio</code>) — they have zero sim impact and are not deterministic. They exist purely for atmosphere. The sound is spatialized: the camera’s position determines what the player hears and at what volume.</p>
+<p>Multiple overlapping zones blend naturally. A bridge over a river in a forest plays water + birds + wind, with each source fading based on camera proximity to its region.</p>
+<h4 id="eva-notification-system"><a class="header" href="#eva-notification-system">EVA Notification System</a></h4>
+<p>EVA voice lines are how C&amp;C communicates game events to the player — “Construction complete,” “Unit lost,” “Enemy approaching.” The editor exposes EVA as a module for custom notifications:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Event type</strong></td><td>dropdown</td><td><code>custom</code> / <code>warning</code> / <code>info</code> / <code>critical</code></td></tr>
+<tr><td><strong>Text</strong></td><td>text</td><td>Notification text shown in the message area</td></tr>
+<tr><td><strong>Audio</strong></td><td>file picker</td><td>Voice line audio file</td></tr>
+<tr><td><strong>Trigger</strong></td><td>connection</td><td>When to fire the notification</td></tr>
+<tr><td><strong>Cooldown</strong></td><td>slider</td><td>Minimum time before this notification can fire again</td></tr>
+<tr><td><strong>Priority</strong></td><td>dropdown</td><td><code>low</code> / <code>normal</code> / <code>high</code> / <code>critical</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Priority determines queuing behavior — critical notifications interrupt lower-priority ones; low-priority notifications wait. This prevents EVA spam during intense battles while ensuring critical alerts always play.</p>
+<p><strong>Built-in EVA events</strong> (game module provides defaults for standard events: unit lost, building destroyed, harvester under attack, insufficient funds, etc.). Custom EVA modules are for mission-specific notifications — “The bridge has been rigged with explosives,” “Reinforcements are en route.”</p>
+<h4 id="letterbox--cinematic-mode"><a class="header" href="#letterbox--cinematic-mode">Letterbox / Cinematic Mode</a></h4>
+<p>The <strong>Letterbox Mode</strong> module toggles cinematic presentation:</p>
+<ul>
+<li><strong>Letterbox bars</strong> — black bars at top and bottom of screen, creating a widescreen aspect ratio</li>
+<li><strong>HUD hidden</strong> — sidebar, minimap, resource bar, unit selection all hidden</li>
+<li><strong>Input restricted</strong> — player cannot issue orders (optional — some sequences allow camera panning)</li>
+<li><strong>Transition time</strong> — bars slide in/out smoothly (configurable)</li>
+</ul>
+<p>Letterbox mode is automatically entered by Cinematic Sequences when <code>letterbox: true</code> (the default). It can also be triggered independently — a Letterbox Mode module connected to a trigger enters cinematic mode for dramatic moments without a full sequence (e.g., a dramatic camera pan to a nuclear explosion, then back to gameplay).</p>
+<h4 id="media-in-campaigns"><a class="header" href="#media-in-campaigns">Media in Campaigns</a></h4>
+<p>All media modules work within the campaign editor’s intermission system:</p>
+<ul>
+<li><strong>Fullscreen video</strong> before missions (briefing FMVs)</li>
+<li><strong>Music Playlist</strong> per campaign node (each mission can have its own playlist, or inherit from the campaign default)</li>
+<li><strong>Dialogue with audio</strong> in intermission screens — character portraits with voice-over</li>
+<li><strong>Ambient sound</strong> in intermission screens (command tent ambiance, war room hum)</li>
+</ul>
+<p>The campaign node properties (briefing, debriefing) support media references:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Briefing video</strong></td><td>file picker</td><td>Optional FMV played before the mission (fullscreen)</td></tr>
+<tr><td><strong>Briefing audio</strong></td><td>file picker</td><td>Voice-over for text briefing (if no video)</td></tr>
+<tr><td><strong>Briefing music</strong></td><td>track picker</td><td>Music playing during the briefing screen</td></tr>
+<tr><td><strong>Debrief audio</strong></td><td>file picker (×N)</td><td>Per-outcome voice-over for debrief screens</td></tr>
+<tr><td><strong>Debrief video</strong></td><td>file picker (×N)</td><td>Per-outcome FMV (optional)</td></tr>
+</tbody>
+</table>
+</div>
+<p>This means a campaign creator can build the full original RA experience — FMV briefing → mission with in-game radar comms → debrief with per-outcome results — entirely through the visual editor.</p>
+<h4 id="localization--subtitle--closed-caption-workbench-advanced-phase-6b"><a class="header" href="#localization--subtitle--closed-caption-workbench-advanced-phase-6b">Localization &amp; Subtitle / Closed Caption Workbench (Advanced, Phase 6b)</a></h4>
+<p>Campaign and media-heavy projects need more than scattered text fields. The SDK adds a dedicated <strong>Localization &amp; Subtitle / Closed Caption Workbench</strong> (Advanced mode) for creators shipping multi-language campaigns and cutscene-heavy mods.</p>
+<p><strong>Scope (Phase 6b):</strong></p>
+<ul>
+<li><strong>String table editor</strong> with usage lookup (“where is this key used?” across scenarios, campaign nodes, dialogue, EVA, radar comms)</li>
+<li><strong>Subtitle / closed-caption timeline editor</strong> for video playback, radar comms, and dialogue modules (timing, duration, line breaks, speaker tags, optional SFX/speaker labels)</li>
+<li><strong>Pseudolocalization preview</strong> to catch clipping/overflow in radar comm overlays, briefing panels, and dialogue UI before publish</li>
+<li><strong>RTL/BiDi preview and validation</strong> for Arabic/Hebrew/mixed-script strings (shaping, line-wrap, truncation, punctuation/numeral behavior) in briefing/debrief/radar-comm/dialogue/subtitle/closed-caption surfaces</li>
+<li><strong>Layout-direction preview (<code>LTR</code> / <code>RTL</code>)</strong> for relevant UI surfaces and D065 tutorial/highlight overlays so mirrored anchors and alignment rules can be verified without switching the entire system locale</li>
+<li><strong>Localized image/style asset checks</strong> for baked-text image variants and directional icon policies (<code>mirror_in_rtl</code> vs fixed-orientation) where creators ship localized UI art</li>
+<li><strong>Coverage report</strong> for missing translations per language / per campaign branch</li>
+<li><strong>Export-aware validation</strong> for target constraints (RA1 string table limits, OpenRA Fluent export readiness)</li>
+</ul>
+<p>This is an Advanced-mode tool and stays hidden unless localization assets exist or the creator explicitly enables it. Simple mode continues to use direct text fields.</p>
+<p><strong>Execution overlay mapping:</strong> runtime RTL/BiDi text/layout correctness lands in <code>M6</code>/<code>M7</code>; SDK baseline RTL-safe editor chrome and text rendering land in <code>M9</code>; this Workbench’s authoring-grade RTL/BiDi preview and validation surfaces land in <code>M10</code> (<code>P-Creator</code>) and are not part of <code>M9</code> exit criteria.</p>
+<p><strong>Validation fixtures:</strong> The Workbench ships/uses the canonical <code>src/tracking/rtl-bidi-qa-corpus.md</code> fixtures (mixed-script chat/marker labels, subtitle/closed-caption/objective strings, truncation/bounds cases, and sanitization regression vectors) so runtime D059 communication behavior and authoring previews are tested against the same dataset.</p>
+<h4 id="lua-media-api-advanced"><a class="header" href="#lua-media-api-advanced">Lua Media API (Advanced)</a></h4>
+<p>All media modules map to Lua functions for advanced scripting. The <code>Media</code> global (OpenRA-compatible, D024) provides the baseline; IC extensions add richer control:</p>
+<pre><code class="language-lua">-- OpenRA-compatible (work identically)
+Media.PlaySpeech("eva_building_captured")    -- EVA notification
+Media.PlaySound("explosion_large")           -- Sound effect
+Media.PlayMusic("hell_march")                -- Music track
+Media.DisplayMessage("Bridge destroyed!", "warning")  -- Text message
+
+-- IC extensions (additive)
+Media.PlayVideo("briefing_03.vqa", "fullscreen", { skippable = true })
+Media.PlayVideo("commander_call.mp4", "radar_comm")
+Media.PlayVideo("heli_arrives.webm", "picture_in_picture")
+
+Media.SetMusicPlaylist({ "hell_march", "grinder" }, "shuffle")
+Media.SetMusicMode("dynamic")    -- switch to dynamic mood-based selection
+Media.CrossfadeTo("fogger", 3.0) -- manual crossfade with duration
+
+Media.SetAmbientZone("forest_region", "birds_wind.ogg", { volume = 0.7 })
+Media.SetAmbientZone("river_region", "water_flow.ogg", { volume = 0.5 })
+
+-- Cinematic sequence from Lua (for procedural cutscenes)
+local seq = Media.CreateSequence({ skippable = true, pause_sim = true })
+seq:AddStep("letterbox", { enable = true, transition = 0.5 })
+seq:AddStep("camera_pan", { to = bridge_pos, duration = 3.0 })
+seq:AddStep("dialogue", { speaker = "Tanya", text = "I see them.", audio = "tanya_03.wav" })
+seq:AddStep("play_sound", { ref = "artillery.wav" })
+seq:AddStep("camera_shake", { intensity = 0.4, duration = 0.5 })
+seq:AddStep("letterbox", { enable = false, transition = 0.5 })
+seq:Play()
+</code></pre>
+<p>The visual modules and Lua API are interchangeable — a Cinematic Sequence created in the editor generates the same data as one built in Lua. Advanced users can start with the visual editor and extend with Lua; Lua-first users get the same capabilities without the GUI.</p>
+<h3 id="validate--playtest-low-friction-default"><a class="header" href="#validate--playtest-low-friction-default">Validate &amp; Playtest (Low-Friction Default)</a></h3>
+<p>The default creator workflow is intentionally simple and fast:</p>
+<pre><code>[Preview] [Test ▼] [Validate] [Publish]
+</code></pre>
+<ul>
+<li><strong>Preview</strong> — starts the sim from current editor state in the SDK. No compilation, no export, no separate process.</li>
+<li><strong>Test</strong> — launches <code>ic-game</code> with the current scenario/campaign content. One click, real playtest.</li>
+<li><strong>Validate</strong> — optional one-click checks. Never required before Preview/Test.</li>
+<li><strong>Publish</strong> — opens a single Publish Readiness screen (aggregated checks + warnings), and offers to run Publish Validate if results are stale.</li>
+</ul>
+<p>This preserves the “zero barrier between editing and playing” principle while still giving creators a reliable pre-publish safety net.</p>
+<p><strong>Preview/Test quality-of-life:</strong></p>
+<ul>
+<li><strong>Play from cursor</strong> — start the preview with the camera at the current editor position (Eden Editor’s “play from here”)</li>
+<li><strong>Speed controls</strong> — preview at 2x/4x/8x to quickly reach later mission stages</li>
+<li><strong>Instant restart</strong> — reset to editor state without re-entering the editor</li>
+</ul>
+<h3 id="validation-presets-simple--advanced"><a class="header" href="#validation-presets-simple--advanced">Validation Presets (Simple + Advanced)</a></h3>
+<p>The SDK exposes validation as presets backed by the same core checks used by the CLI (<code>ic mod check</code>, <code>ic mod test</code>, <code>ic mod audit</code>, <code>ic export ... --dry-run/--verify</code>). The SDK is a UI wrapper, not a parallel validation implementation.</p>
+<p><strong>Quick Validate (default <code>Validate</code> button, Phase 6a):</strong></p>
+<ul>
+<li>Target runtime: fast enough to feel instant on typical scenarios (guideline: ~under 2 seconds)</li>
+<li>Schema/serialization validity</li>
+<li>Missing references (entities, regions, layers, campaign node links)</li>
+<li>Unresolved assets</li>
+<li>Lua parse/sandbox syntax checks</li>
+<li>Duplicate IDs/names where uniqueness is required</li>
+<li>Obvious graph errors (dead links, missing mission outcomes)</li>
+<li>Export target incompatibilities (only if export-safe mode has a selected target)</li>
+</ul>
+<p><strong>Publish Validate (Phase 6a, launched from Publish Readiness or Advanced panel):</strong></p>
+<ul>
+<li>Includes Quick Validate</li>
+<li>Dependency/license checks (<code>ic mod audit</code>-style)</li>
+<li>Export verification dry-run for selected target(s)</li>
+<li>Stricter warning set (discoverability/metadata completeness)</li>
+<li>Optional smoke test (headless <code>ic mod test</code> equivalent for playable scenarios)</li>
+</ul>
+<p><strong>Advanced presets (Phase 6b):</strong></p>
+<ul>
+<li><code>Export</code></li>
+<li><code>Multiplayer</code></li>
+<li><code>Performance</code></li>
+<li>Batch validation for multiple scenarios/campaign nodes</li>
+</ul>
+<h3 id="validation-ux-contract-non-blocking-by-default"><a class="header" href="#validation-ux-contract-non-blocking-by-default">Validation UX Contract (Non-Blocking by Default)</a></h3>
+<p>To avoid the SDK “getting in the way,” validation follows strict UX rules:</p>
+<ul>
+<li><strong>Asynchronous</strong> — runs in the background; editing remains responsive</li>
+<li><strong>Cancelable</strong> — long-running checks can be stopped</li>
+<li><strong>No full validate on save</strong> — saving stays fast</li>
+<li><strong>Stale badge, not forced rerun</strong> — edits mark prior results as stale; they do not auto-run heavy checks</li>
+</ul>
+<p><strong>Status badge states (project/editor chrome):</strong></p>
+<ul>
+<li><code>Valid</code></li>
+<li><code>Warnings</code></li>
+<li><code>Errors</code></li>
+<li><code>Stale</code></li>
+<li><code>Running</code></li>
+</ul>
+<p><strong>Validation output model (single UI, Phase 6a):</strong></p>
+<ul>
+<li><strong>Errors</strong> — block publish until fixed</li>
+<li><strong>Warnings</strong> — publish allowed with explicit confirmation (policy-dependent)</li>
+<li><strong>Advice</strong> — non-blocking tips</li>
+</ul>
+<p>Each issue includes severity, source object/file, short explanation, suggested fix, and a one-click focus/select action where possible.</p>
+<p><strong>Shared validation interfaces (SDK + CLI):</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum ValidationPreset { Quick, Publish, Export, Multiplayer, Performance }
+
+pub struct ValidationRunRequest {
+    pub preset: ValidationPreset,
+    pub targets: Vec&lt;String&gt;, // "ic", "openra", "ra1"
+}
+
+pub struct ValidationResult {
+    pub issues: Vec&lt;ValidationIssue&gt;,
+    pub duration_ms: u64,
+}
+
+pub struct ValidationIssue {
+    pub severity: ValidationSeverity, // Error / Warning / Advice
+    pub code: String,
+    pub message: String,
+    pub location: Option&lt;ValidationLocation&gt;,
+    pub suggestion: Option&lt;String&gt;,
+}
+
+pub struct ValidationLocation {
+    pub file: String,
+    pub object_id: Option&lt;StableContentId&gt;,
+    pub field_path: Option&lt;String&gt;,
+}
+<span class="boring">}</span></code></pre>
+<h3 id="publish-readiness-single-aggregated-screen"><a class="header" href="#publish-readiness-single-aggregated-screen">Publish Readiness (Single Aggregated Screen)</a></h3>
+<p>Before publishing, the SDK shows one <strong>Publish Readiness</strong> screen instead of scattering warnings across multiple panels. It aggregates:</p>
+<ul>
+<li>Validation status (Quick / Publish)</li>
+<li>Export compatibility status (if an export target is selected)</li>
+<li>Dependency/license checks</li>
+<li>Missing metadata</li>
+<li>Quality/discoverability warnings</li>
+</ul>
+<p><strong>Gating policy defaults:</strong></p>
+<ul>
+<li><strong>Phase 6a:</strong> Errors block publish. Warnings allow publish with explicit confirmation.</li>
+<li><strong>Phase 6b (Workshop release channel):</strong> Critical metadata gaps can block release publish; <code>beta</code> can proceed with explicit override.</li>
+</ul>
+<h3 id="profile-playtest-advanced-mode"><a class="header" href="#profile-playtest-advanced-mode">Profile Playtest (Advanced Mode)</a></h3>
+<p>Profiling is deliberately not a primary toolbar button. It is available from:</p>
+<ul>
+<li><code>Test</code> dropdown → <strong>Profile Playtest</strong> (Advanced mode only)</li>
+<li>Advanced panel → <strong>Performance</strong> tab</li>
+</ul>
+<p><strong>Profile Playtest goals (Phase 6a):</strong></p>
+<ul>
+<li>Provide creator-actionable measurements, not an engine-internals dump</li>
+<li>Complement (not replace) the Complexity Meter with measured evidence</li>
+</ul>
+<p><strong>Measured outputs (summary-first):</strong></p>
+<ul>
+<li>Average and max sim tick time during playtest</li>
+<li>Top costly systems (grouped for creator readability)</li>
+<li>Trigger/module hotspots (by object ID/name where traceable)</li>
+<li>Entity count timeline</li>
+<li>Asset load/import spikes (Asset Studio profiling integration)</li>
+<li>Budget comparison (desktop default vs low-end target profile)</li>
+</ul>
+<p>The first view is a simple pass/warn/fail summary card with the top 3 hotspots and a few short recommendations. Detailed flame/trace views remain optional in Advanced mode.</p>
+<p><strong>Shared profiling summary interfaces (SDK + CLI/CI, Phase 6b parity):</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct PerformanceBudgetProfile {
+    pub name: String,          // "desktop_default", "low_end_2012"
+    pub avg_tick_us_budget: u64,
+    pub max_tick_us_budget: u64,
+}
+
+pub struct PlaytestPerfSummary {
+    pub avg_tick_us: u64,
+    pub max_tick_us: u64,
+    pub hotspots: Vec&lt;HotspotRef&gt;,
+}
+
+pub struct HotspotRef {
+    pub kind: String,          // system / trigger / module / asset_load
+    pub label: String,
+    pub object_id: Option&lt;StableContentId&gt;,
+}
+<span class="boring">}</span></code></pre>
+<h3 id="ui-preview-harness-cross-device-hud--tutorial-overlay-advanced-mode"><a class="header" href="#ui-preview-harness-cross-device-hud--tutorial-overlay-advanced-mode">UI Preview Harness (Cross-Device HUD + Tutorial Overlay, Advanced Mode)</a></h3>
+<p>To keep mobile/touch UX discoverable and maintainable (and to avoid “gesture folklore”), the SDK includes an <strong>Advanced-mode UI Preview Harness</strong> for testing gameplay HUD layouts and D065 tutorial overlays without launching a full match.</p>
+<p><strong>What it previews:</strong></p>
+<ul>
+<li>Desktop / Tablet / Phone layout profiles (<code>ScreenClass</code>) with safe-area simulation</li>
+<li>Handedness mirroring (left/right thumb-zone layouts)</li>
+<li>Touch HUD clusters (command rail, minimap + bookmark dock, build drawer/sidebar)</li>
+<li>D065 semantic tutorial prompts (<code>highlight_ui</code> aliases resolved to actual widgets)</li>
+<li>Controls Quick Reference overlay states (desktop + touch variants)</li>
+<li>Accessibility variants: large touch targets, reduced motion, high contrast</li>
+</ul>
+<p><strong>Design goals:</strong></p>
+<ul>
+<li>Validate UI anchor aliases and tutorial highlighting before shipping content</li>
+<li>Catch overlap/clipping issues (notches, safe areas, compact phone aspect ratios)</li>
+<li>Give modders and campaign creators a visual way to check tutorial steps and HUD hints</li>
+</ul>
+<p><strong>Scope boundary:</strong> This is a <strong>preview harness</strong>, not a second UI implementation. It renders the same <code>ic-ui</code> widgets/layout profiles used by the game and the same D065 prompt/anchor resolution model used at runtime.</p>
+<h3 id="simple-vs-advanced-mode"><a class="header" href="#simple-vs-advanced-mode">Simple vs Advanced Mode</a></h3>
+<p>Inspired by OFP’s Easy/Advanced toggle:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Feature</th><th>Simple Mode</th><th>Advanced Mode</th></tr>
+</thead>
+<tbody>
+<tr><td>Entity placement</td><td>✓</td><td>✓</td></tr>
+<tr><td>Faction/facing/health</td><td>✓</td><td>✓</td></tr>
+<tr><td>Basic triggers (win/lose/timer)</td><td>✓</td><td>✓</td></tr>
+<tr><td>Waypoints (move/patrol/guard)</td><td>✓</td><td>✓</td></tr>
+<tr><td>Modules</td><td>✓</td><td>✓</td></tr>
+<tr><td><code>Validate</code> (Quick preset)</td><td>✓</td><td>✓</td></tr>
+<tr><td>Publish Readiness screen</td><td>✓</td><td>✓</td></tr>
+<tr><td>UI Preview Harness (HUD/tutorial overlays)</td><td>—</td><td>✓</td></tr>
+<tr><td>Probability of Presence</td><td>—</td><td>✓</td></tr>
+<tr><td>Condition of Presence</td><td>—</td><td>✓</td></tr>
+<tr><td>Custom Lua conditions</td><td>—</td><td>✓</td></tr>
+<tr><td>Init scripts per entity</td><td>—</td><td>✓</td></tr>
+<tr><td>Countdown/Timeout timers</td><td>—</td><td>✓</td></tr>
+<tr><td>Min/Mid/Max randomization</td><td>—</td><td>✓</td></tr>
+<tr><td>Connection lines</td><td>—</td><td>✓</td></tr>
+<tr><td>Layer management</td><td>—</td><td>✓</td></tr>
+<tr><td>Campaign editor</td><td>—</td><td>✓</td></tr>
+<tr><td>Named regions</td><td>—</td><td>✓</td></tr>
+<tr><td>Variables panel</td><td>—</td><td>✓</td></tr>
+<tr><td>Inline Lua scripts on entities</td><td>—</td><td>✓</td></tr>
+<tr><td>External script files panel</td><td>—</td><td>✓</td></tr>
+<tr><td>Trigger folders &amp; flow graph</td><td>—</td><td>✓</td></tr>
+<tr><td>Media modules (basic)</td><td>✓</td><td>✓</td></tr>
+<tr><td>Video playback</td><td>✓</td><td>✓</td></tr>
+<tr><td>Music trigger / playlist</td><td>✓</td><td>✓</td></tr>
+<tr><td>Cinematic sequences</td><td>—</td><td>✓</td></tr>
+<tr><td>Ambient sound zones</td><td>—</td><td>✓</td></tr>
+<tr><td>Letterbox / cinematic mode</td><td>—</td><td>✓</td></tr>
+<tr><td>Lua Media API</td><td>—</td><td>✓</td></tr>
+<tr><td>Intermission screens</td><td>—</td><td>✓</td></tr>
+<tr><td>Dialogue editor</td><td>—</td><td>✓</td></tr>
+<tr><td>Campaign state dashboard</td><td>—</td><td>✓</td></tr>
+<tr><td>Multiplayer / co-op properties</td><td>—</td><td>✓</td></tr>
+<tr><td>Game mode templates</td><td>✓</td><td>✓</td></tr>
+<tr><td>Git status strip (read-only)</td><td>✓</td><td>✓</td></tr>
+<tr><td>Advanced validation presets</td><td>—</td><td>✓</td></tr>
+<tr><td>Profile Playtest</td><td>—</td><td>✓</td></tr>
+</tbody>
+</table>
+</div>
+<p>Simple mode covers 80% of what a casual scenario creator needs. Advanced mode exposes the full power. Same data format — a mission created in Simple mode can be opened in Advanced mode and extended.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../decisions/09f/D038/D038-triggers-waypoints.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../decisions/09f/D038/D038-campaign-editor.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../decisions/09f/D038/D038-triggers-waypoints.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../decisions/09f/D038/D038-campaign-editor.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../../mark-09e88c2c.min.js"></script>
+        <script src="../../../searcher-c2a407aa.js"></script>
+
+        <script src="../../../clipboard-1626706a.min.js"></script>
+        <script src="../../../highlight-abc7f01d.js"></script>
+        <script src="../../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

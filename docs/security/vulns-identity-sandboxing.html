@@ -1,0 +1,451 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Identity &amp; Module Isolation (V43–V52) - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/security/vulns-identity-sandboxing.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="vulnerability-43-wasm-network-allowlist--dns-rebinding--ssrf"><a class="header" href="#vulnerability-43-wasm-network-allowlist--dns-rebinding--ssrf">Vulnerability 43: WASM Network <code>AllowList</code> — DNS Rebinding &amp; SSRF</a></h2>
+<h3 id="the-problem"><a class="header" href="#the-problem">The Problem</a></h3>
+<p><strong>Severity: MEDIUM</strong></p>
+<p><code>NetworkAccess::AllowList(Vec&lt;String&gt;)</code> validates domain names at capability review time, not resolved IP addresses at request time. This enables DNS rebinding:</p>
+<ol>
+<li>
+<p><strong>Attack scenario:</strong> A mod declares <code>AllowList</code> containing <code>assets.my-cool-mod.com</code>. During Workshop capability review, the domain resolves to <code>203.0.113.50</code> (a legitimate CDN). After approval, the attacker changes the DNS record to resolve to <code>127.0.0.1</code>. Now the approved mod can send HTTP requests to <code>localhost</code> — accessing local development servers, databases, or other services running on the player’s machine.</p>
+</li>
+<li>
+<p><strong>LAN scanning:</strong> Rebinding to <code>192.168.1.x</code> allows the mod to probe the player’s local network, mapping services and potentially exfiltrating data via the approved domain’s callback URL.</p>
+</li>
+<li>
+<p><strong>Cloud metadata SSRF:</strong> On cloud-hosted game servers or relay instances, rebinding to <code>169.254.169.254</code> accesses the cloud provider’s metadata service — potentially exposing IAM credentials, instance identity, and other sensitive data.</p>
+</li>
+</ol>
+<h3 id="mitigation"><a class="header" href="#mitigation">Mitigation</a></h3>
+<p><strong>IP range blocking:</strong> After DNS resolution, reject requests where the resolved IP falls in:</p>
+<ul>
+<li><code>127.0.0.0/8</code> (loopback)</li>
+<li><code>10.0.0.0/8</code>, <code>172.16.0.0/12</code>, <code>192.168.0.0/16</code> (RFC 1918 private)</li>
+<li><code>169.254.0.0/16</code> (link-local, cloud metadata)</li>
+<li><code>::1</code>, <code>fc00::/7</code>, <code>fe80::/10</code> (IPv6 equivalents)</li>
+</ul>
+<p>This check runs on every request, not just at capability review time.</p>
+<p><strong>DNS pinning:</strong> Resolve <code>AllowList</code> domains once at mod load time. Cache the resolved IP and use it for all subsequent requests during the session. This prevents mid-session DNS changes from affecting the allowed IP.</p>
+<p><strong>Post-resolution validation:</strong> The request pipeline is: domain → DNS resolve → IP range check → connect. Never connect before validating the resolved IP. Log all WASM network requests (domain, resolved IP, response status) for moderation review.</p>
+<p><strong>Phase:</strong> WASM network hardening ships with Tier 3 WASM modding (Phase 4). IP range blocking is a Phase 4 exit criterion.</p>
+<h2 id="vulnerability-44-developer-mode-multiplayer-enforcement-gap"><a class="header" href="#vulnerability-44-developer-mode-multiplayer-enforcement-gap">Vulnerability 44: Developer Mode Multiplayer Enforcement Gap</a></h2>
+<h3 id="the-problem-1"><a class="header" href="#the-problem-1">The Problem</a></h3>
+<p><strong>Severity: LOW-MEDIUM</strong></p>
+<p><code>DeveloperMode</code> enables powerful cheats (instant build, free units, reveal map, unlimited power, invincibility, resource grants). The doc states “all players must agree to enable dev mode (prevents cheating)” but the enforcement mechanism is unspecified:</p>
+<ol>
+<li><strong>Consensus mechanism:</strong> How do players agree? Runtime vote? Lobby setting? What prevents one client from unilaterally enabling dev mode?</li>
+<li><strong>Order distinction:</strong> Dev mode operations are “special <code>PlayerOrder</code> variants” but it’s unclear whether the sim can distinguish dev orders from normal orders and reject them when dev mode is inactive.</li>
+<li><strong>Sim state:</strong> Is <code>DeveloperMode</code> part of the deterministic sim state? If it’s a client-side setting, different clients could disagree on whether dev mode is active — causing desyncs or enabling one player to cheat.</li>
+</ol>
+<h3 id="mitigation-1"><a class="header" href="#mitigation-1">Mitigation</a></h3>
+<p><strong>Dev mode as sim state:</strong> <code>DeveloperMode</code> is a Bevy <code>Resource</code> in <code>ic-sim</code>, part of the deterministic sim state. All clients agree on whether dev mode is active because it’s replicated through the normal sim state mechanism.</p>
+<p><strong>Lobby-only toggle:</strong> Dev mode is enabled exclusively via lobby settings before game start. It cannot be toggled mid-game in multiplayer. Toggling requires unanimous lobby consent — any player can veto. In single-player and replays, dev mode can be toggled freely.</p>
+<p><strong>Distinct order category:</strong> Dev mode operations use a <code>PlayerOrder::DevCommand(DevAction)</code> variant that is categorically distinct from gameplay orders. The order validation system (V2/D012) rejects <code>DevCommand</code> orders if the sim’s <code>DeveloperMode</code> resource is not active. This is checked in the order validation system, not at the UI layer.</p>
+<p><strong>Ranked exclusion:</strong> Games with dev mode enabled cannot be submitted for ranked matchmaking (D055). Replays record the dev mode flag so spectators and tournament officials can see if cheats were used.</p>
+<p><strong>Dev mode toggle recording (F18 closure):</strong> Dev mode toggles mid-game — possible in single-player — must be recorded as <code>PlayerOrder::DevCommand(DevAction::ToggleDevMode)</code> in the replay order stream, not just a per-match header flag. If dev mode is toggled mid-game, the per-match flag doesn’t capture the toggling pattern. The replay viewer displays a visible indicator (e.g., “DEV” badge) whenever dev mode is active during playback, so viewers understand why instant builds or free units appear.</p>
+<p><strong>Phase:</strong> Dev mode enforcement ships with multiplayer (Phase 5). Ranked exclusion is automatic via the ranked matchmaking system.</p>
+<h2 id="vulnerability-45-background-replay-writer-silent-frame-loss"><a class="header" href="#vulnerability-45-background-replay-writer-silent-frame-loss">Vulnerability 45: Background Replay Writer Silent Frame Loss</a></h2>
+<h3 id="the-problem-2"><a class="header" href="#the-problem-2">The Problem</a></h3>
+<p><strong>Severity: LOW</strong></p>
+<p><code>BackgroundReplayWriter::record_tick()</code> uses <code>let _ = self.queue.try_send(frame)</code> — the send result is explicitly discarded with <code>let _ =</code>. The code comment states frames are “still in memory (not dropped)” but this is incorrect: <code>crossbeam::channel::Sender::try_send()</code> on a bounded channel returns <code>Err(TrySendError::Full(frame))</code> when the channel is full, meaning the frame IS dropped.</p>
+<p>If the background writer thread falls behind (disk I/O spike, system memory pressure, antivirus scan), frames are silently lost. The consequences:</p>
+<ol>
+<li>
+<p><strong>Broken signature chain:</strong> The Ed25519 per-order signing (V4) creates a hash chain where each frame’s signature depends on the previous frame’s hash. A gap in the frame sequence invalidates the chain — the replay appears complete but fails cryptographic verification.</p>
+</li>
+<li>
+<p><strong>Silent data loss:</strong> No log message, no metric, no metadata flag indicates frames were lost. The replay file looks valid but is missing data.</p>
+</li>
+<li>
+<p><strong>Replay verification failure:</strong> A replay with lost frames cannot be used for ranked match verification, tournament archival, or desync diagnosis — precisely the scenarios where replay integrity matters most.</p>
+</li>
+</ol>
+<h3 id="mitigation-2"><a class="header" href="#mitigation-2">Mitigation</a></h3>
+<p><strong>Frame loss tracking:</strong> <code>BackgroundReplayWriter</code> maintains a <code>frames_lost: AtomicU32</code> counter. When <code>try_send</code> fails, the counter increments. The final replay header records the total frames lost. Playback tools display a warning: “This replay has N missing frames.”</p>
+<p><strong><code>send_timeout</code> instead of <code>try_send</code>:</strong> Replace <code>try_send</code> with <code>send_timeout(frame, Duration::from_millis(5))</code>. This gives the writer a brief window to drain the channel during I/O spikes without blocking the sim thread for perceptible time. 5ms is well within a 33ms tick budget.</p>
+<p><strong>Incomplete replay marking:</strong> If any frames are lost, the replay header is marked <code>incomplete</code>. Incomplete replays are playable (the sim handles frame gaps by using the last known state) but cannot be submitted for ranked verification or used as evidence in anti-cheat disputes.</p>
+<p><strong>Signature chain gap handling:</strong> The hash chain must account for frame gaps explicitly. When a frame is lost, the next frame’s signature includes the gap (e.g., <code>hash(prev_hash, gap_marker, frame_index, frame_data)</code>). Verifiers reconstruct the chain by recognizing gap markers instead of treating them as tampering.</p>
+<p><strong>Phase:</strong> Replay writer hardening ships with replay system (Phase 2). Frame loss tracking is a Phase 2 exit criterion.</p>
+<h2 id="vulnerability-46-player-display-name-unicode-confusable-impersonation"><a class="header" href="#vulnerability-46-player-display-name-unicode-confusable-impersonation">Vulnerability 46: Player Display Name Unicode Confusable Impersonation</a></h2>
+<h3 id="the-problem-3"><a class="header" href="#the-problem-3">The Problem</a></h3>
+<p><strong>Severity: HIGH</strong></p>
+<p>Players can create display names using Unicode homoglyphs (e.g., Cyrillic “а” U+0430 vs Latin “a” U+0061) to visually impersonate other players, admins, or system accounts. This enables social engineering in lobbies, chat, and tournament contexts. Combined with RTL override characters (U+202E), names can appear reversed or misleadingly reordered.</p>
+<h3 id="mitigation-3"><a class="header" href="#mitigation-3">Mitigation</a></h3>
+<p><strong>Confusable detection:</strong> All display names are checked against the Unicode Confusable Mappings (UTS #39 skeleton algorithm). Two names that produce the same skeleton are considered confusable. The second registration is rejected or flagged.</p>
+<p><strong>Mixed-script restriction:</strong> Display names must use characters from a single Unicode script family (Latin, Cyrillic, CJK, Arabic, etc.) plus Common/Inherited. Mixed-script names (e.g., Latin + Cyrillic) are rejected unless they match a curated allow-list of legitimate mixed-script patterns.</p>
+<p><strong>Dangerous codepoint stripping:</strong> The following categories are stripped from display names before storage:</p>
+<ul>
+<li>BiDi override characters (U+202A–U+202E, U+2066–U+2069)</li>
+<li>Zero-width joiners/non-joiners outside approved script contexts</li>
+<li>Tag characters (U+E0001–U+E007F)</li>
+<li>Invisible formatting characters (U+200B–U+200F, U+FEFF)</li>
+</ul>
+<p><strong>Visual similarity scoring:</strong> When a player joins a lobby, their display name is compared against all current participants. If any pair of names has a confusable skeleton match, a warning icon appears next to the newer name and the lobby host is notified.</p>
+<p><strong>Cross-reference:</strong> RTL/BiDi text sanitization rules in D059 (09g-interaction.md) apply to display names. The sanitization pipeline from the RTL/BiDi QA corpus (rtl-bidi-qa-corpus.md) categories E and F provides regression vectors.</p>
+<p><strong>Phase:</strong> Display name validation ships with account/identity system (Phase 3). UTS #39 skeleton check is a Phase 3 exit criterion.</p>
+<h2 id="vulnerability-47-player-identity-key-rotation-absence"><a class="header" href="#vulnerability-47-player-identity-key-rotation-absence">Vulnerability 47: Player Identity Key Rotation Absence</a></h2>
+<h3 id="the-problem-4"><a class="header" href="#the-problem-4">The Problem</a></h3>
+<p><strong>Severity: HIGH</strong></p>
+<p>The Ed25519 identity system (BIP-39 mnemonic + SCR signed credentials) has no mechanism for key rotation. If a player’s private key is compromised, there is no way to migrate their identity — match history, ranked standing, friend relationships — to a new key pair. The player must create an entirely new identity, losing all progression.</p>
+<h3 id="mitigation-4"><a class="header" href="#mitigation-4">Mitigation</a></h3>
+<p><strong>Rotation protocol:</strong> A player can generate a new Ed25519 key pair and create a <code>KeyRotation</code> message signed by both the old and new private keys. This message is broadcast to relay servers and recorded in a key-history chain.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct KeyRotation {
+    pub old_public_key: Ed25519PublicKey,
+    pub new_public_key: Ed25519PublicKey,
+    pub rotation_timestamp: i64,
+    pub reason: KeyRotationReason, // compromised / scheduled / device_change
+    pub old_key_signature: Ed25519Signature, // signs (new_pubkey, timestamp, reason)
+    pub new_key_signature: Ed25519Signature, // signs (old_pubkey, timestamp, reason)
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Grace period:</strong> After rotation, the old key remains valid for authentication for 72 hours (configurable by server policy). This allows in-progress sessions to complete and gives federated servers time to propagate the rotation.</p>
+<p><strong>Revocation list:</strong> Relay servers maintain a revocation list of old public keys. After the grace period, authentication attempts with revoked keys are rejected with a message directing the player to recover via their BIP-39 mnemonic.</p>
+<p><strong>Emergency revocation:</strong> If a player suspects compromise, they can issue an emergency rotation using their BIP-39 mnemonic to derive a recovery key. Emergency rotations take effect immediately with no grace period.</p>
+<p><strong>Rotation race condition defense (F3 closure):</strong> If the old key is compromised, both the attacker and legitimate user can simultaneously issue valid <code>KeyRotation</code> messages (both signed by the old key + their own new key). This TOCTOU window requires explicit conflict resolution:</p>
+<ol>
+<li><strong>Monotonic <code>rotation_sequence_number</code>:</strong> Every <code>KeyRotation</code> includes a monotonically increasing sequence number. Community servers accept only the <strong>first valid rotation</strong> for a given sequence number. Subsequent conflicting rotations for the same old key are rejected.</li>
+<li><strong>24-hour cooldown:</strong> Non-emergency rotations have a 24-hour cooldown between operations for the same identity key. This limits the attacker’s ability to race the legitimate user.</li>
+<li><strong>Emergency rotation always wins:</strong> BIP-39 mnemonic-derived emergency rotations bypass the cooldown and take priority over standard rotations. If both a standard and emergency rotation arrive, the emergency rotation wins regardless of arrival order.</li>
+<li><strong>Conflict resolution rule:</strong> “First valid rotation seen by the community authority wins; subsequent conflicting rotations for the same old key are rejected.” If a race is detected (two rotations within the same cooldown window), the identity is frozen and requires BIP-39 emergency recovery.</li>
+</ol>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct KeyRotation {
+    pub old_public_key: Ed25519PublicKey,
+    pub new_public_key: Ed25519PublicKey,
+    pub rotation_timestamp: i64,
+    pub rotation_sequence_number: u64,    // monotonically increasing
+    pub reason: KeyRotationReason,
+    pub old_key_signature: Ed25519Signature,
+    pub new_key_signature: Ed25519Signature,
+}
+
+pub enum KeyRotationReason {
+    Compromised,
+    Scheduled,
+    DeviceChange,
+    Emergency { mnemonic_proof: BIP39Proof },  // bypasses cooldown
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Phase:</strong> Key rotation protocol ships with ranked matchmaking (Phase 5). Emergency revocation is a Phase 5 exit criterion.</p>
+<h2 id="vulnerability-48-community-server-key-revocation-gap"><a class="header" href="#vulnerability-48-community-server-key-revocation-gap">Vulnerability 48: Community Server Key Revocation Gap</a></h2>
+<h3 id="the-problem-5"><a class="header" href="#the-problem-5">The Problem</a></h3>
+<p><strong>Severity: HIGH</strong></p>
+<p>Community servers authenticate via Ed25519 key pairs (D060), but there is no revocation mechanism. A compromised community server key allows an attacker to impersonate the server, intercept player sessions, and potentially inject malicious match results or replay data until the key naturally expires (if it ever does).</p>
+<h3 id="mitigation-5"><a class="header" href="#mitigation-5">Mitigation</a></h3>
+<p><strong>Server key certificate chain:</strong> Community servers obtain signed certificates from a federation authority (relay master server or community trust anchor). Certificates have a bounded validity period (default: 90 days, max: 1 year).</p>
+<p><strong>Certificate revocation list (CRL):</strong> The federation authority maintains a CRL distributed via a signed, timestamped manifest. Clients check the CRL before establishing sessions with community servers. CRL checks use a cached-with-TTL model (TTL: 1 hour) to avoid blocking on every connection.</p>
+<p><strong>OCSP-style fast revocation:</strong> For urgent revocations, a lightweight online check endpoint returns revocation status for a single server key. Clients try the fast check first (50ms timeout) and fall back to the cached CRL.</p>
+<p><strong>Operator-initiated revocation:</strong> Server operators can revoke their own key via a signed revocation request to the federation authority. This is useful for planned key rotation or suspected compromise.</p>
+<p><strong>Unknown-status policy (F4 closure):</strong> When both CRL cache is expired AND OCSP fast-check is unreachable, the client must choose between soft-fail (proceed despite unknown revocation status) and hard-fail (block connection). Neither extreme is acceptable:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mode</th><th>Policy</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Ranked matches</strong></td><td>Hard-fail immediately</td><td>Competitive integrity &gt; availability. A revoked server must not host ranked games.</td></tr>
+<tr><td><strong>Unranked matches</strong></td><td>Hard-fail with 24-hour grace period</td><td>Accept the cached CRL for an additional 24 hours after TTL expiry, then hard-fail. Gives operators time to fix CRL distribution. Display warning: “Server certificate status could not be verified.”</td></tr>
+<tr><td><strong>LAN / private</strong></td><td>Soft-fail with warning</td><td>Local trust, no revocation infrastructure expected. Always display warning.</td></tr>
+</tbody>
+</table>
+</div>
+<p>This mirrors the TLS revocation world’s pragmatic compromise: strict for high-stakes contexts, lenient for casual contexts, always transparent about the status. The 24-hour grace period bounds the vulnerability window while preventing CRL infrastructure outages from becoming denial-of-service against all community server connections.</p>
+<p><strong>Phase:</strong> Community server key revocation ships with community server support (Phase 7). CRL distribution is a Phase 7 exit criterion. Unknown-status policy is documented in the Competitive Integrity Summary table.</p>
+<h2 id="vulnerability-49-workshop-package-author-signing-absence"><a class="header" href="#vulnerability-49-workshop-package-author-signing-absence">Vulnerability 49: Workshop Package Author Signing Absence</a></h2>
+<h3 id="the-problem-6"><a class="header" href="#the-problem-6">The Problem</a></h3>
+<p><strong>Severity: HIGH</strong></p>
+<p>Workshop packages (D030) use SHA-256 content digests and Ed25519 metadata signatures, but these signatures are applied by the Workshop registry infrastructure, not by the package author. This means the registry is a single point of trust — a compromised registry can serve modified packages that pass all verification checks. Authors cannot independently prove package authenticity.</p>
+<h3 id="mitigation-6"><a class="header" href="#mitigation-6">Mitigation</a></h3>
+<p><strong>Author-level Ed25519 signing:</strong> Package authors sign their package manifest with their personal Ed25519 key before uploading. The registry stores the author signature alongside its own infrastructure signature, creating a two-layer trust model.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct PackageManifest {
+    pub package_id: WorkshopPackageId,
+    pub version: SemVer,
+    pub content_digest: Sha256Digest,
+    pub author_public_key: Ed25519PublicKey,
+    pub author_signature: Ed25519Signature,     // author signs (package_id, version, content_digest)
+    pub registry_signature: Ed25519Signature,   // registry counter-signs the above
+    pub registry_timestamp: i64,
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Verification chain:</strong> Clients verify both signatures. If the author signature is invalid, the package is rejected regardless of registry signature validity. This ensures even a compromised registry cannot forge author intent.</p>
+<p><strong>Key pinning:</strong> After a user installs a package, the author’s public key is pinned. Future updates must be signed by the same key (or a rotated key via V47’s rotation protocol). Key changes without proper rotation trigger a warning.</p>
+<p><strong>Phase:</strong> Author signing ships with Workshop package verification (M8/M9). Author signature verification is an M8 exit criterion; key pinning is M9.</p>
+<h2 id="vulnerability-50-wasm-inter-module-communication-isolation"><a class="header" href="#vulnerability-50-wasm-inter-module-communication-isolation">Vulnerability 50: WASM Inter-Module Communication Isolation</a></h2>
+<h3 id="the-problem-7"><a class="header" href="#the-problem-7">The Problem</a></h3>
+<p><strong>Severity: MEDIUM</strong></p>
+<p>The tiered modding system (Invariant #3) sandboxes individual WASM modules, but the design does not specify isolation boundaries for inter-module communication. A malicious WASM mod could probe or manipulate another mod’s state through shared host-provided resources (e.g., shared ECS queries, event buses, or resource pools).</p>
+<h3 id="mitigation-7"><a class="header" href="#mitigation-7">Mitigation</a></h3>
+<p><strong>Module namespace isolation:</strong> Each WASM module operates in its own namespace. Host-provided imports (<code>ic_query_*</code>, <code>ic_spawn_*</code>, <code>ic_format_*</code>) are scoped to the calling module’s declared capabilities. A module cannot query entities or components registered by another module unless the target module explicitly exports them.</p>
+<p><strong>Capability-gated cross-module calls:</strong> Cross-module communication is only possible through a host-mediated message-passing API. Modules declare <code>exports</code> and <code>imports</code> in their manifest. The host validates that import/export pairs match before linking.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// In mod manifest (mod.yaml)
+// exports: ["custom_unit_stats"]
+// imports: ["base_game.terrain_query"]
+<span class="boring">}</span></code></pre>
+<p><strong>Resource pool isolation:</strong> Each module gets its own memory allocation pool. Host-imposed limits (memory, CPU ticks, entity count) are per-module, not shared. A module exhausting its allocation cannot starve other modules.</p>
+<p><strong>Audit logging:</strong> All cross-module calls are logged with caller/callee module IDs, capability tokens, and call arguments. Suspicious patterns (high-frequency probing, unauthorized access attempts) trigger rate limiting and are reported to the anti-cheat system.</p>
+<p><strong>Phase:</strong> WASM inter-module isolation ships with WASM modding tier (Phase 6). Namespace isolation is a Phase 6 exit criterion.</p>
+<h2 id="vulnerability-51-workshop-package-quarantine-for-popular-packages"><a class="header" href="#vulnerability-51-workshop-package-quarantine-for-popular-packages">Vulnerability 51: Workshop Package Quarantine for Popular Packages</a></h2>
+<h3 id="the-problem-8"><a class="header" href="#the-problem-8">The Problem</a></h3>
+<p><strong>Severity: MEDIUM</strong></p>
+<p>Popular Workshop packages (high download count, many dependents) are high-value targets for supply-chain attacks. If an author’s key is compromised or an author turns malicious, a single update can affect thousands of players. The current design has no mechanism to delay or review updates to widely-deployed packages.</p>
+<h3 id="mitigation-8"><a class="header" href="#mitigation-8">Mitigation</a></h3>
+<p><strong>Popularity threshold quarantine:</strong> Packages exceeding a subscriber threshold (configurable, default: 1000 subscribers) enter a quarantine zone for updates. New versions are held for a review period (default: 24 hours) before automatic distribution.</p>
+<p><strong>Diff-based review signal:</strong> During quarantine, the registry computes a structural diff between the old and new version. Large changes (&gt;50% of files modified, new WASM modules added, new capabilities requested) extend the quarantine period and flag the update for manual review by Workshop moderators.</p>
+<p><strong>Rollback capability:</strong> If a quarantined update is found to be malicious or broken, the registry can issue a rollback directive. Clients that already installed the update receive a forced downgrade notification.</p>
+<p><strong>Author notification:</strong> Authors of popular packages are notified that their updates are subject to quarantine. The quarantine period can be reduced (to a minimum of 1 hour) for authors with a strong track record (no prior incidents, account age &gt;6 months, 2FA enabled).</p>
+<p><strong>Cross-reference:</strong> WREG-006 (star-jacking / reputation gaming) — artificially inflating subscriber counts to avoid or trigger quarantine thresholds is itself a sanctionable offense.</p>
+<p><strong>Phase:</strong> Package quarantine ships with Workshop moderation tools (M9). Quarantine pipeline is an M9 exit criterion.</p>
+<h2 id="vulnerability-52-star-jacking-and-workshop-reputation-gaming-wreg-006"><a class="header" href="#vulnerability-52-star-jacking-and-workshop-reputation-gaming-wreg-006">Vulnerability 52: Star-Jacking and Workshop Reputation Gaming (WREG-006)</a></h2>
+<h3 id="the-problem-9"><a class="header" href="#the-problem-9">The Problem</a></h3>
+<p><strong>Severity: MEDIUM</strong></p>
+<p>Workshop reputation systems (ratings, subscriber counts, featured placement) are vulnerable to manipulation. Techniques include: sock-puppet accounts inflating ratings, fork-bombing (cloning popular packages with minor changes to dilute search results), and subscriber count inflation via automated installs from throwaway accounts.</p>
+<h3 id="mitigation-9"><a class="header" href="#mitigation-9">Mitigation</a></h3>
+<p><strong>Rate limiting:</strong> Accounts created within 24 hours cannot rate or subscribe to packages. Accounts must have at least 1 hour of verified gameplay before Workshop interactions are counted.</p>
+<p><strong>Anomaly detection:</strong> Statistical analysis of rating/subscription patterns. Sudden spikes (&gt;10x normal rate) trigger a hold on the package’s reputation score pending review. Coordinated actions from accounts with correlated metadata (IP ranges, creation timestamps, user-agent patterns) are flagged.</p>
+<p><strong>Fork detection:</strong> Package uploads are compared against existing packages using structural similarity (file tree diff, asset hash overlap). Packages with &gt;80% overlap with an existing package are flagged as potential forks and require author justification.</p>
+<p><strong>Reputation decay:</strong> Inactive accounts’ ratings decay over time (weight halving every 6 months). This prevents abandoned sock-puppet networks from permanently inflating scores.</p>
+<p><strong>Phase:</strong> Reputation gaming defenses ship with Workshop moderation tools (M9). Anomaly detection is an M9 exit criterion.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../security/vulns-infrastructure.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../security/vulns-edge-cases-infra.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../security/vulns-infrastructure.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../security/vulns-edge-cases-infra.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,420 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>API Patterns &amp; Gap Analysis - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/architecture/api-misuse-patterns.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h3 id="8-campaign-graph-ic-sim--d021"><a class="header" href="#8-campaign-graph-ic-sim--d021">8. Campaign Graph (<code>ic-sim</code> / D021)</a></h3>
+<p><strong>Surface:</strong> <code>CampaignGraph</code>, <code>MissionExecution&lt;S&gt;</code>, roster carryover, story flags.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>Misuse Vector</th><th>Origin</th><th>Type-System Defense</th><th>Test Requirement</th></tr>
+</thead>
+<tbody>
+<tr><td>C1</td><td>Complete a mission that is still loading (<code>MissionLoading</code> → <code>MissionCompleted</code>)</td><td>caller</td><td>Typestate: <code>MissionExecution&lt;MissionLoading&gt;</code> has no <code>complete()</code> method. Only <code>MissionExecution&lt;MissionActive&gt;</code> does. Transition consumes <code>self</code>.</td><td>Compile-time enforcement</td></tr>
+<tr><td>C2</td><td>Construct a <code>CampaignGraph</code> with cycles (mission A → B → A)</td><td>caller/mod</td><td>Validated construction: <code>CampaignGraph::new()</code> validates the DAG property. <code>_private: ()</code> prevents bypass via struct literal.</td><td>T1: cyclic graph → <code>CampaignGraphError::Cycle</code></td></tr>
+<tr><td>C3</td><td>Transition to a <code>MissionId</code> that doesn’t exist in the graph</td><td>caller/mod</td><td><code>MissionExecution&lt;MissionCompleted&gt;::transition()</code> takes an <code>OutcomeName</code> and looks up the next mission in the validated <code>CampaignGraph</code>. Invalid outcomes return <code>CampaignTransitionError::NoSuchOutcome</code>.</td><td>T1: dangling outcome → error</td></tr>
+<tr><td>C4</td><td>Roster carryover with fabricated unit stats (inflated health/veterancy)</td><td>mod/adversary</td><td>Roster is extracted from the sim snapshot at mission end — not user-supplied. <code>roster_extract()</code> reads from <code>Verified&lt;SimSnapshot&gt;</code>. Stats come from the actual sim state, not from save data the user can edit.</td><td>T2: roster extraction from snapshot → matches actual unit state</td></tr>
+<tr><td>C5</td><td>Story flag name collision between different campaign mods</td><td>mod</td><td>Story flags are namespaced by <code>CampaignId</code>. Flag access API requires <code>(CampaignId, FlagName)</code>. <code>FlagName</code> is a validated newtype. Cross-campaign flag access is impossible without the correct <code>CampaignId</code>.</td><td>T2: flag set in campaign A → not visible in campaign B</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h3 id="9-console-commands-ic-ui--d058"><a class="header" href="#9-console-commands-ic-ui--d058">9. Console Commands (<code>ic-ui</code> / D058)</a></h3>
+<p><strong>Surface:</strong> Command tree, cvar system, <code>BoundedCvar&lt;T&gt;</code>, permission tiers, <code>DevModeFlag</code>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>Misuse Vector</th><th>Origin</th><th>Type-System Defense</th><th>Test Requirement</th></tr>
+</thead>
+<tbody>
+<tr><td>X1</td><td>Non-admin player executes admin-only command</td><td>network/adversary</td><td>Each command node is tagged with a <code>PermissionTier</code> enum (<code>Player</code>, <code>Admin</code>, <code>Dev</code>). Command execution checks <code>caller.permission &gt;= command.required_tier</code>. The comparison is on the enum, not a raw integer — no off-by-one privilege escalation.</td><td>T1: non-admin → admin command → permission error</td></tr>
+<tr><td>X2</td><td>Set a <code>BoundedCvar</code> to out-of-range value via console</td><td>caller</td><td><code>BoundedCvar::set()</code> clamps to <code>[min, max]</code>. The cvar cannot represent an out-of-range value — it’s structurally impossible after construction. <code>_private: ()</code> prevents direct field assignment.</td><td>T1: set cvar to extreme value → clamped to nearest bound</td></tr>
+<tr><td>X3</td><td>Command injection via chat-crafted <code>/</code> prefix in multiplayer</td><td>adversary</td><td>Chat messages beginning with <code>/</code> are parsed through the command tree. Unknown commands return <code>CommandError::NotFound</code> — they are not echoed to chat. The Brigadier-style parse tree has no string interpolation or eval.</td><td>T2: malformed command string → clean error; no eval</td></tr>
+<tr><td>X4</td><td>Execute dev command during ranked game without flagging</td><td>caller</td><td>Any command tagged <code>DEV_ONLY</code> sets <code>DevModeFlag</code> on the sim state. <code>DevModeFlag</code> is checked by the ranking system — flagged games are excluded from ranked standings. The flag is write-once-per-session (cannot be unset).</td><td>T2: dev command in ranked → replay flagged; no leaderboard entry</td></tr>
+<tr><td>X5</td><td>Flood commands to overwhelm the command parser</td><td>adversary</td><td>Command processing is rate-limited via the same <code>OrderBudget</code> mechanism as orders. Excess commands are dropped with <code>CommandRejection::RateLimitExceeded</code>.</td><td>T2: 1000 commands/tick → excess dropped; rate recovers</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h3 id="10-chat--communication-system-d059"><a class="header" href="#10-chat--communication-system-d059">10. Chat &amp; Communication System (D059)</a></h3>
+<p><strong>Surface:</strong> <code>ChatMessage&lt;S&gt;</code> scope-branded messages, ping system, chat wheel, minimap drawing.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>Misuse Vector</th><th>Origin</th><th>Type-System Defense</th><th>Test Requirement</th></tr>
+</thead>
+<tbody>
+<tr><td>M1</td><td>Team chat message accidentally broadcast to all players</td><td>caller</td><td><code>ChatMessage&lt;TeamScope&gt;</code> and <code>ChatMessage&lt;AllScope&gt;</code> are distinct types. The team chat handler accepts only <code>ChatMessage&lt;TeamScope&gt;</code>. The routing function for team chat is physically separate from all-chat routing. No implicit <code>From&lt;TeamScope&gt;</code> → <code>AllScope</code> conversion.</td><td>T1: team message → only team members receive; T2: integration test</td></tr>
+<tr><td>M2</td><td>RTL/BiDi override characters injected in chat to disguise message content</td><td>adversary</td><td><code>SanitizedString</code> replaces <code>String</code> for all user-facing text. Construction requires passing through <code>sanitize_bidi()</code>, which strips/neutralizes BiDi override codepoints per UAX #9. The inner <code>String</code> is private.</td><td>T3: BiDi QA corpus regression suite</td></tr>
+<tr><td>M3</td><td>Display name impersonation via Unicode confusables (Cyrillic ‘а’ vs Latin ‘a’)</td><td>adversary</td><td>Display names are validated via UTS #39 confusable check at registration. <code>DisplayName</code> is a validated newtype — construction runs confusable detection. Existing names are checked for collision with the new name’s skeleton.</td><td>T3: confusable corpus → all impersonation attempts blocked</td></tr>
+<tr><td>M4</td><td>Ping spam (hundreds of pings per second to obscure minimap)</td><td>adversary</td><td>Ping system uses <code>OrderBudget</code>-style rate limiting. Excess pings are silently dropped. Ping rate limit is lower than order rate limit (configurable, default: 5/second).</td><td>T2: 100 pings/second → excess dropped; rate recovers</td></tr>
+<tr><td>M5</td><td>Minimap drawing exceeds size limit (draw thousands of points)</td><td>adversary</td><td>Drawing commands are bounded (<code>BoundedVec&lt;DrawPoint, MAX_DRAW_POINTS&gt;</code>). Excess points are truncated. Drawing state is cleared each tick.</td><td>T2: oversized draw command → truncated to limit</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h3 id="11-double-buffered-state"><a class="header" href="#11-double-buffered-state">11. Double-Buffered State</a></h3>
+<p><strong>Surface:</strong> <code>DoubleBuffered&lt;T&gt;</code> — used for fog visibility, influence maps, weather terrain effects, global condition modifiers.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>Misuse Vector</th><th>Origin</th><th>Type-System Defense</th><th>Test Requirement</th></tr>
+</thead>
+<tbody>
+<tr><td>B1</td><td>Reading from the write buffer during a tick (seeing partial state)</td><td>caller</td><td><code>DoubleBuffered::read()</code> returns <code>&amp;T</code> of the read buffer. <code>DoubleBuffered::write()</code> returns <code>&amp;mut T</code> of the write buffer. Borrow checker prevents aliasing. Additionally, only the designated writer system calls <code>write()</code> — enforced by Bevy system parameter constraints (the writer system takes <code>ResMut&lt;DoubleBuffered&lt;T&gt;&gt;</code>, readers take <code>Res&lt;DoubleBuffered&lt;T&gt;&gt;</code>).</td><td>T2: determinism test — two sims with same input produce identical fog state</td></tr>
+<tr><td>B2</td><td>Forgetting to call <code>swap()</code> at tick boundary (readers see stale data)</td><td>caller</td><td><code>swap()</code> is called in <code>Simulation::apply_tick()</code> at a fixed point (before system pipeline). This is a single call site, not distributed across systems. Integration tests verify fog state advances per tick.</td><td>T2: fog update → next tick readers see updated visibility</td></tr>
+<tr><td>B3</td><td>Calling <code>swap()</code> multiple times per tick (can corrupt state)</td><td>caller</td><td><code>swap()</code> is called exactly once in <code>apply_tick()</code>. Debug assertion tracks swap count per tick. Multiple swaps in a single tick triggers <code>debug_assert!(self.swap_count_this_tick == 0)</code>.</td><td>T1: debug assertion catches double-swap in test</td></tr>
+<tr><td>B4</td><td>Writer system mutates the read buffer directly (bypassing double-buffered write)</td><td>caller</td><td>The read buffer’s type is accessed via <code>read()</code> → <code>&amp;T</code> (immutable). Without <code>unsafe</code>, the writer cannot obtain <code>&amp;mut</code> to the read buffer. Rust’s borrow system enforces this structurally.</td><td>Compile-time enforcement</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h3 id="12-unittag--entity-identity"><a class="header" href="#12-unittag--entity-identity">12. UnitTag &amp; Entity Identity</a></h3>
+<p><strong>Surface:</strong> <code>UnitTag { index: u16, generation: u16 }</code>, <code>UnitPool</code> resource, <code>UnitTag ↔ Entity</code> mapping.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>Misuse Vector</th><th>Origin</th><th>Type-System Defense</th><th>Test Requirement</th></tr>
+</thead>
+<tbody>
+<tr><td>U1</td><td>Stale <code>UnitTag</code> used after unit death (use-after-free analog)</td><td>caller/mod/network</td><td><code>UnitPool::resolve(tag)</code> checks generation. If the slot has been recycled (new unit with higher generation), returns <code>None</code>. Callers handle <code>None</code> explicitly (order validation rejects stale targets).</td><td>T1: stale UnitTag → resolution returns None; T2: attack order on dead unit → OrderRejection</td></tr>
+<tr><td>U2</td><td><code>UnitTag</code> Index overflow — more than 65,535 units</td><td>caller</td><td><code>UnitPool</code> size is bounded by game module config (RA1: 2048). Allocation beyond capacity returns <code>UnitPoolError::PoolExhausted</code>. The pool size is checked at game start — misconfig is caught early.</td><td>T2: pool exhaustion → clean error; T3: fuzz with adversarial spawn rates</td></tr>
+<tr><td>U3</td><td>Generation wraparound — generation <code>u16</code> overflows after 65,535 recycles of same slot</td><td>caller</td><td>At 30 tps with frequent unit deaths, a single slot recycling every 2 seconds wraps in ~36 hours. In practice, generation overflow is unlikely but handled: <code>UnitPool</code> detects wraparound and retires the slot permanently (marks it unusable).</td><td>T4: synthetic stress test — force 65,535 recycles on one slot → slot retired</td></tr>
+<tr><td>U4</td><td>Lua/WASM script constructs a <code>UnitTag</code> from raw integers</td><td>mod</td><td>Host API returns <code>UnitTag</code> values as opaque handles. Lua represents them as userdata (not plain numbers). WASM receives them as handles through the ABI. Neither can construct arbitrary <code>UnitTag</code> values — they can only use values the host gave them.</td><td>T3: script forges tag value → host API rejects with ownership error</td></tr>
+<tr><td>U5</td><td>Serialized <code>UnitTag</code> in replay or network message doesn’t match any live entity</td><td>network</td><td><code>UnitPool::resolve()</code> returns <code>None</code> for unknown tags. Order execution handles <code>None</code> gracefully (order is silently dropped or rejected depending on context). No panic path.</td><td>T2: replay with stale tags → orders rejected gracefully</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h3 id="13-configuration-loading-tomlyaml"><a class="header" href="#13-configuration-loading-tomlyaml">13. Configuration Loading (TOML/YAML)</a></h3>
+<p><strong>Surface:</strong> <code>config.toml</code>, <code>server_config.toml</code>, <code>settings.toml</code>, mod YAML, <code>serde</code> deserialization.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>Misuse Vector</th><th>Origin</th><th>Type-System Defense</th><th>Test Requirement</th></tr>
+</thead>
+<tbody>
+<tr><td>F1</td><td>YAML rule with negative health or zero-cost unit creating degenerate gameplay</td><td>mod</td><td>Schema validation runs at load time. <code>Health.max</code> is validated as <code>&gt; 0</code>. <code>Buildable.cost</code> is validated as <code>&gt;= 0</code>. Validation errors include the YAML file path, line number, and field name.</td><td>T1: negative health YAML → schema error with location</td></tr>
+<tr><td>F2</td><td>YAML inheritance creates infinite loop (A inherits B inherits A)</td><td>mod</td><td>Inheritance resolver detects cycles via visited-set tracking. <code>RuleLoadError::CircularInheritance { chain }</code> includes the human-readable cycle path.</td><td>T1: circular inheritance → error with chain; T3: fuzz random inheritance trees</td></tr>
+<tr><td>F3</td><td>TOML config with unknown keys (typos that silently do nothing)</td><td>caller</td><td><code>serde</code>’s <code>#[serde(deny_unknown_fields)]</code> on config structs. Unknown keys produce a deserialization error naming the unknown field and listing valid fields. <code>ic server validate-config</code> CLI runs the same check.</td><td>T1: unknown key in config → error with suggestion</td></tr>
+<tr><td>F4</td><td>Config value within valid range but cross-parameter inconsistency (e.g., <code>min &gt; max</code>)</td><td>caller</td><td>Config struct <code>validate()</code> method checks cross-parameter invariants after deserialization. Example: <code>OrderBudget::new()</code> rejects <code>refill &gt; burst_cap</code>. Validated construction applies to all config types with dependent constraints.</td><td>T1: cross-parameter inconsistency → specific error</td></tr>
+<tr><td>F5</td><td>Server config hot-reload introduces inconsistent state mid-game</td><td>caller</td><td>Hot-reload applies changes at tick boundary only (between ticks). Changes are validated against the full config before application — invalid partial updates are rejected atomically. The reload handler takes <code>&amp;mut Config</code>, not individual fields.</td><td>T2: hot-reload with invalid change → rejected; old config preserved</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h3 id="14-asset-pipeline--format-parsing-ra-formats"><a class="header" href="#14-asset-pipeline--format-parsing-ra-formats">14. Asset Pipeline &amp; Format Parsing (<code>ra-formats</code>)</a></h3>
+<p><strong>Surface:</strong> <code>.mix</code>, <code>.shp</code>, <code>.pal</code>, <code>.aud</code>, <code>.oramap</code> parsers, <code>StrictPath</code>, virtual filesystem.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>Misuse Vector</th><th>Origin</th><th>Type-System Defense</th><th>Test Requirement</th></tr>
+</thead>
+<tbody>
+<tr><td>A1</td><td>Zip Slip in <code>.oramap</code> archive (entry with <code>../../</code> path)</td><td>adversary</td><td><code>StrictPath&lt;PathBoundary&gt;</code> rejects any path that escapes its boundary directory. The <code>.oramap</code> extractor resolves entries through <code>StrictPath::join()</code>, which normalizes and boundary-checks.</td><td>T3: fuzz .oramap with path traversal entries → all rejected</td></tr>
+<tr><td>A2</td><td><code>.mix</code> archive with header declaring more files than the archive contains</td><td>adversary</td><td>Parser compares declared file count against available data. Returns <code>MixParseError::FileCountMismatch { declared, actual }</code> with full diagnostic.</td><td>T1: truncated .mix → specific error; T3: fuzz random .mix bytes</td></tr>
+<tr><td>A3</td><td><code>.shp</code> sprite file with frame dimensions causing integer overflow in buffer allocation</td><td>adversary</td><td>Frame dimensions are validated against <code>MAX_SPRITE_DIMENSION</code> (configurable, default: 4096×4096). Buffer allocation uses <code>checked_mul()</code> — overflow returns error, not wrap.</td><td>T3: fuzz .shp with extreme dimensions → clean error</td></tr>
+<tr><td>A4</td><td><code>.aud</code> audio file with decompression ratio indicating a bomb</td><td>adversary</td><td>Audio decoder uses bounded output buffer. If decompressed size exceeds <code>MAX_AUDIO_OUTPUT_BYTES</code>, decoding aborts. The declared sample count is cross-checked against the compressed data size.</td><td>T3: fuzz .aud with decompression bomb → clean abort</td></tr>
+<tr><td>A5</td><td>Virtual filesystem path collision (two mods providing same asset path)</td><td>mod</td><td>Mod profile system (D062) uses explicit priority ordering. When two mods conflict, the higher-priority mod wins. Conflict is detected and reported at profile activation (not silently). <code>Fingerprint</code> of the resolved namespace ensures all clients agree.</td><td>T2: conflicting mods → conflict reported; resolution deterministic</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="cross-cutting-type-system-defense-patterns"><a class="header" href="#cross-cutting-type-system-defense-patterns">Cross-Cutting Type-System Defense Patterns</a></h2>
+<p>These patterns apply across multiple API surfaces:</p>
+<h3 id="pattern-1-newtype-fortress"><a class="header" href="#pattern-1-newtype-fortress">Pattern 1: Newtype Fortress</a></h3>
+<p>Every domain identifier (<code>PlayerId</code>, <code>SimTick</code>, <code>UnitTag</code>, <code>MissionId</code>, <code>PackageName</code>, <code>WasmInstanceId</code>, etc.) is a newtype with a private inner field. Construction is restricted to <code>pub(crate)</code> or validated factory methods. This eliminates the most common bug class in game engines: parameter swap errors.</p>
+<p><strong>Measured impact:</strong> In a hypothetical codebase using raw integers, <code>apply_order(player: u32, tick: u32, unit: u32)</code> permits 6 argument orderings. With newtypes, only 1 compiles. This is a 6× reduction in the callable-but-wrong surface.</p>
+<h3 id="pattern-2-typestate-lifecycle"><a class="header" href="#pattern-2-typestate-lifecycle">Pattern 2: Typestate Lifecycle</a></h3>
+<p>State machines with restricted transitions use typestate (connection, WASM sandbox, Workshop install, campaign mission, balance patch). Invalid transitions are compile errors, not runtime checks. Every <code>consume-self-return-new-state</code> method documents the transition in its type signature.</p>
+<p><strong>Coverage:</strong> 5 typestate machines currently defined. Each eliminates 2–4 invalid transition paths that would otherwise require runtime checks and tests.</p>
+<h3 id="pattern-3-capability-tokens"><a class="header" href="#pattern-3-capability-tokens">Pattern 3: Capability Tokens</a></h3>
+<p>APIs that grant access (filesystem, network, ECS queries from mods) require unforgeable capability tokens. Tokens use <code>_private: ()</code> to prevent external construction. This pattern applies to: <code>FsReadCapability</code>, <code>ReconcilerToken</code>, <code>AdminCapability</code>, and WASM host function access.</p>
+<h3 id="pattern-4-verified-wrappers"><a class="header" href="#pattern-4-verified-wrappers">Pattern 4: Verified Wrappers</a></h3>
+<p>Security-critical data passes through verification once, then carries proof of verification in the type system. <code>Verified&lt;T&gt;</code> prevents the “forgot to verify” bug class. Applies to: SCR signatures, manifest hashes, replay signatures, validated orders.</p>
+<h3 id="pattern-5-bounded-collections"><a class="header" href="#pattern-5-bounded-collections">Pattern 5: Bounded Collections</a></h3>
+<p>Every collection that grows based on external input has a type-enforced bound. <code>BoundedVec&lt;T, N&gt;</code> returns <code>Err(CapacityExceeded)</code> on overflow. This applies to: order queues, chat buffers, ping lists, draw commands, waypoints, build queues, group assignments.</p>
+<h3 id="pattern-6-directionscope-branding"><a class="header" href="#pattern-6-directionscope-branding">Pattern 6: Direction/Scope Branding</a></h3>
+<p>Messages carry their origin/destination in the type: <code>FromClient&lt;T&gt;</code> vs <code>FromServer&lt;T&gt;</code>, <code>ChatMessage&lt;TeamScope&gt;</code> vs <code>ChatMessage&lt;AllScope&gt;</code>. Routing errors become type errors. No implicit conversion between branded types.</p>
+<hr>
+<h2 id="defense-gap-analysis"><a class="header" href="#defense-gap-analysis">Defense Gap Analysis</a></h2>
+<p>Areas where type-system defenses are defined but should be validated through priority testing:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Gap</th><th>Current State</th><th>Recommended Action</th><th>Priority</th></tr>
+</thead>
+<tbody>
+<tr><td><code>DeltaSnapshot</code> baseline validation</td><td>Defined (S10) but no subsystem test spec</td><td>Add to Reconnection Snapshot test table</td><td>M4</td></tr>
+<tr><td>Lua timer recursion depth bound</td><td>Designed (L6) but not in any fuzz target</td><td>Add <code>lua_timer_chain</code> fuzz target</td><td>M7</td></tr>
+<tr><td><code>UnitTag</code> generation wraparound</td><td>Handled by slot retirement (U3) but rare to trigger</td><td>Add T4 stress test for wraparound</td><td>M9</td></tr>
+<tr><td>Config hot-reload atomicity</td><td>Designed (F5) but not in subsystem test specs</td><td>Add to Console Command or Server Config test table</td><td>M5</td></tr>
+<tr><td>Foreign replay order rejection (R5)</td><td><code>ForeignDivergence</code> logging defined but no labeled corpus</td><td>Add foreign replay test corpus (10 replays minimum)</td><td>M10</td></tr>
+<tr><td>Cross-module WASM communication</td><td>Blocked by type system, but inter-module data leaks via shared host resources (e.g., global ECS) need integration testing</td><td>Add WASM inter-module integration scenario</td><td>M7</td></tr>
+<tr><td>Ping/draw rate recovery timing</td><td>Budget recovery is tested but exact tick-level recovery rate is not asserted</td><td>Add specific tick-count assertion for rate recovery</td><td>M6</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="summary-matrix"><a class="header" href="#summary-matrix">Summary Matrix</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>API Surface</th><th>Misuse Vectors</th><th>Compile-Time Defenses</th><th>Runtime Defenses</th><th>Tests Required</th></tr>
+</thead>
+<tbody>
+<tr><td>Simulation</td><td>10</td><td>3 (borrow checker, <code>!Sync</code>, <code>ReconcilerToken</code>)</td><td>7 (hash check, validation, bounds)</td><td>8 runtime tests</td></tr>
+<tr><td>Order Pipeline</td><td>8</td><td>3 (<code>Verified</code>, <code>_private</code>, <code>BoundedVec</code>)</td><td>5 (validation, budget, clamping)</td><td>6 runtime tests</td></tr>
+<tr><td>Network/Relay</td><td>8</td><td>2 (<code>FromClient</code>/<code>FromServer</code>, <code>SyncHash</code>≠<code>StateHash</code>)</td><td>6 (challenge, hash, typestate)</td><td>6 runtime tests</td></tr>
+<tr><td>WASM Sandbox</td><td>9</td><td>4 (typestate, <code>_private</code>, capability tokens, type rejection)</td><td>5 (fuel, memory cap, timeout)</td><td>7 runtime tests</td></tr>
+<tr><td>Lua Sandbox</td><td>7</td><td>0 (Lua is dynamically typed — defenses are host-side)</td><td>7 (memory limit, fuel, whitelist, isolation)</td><td>7 runtime tests</td></tr>
+<tr><td>Replay</td><td>5</td><td>1 (<code>Verified&lt;ReplaySignature&gt;</code>)</td><td>4 (signature, version, bounds, hash)</td><td>5 runtime tests</td></tr>
+<tr><td>Workshop</td><td>7</td><td>3 (typestate, <code>_private</code>, validated construction)</td><td>4 (immutability, cycle detection, bomb guard)</td><td>5 runtime tests</td></tr>
+<tr><td>Campaign</td><td>5</td><td>2 (typestate, validated construction)</td><td>3 (flag namespace, roster extraction, reference check)</td><td>4 runtime tests</td></tr>
+<tr><td>Console</td><td>5</td><td>1 (<code>BoundedCvar</code>)</td><td>4 (permission, rate limit, flag, clamping)</td><td>5 runtime tests</td></tr>
+<tr><td>Chat</td><td>5</td><td>2 (scope branding, <code>SanitizedString</code>)</td><td>3 (rate limit, BiDi strip, confusable check)</td><td>5 runtime tests</td></tr>
+<tr><td>Double-Buffer</td><td>4</td><td>3 (borrow checker, <code>&amp;T</code> read, <code>&amp;mut T</code> write)</td><td>1 (debug swap count)</td><td>2 runtime tests</td></tr>
+<tr><td>UnitTag</td><td>5</td><td>1 (opaque handle for mods)</td><td>4 (generation check, pool bound, ownership validation)</td><td>5 runtime tests</td></tr>
+<tr><td>Config</td><td>5</td><td>1 (<code>deny_unknown_fields</code>)</td><td>4 (validation, cycle detect, cross-param, atomicity)</td><td>5 runtime tests</td></tr>
+<tr><td>Asset Pipeline</td><td>5</td><td>1 (<code>StrictPath</code>)</td><td>4 (bounds check, bomb guard, hash-check, priority)</td><td>4 runtime tests</td></tr>
+<tr><td><strong>Totals</strong></td><td><strong>88</strong></td><td><strong>27 compile-time</strong></td><td><strong>61 runtime</strong></td><td><strong>76 tests</strong></td></tr>
+</tbody>
+</table>
+</div>
+<p>The type system eliminates 27 misuse vectors at compile time (31%). The remaining 61 require runtime checks with automated test coverage. Every runtime defense has a corresponding test in the CI pipeline.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../architecture/api-misuse-defense.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../architecture/security-audit-findings.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../architecture/api-misuse-defense.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../architecture/security-audit-findings.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

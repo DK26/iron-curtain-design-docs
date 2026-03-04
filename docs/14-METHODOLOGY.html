@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-da66c284.js";
+            window.path_to_searchindex_js = "searchindex-eb0f51f8.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-b6ee3c41.js"></script>
+        <script src="toc-2281c970.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -648,313 +648,18 @@ Does NOT touch: ic-render, ic-net, ic-ui, ic-editor
 </li>
 </ol>
 <hr>
-<h2 id="stage-7-integration--validation"><a class="header" href="#stage-7-integration--validation">Stage 7: Integration &amp; Validation</a></h2>
-<blockquote>
-<p>How isolated pieces come together. Where bugs live. Where the community weighs in.</p>
-</blockquote>
-<p><strong>What this produces:</strong> A working, tested system from individually-developed components — plus community validation that we’re building the right thing.</p>
-<p><strong>The integration problem:</strong> Stages 4–6 optimize for isolation. That’s correct for development quality, but isolation creates a risk: the pieces might not fit together. Stage 7 is where we find out.</p>
-<p><strong>Process:</strong></p>
-<h3 id="technical-integration"><a class="header" href="#technical-integration">Technical Integration</a></h3>
-<ol>
-<li>
-<p><strong>Interface verification.</strong> Before integrating two components, verify that the trait interface between them matches expectations. The <code>Pathfinder</code> trait that <code>ic-sim</code> calls must match the <code>IcPathfinder</code> that implements it — not just in type signature, but in behavioral contract (does it handle unreachable goals? does it respect terrain cost? does the multi-layer system degrade gracefully?).</p>
-</li>
-<li>
-<p><strong>Integration tests.</strong> These are different from unit tests. Unit tests verify a component in isolation. Integration tests verify that two or more components work together correctly:</p>
-<ul>
-<li>Sim + LocalNetwork: orders go in, state comes out, hashes match</li>
-<li>Sim + ReplayPlayback: replay file produces identical state sequence</li>
-<li>Sim + ForeignReplayPlayback (D056): foreign replays complete without panics; order rejection rate and divergence tick tracked for regression</li>
-<li>Sim + Renderer: state changes produce correct visual updates</li>
-<li>Sim + AI: AI generates valid orders, sim accepts them</li>
-</ul>
-</li>
-<li>
-<p><strong>Desync testing.</strong> Run the same game on two instances with the same orders. Compare state hashes every tick. Any divergence is a determinism bug. This is the most critical integration test — it validates invariant #1.</p>
-</li>
-<li>
-<p><strong>Performance integration.</strong> Individual components may meet their performance targets in isolation but degrade when combined (cache thrashing, unexpected allocation, scheduling contention). Profile the integrated system, not just the parts.</p>
-</li>
-</ol>
-<h3 id="community-validation"><a class="header" href="#community-validation">Community Validation</a></h3>
-<ol start="5">
-<li>
-<p><strong>Release the MVP.</strong> At the end of each phase, ship what’s playable (see Stage 3 release table). Make it easy to download and run.</p>
-</li>
-<li>
-<p><strong>Collect feedback.</strong> Not just “does it work?” but “does it feel right?” The community knows what RA should feel like. If unit movement feels wrong, pathfinding is wrong — regardless of what the unit tests say. See Philosophy principle #2: “Fun beats documentation.”</p>
-</li>
-<li>
-<p><strong>Triage feedback into three buckets:</strong></p>
-<ul>
-<li><strong>Fix now:</strong> Bugs, crashes, format compatibility failures. If someone’s .mix file doesn’t load, that blocks everything (invariant #8).</li>
-<li><strong>Fix this phase:</strong> Behavior that’s wrong but not crashing. Unit speed feels off, build times are weird, UI is confusing.</li>
-<li><strong>Defer:</strong> Feature requests, nice-to-haves, things that belong in a later phase. Acknowledge them, log them, don’t act on them yet.</li>
-</ul>
-</li>
-<li>
-<p><strong>Update the roadmap.</strong> Community feedback may reveal that our priorities are wrong. If everyone says “the sidebar is unusable” and we planned to polish it in Phase 6, pull it forward. The roadmap serves the game, not the other way around.</p>
-</li>
-</ol>
-<p><strong>Exit criteria (per phase):</strong></p>
-<ul>
-<li>All integration tests pass</li>
-<li>Desync test produces zero divergence over 10,000 ticks</li>
-<li>Performance meets the targets in <a href="10-PERFORMANCE.html">10-PERFORMANCE</a> for the current phase’s scope</li>
-<li>Community feedback is collected, triaged, and incorporated into the next phase’s plan</li>
-<li>Known issues are documented — not hidden, not ignored</li>
-</ul>
 <hr>
-<h2 id="stage-8-design-evolution"><a class="header" href="#stage-8-design-evolution">Stage 8: Design Evolution</a></h2>
-<blockquote>
-<p>The design docs are alive. Implementation teaches us things. Update accordingly.</p>
-</blockquote>
-<p><strong>What this produces:</strong> Design documents that stay accurate as the project evolves — not frozen artifacts from before we wrote any code.</p>
-<p><strong>The problem:</strong> A design doc written before implementation is a hypothesis. Implementation tests that hypothesis. Sometimes the hypothesis is wrong. When that happens, the design doc must change — not the code.</p>
-<p><strong>Process:</strong></p>
-<ol>
-<li>
-<p><strong>When implementation contradicts the design, investigate.</strong> Sometimes the implementation is wrong (bug). Sometimes the design is wrong (bad assumption). Sometimes both need adjustment. Don’t reflexively change either one — understand <em>why</em> they disagree first.</p>
-</li>
-<li>
-<p><strong>Update the design doc in the same pass as the code change.</strong> If you change how the damage pipeline works, update <a href="02-ARCHITECTURE.html">02-ARCHITECTURE</a> § damage pipeline, <a href="decisions/09c-modding.html">decisions/09c-modding.md</a> § D028, and <code>AGENTS.md</code>. Don’t leave stale documentation for the next person to discover.</p>
-</li>
-<li>
-<p><strong>Log design changes in the decisions sub-documents.</strong> If a decision changes, don’t silently edit it — find the decision in the appropriate sub-file via <a href="09-DECISIONS.html">09-DECISIONS.md</a> and add a note: “Revised from X to Y because implementation revealed Z.” The decision log is a history, not just a current snapshot.</p>
-</li>
-<li>
-<p><strong>If implementation diverges from the original design, track it with full rationale — and open an issue.</strong> The implementation repo must locally document why it chose to diverge (in code comments, a design-gap tracking file, or both), and post a design-change issue in the design-doc repo with the complete rationale and proposed changes. See <code>src/tracking/external-code-project-bootstrap.md</code> § Design Change Escalation Workflow for the full process.</p>
-</li>
-<li>
-<p><strong>Community feedback triggers design review.</strong> If the community consistently reports that a design choice doesn’t work in practice, that’s data. Evaluate it against the philosophy principles, and if the design is wrong, update it. See <a href="13-PHILOSOPHY.html">13-PHILOSOPHY</a> principle #2: “Fun beats documentation — if it’s in the doc but plays poorly, cut it.”</p>
-</li>
-<li>
-<p><strong>Never silently promise something the code can’t deliver.</strong> If a design doc describes a feature that hasn’t been built yet, it must use future tense. If a feature was cut or descoped, the doc must say so explicitly. Silence implies completeness — and that makes silence a lie.</p>
-</li>
-</ol>
-<p><strong>What triggers design evolution:</strong></p>
-<ul>
-<li>Implementation reveals a better approach than what was planned</li>
-<li>Performance profiling shows an algorithm choice doesn’t meet targets</li>
-<li>Community feedback identifies a pain point the design didn’t anticipate</li>
-<li>A new decision (D043, D044, …) changes assumptions that earlier decisions relied on</li>
-<li>A pending decision (P002, P003, …) gets resolved and affects other sections</li>
-<li><strong>Research integration</strong> — a new prior art analysis reveals cross-project evidence that strengthens, challenges, or refines existing decisions (e.g., Stratagus analysis confirming D043’s manager hierarchy across a 7th independent codebase, or revealing a Lua stdlib security pattern applicable to D005’s sandbox)</li>
-</ul>
-<p><strong>Exit criteria:</strong> There is no exit. Design evolution is continuous. The docs are accurate on every commit.</p>
-<hr>
-<h2 id="how-the-stages-map-to-roadmap-phases"><a class="header" href="#how-the-stages-map-to-roadmap-phases">How the Stages Map to Roadmap Phases</a></h2>
-<p>The eight stages aren’t “do Stage 1, then Stage 2, then never touch Stage 1 again.” They repeat at different scales:</p>
+<h2 id="sub-pages"><a class="header" href="#sub-pages">Sub-Pages</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Roadmap Phase</th><th>Primary Stages Active</th><th>What’s Happening</th></tr>
+<tr><th>Section</th><th>Topic</th><th>File</th></tr>
 </thead>
 <tbody>
-<tr><td>Pre-development (now)</td><td>1, 2, 3, 8</td><td>Research, blueprint, delivery planning — design evolution already active as research findings refine earlier decisions</td></tr>
-<tr><td>Phase 0 start</td><td>1, 4, 5, 6</td><td>Dependency analysis, work unit decomposition, coding rules — targeted research continues</td></tr>
-<tr><td>Phase 0 development</td><td>5, 6, 7, 8</td><td>Work units executed, integrated, first community release (format tools)</td></tr>
-<tr><td>Phase 1–2 development</td><td>5, 6, 7, 8, (1 targeted)</td><td>Core engine work, continuous integration, design docs evolve, research on specific unknowns</td></tr>
-<tr><td>Phase 3 (first playable)</td><td>5, 6, 7, 8, (1 targeted)</td><td>The big community moment — heavy feedback, heavy design evolution</td></tr>
-<tr><td>Phase 4+</td><td>5, 6, 7, 8, (1 targeted)</td><td>Ongoing development cycle with targeted research on new subsystems</td></tr>
+<tr><td>Integration, Evolution &amp; Research Rigor</td><td>Stages 7-8 (Integration/Validation, Design Evolution), stage-to-phase mapping, research-design-refine cycle, methodology principles, research rigor and AI-assisted design</td><td><a href="methodology/research-rigor.html">research-rigor.md</a></td></tr>
 </tbody>
 </table>
 </div>
-<p>Stage 1 (research) never fully stops. The project’s pre-development history demonstrates this: even after major architectural questions were answered, ongoing research (AI implementation surveys across 7 codebases, Stratagus engine analysis, Westwood development philosophy compilation) continued to produce actionable refinements to existing decisions. The shift is from breadth (“what should we build?”) to depth (“does this prior art validate our approach?”). Stage 8 (design evolution) is active from the very first research cycle — not only after implementation begins.</p>
-<hr>
-<h2 id="the-research-design-refine-cycle"><a class="header" href="#the-research-design-refine-cycle">The Research-Design-Refine Cycle</a></h2>
-<blockquote>
-<p>The repeatable micro-workflow that operates within the stages. This is the actual working pattern — observed across 80+ commits of pre-development work on this project and applicable to any design-heavy endeavor.</p>
-</blockquote>
-<p>The eight stages above describe the macro structure — the project-level phases. But within those stages, the dominant working pattern is a smaller, repeatable cycle:</p>
-<pre><code>┌─────────────────────────┐
-│ 1. Identify a question  │ "What can we learn from Stratagus's AI system?"
-└──────────┬──────────────┘ "How should Lua sandboxing work?"
-           ▼                "What does the security model for Workshop look like?"
-┌─────────────────────────┐
-│ 2. Research prior art   │  Read source code, docs, papers. Compare 3-7 projects.
-└──────────┬──────────────┘  Take structured notes.
-           ▼
-┌─────────────────────────┐
-│ 3. Document findings    │  Write a research document (research/*.md).
-└──────────┬──────────────┘  Structured: overview, analysis, lessons, sources.
-           ▼
-┌─────────────────────────┐
-│ 4. Extract decisions    │  "This confirms our manager hierarchy."
-└──────────┬──────────────┘  "This adds a new precedent for stdlib policy."
-           ▼                 "This reveals a gap we haven't addressed."
-┌─────────────────────────┐
-│ 5. Propagate across     │  Update AGENTS.md, decisions/*, architecture,
-│    design docs          │  roadmap, modding, security — every affected doc.
-└──────────┬──────────────┘  Use cross-cutting propagation discipline (Stage 5).
-           ▼
-┌─────────────────────────┐
-│ 6. Review and refine    │  Re-read in context. Fix inconsistencies.
-└─────────────────────────┘  Verify cross-references. Improve clarity.
-   │
-   └──▶ (New questions arise → back to step 1)
-</code></pre>
-<p><strong>This cycle maps to the stages:</strong> Step 1-3 is Stage 1 (Research). Step 4 is Stage 2 (Blueprint refinement). Step 5 is Stage 8 (Design Evolution). Step 6 is quality discipline. The cycle is Stages 1→2→8 in miniature, repeated per topic.</p>
-<p><strong>Observed cadence:</strong> In this project’s pre-development phase, the cycle typically completes in 1-3 work sessions. The research step is the longest; propagation is mechanical but must be thorough. A single cycle often spawns 1-2 new questions that start their own cycles.</p>
-<p><strong>Why this matters for future projects:</strong> This cycle is project-agnostic. Any design-heavy project — not just Iron Curtain — benefits from the discipline of:</p>
-<ul>
-<li>Researching before designing (don’t reinvent what others have solved)</li>
-<li>Documenting research separately from decisions (research is evidence; decisions are conclusions)</li>
-<li>Propagating decisions systematically (a decision that only updates one file is a consistency bug waiting to happen)</li>
-<li>Treating refinement as a first-class work type (not “cleanup” — it’s how design quality improves)</li>
-</ul>
-<p><strong>Anti-patterns to avoid:</strong></p>
-<ul>
-<li><strong>Research without documentation.</strong> If findings aren’t written down, they’re lost when context resets. The research document is the artifact.</li>
-<li><strong>Documentation without propagation.</strong> A new finding that only updates the research file but not the design docs creates drift. The propagation step is non-optional.</li>
-<li><strong>Propagation without verification.</strong> Updating 6 files but missing the 7th creates an inconsistency. The checklist discipline (Stage 5 § Cross-Cutting Propagation) prevents this.</li>
-<li><strong>Skipping the refinement step.</strong> First-draft design text is hypothesis. Re-reading in context after propagation often reveals awkward phrasing, missing cross-references, or logical gaps.</li>
-</ul>
-<hr>
-<h2 id="principles-underlying-the-methodology"><a class="header" href="#principles-underlying-the-methodology">Principles Underlying the Methodology</a></h2>
-<p>These aren’t new principles — they’re existing project principles applied to the development process itself.</p>
-<ol>
-<li>
-<p><strong>The community sees progress, not promises</strong> (Philosophy #0). Every release cycle produces something playable. We never go dark for 6 months.</p>
-</li>
-<li>
-<p><strong>Separate concerns</strong> (Architecture invariant #1, #2). Crate boundaries exist so that work on one subsystem doesn’t require understanding every other subsystem. The methodology enforces this through context-bounded work units.</p>
-</li>
-<li>
-<p><strong>Data-driven everything</strong> (Philosophy #4). The task spec for a work unit is data — crate, trait, inputs, outputs, tests. It’s not a vague description; it’s a structured definition that can be validated.</p>
-</li>
-<li>
-<p><strong>Fun beats documentation</strong> (Philosophy #2). If community feedback says the design is wrong, update the design. The docs serve the game, not the other way around.</p>
-</li>
-<li>
-<p><strong>Scope to what you have</strong> (Philosophy #7). Each phase focuses. Don’t spread work across too many subsystems at once. Complete one thing excellently before starting the next.</p>
-</li>
-<li>
-<p><strong>Make temporary compromises explicit</strong> (Philosophy #8). If a Phase 2 implementation is “good enough for now,” label it. Use <code>// TODO(phase-N): description</code> comments. Don’t let shortcuts become permanent without a conscious decision.</p>
-</li>
-<li>
-<p><strong>Efficiency-first</strong> (Architecture invariant #5, <a href="10-PERFORMANCE.html">10-PERFORMANCE</a>). This applies to the development process too — better methodology, clearer task specs, cleaner boundaries before “throw more agents at it.”</p>
-</li>
-<li>
-<p><strong>Research is a continuous discipline, not a phase</strong> (observed pattern). The project’s commit history shows research intensifying — not tapering — as design maturity enables more precise questions. New prior art analysis is never “too late” if it produces actionable refinements. Budget time for research throughout the project, not just at the start.</p>
-</li>
-</ol>
-<hr>
-<h2 id="research-rigor--ai-assisted-design"><a class="header" href="#research-rigor--ai-assisted-design">Research Rigor &amp; AI-Assisted Design</a></h2>
-<blockquote>
-<p>This project uses LLM agents as research assistants and writing tools within a human-directed methodology. This section documents the actual process — because “AI-assisted” is frequently misunderstood as “AI-generated,” and the difference matters.</p>
-</blockquote>
-<h3 id="the-misconception"><a class="header" href="#the-misconception">The Misconception</a></h3>
-<p>When people hear “built with AI assistance,” they often imagine: someone typed a few prompts, an LLM produced some text, and that text was shipped as-is. If that were the process, the result would be shallow, inconsistent, and full of hallucinated claims. It would read like marketing copy, not engineering documentation.</p>
-<p>That is not what happened here.</p>
-<h3 id="what-actually-happened"><a class="header" href="#what-actually-happened">What Actually Happened</a></h3>
-<p>Every design decision in this project followed a deliberate, multi-step process:</p>
-<ol>
-<li>
-<p><strong>The human identifies the question.</strong> Not the LLM. The questions come from domain expertise, community knowledge, and architectural reasoning. “How should the Workshop handle P2P distribution?” is a question born from years of experience with modding communities, not a prompt template.</p>
-</li>
-<li>
-<p><strong>Prior art is studied at the source code level.</strong> Not summarized from blog posts. When this project says “Generals uses adaptive run-ahead,” that claim was verified by reading the actual <code>FrameReadiness</code> enum in EA’s GPL-licensed C++ source. When it says “IPFS has a 9-year-unresolved bandwidth limiting issue,” the actual GitHub issue (#3065) was read, along with its 73 reactions and 67 comments. When it says “Minetest uses a LagPool for rate control,” the Minetest source was examined.</p>
-</li>
-<li>
-<p><strong>Findings are documented in structured research documents.</strong> Each research analysis follows a consistent format: overview, architecture analysis, lessons applicable to IC, comparison with IC’s approach, and source citations. These aren’t LLM summaries — they’re analytical documents where every claim traces to a specific codebase, issue, or commit.</p>
-</li>
-<li>
-<p><strong>Decisions are extracted with alternatives and rationale.</strong> Each of the 50 decisions in the decision log (D001–D050) records what was chosen, what alternatives were considered, and why. Many decisions evolved through multiple revision cycles as new research challenged initial assumptions.</p>
-</li>
-<li>
-<p><strong>Findings are propagated across all affected documents.</strong> A single research finding (e.g., “Stratagus confirms the manager hierarchy pattern for AI”) doesn’t just update one file — it’s traced through every document that references the topic: architecture, decisions, roadmap, modding, security, methodology. The cross-cutting propagation discipline documented in Stage 5 of this chapter isn’t theoretical — it’s how every research integration actually works.</p>
-</li>
-<li>
-<p><strong>The human reviews, verifies, and commits.</strong> The maintainer reads every change, verifies factual claims, checks cross-references, and decides what ships. The LLM agent never commits — it proposes, the human approves. A commit is a human judgment that the content is correct.</p>
-</li>
-</ol>
-<h3 id="the-evidence-by-the-numbers"><a class="header" href="#the-evidence-by-the-numbers">The Evidence: By the Numbers</a></h3>
-<p>The body of work speaks for itself:</p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Metric</th><th>Count</th></tr>
-</thead>
-<tbody>
-<tr><td>Design chapters</td><td>14 (Vision, Architecture, Netcode, Modding, Formats, Security, Cross-Engine, Roadmap, Decisions, Performance, OpenRA Features, Mod Migration, Philosophy, Methodology)</td></tr>
-<tr><td>Standalone research documents</td><td>19 (netcode analyses, AI surveys, pathfinding studies, security research, development philosophy, Workshop/P2P analysis)</td></tr>
-<tr><td>Total lines of structured documentation</td><td>~35,000</td></tr>
-<tr><td>Recorded design decisions (D001–D050)</td><td>50</td></tr>
-<tr><td>Pending decisions with analysis</td><td>6 (P001–P007, two resolved)</td></tr>
-<tr><td>Git commits (design iteration)</td><td>100+</td></tr>
-<tr><td>Open-source codebases studied at source level</td><td>8+ (EA Red Alert, EA Remastered, EA Generals, EA Tiberian Dawn, OpenRA, OpenRA Mod SDK, Stratagus/Stargus, Chrono Divide)</td></tr>
-<tr><td>Additional projects studied for specific patterns</td><td>12+ (Spring Engine, 0 A.D., MicroRTS, Veloren, Hypersomnia, OpenBW, DDNet, OpenTTD, Minetest, Lichess, Quake 3, Warzone 2100)</td></tr>
-<tr><td>Workshop/P2P platforms analyzed</td><td>13+ (npm, Cargo, NuGet, PyPI, Nexus Mods, CurseForge, mod.io, Steam Workshop, ModDB, GameBanana, Uber Kraken, Dragonfly, IPFS)</td></tr>
-<tr><td>OpenRA traits mapped in gap analysis</td><td>~700</td></tr>
-<tr><td>Original creator quotes compiled and sourced</td><td>50+ (from Bostic, Sperry, Castle, Klepacki, Long, Legg, and other Westwood/EA veterans)</td></tr>
-<tr><td>Cross-system pattern analyses</td><td>3 (netcode ↔ Workshop cross-pollination, AI extensibility across 7 codebases, pathfinding survey across 6 engines)</td></tr>
-</tbody>
-</table>
-</div>
-<p>This corpus wasn’t generated in a single session. It was built iteratively over 100+ commits, with each commit refining, cross-referencing, and sometimes revising previous work. The decision log shows decisions that evolved through multiple revisions — D002 (Bevy) was originally “No Bevy” before research changed the conclusion. D043 (AI presets) grew from a simple paragraph to a multi-page design as each new codebase study (Spring Engine, 0 A.D., MicroRTS, Stratagus) added validated evidence.</p>
-<h3 id="how-the-human-agent-relationship-works"><a class="header" href="#how-the-human-agent-relationship-works">How the Human-Agent Relationship Works</a></h3>
-<p>The roles are distinct:</p>
-<p><strong>The human (maintainer/architect) does:</strong></p>
-<ul>
-<li>Identifies which questions matter and in what order</li>
-<li>Decides which codebases and prior art to study</li>
-<li>Evaluates whether findings are accurate and relevant</li>
-<li>Makes every architectural decision — the LLM never decides</li>
-<li>Reviews all text for factual accuracy, tone, and consistency</li>
-<li>Commits changes only after verification</li>
-<li>Directs the overall vision and priorities</li>
-<li>Catches when the LLM is wrong, imprecise, or overconfident</li>
-</ul>
-<p><strong>The LLM agent does:</strong></p>
-<ul>
-<li>Reads source code and documentation at scale (an LLM can process a 10,000-line codebase faster than a human)</li>
-<li>Searches for patterns across multiple codebases simultaneously</li>
-<li>Drafts structured analysis documents following established formats</li>
-<li>Propagates changes across multiple files (mechanical but error-prone if done manually)</li>
-<li>Maintains consistent cross-references across 35,000+ lines of documentation</li>
-<li>Produces initial drafts that the human refines</li>
-</ul>
-<p><strong>What the LLM does NOT do:</strong></p>
-<ul>
-<li>Make architectural decisions</li>
-<li>Decide what to research next</li>
-<li>Ship anything without human review</li>
-<li>Determine project direction or priorities</li>
-<li>Evaluate whether a design is “good enough”</li>
-<li>Commit to the repository</li>
-</ul>
-<p>The relationship is closer to an architect working with a highly capable research assistant than to someone using a text generator. The assistant can read faster, search broader, and draft more consistently — but the architect decides what to build, evaluates the research, and signs off on every deliverable.</p>
-<h3 id="why-this-matters"><a class="header" href="#why-this-matters">Why This Matters</a></h3>
-<p>Three reasons:</p>
-<ol>
-<li>
-<p><strong>Quality.</strong> An LLM generating text without structured methodology produces plausible-sounding but shallow output. The same LLM operating within a rigorous process — where every claim is verified against source code, every decision has documented alternatives, and every cross-reference is maintained — produces documentation that matches or exceeds what a single human could produce in the same timeframe. The methodology is the quality control, not the model.</p>
-</li>
-<li>
-<p><strong>Accountability.</strong> Every claim in these design documents can be traced: which research document supports it, which source code was examined, which decision records the rationale. If a claim is wrong, the trail shows where the error entered. If a decision was revised, the log shows when and why. This auditability is a property of the process, not the tool.</p>
-</li>
-<li>
-<p><strong>Reproducibility.</strong> The Research-Design-Refine cycle documented in this chapter is a repeatable methodology. Another project could follow the same process — with or without an LLM — and produce similarly rigorous results. The LLM accelerates the process; it doesn’t define it. The methodology works without AI assistance — it just takes longer.</p>
-</li>
-</ol>
-<h3 id="what-weve-learned-about-ai-assisted-design"><a class="header" href="#what-weve-learned-about-ai-assisted-design">What We’ve Learned About AI-Assisted Design</a></h3>
-<p>Having used this methodology across 100+ iterations, some observations:</p>
-<ul>
-<li>
-<p><strong>The constraining documents matter more than the prompts.</strong> <code>AGENTS.md</code>, the architectural invariants, the crate boundaries, the “Mistakes to Never Repeat” list — these constrain what the LLM can produce. As the constraint set grows, the LLM’s output quality improves because there are fewer ways to be wrong. This is the compounding effect described in the Foreword.</p>
-</li>
-<li>
-<p><strong>Research compounds.</strong> Each research document makes subsequent research more productive. When studying Stratagus’s AI system, having already analyzed Spring Engine, 0 A.D., and MicroRTS meant the agent could immediately compare findings against three prior analyses. By the time the Workshop P2P research was done (Kraken → Dragonfly → IPFS, three deep-dives in sequence), the pattern recognition was sharp enough to identify cross-pollination with the netcode design — a connection that wouldn’t have been visible without the accumulated context.</p>
-</li>
-<li>
-<p><strong>The human’s domain expertise is irreplaceable.</strong> The LLM doesn’t know that C&amp;C LAN parties still happen. It doesn’t know that the OFP mission editor was the most empowering creative tool of its era. It doesn’t know that the feeling of tank treads crushing infantry is what makes Red Alert <em>Red Alert</em>. These intuitions direct the research and shape the decisions. The LLM is a tool; the vision is human.</p>
-</li>
-<li>
-<p><strong>Verification is non-negotiable.</strong> The “Mistakes to Never Repeat” section in <code>AGENTS.md</code> exists because the LLM got things wrong — sometimes confidently. It claimed “design documents are complete” when they weren’t. It used present tense for unbuilt features. It stated unverified performance numbers as fact. Each mistake was caught during review, corrected, and added to the constraint set so it wouldn’t recur. The methodology assumes the LLM will make errors and builds in verification at every step.</p>
-</li>
-</ul>
 
                     </main>
 
@@ -964,7 +669,7 @@ Does NOT touch: ic-render, ic-net, ic-ui, ic-editor
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="15-SERVER-GUIDE.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="methodology/research-rigor.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -978,7 +683,7 @@ Does NOT touch: ic-render, ic-net, ic-ui, ic-editor
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="15-SERVER-GUIDE.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="methodology/research-rigor.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

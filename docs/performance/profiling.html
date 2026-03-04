@@ -1,0 +1,483 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Profiling &amp; Regression - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/performance/profiling.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="profiling--regression-strategy"><a class="header" href="#profiling--regression-strategy">Profiling &amp; Regression Strategy</a></h1>
+<h3 id="automated-benchmarks-ci"><a class="header" href="#automated-benchmarks-ci">Automated Benchmarks (CI)</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[bench] fn bench_tick_100_units()  { tick_bench(100); }
+#[bench] fn bench_tick_500_units()  { tick_bench(500); }
+#[bench] fn bench_tick_1000_units() { tick_bench(1000); }
+#[bench] fn bench_tick_2000_units() { tick_bench(2000); }
+
+#[bench] fn bench_flowfield_generation() { ... }
+#[bench] fn bench_spatial_query_1000() { ... }
+#[bench] fn bench_fog_recalc_full_map() { ... }
+
+#[bench] fn bench_snapshot_1000_units() { ... }
+#[bench] fn bench_restore_1000_units() { ... }
+<span class="boring">}</span></code></pre>
+<h3 id="regression-rule"><a class="header" href="#regression-rule">Regression Rule</a></h3>
+<p>CI fails if any benchmark regresses &gt; 10% from the rolling average. Performance is a ratchet — it only goes up.</p>
+<h3 id="engine-telemetry-d031"><a class="header" href="#engine-telemetry-d031">Engine Telemetry (D031)</a></h3>
+<p>Per-system tick timing from the benchmark suite can be exported as OTEL metrics for deeper analysis when the <code>telemetry</code> feature flag is enabled. This bridges offline benchmarks with live system inspection:</p>
+<ul>
+<li>Per-system execution time histograms (<code>sim.system.&lt;name&gt;_us</code>)</li>
+<li>Entity count gauges, pathfinding cache hit rates, memory usage</li>
+<li>Gameplay event stream for AI training data collection</li>
+<li>Debug overlay (via <code>bevy_egui</code>) reads live telemetry for real-time profiling during development</li>
+</ul>
+<p>Telemetry is zero-cost when disabled (compile-time feature gate). Release builds intended for players ship without it. Tournament servers, AI training, and development builds enable it. See <code>decisions/09e/D031-observability.md</code> for full design.</p>
+<h3 id="diagnostic-overlay--real-time-observability"><a class="header" href="#diagnostic-overlay--real-time-observability">Diagnostic Overlay &amp; Real-Time Observability</a></h3>
+<p>IC needs a <strong>player-visible diagnostic overlay</strong> — the equivalent of Source Engine’s <code>net_graph</code>, but designed for lockstep RTS rather than client-server FPS. The overlay reads live telemetry data (D031) and renders via <code>bevy_egui</code> as a configurable HUD element. Console commands (D058) control which panels are visible.</p>
+<p><strong>Inspired by:</strong> Source Engine’s <code>net_graph 1/2/3</code> (layered detail), Factorio’s debug panels (F4/F5), StarCraft 2’s Ctrl+Alt+F (latency/FPS bar), Supreme Commander’s sim speed indicator. Source’s <code>net_graph</code> is the gold standard for “always visible, never in the way” — IC adapts the concept to lockstep semantics where there is no prediction, no interpolation, and latency means order-delivery delay rather than entity rubber-banding.</p>
+<h4 id="overlay-levels"><a class="header" href="#overlay-levels">Overlay Levels</a></h4>
+<p>The overlay has four levels, toggled by <code>/diag &lt;level&gt;</code> or the cvar <code>debug.diag_level</code>. Higher levels include everything from lower levels.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Level</th><th>Name</th><th>Audience</th><th>What It Shows</th><th>Feature Gate</th></tr>
+</thead>
+<tbody>
+<tr><td>0</td><td>Off</td><td>—</td><td>Nothing</td><td>—</td></tr>
+<tr><td>1</td><td>Basic</td><td>All players</td><td>FPS, sim tick time, network latency (RTT), entity count</td><td>Always available</td></tr>
+<tr><td>2</td><td>Detailed</td><td>Power users, modders</td><td>Per-system tick breakdown, pathfinding stats, order queue depth, memory, tick sync status</td><td>Always available</td></tr>
+<tr><td>3</td><td>Full</td><td>Developers, debugging</td><td>ECS component inspector, AI state viewer, fog debug visualization, network packet log, desync hash comparison</td><td><code>dev-tools</code> feature flag</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Level 1 — Basic</strong> (the “net_graph 1” equivalent):</p>
+<pre><code>┌─────────────────────────────┐
+│  FPS: 60    Tick: 15.0 tps  │
+│  RTT: 42ms  Jitter: ±3ms   │
+│  Entities: 847              │
+│  Sim: 4.2ms / 66ms budget   │
+│  ████░░░░░░ 6.4%            │
+└─────────────────────────────┘
+</code></pre>
+<ul>
+<li><strong>FPS:</strong> Render frames per second (client-side, independent of sim rate)</li>
+<li><strong>Tick:</strong> Actual simulation ticks per second vs target (e.g., 15.0/15 tps). Drops below target indicate sim overload</li>
+<li><strong>RTT:</strong> Round-trip time to the relay server (multiplayer) or “Local” (single-player). Sourced from <code>relay.player.rtt_ms</code></li>
+<li><strong>Jitter:</strong> RTT variance — high jitter means inconsistent order delivery</li>
+<li><strong>Entities:</strong> Total sim entities (units + projectiles + buildings + effects)</li>
+<li><strong>Sim:</strong> Current tick computation time vs budget, with a bar graph showing budget utilization. Green = &lt;50%, yellow = 50-80%, red = &gt;80%</li>
+</ul>
+<p><strong>Level 2 — Detailed</strong> (the “net_graph 2” equivalent):</p>
+<pre><code>┌─────────────────────────────────────────┐
+│  FPS: 60    Tick: 15.0 tps              │
+│  RTT: 42ms  Jitter: ±3ms               │
+│  Entities: 847  (Units: 612  Proj: 185) │
+│                                         │
+│  ── Sim Tick Breakdown (4.2ms) ──       │
+│  movement    ██████░░░░  1.8ms (net 1.2)│
+│  combat      ████░░░░░░  1.1ms          │
+│  pathfinding ██░░░░░░░░  0.5ms          │
+│  fog         █░░░░░░░░░  0.3ms          │
+│  production  ░░░░░░░░░░  0.2ms          │
+│  orders      ░░░░░░░░░░  0.1ms          │
+│  other       ░░░░░░░░░░  0.2ms          │
+│                                         │
+│  ── Pathfinding ──                      │
+│  Requests: 23/tick  Cache: 87% hit      │
+│  Flowfields: 4 active  Recalc: 1        │
+│                                         │
+│  ── Network ──                          │
+│  Orders TX: 3/tick  RX: 12/tick         │
+│  Cushion: 3 ticks (200ms) ✓            │
+│  Queue depth: 2 ticks ahead             │
+│  Tick sync: ✓ (0 drift)                 │
+│  State hash: 0xA3F7…  ✓ match          │
+│                                         │
+│  ── Memory ──                           │
+│  Scratch: 48KB / 256KB                  │
+│  Component storage: 12.4 MB             │
+│  Flowfield cache: 2.1 MB (4 fields)     │
+└─────────────────────────────────────────┘
+</code></pre>
+<ul>
+<li><strong>Sim tick breakdown:</strong> Per-system execution time, drawn as horizontal bar chart. Systems are sorted by cost (most expensive first). Colors match budget status. System names map to the OTEL metrics from D031 (<code>sim.system.&lt;name&gt;_us</code>). Each system shows <strong>net time</strong> (excluding child calls) by default; gross time (including children) shown on hover/expand. This gross/net distinction — inspired by SAGE engine’s <code>PerfGather</code> hierarchical profiler (see <code>research/generals-zero-hour-diagnostic-tools-study.md</code>) — prevents the confusion where “movement: 3ms” includes pathfinding that’s already shown separately</li>
+<li><strong>Pathfinding:</strong> Active flowfield count, cache hit rate (<code>sim.pathfinding.cache_hits</code> / <code>sim.pathfinding.requests</code>), recalculations this tick</li>
+<li><strong>Network:</strong> Orders sent/received per tick, <strong>command arrival cushion</strong> (how far ahead orders arrive before they’re needed — the most meaningful lockstep metric, inspired by SAGE’s <code>FrameMetrics::getMinimumCushion()</code>), order queue depth, tick synchronization status (drift from canonical tick), and the current <code>state_hash</code> with match/mismatch indicator. Cushion warning: yellow at &lt;3 ticks, red at &lt;2 ticks (stall imminent)</li>
+<li><strong>Memory:</strong> TickScratch buffer usage, total ECS component storage, flowfield cache footprint</li>
+</ul>
+<p><strong>Collection interval:</strong> Expensive Level 2 metrics (pathfinding cache analysis, memory accounting, ECS archetype counts) are batched on a configurable interval (<code>debug.diag_batch_interval_ms</code> cvar, default: 500ms) rather than computed per-frame. This pattern is validated by SAGE engine’s 2-second collection interval in <code>gatherDebugStats()</code>. Cheap metrics (FPS, tick time, entity count) are still per-frame</p>
+<p><strong>Level 3 — Full</strong> (developer mode, <code>dev-tools</code> feature flag required):</p>
+<p>Adds interactive panels rendered via <code>bevy_egui</code>:</p>
+<ul>
+<li><strong>ECS Inspector:</strong> Browse entities by archetype, view component values in real time. Click an entity in the game world to inspect it. Shows position, health, current order, AI state, owner, all components. Read-only — inspection never modifies sim state (Invariant #1)</li>
+<li><strong>AI State Viewer:</strong> For selected unit(s), shows current task/schedule, interrupt mask, strategy slot assignment, failed path count, idle reason. Essential for debugging “why won’t my units move?” scenarios</li>
+<li><strong>Order Queue Inspector:</strong> Shows the full order pipeline: pending orders in the network queue, orders being validated (D012), orders applied this tick. Includes sub-tick timestamps (D008)</li>
+<li><strong>Fog Debug Visualization:</strong> Overlays fog-of-war boundaries on the game world. Shows which cells are visible/explored/hidden for the selected player. Highlights stagger bucket boundaries (which portion of the fog map updated this tick)</li>
+<li><strong>World Debug Markers:</strong> A global <code>debug_marker(pos, color, duration, category)</code> API callable from any system — pathfinding, AI, combat, triggers — with <strong>category-based filtering</strong> via <code>/diag ai paths</code>, <code>/diag ai zones</code>, <code>/diag fog cells</code> as independent toggles. Self-expiring markers clean up automatically. Inspired by SAGE engine’s <code>addIcon()</code> pattern (see <code>research/generals-zero-hour-diagnostic-tools-study.md</code>) but with category filtering that SAGE lacked — essential for 1000-unit games where showing all markers simultaneously would be unusable</li>
+<li><strong>Network Packet Log:</strong> Scrollable log of recent network messages (orders, state hashes, relay control messages). Filterable by type, player, tick. Shows raw byte sizes and timing</li>
+<li><strong>Desync Debugger:</strong> When a desync is detected, freezes the overlay and shows the divergence point — which tick, which state hash components differ, and (if both clients have telemetry) a field-level diff of the diverged state. <strong>Frame-gated detail logging:</strong> on desync detection, automatically enables detailed state logging for 50 ticks before and after the divergence point (ring buffer captures the “before” window), dumps to structured JSON, and makes available via <code>/diag export</code>. This adopts SAGE engine’s focused-capture pattern rather than always-on deep logging. Export includes a machine/session identifier for cross-client <code>diff</code> analysis (inspired by SAGE’s per-machine CRC dump files)</li>
+</ul>
+<h4 id="console-commands-d058-integration"><a class="header" href="#console-commands-d058-integration">Console Commands (D058 Integration)</a></h4>
+<p>All diagnostic overlay commands go through the existing <code>CommandDispatcher</code> (D058). They are <strong>client-local</strong> — they do not produce <code>PlayerOrder</code>s and do not flow through the network. They read telemetry data that is already being collected.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Behavior</th><th>Permission</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/diag</code> or <code>/diag 1</code></td><td>Toggle basic overlay (level 1)</td><td>Player</td></tr>
+<tr><td><code>/diag 0</code></td><td>Turn off overlay</td><td>Player</td></tr>
+<tr><td><code>/diag 2</code></td><td>Detailed overlay</td><td>Player</td></tr>
+<tr><td><code>/diag 3</code></td><td>Full developer overlay</td><td>Developer (<code>dev-tools</code> required)</td></tr>
+<tr><td><code>/diag net</code></td><td>Show only the network panel (any level)</td><td>Player</td></tr>
+<tr><td><code>/diag sim</code></td><td>Show only the sim tick breakdown panel</td><td>Player</td></tr>
+<tr><td><code>/diag path</code></td><td>Show only the pathfinding panel</td><td>Player</td></tr>
+<tr><td><code>/diag mem</code></td><td>Show only the memory panel</td><td>Player</td></tr>
+<tr><td><code>/diag ai</code></td><td>Show AI state viewer for selected unit(s)</td><td>Developer</td></tr>
+<tr><td><code>/diag orders</code></td><td>Show order queue inspector</td><td>Developer</td></tr>
+<tr><td><code>/diag fog</code></td><td>Toggle fog debug visualization</td><td>Developer</td></tr>
+<tr><td><code>/diag desync</code></td><td>Show desync debugger panel</td><td>Developer</td></tr>
+<tr><td><code>/diag pos &lt;corner&gt;</code></td><td>Move overlay position: <code>tl</code>, <code>tr</code>, <code>bl</code>, <code>br</code> (default: <code>tr</code>)</td><td>Player</td></tr>
+<tr><td><code>/diag scale &lt;0.5-2.0&gt;</code></td><td>Scale overlay text size (accessibility)</td><td>Player</td></tr>
+<tr><td><code>/diag export</code></td><td>Dump current overlay state to a timestamped JSON file</td><td>Player</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Cvar mappings</strong> (for <code>config.toml</code> and persistent configuration):</p>
+<pre><code class="language-toml">[debug]
+diag_level = 0            # 0-3, default off
+diag_position = "tr"      # tl, tr, bl, br
+diag_scale = 1.0          # text scale factor
+diag_opacity = 0.8        # overlay background opacity (0.0-1.0)
+show_fps = true           # standalone FPS counter (separate from diag overlay)
+show_network_stats = false # legacy alias for diag_level &gt;= 1 net panel
+</code></pre>
+<h4 id="graph-history-mode"><a class="header" href="#graph-history-mode">Graph History Mode</a></h4>
+<p>The basic and detailed overlays show instantaneous values by default. Pressing <code>/diag history</code> or clicking the overlay header toggles <strong>graph history mode</strong>: key metrics are rendered as scrolling line graphs over the last N seconds (configurable via <code>debug.diag_history_seconds</code>, default: 30).</p>
+<p>Graphed metrics:</p>
+<ul>
+<li><strong>FPS</strong> (line graph, green/yellow/red zones)</li>
+<li><strong>Sim tick time</strong> (line graph with budget line overlay)</li>
+<li><strong>RTT</strong> (line graph with jitter band)</li>
+<li><strong>Entity count</strong> (line graph)</li>
+<li><strong>Pathfinding cost per tick</strong> (line graph)</li>
+</ul>
+<p>Graph history mode is especially useful for identifying <strong>intermittent spikes</strong> — a single frame’s numbers disappear instantly, but a spike in the graph persists and is visible at a glance. This is the pattern that Source Engine’s <code>net_graph 3</code> uses for bandwidth history, adapted to RTS-relevant metrics.</p>
+<pre><code>┌─ Sim Tick History (30s) ─────────────────┐
+│ 10ms ┤                                    │
+│      │         ╭─╮                        │
+│  5ms ┤─────────╯ ╰────────────────────── │
+│      │                                    │
+│  0ms ┤────────────────────────────────── │
+│      └────────────────────────────────── │
+│       -30s                          now   │
+│ ── budget (66ms) far above graph ✓ ──    │
+└──────────────────────────────────────────┘
+</code></pre>
+<h4 id="mobile--touch-support"><a class="header" href="#mobile--touch-support">Mobile / Touch Support</a></h4>
+<p>On mobile/tablet (D065), the diagnostic overlay is accessible via:</p>
+<ul>
+<li><strong>Settings gear → Debug → Diagnostics</strong> (GUI path, no console needed)</li>
+<li><strong>Three-finger triple-tap</strong> (hidden gesture, for developers testing on physical devices)</li>
+<li>Level 1 and 2 are available on mobile; Level 3 requires <code>dev-tools</code> which is not expected on player-facing mobile builds</li>
+</ul>
+<p>The overlay renders at a larger font size on mobile (auto-scaled by DPI) and uses the bottom-left corner by default (avoiding thumb zones and the minimap). Graph history mode uses touch-friendly swipe-to-scroll.</p>
+<h4 id="mod-developer-diagnostics"><a class="header" href="#mod-developer-diagnostics">Mod Developer Diagnostics</a></h4>
+<p>Mods (Lua/WASM) can register custom diagnostic panels via the telemetry API:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Mod-registered diagnostic metric. Appears in a "Mod Diagnostics" panel
+/// visible at overlay level 2+. Mods cannot read engine internals — they
+/// can only publish their own metrics through this API.
+pub struct ModDiagnosticMetric {
+    pub name: String,        // e.g., "AI Think Time"
+    pub value: DiagValue,    // Gauge, Counter, or Text
+    pub category: String,    // Grouping label in the UI
+}
+
+/// Client-side display only — never enters ic-sim or deterministic game logic.
+pub enum DiagValue {
+    Gauge(f64),              // Current value (e.g., 4.2ms) — f64 is safe here (presentation only)
+    Counter(u64),            // Monotonically increasing (e.g., total pathfinding requests)
+    Text(String),            // Freeform (e.g., "State: Attacking")
+}
+<span class="boring">}</span></code></pre>
+<p>Mod diagnostics are sandboxed: mods publish metrics through the API, the engine renders them. Mods cannot read other mods’ diagnostics or engine-internal metrics. This prevents information leakage (e.g., a mod reading fog-of-war data through the diagnostic API).</p>
+<h4 id="performance-overhead"><a class="header" href="#performance-overhead">Performance Overhead</a></h4>
+<p>The diagnostic overlay itself must not become a performance problem:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Level</th><th>Overhead</th><th>Mechanism</th></tr>
+</thead>
+<tbody>
+<tr><td>0 (Off)</td><td>Zero</td><td>No reads, no rendering</td></tr>
+<tr><td>1 (Basic)</td><td>&lt; 0.1ms/frame</td><td>Read 5 atomic counters + render 6 text lines via egui</td></tr>
+<tr><td>2 (Detailed)</td><td>&lt; 0.5ms/frame</td><td>Read ~20 metrics + render breakdown bars + text</td></tr>
+<tr><td>3 (Full)</td><td>&lt; 2ms/frame</td><td>ECS query for selected entity + scrollable log rendering</td></tr>
+<tr><td>Graph history</td><td>+0.2ms/frame</td><td>Ring buffer append + line graph rendering</td></tr>
+</tbody>
+</table>
+</div>
+<p>All metric reads are <strong>lock-free</strong>: the sim writes to atomic counters/gauges, the overlay reads them on the render thread. No mutex contention, no sim slowdown from enabling the overlay. The ECS inspector (Level 3) uses Bevy’s standard query system and runs in the render schedule, not the sim schedule.</p>
+<h4 id="implementation-phase"><a class="header" href="#implementation-phase">Implementation Phase</a></h4>
+<ul>
+<li><strong>Phase 2 (M2):</strong> Level 1 overlay (FPS, tick time, entity count) — requires only sim tick instrumentation that already exists for benchmarks</li>
+<li><strong>Phase 3 (M3):</strong> Level 2 overlay (per-system breakdown, pathfinding, memory) — requires D031 telemetry instrumentation</li>
+<li><strong>Phase 4 (M4):</strong> Network panels (RTT, order queue, tick sync, state hash) — requires netcode instrumentation</li>
+<li><strong>Phase 5+ (M6):</strong> Level 3 developer panels (ECS inspector, AI viewer, desync debugger) — requires mature sim + AI + netcode</li>
+<li><strong>Phase 6a (M8):</strong> Mod diagnostic API — requires mod runtime (Lua/WASM) with telemetry bridge</li>
+</ul>
+<h3 id="profile-before-parallelize"><a class="header" href="#profile-before-parallelize">Profile Before Parallelize</a></h3>
+<p>Never add <code>par_iter()</code> without profiling first. Measure single-threaded. If a system takes &gt; 1ms, consider parallelizing. If it takes &lt; 0.1ms, sequential is faster (avoids coordination overhead).</p>
+<p><strong>Recommended profiling tool:</strong> Embark Studios’ <strong>puffin</strong> (1,674★, MIT/Apache-2.0) — a frame-based instrumentation profiler built for game loops. Puffin’s thread-local profiling streams have ~1ns overhead when disabled (atomic bool check, no allocation), making it safe to leave instrumentation in release builds. Key features validated by production use at Embark: frame-scoped profiling (maps directly to IC’s sim tick loop), remote TCP streaming for profiling headless servers (relay server profiling without local UI), and the <code>puffin_egui</code> viewer for real-time flame graphs in development builds via <code>bevy_egui</code>. IC’s <code>telemetry</code> feature flag (D031) should gate puffin’s collection, maintaining zero-cost when disabled. See <code>research/embark-studios-rust-gamedev-analysis.md</code> § puffin.</p>
+<h3 id="sdk-profile-playtest-d038-integration-advanced-mode"><a class="header" href="#sdk-profile-playtest-d038-integration-advanced-mode">SDK Profile Playtest (D038 Integration, Advanced Mode)</a></h3>
+<p>Performance tooling must not make the SDK feel heavy for casual creators. The editor should expose profiling as an <strong>opt-in Advanced workflow</strong>, not a required step before every preview/test:</p>
+<ul>
+<li>Default toolbar stays simple: <code>Preview</code> / <code>Test</code> / <code>Validate</code> / <code>Publish</code></li>
+<li>Profiling lives behind <code>Test ▼ → Profile Playtest</code> and an Advanced Performance panel</li>
+<li>No automatic profiling on save or on every test launch</li>
+</ul>
+<p><strong>Profile Playtest output style (summary-first):</strong></p>
+<ul>
+<li>Pass / warn / fail against a selected performance budget profile (desktop default, low-end target, etc.)</li>
+<li>Top 3 hotspots (creator-readable grouping, not raw ECS internals only)</li>
+<li>Average / max sim tick time</li>
+<li>Trigger/module hotspot links where traceability exists</li>
+<li>Optional detailed flame graph / trace view for advanced debugging</li>
+</ul>
+<p>This complements the Scenario Complexity Meter in <code>decisions/09f/D038-scenario-editor.md</code>: the meter is a heuristic guide, while Profile Playtest provides measured evidence during playtest.</p>
+<p><strong>CLI/CI parity (Phase 6b):</strong> Headless profiling summaries (<code>ic mod perf-test</code>) should reuse the same summary schema as the SDK view so teams can gate performance in CI without an SDK-only format.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../performance/gpu-hardware.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../performance/delta-encoding.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../performance/gpu-hardware.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../performance/delta-encoding.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,691 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Advanced Templating - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/modding/tera-templating-advanced.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h3 id="dynamic-mission-flow-map-expansion-sub-maps-phase-transitions"><a class="header" href="#dynamic-mission-flow-map-expansion-sub-maps-phase-transitions">Dynamic Mission Flow (Map Expansion, Sub-Maps, Phase Transitions)</a></h3>
+<p>Classic C&amp;C missions — and especially OFP/ArmA missions — aren’t static. The map <em>changes</em> as you play: new areas reveal when objectives are completed, units enter building interiors for infiltration sequences, briefings fire between phases. Iron Curtain makes all of this first-class, scriptable, and editor-friendly.</p>
+<p>Three interconnected systems:</p>
+<ol>
+<li><strong>Map Layers</strong> — named groups of terrain, entities, and triggers that activate/deactivate at runtime. The map expansion primitive.</li>
+<li><strong>Sub-Map Transitions</strong> — enter a building or structure, transition to an interior map, complete objectives, return to the parent map.</li>
+<li><strong>Phase Briefings</strong> — mid-mission cutscenes and briefings that bridge expansion phases (builds on the existing <code>video_playback</code> and <code>scripted_scene</code> templates).</li>
+</ol>
+<h4 id="map-layers--dynamic-expansion"><a class="header" href="#map-layers--dynamic-expansion">Map Layers &amp; Dynamic Expansion</a></h4>
+<p>The map is authored as one large map with <strong>named layers</strong>. Each layer groups a region of terrain, entities, triggers, and camera bounds into a named set that starts active or inactive. When a Lua script activates a layer, the engine reveals shroud over that area, wakes dormant entities, extends the playable camera bounds, and activates triggers assigned to that layer.</p>
+<p><strong>Key invariant:</strong> The full map exists in the simulation from tick 0 — all cells, all terrain data. Layers control <em>visibility and activity</em>, not physical existence. This preserves determinism: every client has the same map data from the start; layer state is part of the sim state.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// A named group of map content that can be activated/deactivated at runtime.
+/// Entities assigned to an inactive layer are dormant: invisible, non-collidable,
+/// non-targetable, and their Lua scripts don't fire. Activating the layer wakes them.
+#[derive(Component)]
+pub struct MapLayer {
+    pub name: String,
+    pub active: bool,
+    pub bounds: Option&lt;CellRect&gt;,           // layer's spatial extent (for camera bounds expansion)
+    pub activation_shroud: ShroudRevealMode,// how shroud lifts when activated
+    pub activation_camera: CameraAction,    // what the camera does on activation
+}
+
+/// How shroud reveals when a layer activates.
+pub enum ShroudRevealMode {
+    Instant,                        // immediate full reveal (classic)
+    Dissolve { duration_ticks: u32 }, // fade from black over N ticks (cinematic)
+    Gradual { speed: i32 },         // shroud peels from activation edge outward
+    None,                           // don't touch shroud (layer has no terrain, e.g. entity-only)
+}
+
+/// What the camera does when a layer activates.
+pub enum CameraAction {
+    Stay,                           // camera stays where it is
+    PanTo { target: CellPos, duration_ticks: u32 }, // smooth pan to new area
+    JumpTo { target: CellPos },     // instant jump (for hard cuts)
+    FollowUnit { entity: Entity },  // lock camera to a specific unit
+}
+
+/// Bevy Resource tracking active layers and the current playable bounds.
+#[derive(Resource)]
+pub struct MapLayerState {
+    pub layers: HashMap&lt;String, bool&gt;,  // name → active
+    pub playable_bounds: CellRect,      // union of all active layer bounds
+}
+
+/// Marker component for entities assigned to a specific layer.
+/// When the layer is inactive, the entity is dormant.
+#[derive(Component)]
+pub struct LayerMember {
+    pub layer: String,
+}
+<span class="boring">}</span></code></pre>
+<p><strong>YAML schema — layers defined in the mission file:</strong></p>
+<pre><code class="language-yaml"># mission map definition (inside map.yaml or scenario.yaml)
+layers:
+  phase_1_coastal:
+    bounds: { x: 0, y: 0, w: 96, h: 64 }
+    active: true                    # starting layer — player sees this area
+  phase_2_beach:
+    bounds: { x: 0, y: 64, w: 96, h: 48 }
+    active: false
+    activation_shroud: dissolve
+    activation_camera: { pan_to: { x: 48, y: 88 }, duration: 90 }  # 3 seconds at 30 tps
+  phase_3_base:
+    bounds: { x: 96, y: 0, w: 64, h: 112 }
+    active: false
+    activation_shroud: gradual
+    activation_camera: stay
+
+actors:
+  # Entities can be assigned to layers. Inactive layer → entity dormant.
+  - type: SovietBarracks
+    position: { x: 120, y: 50 }
+    owner: enemy
+    layer: phase_3_base             # only appears when phase_3_base activates
+  - type: Tanya
+    position: { x: 10, y: 10 }
+    owner: player
+    # no layer → always active (part of the implicit "base" layer)
+</code></pre>
+<p><strong>Lua API — <code>Layer</code> global:</strong></p>
+<pre><code class="language-lua">-- Activate a layer: reveal shroud, wake entities, extend camera bounds
+Layer.Activate("phase_2_beach")
+
+-- Activate with a cinematic transition (overrides YAML defaults)
+Layer.ActivateWithTransition("phase_2_beach", {
+    shroud = "dissolve",
+    shroud_duration = 120,          -- 4 seconds
+    camera = "pan",
+    camera_target = { x = 48, y = 88 },
+    camera_duration = 90,
+})
+
+-- Deactivate: re-shroud, deactivate entities, contract bounds
+Layer.Deactivate("phase_2_beach")
+
+-- Query state
+local active = Layer.IsActive("phase_2_beach")  -- true/false
+local entities = Layer.GetEntities("phase_2_beach")  -- list of actor references
+
+-- Modify bounds at runtime (rare, but useful for dynamic scenarios)
+Layer.SetBounds("phase_2_beach", { x = 0, y = 64, w = 128, h = 48 })
+</code></pre>
+<p><strong>Lua API — <code>Map</code> global extensions:</strong></p>
+<pre><code class="language-lua">-- Directly manipulate playable camera bounds (independent of layers)
+Map.SetPlayableBounds({ x = 0, y = 0, w = 192, h = 112 })
+local bounds = Map.GetPlayableBounds()
+
+-- Bulk shroud reveal (for custom reveal patterns, independent of layers)
+Map.RevealShroud("named_region_from_editor")   -- reveal a D038 Named Region
+Map.RevealShroud({ x = 10, y = 10, w = 30, h = 20 })  -- reveal a rectangle
+Map.RevealShroudGradual("named_region", 90)     -- animated reveal over 3 seconds
+</code></pre>
+<p><strong>Worked example — “Operation Coastal Storm” (Tanya destroys AA → map expands):</strong></p>
+<pre><code class="language-lua">-- mission_coastal_storm.lua
+
+local aa_sites_remaining = 3
+
+function OnMissionStart()
+    Objectives.Add("primary", "destroy_aa", "Destroy the 3 anti-air batteries")
+    -- Player starts in phase_1_coastal (64-cell-tall strip)
+    -- phase_2_beach is invisible, its entities dormant
+end
+
+Trigger.OnKilled("aa_site_1", function() OnAASiteDestroyed() end)
+Trigger.OnKilled("aa_site_2", function() OnAASiteDestroyed() end)
+Trigger.OnKilled("aa_site_3", function() OnAASiteDestroyed() end)
+
+function OnAASiteDestroyed()
+    aa_sites_remaining = aa_sites_remaining - 1
+    UserInterface.SetMissionText("AA sites remaining: " .. aa_sites_remaining)
+
+    if aa_sites_remaining == 0 then
+        Objectives.Complete("destroy_aa")
+
+        -- Phase transition: expand the map
+        Layer.ActivateWithTransition("phase_2_beach", {
+            shroud = "dissolve",
+            shroud_duration = 120,
+            camera = "pan",
+            camera_target = { x = 48, y = 88 },
+            camera_duration = 90,
+        })
+
+        -- Mid-expansion briefing (radar_comm — game doesn't pause)
+        Media.PlayVideo("videos/commander-clear-skies.webm", "radar_comm")
+
+        -- Reinforcements arrive at the newly revealed beach
+        Trigger.AfterDelay(150, function()
+            Reinforcements.Arrive("allies", {"Tank", "Tank", "APC", "Rifle", "Rifle"},
+                                  "south_beach_entry")
+            PlayEVA("reinforcements_arrived")
+        end)
+
+        -- New objective in the expanded area
+        Objectives.Add("primary", "capture_port", "Capture the enemy port facility")
+    end
+end
+</code></pre>
+<h4 id="sub-map-transitions-building-interiors"><a class="header" href="#sub-map-transitions-building-interiors">Sub-Map Transitions (Building Interiors)</a></h4>
+<p>A <code>SubMapPortal</code> links a location on the main map to a secondary map file. When a qualifying unit enters the portal’s trigger region, the engine:</p>
+<ol>
+<li><strong>Snapshots</strong> the main map state (sim snapshot — D010)</li>
+<li><strong>Transitions</strong> visually (fade, iris wipe, or cut)</li>
+<li>Optionally plays a <strong>briefing</strong> during the transition</li>
+<li><strong>Loads</strong> the sub-map and spawns the entering unit at the configured spawn point</li>
+<li>Runs the sub-map as a <strong>self-contained mission</strong> with its own triggers, objectives, and Lua scripts</li>
+<li>On sub-map completion (<code>SubMap.Exit(outcome)</code>), <strong>returns</strong> to the main map, restores the snapshot, applies outcome effects, and resumes simulation</li>
+</ol>
+<p><strong>Determinism:</strong> The main map snapshot is part of the sim state. Sub-map execution is fully deterministic. The sub-map’s Lua environment is isolated — it cannot access main map entities directly, only through <code>SubMap.GetParentContext()</code>.</p>
+<p>Inspired by: Commandos: Behind Enemy Lines (building interiors), Fallout 1/2 (location transitions), Jagged Alliance 2 (sector movement), and the “Tanya infiltrates the base” C&amp;C mission archetype.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// A portal linking the main map to a sub-map (building interior, underground, etc.)
+#[derive(Component)]
+pub struct SubMapPortal {
+    pub name: String,
+    pub sub_map: String,                    // path to sub-map file (e.g., "interiors/radar-station.yaml")
+    pub entry_region: String,               // D038 Named Region on main map (trigger area)
+    pub spawn_point: CellPos,               // where the unit appears in the sub-map
+    pub exit_point: CellPos,                // where the unit appears on main map when exiting
+    pub allowed_units: Vec&lt;String&gt;,         // unit type filter (empty = any unit)
+    pub transition: SubMapTransitionEffect,
+    pub on_enter_briefing: Option&lt;String&gt;,  // optional briefing during transition
+    pub outcomes: HashMap&lt;String, SubMapOutcome&gt;, // named outcomes and their effects on parent
+}
+
+pub enum SubMapTransitionEffect {
+    FadeBlack { duration_ticks: u32 },
+    IrisWipe { duration_ticks: u32 },
+    Cut,                                    // instant (no transition effect)
+}
+
+/// What happens on the parent map when the sub-map exits with a given outcome.
+pub struct SubMapOutcome {
+    pub set_flags: HashMap&lt;String, bool&gt;,   // campaign/mission flags to set
+    pub activate_layers: Vec&lt;String&gt;,       // map layers to activate on return
+    pub deactivate_layers: Vec&lt;String&gt;,     // map layers to deactivate
+    pub spawn_units: Vec&lt;SpawnSpec&gt;,        // units to spawn on main map
+    pub play_video: Option&lt;String&gt;,         // debrief video on return
+}
+
+/// Bevy Resource tracking the active sub-map state.
+#[derive(Resource)]
+pub struct SubMapState {
+    pub active: bool,
+    pub parent_snapshot: Option&lt;SimSnapshot&gt;,   // D010: frozen main map state
+    pub entry_context: Option&lt;SubMapContext&gt;,    // which unit, which portal
+    pub current_sub_map: Option&lt;String&gt;,         // active sub-map path
+}
+
+pub struct SubMapContext {
+    pub entering_unit: Entity,
+    pub portal_name: String,
+    pub parent_map: String,
+}
+<span class="boring">}</span></code></pre>
+<p><strong>YAML schema — portals defined in the mission file:</strong></p>
+<pre><code class="language-yaml">portals:
+  radar_dome_interior:
+    sub_map: interiors/radar-station.yaml
+    entry_region: radar_door_zone           # D038 Named Region
+    spawn_point: { x: 5, y: 12 }
+    exit_point: { x: 48, y: 30 }           # where unit reappears on main map
+    allowed_units: [spy, tanya, commando]
+    transition: { fade_black: { duration: 60 } }
+    on_enter_briefing: briefings/infiltrate-radar.yaml
+    outcomes:
+      sabotaged:
+        set_flags: { radar_destroyed: true }
+        activate_layers: [phase_2_north]
+        play_video: videos/radar-destroyed.webm
+      detected:
+        set_flags: { alarm_triggered: true }
+        spawn_units:
+          - type: SovietDog
+            count: 4
+            position: { x: 50, y: 32 }
+          - type: Rifle
+            count: 8
+            position: { x: 55, y: 28 }
+      captured:
+        set_flags: { radar_captured: true, radar_destroyed: false }
+        activate_layers: [allied_radar_overlay]
+</code></pre>
+<p><strong>Sub-map file (the interior):</strong></p>
+<pre><code class="language-yaml"># interiors/radar-station.yaml — self-contained mini-mission
+map:
+  size: { w: 24, h: 16 }
+  tileset: interior_concrete
+
+actors:
+  - type: SovietGuard
+    position: { x: 10, y: 8 }
+    owner: enemy
+    stance: patrol
+    patrol_route: [{ x: 10, y: 8 }, { x: 18, y: 8 }, { x: 18, y: 4 }]
+  - type: RadarConsole
+    position: { x: 20, y: 2 }
+    owner: enemy
+    # The objective target
+
+triggers:
+  - name: comm_array_destroyed
+    condition: { killed: RadarConsole }
+    action: { lua: "SubMap.Exit('sabotaged')" }
+  - name: spy_detected
+    condition: { any_enemy_sees: entering_unit, range: 3 }
+    action: { lua: "SubMap.Exit('detected')" }
+  - name: console_captured
+    condition: { captured: RadarConsole }
+    action: { lua: "SubMap.Exit('captured')" }
+</code></pre>
+<p><strong>Lua API — <code>SubMap</code> global:</strong></p>
+<pre><code class="language-lua">-- Programmatically enter a portal (alternative to unit walking into trigger region)
+SubMap.Enter("radar_dome_interior")
+
+-- Exit back to parent map with a named outcome
+SubMap.Exit("sabotaged")           -- triggers the outcome effects defined in YAML
+
+-- Query state
+local is_inside = SubMap.IsActive()                     -- true if inside a sub-map
+local context = SubMap.GetParentContext()                -- { unit = ..., portal = "radar_dome_interior" }
+local entering_unit = SubMap.GetParentContext().unit     -- the unit that entered
+
+-- Transfer additional units into the sub-map (e.g., reinforcements arrive inside)
+SubMap.TransferUnit(some_unit, { x = 5, y = 14 })
+
+-- Read parent map flags from within the sub-map (read-only)
+local has_power = SubMap.GetParentFlag("enemy_power_down")
+</code></pre>
+<p><strong>Worked example — spy infiltration with multiple outcomes:</strong></p>
+<pre><code class="language-lua">-- interiors/radar-station.lua (runs inside the sub-map)
+
+function OnMissionStart()
+    local spy = SubMap.GetParentContext().unit
+    Objectives.Add("primary", "disable_radar", "Reach the communications array")
+    Objectives.Add("secondary", "capture_radar", "Capture the array instead of destroying it")
+
+    -- Spy starts disguised — guards don't attack unless within detection range
+    -- Detection range is smaller for spies (disguise mechanic from gameplay-systems.md)
+end
+
+-- Guard patrol detection
+Trigger.OnEnteredProximity("soviet_guard_1", 3, function(detected_unit)
+    if detected_unit == SubMap.GetParentContext().unit then
+        UserInterface.SetMissionText("You've been detected!")
+        PlayEVA("mission_compromised")
+        Trigger.AfterDelay(30, function()
+            SubMap.Exit("detected")  -- alarm on main map, enemy reinforcements
+        end)
+    end
+end)
+
+-- Destroy the console
+Trigger.OnKilled("radar_console", function()
+    Objectives.Complete("disable_radar")
+    Camera.Shake(5)
+    PlayEVA("objective_complete")
+    Trigger.AfterDelay(60, function()
+        SubMap.Exit("sabotaged")    -- radar goes offline, phase_2_north activates
+    end)
+end)
+
+-- OR capture it (spy uses C4 vs. infiltration — player's choice)
+Trigger.OnCaptured("radar_console", function()
+    Objectives.Complete("capture_radar")
+    PlayEVA("building_captured")
+    Trigger.AfterDelay(60, function()
+        SubMap.Exit("captured")     -- radar now works for allies
+    end)
+end)
+</code></pre>
+<h4 id="phase-briefings--cutscene-integration"><a class="header" href="#phase-briefings--cutscene-integration">Phase Briefings &amp; Cutscene Integration</a></h4>
+<p>The existing <code>video_playback</code> scene template (fullscreen / radar_comm / picture_in_picture) and <code>scripted_scene</code> template already handle mid-mission cutscenes. The new <code>phase_briefing</code> scene template <strong>combines</strong> a briefing with layer activation and reinforcements into a single atomic “next phase” module:</p>
+<pre><code class="language-lua">-- phase_briefing: the "glue" between mission phases
+-- Equivalent to manually chaining: video → layer activation → reinforcements → new objectives
+-- but packaged as one drag-and-drop module in the D038 editor
+
+function TriggerPhaseTransition(config)
+    -- 1. Play briefing (if provided)
+    if config.video then
+        Media.PlayVideo(config.video, config.display_mode or "radar_comm", function()
+            -- 2. Activate layer (if provided) — callback fires when video ends
+            if config.layer then
+                Layer.ActivateWithTransition(config.layer, config.transition or {})
+            end
+            -- 3. Spawn reinforcements (if provided)
+            if config.reinforcements then
+                for _, r in ipairs(config.reinforcements) do
+                    Reinforcements.Arrive(r.faction, r.units, r.entry_point)
+                end
+            end
+            -- 4. Add new objectives (if provided)
+            if config.objectives then
+                for _, obj in ipairs(config.objectives) do
+                    Objectives.Add(obj.priority, obj.id, obj.text)
+                end
+            end
+        end)
+    end
+end
+</code></pre>
+<p><code>Media.PlayVideo</code> with a callback is the key addition — the existing video system plays the clip, and the callback fires when it ends (or when the player skips). This enables sequenced phase transitions: briefing → reveal → reinforcements → objectives, all timed correctly.</p>
+<p>For <code>scripted_scene</code> (non-video cutscenes using in-engine camera movement and dialogue), the existing <code>Camera.Pan()</code> API chains naturally with <code>Layer.ActivateWithTransition()</code>:</p>
+<pre><code class="language-lua">-- Dramatic reveal: camera pans to newly expanded area while shroud dissolves
+Layer.ActivateWithTransition("phase_2_beach", {
+    shroud = "dissolve", shroud_duration = 120,
+    camera = "pan", camera_target = { x = 48, y = 88 }, camera_duration = 90,
+})
+-- Letterbox bars appear for cinematic framing
+Camera.SetLetterbox(true)
+Trigger.AfterDelay(120, function()
+    Camera.SetLetterbox(false)
+    -- Player regains control in the newly revealed area
+end)
+</code></pre>
+<h4 id="multi-phase-mission-example-all-systems-combined"><a class="header" href="#multi-phase-mission-example-all-systems-combined">Multi-Phase Mission Example (All Systems Combined)</a></h4>
+<p>This example shows how map expansion, sub-map transitions, and phase briefings compose into a sophisticated multi-phase mission — the kind of scenario the editor should make easy to build.</p>
+<p><strong>“Operation Iron Veil” — 4-phase campaign mission:</strong></p>
+<pre><code>Phase 1: Small map. Tanya + squad. Destroy 3 AA positions.
+    ↓ AA destroyed
+Phase 2: Map expands north (beach). Briefing: "Clear skies! Sending the fleet."
+         Transports arrive. Beach assault with armor.
+    ↓ Beach secured
+Phase 3: Spy enters enemy radar dome (sub-map transition).
+         Interior infiltration: avoid patrols, sabotage or capture radar.
+    ↓ Radar outcome
+Phase 4: Map expands east (enemy HQ). Final assault.
+         If radar sabotaged: enemy has no radar, reduced AI vision.
+         If radar captured: player gets full map reveal.
+         If spy detected: enemy is reinforced, harder fight.
+</code></pre>
+<p>Each phase transition uses the systems described above. The campaign state (D021) tracks outcomes: <code>Campaign.set_flag("radar_outcome", outcome)</code> persists into subsequent missions. A follow-up mission might reference whether the player captured vs. destroyed the radar.</p>
+<h4 id="editor-support-d038"><a class="header" href="#editor-support-d038">Editor Support (D038)</a></h4>
+<p>The scenario editor exposes all three systems through its visual interface. These are <strong>Advanced mode</strong> features (hidden in Simple mode to keep it approachable).</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Editor Feature</th><th>Mode</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Layer Panel</strong></td><td>Advanced</td><td>Side panel listing all map layers. Create, rename, delete, toggle visibility. Click a layer to highlight its bounds and member entities. Drag entities into layers.</td></tr>
+<tr><td><strong>Layer Bounds Tool</strong></td><td>Advanced</td><td>Draw/resize rectangles on the map to define layer spatial extents. Color-coded overlay per layer (semi-transparent tinting).</td></tr>
+<tr><td><strong>Preview Layer</strong></td><td>Advanced</td><td>Toggle button per layer — shows what the map looks like with that layer active/inactive. Useful for testing expansion flow without running the mission.</td></tr>
+<tr><td><strong>Expansion Zone Module</strong></td><td>Advanced</td><td>Drag-and-drop module in the Connections panel: wire a trigger condition → layer activation. Properties: shroud reveal mode, camera action, delay.</td></tr>
+<tr><td><strong>Portal Placement</strong></td><td>Advanced</td><td>Place a portal entity on a building footprint. Properties panel: linked sub-map file, spawn point, exit point, allowed unit types, transition effect, outcomes.</td></tr>
+<tr><td><strong>Sub-Map Tab</strong></td><td>Advanced</td><td>Open a linked sub-map in a new editor tab. Edit the interior with all standard tools. Portal entry/exit markers shown as special gizmos.</td></tr>
+<tr><td><strong>Portal Connections View</strong></td><td>Advanced</td><td>Overlay showing lines from portal entities to their sub-map files. Click to open. Visual indication of which outcomes are wired to which parent map effects.</td></tr>
+<tr><td><strong>Phase Briefing Module</strong></td><td>Advanced</td><td>Drag-and-drop module: combines video/briefing reference + layer activation + reinforcement list + new objectives. The “next phase” button in module form.</td></tr>
+<tr><td><strong>Test Phase Flow</strong></td><td>Advanced</td><td>Play button that runs through phase transitions in sequence — activates layers, plays briefings, spawns reinforcements — without running full AI/combat simulation. Quick iteration on mission pacing.</td></tr>
+</tbody>
+</table>
+</div>
+<blockquote>
+<p><strong>Simple mode</strong> users can still create multi-phase missions — they just use the pre-built <code>map_expansion</code>, <code>sub_map_transition</code>, and <code>phase_briefing</code> modules from the module library, filling in parameters via the properties panel. Advanced mode gives direct layer/portal manipulation for power users.</p>
+</blockquote>
+<h3 id="templates-as-workshop-resources"><a class="header" href="#templates-as-workshop-resources">Templates as Workshop Resources</a></h3>
+<p>Scene templates and mission templates are both first-class workshop resource types — shared, rated, versioned, and downloadable like any other content. See the full resource category taxonomy in the <a href="#workshop-resource-registry--dependency-system-d030">Workshop Resource Registry</a> section below.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Contents</th><th>Examples</th></tr>
+</thead>
+<tbody>
+<tr><td>Mods</td><td>YAML rules + Lua scripts + WASM modules</td><td>Total conversions, balance patches, new factions</td></tr>
+<tr><td>Maps</td><td><code>.oramap</code> or native IC YAML map format</td><td>Skirmish maps, campaign maps, tournament pools</td></tr>
+<tr><td>Missions</td><td>YAML map + Lua triggers + briefing</td><td>Hand-crafted or LLM-generated scenarios</td></tr>
+<tr><td><strong>Scene Templates</strong></td><td><strong>Tera-templated Lua + schema</strong></td><td><strong>Reusable sub-mission building blocks</strong></td></tr>
+<tr><td><strong>Mission Templates</strong></td><td><strong>Tera templates + scene refs + schema</strong></td><td><strong>Full parameterized mission blueprints</strong></td></tr>
+<tr><td>Campaigns</td><td>Ordered mission sets + narrative</td><td>Multi-mission storylines</td></tr>
+<tr><td>Music</td><td>OGG Vorbis recommended (<code>.ogg</code>); also <code>.mp3</code>, <code>.flac</code></td><td>Custom soundtracks, faction themes, menu music</td></tr>
+<tr><td>Sound Effects</td><td>WAV or OGG (<code>.wav</code>, <code>.ogg</code>); legacy <code>.aud</code> accepted</td><td>Weapon sounds, ambient loops, UI feedback</td></tr>
+<tr><td>Voice Lines</td><td>OGG Vorbis + trigger metadata; legacy <code>.aud</code> accepted</td><td>EVA packs, unit responses, faction voice sets</td></tr>
+<tr><td>Sprites</td><td>PNG recommended (<code>.png</code>); legacy <code>.shp</code>+<code>.pal</code> accepted</td><td>HD unit packs, building sprites, effects packs</td></tr>
+<tr><td>Textures</td><td>PNG or KTX2 (GPU-compressed); legacy <code>.tmp</code> accepted</td><td>Theater tilesets, seasonal terrain variants</td></tr>
+<tr><td>Palettes</td><td><code>.pal</code> files (unchanged — 768 bytes, universal)</td><td>Theater palettes, faction colors, seasonal</td></tr>
+<tr><td>Cutscenes / Video</td><td>WebM recommended (<code>.webm</code>); also <code>.mp4</code>; legacy <code>.vqa</code> accepted</td><td>Custom briefings, cinematics, narrative videos</td></tr>
+<tr><td>UI Themes</td><td>Chrome layouts, fonts, cursors</td><td>Alternative sidebars, HD cursor packs</td></tr>
+<tr><td>Balance Presets</td><td>YAML rule overrides</td><td>Competitive tuning, historical accuracy presets</td></tr>
+<tr><td>QoL Presets</td><td>Gameplay behavior toggle sets (D033)</td><td>Custom QoL configurations, community favorites</td></tr>
+<tr><td>Experience Profiles</td><td>Combined balance + theme + QoL (D019+D032+D033)</td><td>One-click full experience configurations</td></tr>
+</tbody>
+</table>
+</div>
+<blockquote>
+<p><strong>Format guidance (D049):</strong> New Workshop content should use Bevy-native modern formats (OGG, PNG, WAV, WebM, KTX2, GLTF) for best compatibility, security, and tooling support. C&amp;C legacy formats (.aud, .shp, .vqa, .tmp) are fully supported for backward compatibility but not recommended for new content. See <code>05-FORMATS.md</code> § Canonical Asset Format Recommendations and <code>decisions/09e/D049-workshop-assets.md</code> for full rationale.</p>
+</blockquote>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../modding/tera-templating.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../modding/resource-packs.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../modding/tera-templating.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../modding/resource-packs.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

@@ -268,7 +268,7 @@ Logic classes bind widgets to game state and user actions.
 | `RepairableBuildingProperties` | Building repair                                                        |
 | `ResourceProperties`           | Resource queries                                                       |
 | `ScaredCatProperties`          | Panic command                                                          |
-| `SellableProperties`           | Sell command                                                            |
+| `SellableProperties`           | Sell command                                                           |
 | `TransformProperties`          | Transform command                                                      |
 | `TransportProperties`          | Load, unload, passenger queries                                        |
 

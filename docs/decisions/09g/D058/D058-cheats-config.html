@@ -1,0 +1,514 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Cheats, Config &amp; Integration - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09g/D058/D058-cheats-config.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h4 id="classic-cheat-codes-single-player-easter-egg"><a class="header" href="#classic-cheat-codes-single-player-easter-egg">Classic Cheat Codes (Single-Player Easter Egg)</a></h4>
+<p><strong>Phase:</strong> Phase 3+ (requires command system; trivial to implement once <code>CheatCodeHandler</code> and <code>PlayerOrder::CheatCode</code> exist — each cheat reuses existing dev command effects).</p>
+<p>A hidden, undocumented homage to the golden age of cheat codes and trainers. In single-player, the player can type certain phrases into the chat input — no <code>/</code> prefix needed — and trigger hidden effects. These are never listed in <code>/help</code>, never mentioned in any in-game documentation, and never exposed through the UI. They exist for the community to discover, share, and enjoy — exactly like AoE2’s “how do you turn this on” or StarCraft’s “power overwhelming.”</p>
+<p><strong>Design principles:</strong></p>
+<ol>
+<li>
+<p><strong>Single-player only.</strong> Cheat phrases are ignored entirely in multiplayer — the <code>CheatCodeHandler</code> is not even registered as a system when <code>NetworkModel</code> is anything other than <code>LocalNetwork</code>. No server-side processing, no network traffic, no possibility of multiplayer exploitation.</p>
+</li>
+<li>
+<p><strong>Undocumented.</strong> Not in <code>/help</code>. Not in the encyclopedia. Not in any in-game tooltip or tutorial. The game’s official documentation does not acknowledge their existence. Community wikis and word-of-mouth are the discovery mechanism — just like the originals.</p>
+</li>
+<li>
+<p><strong>Hashed, not plaintext.</strong> Cheat phrase strings are stored as pre-computed hashes in the binary, not as plaintext string literals. Casual inspection of the binary or source code does not trivially reveal all cheats. This is a speed bump, not cryptographic security — determined data-miners will find them, and that’s fine. The goal is to preserve the discovery experience, not to make them impossible to find.</p>
+</li>
+<li>
+<p><strong>Two-tier achievement-flagging.</strong> Not all cheats are equal — disco palette cycling doesn’t affect competitive integrity the same way infinite credits does. IC uses a two-tier cheat classification:</p>
+<ul>
+<li><strong>Gameplay cheats</strong> (invincibility, instant build, free credits, reveal map, etc.) permanently set <code>cheats_used = true</code> on the save/match. Achievements (D036) are disabled. Same rules as dev commands.</li>
+<li><strong>Cosmetic cheats</strong> (palette effects, visual gags, camera tricks, audio swaps) set <code>cosmetic_cheats_used = true</code> but do NOT disable achievements or flag the save as “cheated.” They are recorded in replay metadata for transparency but carry no competitive consequence.</li>
+</ul>
+<p>The litmus test: <strong>does this cheat change the simulation state in a way that affects win/loss outcomes?</strong> If yes → gameplay cheat. If it only touches rendering, audio, or visual effects with zero sim impact → cosmetic cheat. Edge cases default to gameplay (conservative). The classification is per-cheat, defined in the game module’s cheat table (the <code>CheatFlags</code> field below).</p>
+<p>This is more honest than a blanket flag. Punishing a player for typing “kilroy was here” the same way you punish them for infinite credits is disproportionate — it discourages the fun, low-stakes cheats that are the whole point of the system.</p>
+</li>
+<li>
+<p><strong>Thematic.</strong> Phrases are Cold War themed, fitting the Red Alert setting, and extend to C&amp;C franchise cultural moments and cross-game nostalgia. Each cheat has a brief, in-character confirmation message displayed as an EVA notification — no generic “cheat activated” text. Naming follows the narrative identity principle: earnest commitment, never ironic distance (Principle #20, <a href="13-PHILOSOPHY.html">13-PHILOSOPHY.md</a>). Even hidden mechanisms carry the world’s flavor.</p>
+</li>
+<li>
+<p><strong>Fun first.</strong> Some cheats are practical (infinite credits, invincibility). Others are purely cosmetic silliness (visual effects, silly unit behavior). The two-tier flagging (principle 4 above) ensures cosmetic cheats don’t carry disproportionate consequences — players can enjoy visual gags without losing achievement progress.</p>
+</li>
+</ol>
+<p><strong>Implementation:</strong></p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Handles hidden cheat code activation in single-player.
+/// Registered ONLY when NetworkModel is LocalNetwork (single-player / skirmish vs AI).
+/// Checked BEFORE the CommandDispatcher — if input matches a known cheat hash,
+/// the cheat is activated and the input is consumed (never reaches chat or command parser).
+pub struct CheatCodeHandler {
+    /// Pre-computed FNV-1a hashes of cheat phrases (lowercased, trimmed).
+    /// Using hashes instead of plaintext prevents casual string extraction from the binary.
+    /// Map: hash → CheatEntry (id + flags).
+    known_hashes: HashMap&lt;u64, CheatEntry&gt;,
+    /// Currently active toggle cheats (invincibility, instant build, etc.).
+    active_toggles: HashSet&lt;CheatId&gt;,
+}
+
+pub struct CheatEntry {
+    pub id: CheatId,
+    pub flags: CheatFlags,
+}
+
+bitflags! {
+    /// Per-cheat classification. Determines achievement/ranking consequences.
+    pub struct CheatFlags: u8 {
+        /// Affects simulation state (credits, health, production, fog, victory).
+        /// Sets `cheats_used = true` — disables achievements and ranked submission.
+        const GAMEPLAY = 0b01;
+        /// Affects only rendering, audio, or camera — zero sim impact.
+        /// Sets `cosmetic_cheats_used = true` — recorded in replay but no competitive consequence.
+        const COSMETIC = 0b10;
+    }
+}
+
+impl CheatCodeHandler {
+    /// Called from InputSource processing pipeline, BEFORE command dispatch.
+    /// Returns true if input was consumed as a cheat code.
+    pub fn try_activate(&amp;mut self, input: &amp;str) -&gt; Option&lt;CheatActivation&gt; {
+        let normalized = input.trim().to_lowercase();
+        let hash = fnv1a_hash(normalized.as_bytes());
+        if let Some(&amp;cheat_id) = self.known_hashes.get(&amp;hash) {
+            Some(CheatActivation {
+                cheat_id,
+                // Produces a PlayerOrder::CheatCode(cheat_id) that flows through
+                // the sim's order pipeline — deterministic, snapshottable, replayable.
+                order: PlayerOrder::CheatCode(cheat_id),
+            })
+        } else {
+            None
+        }
+    }
+}
+
+/// Cheat activation produces a PlayerOrder — the sim handles it deterministically.
+/// This means cheats are: (a) snapshottable (D010), (b) replayable, (c) validated
+/// (the sim rejects CheatCode orders when not in single-player mode).
+pub enum PlayerOrder {
+    // ... existing variants ...
+    CheatCode(CheatId),
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Processing flow:</strong> Chat input → <code>CheatCodeHandler::try_activate()</code> → if match, produce <code>PlayerOrder::CheatCode</code> → order pipeline → sim validates (single-player only) → check <code>CheatFlags</code>: if <code>GAMEPLAY</code>, set <code>cheats_used = true</code>; if <code>COSMETIC</code>, set <code>cosmetic_cheats_used = true</code> → apply effect → EVA confirmation notification. If no match, input falls through to normal chat/command dispatch.</p>
+<p><strong>Note on chat swallowing:</strong> If a player types a cheat phrase (e.g., “iron curtain”) as normal chat, it is consumed as a cheat activation — the text is NOT sent as a chat message. This is <strong>intentional and by design</strong>: cheat codes only activate in single-player mode (multiplayer rejects <code>CheatCode</code> orders), and the hidden-phrase discovery mechanic requires that the input be consumed on match. Players in single-player who accidentally trigger a cheat receive an EVA confirmation that makes the activation obvious, and all cheats are toggleable (can be deactivated by typing the phrase again).</p>
+<p><strong>Cheat codes (RA1 game module examples):</strong></p>
+<p><em>Trainer-style cheats (gameplay-affecting — <code>GAMEPLAY</code> flag, disables achievements):</em></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phrase</th><th>Effect</th><th>Type</th><th>Flags</th><th>Confirmation</th></tr>
+</thead>
+<tbody>
+<tr><td><code>perestroika</code></td><td>Reveal entire map permanently</td><td>One-shot</td><td><code>GAMEPLAY</code></td><td>“Transparency achieved.”</td></tr>
+<tr><td><code>glasnost</code></td><td>Remove fog of war permanently (live vision of all units)</td><td>One-shot</td><td><code>GAMEPLAY</code></td><td>“Nothing to hide, comrade.”</td></tr>
+<tr><td><code>iron curtain</code></td><td>Toggle invincibility for all your units</td><td>Toggle</td><td><code>GAMEPLAY</code></td><td>“Your forces are shielded.” / “Shield lowered.”</td></tr>
+<tr><td><code>five year plan</code></td><td>Toggle instant build (all production completes in 1 tick)</td><td>Toggle</td><td><code>GAMEPLAY</code></td><td>“Plan accelerated.” / “Plan normalized.”</td></tr>
+<tr><td><code>surplus</code></td><td>Grant 10,000 credits (repeatable)</td><td>Repeatable</td><td><code>GAMEPLAY</code></td><td>“Economic stimulus approved.”</td></tr>
+<tr><td><code>marshall plan</code></td><td>Max out credits + complete all queued production instantly</td><td>One-shot</td><td><code>GAMEPLAY</code></td><td>“Full economic mobilization.”</td></tr>
+<tr><td><code>mutual assured destruction</code></td><td>All superweapons fully charged</td><td>Repeatable</td><td><code>GAMEPLAY</code></td><td>“Launch readiness confirmed.”</td></tr>
+<tr><td><code>arms race</code></td><td>All current units gain elite veterancy</td><td>One-shot</td><td><code>GAMEPLAY</code></td><td>“Accelerated training complete.”</td></tr>
+<tr><td><code>not a step back</code></td><td>Toggle +100% fire rate and +50% damage for all your units</td><td>Toggle</td><td><code>GAMEPLAY</code></td><td>“Order 227 issued.” / “Order rescinded.”</td></tr>
+<tr><td><code>containment</code></td><td>All enemy units frozen in place for 30 seconds</td><td>Repeatable</td><td><code>GAMEPLAY</code></td><td>“Enemies contained.”</td></tr>
+<tr><td><code>scorched earth</code></td><td>Next click drops a nuke at cursor position (one-use per activation)</td><td>One-use</td><td><code>GAMEPLAY</code></td><td>“Strategic asset available. Select target.”</td></tr>
+<tr><td><code>red october</code></td><td>Spawn a submarine fleet at nearest water body</td><td>One-shot</td><td><code>GAMEPLAY</code></td><td>“The fleet has arrived.”</td></tr>
+<tr><td><code>from russia with love</code></td><td>Spawn a Tanya at cursor position</td><td>Repeatable</td><td><code>GAMEPLAY</code></td><td>“Special operative deployed.”</td></tr>
+<tr><td><code>new world order</code></td><td>Instant victory</td><td>One-shot</td><td><code>GAMEPLAY</code></td><td>“Strategic dominance achieved.”</td></tr>
+<tr><td><code>better dead than red</code></td><td>Instant defeat (you lose)</td><td>One-shot</td><td><code>GAMEPLAY</code></td><td>“Surrender accepted.”</td></tr>
+<tr><td><code>dead hand</code></td><td>Automated retaliation: when your last building dies, all enemy units on the map take massive damage</td><td>Persistent</td><td><code>GAMEPLAY</code></td><td>“Automated retaliation system armed. They cannot win without losing.”</td></tr>
+<tr><td><code>mr gorbachev</code></td><td>Destroys every wall segment on the map (yours and the enemy’s)</td><td>One-shot</td><td><code>GAMEPLAY</code></td><td>“Tear down this wall!”</td></tr>
+<tr><td><code>domino theory</code></td><td>When an enemy unit dies, adjacent enemies take 25% of the killed unit’s max HP. Chain reactions possible</td><td>Toggle</td><td><code>GAMEPLAY</code></td><td>“One falls, they all fall.” / “Containment restored.”</td></tr>
+<tr><td><code>wolverines</code></td><td>All infantry deal +50% damage (Red Dawn, 1984)</td><td>Toggle</td><td><code>GAMEPLAY</code></td><td>“WOLVERINES!” / “Stand down, guerrillas.”</td></tr>
+<tr><td><code>berlin airlift</code></td><td>A cargo plane drops 5 random crates across your base</td><td>Repeatable</td><td><code>GAMEPLAY</code></td><td>“Supply drop inbound.”</td></tr>
+<tr><td><code>how about a nice game of chess</code></td><td>AI difficulty drops to minimum (WarGames, 1983)</td><td>One-shot</td><td><code>GAMEPLAY</code></td><td>“A strange game. The only winning move is not to play. …But let’s play anyway.”</td></tr>
+<tr><td><code>trojan horse</code></td><td>Your next produced unit appears with enemy colors. Enemies ignore it until it fires</td><td>One-use</td><td><code>GAMEPLAY</code></td><td>“Infiltrator ready. They won’t see it coming.”</td></tr>
+</tbody>
+</table>
+</div>
+<p><em>Cosmetic / fun cheats (visual-only — <code>COSMETIC</code> flag, achievements remain enabled):</em></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phrase</th><th>Effect</th><th>Type</th><th>Flags</th><th>Confirmation</th></tr>
+</thead>
+<tbody>
+<tr><td><code>party like its 1946</code></td><td>Disco palette cycling on all units</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“♪ Boogie Woogie Bugle Boy ♪”</td></tr>
+<tr><td><code>space race</code></td><td>Unlock maximum camera zoom-out (full map view). Fog of war still renders at all zoom levels — unexplored/fogged terrain is hidden regardless of altitude. This is purely a camera unlock, not a vision cheat (compare <code>perestroika</code>/<code>glasnost</code> which ARE <code>GAMEPLAY</code>)</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“Orbital altitude reached.” / “Returning to ground.”</td></tr>
+<tr><td><code>propaganda</code></td><td>EVA voice lines replaced with exaggerated patriotic variants</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“For the motherland!” / “Standard communications restored.”</td></tr>
+<tr><td><code>kilroy was here</code></td><td>All infantry units display a tiny “Kilroy” graffiti sprite above their head</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“He was here.” / “He left.”</td></tr>
+<tr><td><code>hell march</code></td><td>Force Hell March to play on infinite loop, overriding all other music. The definitive RA experience</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“♪ Die Waffen, legt an! ♪” / “Standard playlist restored.”</td></tr>
+<tr><td><code>kirov reporting</code></td><td>A massive Kirov airship shadow slowly drifts across the map every few minutes. No actual unit — pure atmospheric dread</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“Kirov reporting.” / “Airspace cleared.”</td></tr>
+<tr><td><code>conscript reporting</code></td><td>Every single unit — tanks, ships, planes, buildings — uses Conscript voice lines when selected or ordered</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“Conscript reporting!” / “Specialized communications restored.”</td></tr>
+<tr><td><code>rubber shoes in motion</code></td><td>All units crackle with Tesla electricity visual effects when moving</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“Charging up!” / “Discharge complete.”</td></tr>
+<tr><td><code>silos needed</code></td><td>EVA says “silos needed” every 5 seconds regardless of actual silo status. The classic annoyance, weaponized as nostalgia</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“You asked for this.” / “Sanity restored.”</td></tr>
+<tr><td><code>big head mode</code></td><td>All unit sprites and turrets rendered at 200% head/turret size. Classic Goldeneye DK Mode homage</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“Cranial expansion complete.” / “Normal proportions restored.”</td></tr>
+<tr><td><code>crab rave</code></td><td>All idle units slowly rotate in place in synchronized circles</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“🦀” / “Units have regained their sense of purpose.”</td></tr>
+<tr><td><code>dr strangelove</code></td><td>Units occasionally shout “YEEEEHAW!” when attacking. Nuclear explosions display riding-the-bomb animation overlay</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“Gentlemen, you can’t fight in here! This is the War Room!” / “Decorum restored.”</td></tr>
+<tr><td><code>sputnik</code></td><td>A tiny satellite sprite orbits your cursor wherever it goes</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“Beep… beep… beep…” / “Satellite deorbited.”</td></tr>
+<tr><td><code>duck and cover</code></td><td>All infantry periodically go prone for 1 second at random, as if practicing civil defense drills (purely animation — no combat effect)</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“This is a drill. This is only a drill.” / “All clear.”</td></tr>
+<tr><td><code>enigma</code></td><td>All AI chat/notification text is displayed as scrambled cipher characters</td><td>Toggle</td><td><code>COSMETIC</code></td><td>“XJFKQ ZPMWV ROTBG.” / “Decryption restored.”</td></tr>
+</tbody>
+</table>
+</div>
+<p><em>Cross-game easter eggs (meta-references — <code>COSMETIC</code> flag):</em></p>
+<p>These recognize cheat codes from other iconic games and respond with in-character humor. <strong>None of them do anything mechanically</strong> — the witty EVA response IS the entire easter egg. They reward gaming cultural knowledge with a knowing wink, not a gameplay advantage. They’re love letters to the genre.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phrase</th><th>Recognized From</th><th>Type</th><th>Flags</th><th>Response</th></tr>
+</thead>
+<tbody>
+<tr><td><code>power overwhelming</code></td><td>StarCraft</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“Protoss technologies are not available in this theater of operations.”</td></tr>
+<tr><td><code>show me the money</code></td><td>StarCraft</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“This is a command economy, Commander. Fill out the proper requisition forms.”</td></tr>
+<tr><td><code>there is no cow level</code></td><td>Diablo / StarCraft</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“Correct.”</td></tr>
+<tr><td><code>how do you turn this on</code></td><td>Age of Empires II</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“Motorpool does not stock that vehicle. Try a Mammoth Tank.”</td></tr>
+<tr><td><code>rosebud</code></td><td>The Sims</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“§;§;§;§;§;§;§;§;§;”</td></tr>
+<tr><td><code>iddqd</code></td><td>DOOM</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“Wrong engine. This one uses Bevy.”</td></tr>
+<tr><td><code>impulse 101</code></td><td>Half-Life</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“Requisition denied. This isn’t Black Mesa.”</td></tr>
+<tr><td><code>greedisgood</code></td><td>Warcraft III</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“Wrong franchise. We use credits here, not gold.”</td></tr>
+<tr><td><code>up up down down</code></td><td>Konami Code</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“30 extra lives. …But this isn’t that kind of game.”</td></tr>
+<tr><td><code>cheese steak jimmys</code></td><td>Age of Empires II</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“The mess hall is closed, Commander.”</td></tr>
+<tr><td><code>black sheep wall</code></td><td>StarCraft</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“Try ‘perestroika’ instead. We have our own words for that.”</td></tr>
+<tr><td><code>operation cwal</code></td><td>StarCraft</td><td>One-shot</td><td><code>COSMETIC</code></td><td>“Try ‘five year plan’. Same idea, different ideology.”</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Why meta-references are <code>COSMETIC</code>:</strong> They have zero game effect. The reconnaissance value of knowing “<code>black sheep wall</code> doesn’t work but <code>perestroika</code> does” is part of the discovery fun — the game is training you to find the real cheats. The last two entries deliberately point players toward IC’s actual cheat codes, rewarding cross-game knowledge with a hint.</p>
+<p><strong>Mod-defined cheats:</strong> Game modules register their own cheat code tables — the engine provides the <code>CheatCodeHandler</code> infrastructure, the game module supplies the phrase hashes and effect implementations. A Tiberian Dawn module would have different themed phrases than RA1. Total conversion mods can define entirely custom cheat tables via YAML:</p>
+<pre><code class="language-yaml"># Custom cheat codes (mod.yaml)
+cheat_codes:
+  - phrase_hash: 0x7a3f2e1d   # hash of the phrase — not the phrase itself
+    effect: give_credits
+    amount: 50000
+    flags: gameplay          # disables achievements
+    confirmation: "Tiberium dividend received."
+  - phrase_hash: 0x4b8c9d0e
+    effect: toggle_invincible
+    flags: gameplay
+    confirmation_on: "Blessed by Kane."
+    confirmation_off: "Mortality restored."
+  - phrase_hash: 0x9e2f1a3b
+    effect: toggle_visual
+    flags: cosmetic           # achievements unaffected
+    confirmation_on: "The world changes."
+    confirmation_off: "Reality restored."
+</code></pre>
+<p><strong>Relationship to dev commands:</strong> Cheat codes and dev commands are complementary, not redundant. Dev commands (<code>/give</code>, <code>/spawn</code>, <code>/reveal</code>, <code>/instant_build</code>) are the precise, documented, power-user interface — visible in <code>/help</code>, discoverable, parameterized. Cheat codes are the thematic, hidden, fun interface — no parameters, no documentation, themed phrases with in-character responses. Under the hood, many cheats produce the same <code>PlayerOrder</code> variants as their dev command counterparts. The difference is entirely in the surface: how the player discovers, invokes, and experiences them.</p>
+<p><strong>Why hashed phrases, not encrypted:</strong> We are preserving a nostalgic discovery experience, not implementing DRM. Hashing makes cheats non-obvious to casual inspection but deliberately yields to determined community effort. Within weeks of release, every cheat will be on a wiki — and that’s the intended outcome. The joy is in the initial community discovery process, not in permanent secrecy.</p>
+<h4 id="security-considerations"><a class="header" href="#security-considerations">Security Considerations</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Risk</th><th>Mitigation</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Arbitrary Lua execution</strong></td><td>Lua runs in the D004 sandbox — no filesystem, no network, no <code>os.*</code>. <code>loadstring()</code> disabled. Execution timeout (100ms default). Memory limit per invocation.</td></tr>
+<tr><td><strong>Cvar manipulation for cheating</strong></td><td>Sim-affecting cvars require <code>DEV_ONLY</code> flag and flow through order validation. Render/audio cvars cannot affect gameplay. A <code>/set</code> command for a <code>DEV_ONLY</code> cvar without dev mode active is rejected.</td></tr>
+<tr><td><strong>Chat message buffer overflow</strong></td><td>Chat messages are bounded (512 chars, same as <code>ProtocolLimits::max_chat_message_length</code> from <code>06-SECURITY.md</code> § V15). Command input bounded similarly. The <code>StringReader</code> parser rejects input exceeding the limit before parsing.</td></tr>
+<tr><td><strong>Command injection in multiplayer</strong></td><td>Commands execute locally on the issuing client. Sim-affecting commands go through the order pipeline as <code>PlayerOrder::ChatCommand(cmd, args)</code> — validated by the sim like any other order. A malicious client cannot execute commands on another client’s behalf.</td></tr>
+<tr><td><strong>Denial of service via expensive Lua</strong></td><td>Lua execution has a tick budget. <code>/c</code> commands that exceed the budget are interrupted with an error. The chat/console remains responsive because Lua runs in the script system’s time slice, not the UI thread.</td></tr>
+<tr><td><strong>Cvar persistence tampering</strong></td><td><code>config.toml</code> is local — tampering only affects the local client. Server-authoritative cvars (<code>SERVER</code> flag) cannot be overridden by client-side config.</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="platform-considerations"><a class="header" href="#platform-considerations">Platform Considerations</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Platform</th><th>Chat Input</th><th>Developer Console</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Desktop</strong></td><td>Enter opens input, <code>/</code> prefix for commands</td><td><code>~</code> toggles overlay</td><td>Full keyboard; best experience</td></tr>
+<tr><td><strong>Browser (WASM)</strong></td><td>Same</td><td>Same (tilde might conflict with browser shortcuts — configurable)</td><td>Virtual keyboard on mobile browsers</td></tr>
+<tr><td><strong>Steam Deck</strong></td><td>On-screen keyboard when input focused</td><td>Touchscreen or controller shortcut</td><td>Steam’s built-in OSK works</td></tr>
+<tr><td><strong>Mobile (future)</strong></td><td>Tap chat icon → OS keyboard</td><td>Not exposed (use GUI settings instead)</td><td>Commands via chat input; no tilde console</td></tr>
+<tr><td><strong>Console (future)</strong></td><td>D-pad/bumper to open, OS keyboard</td><td>Not exposed</td><td>Controller-friendly command browser as alternative</td></tr>
+</tbody>
+</table>
+</div>
+<p>For non-desktop platforms, the cvar browser in the developer console is replaced by the <strong>Settings UI</strong> — a GUI-based equivalent that exposes the same cvars through menus and sliders. The command system is accessible via chat input on all platforms; the developer console overlay is a desktop convenience, not a requirement.</p>
+<h3 id="config-file-on-startup"><a class="header" href="#config-file-on-startup">Config File on Startup</a></h3>
+<p>Cvars are loadable from <code>config.toml</code> on startup and optionally from a per-game-module override:</p>
+<pre><code>config.toml                   # global defaults
+config.ra1.toml               # RA1-specific overrides (optional)
+config.td.toml                # TD-specific overrides (optional)
+</code></pre>
+<p><strong>Load order:</strong> <code>config.toml</code> → <code>config.&lt;game_module&gt;.toml</code> → command-line arguments → in-game <code>/set</code> commands. Each layer overrides the previous. Changes made via <code>/set</code> on <code>PERSISTENT</code> cvars write back to the appropriate config file.</p>
+<p><strong>Autoexec:</strong> An optional <code>autoexec.cfg</code> file (Source Engine convention) runs commands on startup:</p>
+<pre><code># autoexec.cfg — runs on game startup
+/set render.max_fps 144
+/set audio.master_volume 80
+/set gameplay.scroll_speed 7
+</code></pre>
+<p>This is a convenience for power users who prefer text files over GUI settings. The format is one command per line, <code>#</code> for comments. Parsed by the same <code>CommandDispatcher</code> with <code>CommandOrigin::ConfigFile</code>.</p>
+<h3 id="what-this-is-not"><a class="header" href="#what-this-is-not">What This Is NOT</a></h3>
+<ul>
+<li><strong>NOT a replacement for the Settings UI.</strong> Most players change settings through the GUI. The command system and cvars are the power-user interface to the same underlying settings. Both read and write the same <code>config.toml</code>.</li>
+<li><strong>NOT a scripting environment.</strong> The <code>/c</code> Lua console is for quick testing and debugging, not for writing mods. Mods belong in proper <code>.lua</code> files loaded through the mod system (D004). The console is a REPL — one-liners and quick experiments.</li>
+<li><strong>NOT available in competitive/ranked play.</strong> Dev commands are gated behind DeveloperMode (V44). The chat system and non-dev commands work in ranked; the Lua console and dev commands do not. Normal console commands (<code>/move</code>, <code>/build</code>, etc.) are treated as GUI-equivalent inputs — they produce the same <code>PlayerOrder</code> and are governed by D033 QoL toggles. See “Competitive Integrity in Multiplayer” above for the full framework: order rate monitoring, input source tracking, ranked restrictions, and tournament mode.</li>
+<li><strong>NOT a server management panel.</strong> Server administration beyond kick/ban/config should use external tools (web panels, RCON protocol). The in-game commands cover in-match operations only.</li>
+</ul>
+<h3 id="gui-first-application-design-cross-reference"><a class="header" href="#gui-first-application-design-cross-reference">GUI-First Application Design (Cross-Reference)</a></h3>
+<p>The in-game command console is part of the game client’s GUI — not a separate terminal. IC’s binary architecture is documented in <code>architecture/crate-graph.md</code> § “Binary Architecture: GUI-First Design.” The key principle: the game client (<code>iron-curtain[.exe]</code>) is a <strong>GUI application</strong> that launches into a windowed menu. The <code>ic</code> CLI is a separate developer/modder utility. Players never need a terminal. The command console (<code>/help</code>, <code>/speed 2x</code>) is an in-game overlay — a text field inside the game window, not a shell prompt. CI-1 (Console = GUI parity) ensures every console command has a GUI equivalent.</p>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ul>
+<li><strong>Separate console only, no chat integration</strong> (rejected — Source Engine’s model works for FPS games where chat is secondary, but RTS players use chat heavily during matches; forcing tilde-switch for commands is friction. Factorio and Minecraft prove unified is better for games where chat and commands coexist.)</li>
+<li><strong>Chat only, no developer console</strong> (rejected — power users need multi-line Lua input, scrollback, cvar browsing, and syntax highlighting. A single-line chat field can’t provide this. The developer console is a thin UI layer over the same dispatcher — minimal implementation cost.)</li>
+<li><strong>GUI-only commands like OpenRA</strong> (rejected — checkbox menus are fine for 7 dev mode flags but don’t scale to dozens of commands, mod-injected commands, or Lua execution. A text interface is necessary for extensibility.)</li>
+<li><strong>Custom command syntax instead of <code>/</code> prefix</strong> (rejected — <code>/</code> is the universal standard across Minecraft, Factorio, Discord, IRC, MMOs, and dozens of other games. Any other prefix would surprise users.)</li>
+<li><strong>RCON protocol for remote administration</strong> (deferred to <code>M7</code> / Phase 5 productization, <code>P-Scale</code> — useful for dedicated/community servers but out of scope for Phase 3. Planned implementation path: add <code>CommandOrigin::Rcon</code> with <code>Admin</code> permission level; the command dispatcher is origin-agnostic by design. Not part of Phase 3 exit criteria.)</li>
+<li><strong>Unrestricted Lua console without achievement consequences</strong> (rejected — every game that has tried this has created a split community where “did you use the console?” is a constant question. Factorio’s model — use it freely, but achievements are permanently disabled — is honest and universally understood.)</li>
+<li><strong>Disable console commands in multiplayer to prevent scripting</strong> (rejected — console commands produce the same <code>PlayerOrder</code> as GUI actions. Removing them doesn’t prevent scripting — external tools like AutoHotKey can automate mouse/keyboard input. Worse, a modified open-source client can send orders directly, bypassing all input methods. Removing the console punishes legitimate power users and accessibility needs while providing zero security benefit. The correct defense is D033 equalization, input source tracking, and community governance — see “Competitive Integrity in Multiplayer.”)</li>
+</ul>
+<h3 id="integration-with-existing-decisions"><a class="header" href="#integration-with-existing-decisions">Integration with Existing Decisions</a></h3>
+<ul>
+<li><strong>D004 (Lua Scripting):</strong> The <code>/c</code> command executes Lua in the same sandbox as mission scripts. The <code>CommandSource</code> passed to Lua commands provides the execution context (<code>CommandOrigin::ChatInput</code> vs <code>LuaScript</code> vs <code>ConfigFile</code>).</li>
+<li><strong>D005 (WASM):</strong> WASM modules register commands through the same <code>CommandDispatcher</code> host function API. WASM commands have the same permission model and sandboxing guarantees.</li>
+<li><strong>D012 (Order Validation):</strong> Sim-affecting commands produce <code>PlayerOrder</code> variants. The order validator rejects dev commands when dev mode is inactive, and logs repeated rejections for anti-cheat analysis.</li>
+<li><strong>D031 (Observability):</strong> Command execution events (who, what, when) are telemetry events. Admin actions, dev mode usage, and Lua console invocations are all observable.</li>
+<li><strong>D033 (QoL Toggles):</strong> Many QoL settings map directly to cvars. The QoL toggle UI and the cvar system read/write the same underlying values.</li>
+<li><strong>D034 (SQLite):</strong> Console command history is persisted in SQLite. The cvar browser’s search index uses the same FTS5 infrastructure.</li>
+<li><strong>D036 (Achievements):</strong> The <code>cheats_used</code> flag in sim state is set when any dev command or gameplay cheat executes. Achievement checks respect this flag. Cosmetic cheats (<code>cosmetic_cheats_used</code>) do not affect achievements — only <code>cheats_used</code> does.</li>
+<li><strong>D055 (Ranked Matchmaking):</strong> Games with <code>cheats_used = true</code> are excluded from ranked submission. The relay server verifies this flag in match certification. <code>cosmetic_cheats_used</code> alone does not affect ranked eligibility (cosmetic cheats are single-player only regardless).</li>
+<li><strong>03-NETCODE.md (In-Match Vote Framework):</strong> The <code>/callvote</code>, <code>/vote</code>, <code>/poll</code> commands are registered in the Brigadier command tree. <code>/gg</code> and <code>/ff</code> are aliases for <code>/callvote surrender</code>. Vote commands produce <code>PlayerOrder::Vote</code> variants — processed by the sim like any other order. Tactical polls extend the chat wheel phrase system.</li>
+<li><strong>V44 (06-SECURITY.md):</strong> <code>DeveloperMode</code> is sim state, toggled in lobby only, with unanimous consent in multiplayer. The command system enforces this — dev commands are rejected at the order validation layer, not the UI layer.</li>
+</ul>
+<hr>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../decisions/09g/D058/D058-competitive-cheats-integration.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../decisions/09g/D059-communication.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../decisions/09g/D058/D058-competitive-cheats-integration.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../decisions/09g/D059-communication.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../../mark-09e88c2c.min.js"></script>
+        <script src="../../../searcher-c2a407aa.js"></script>
+
+        <script src="../../../clipboard-1626706a.min.js"></script>
+        <script src="../../../highlight-abc7f01d.js"></script>
+        <script src="../../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

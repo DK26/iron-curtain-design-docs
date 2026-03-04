@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-da66c284.js";
+            window.path_to_searchindex_js = "searchindex-eb0f51f8.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-b6ee3c41.js"></script>
+        <script src="toc-2281c970.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -306,24 +306,98 @@
 </ol>
 <hr>
 <h2 id="high-cost-docs--resolved"><a class="header" href="#high-cost-docs--resolved">High-Cost Docs — Resolved</a></h2>
-<p>All previously identified high-cost files have been split into individually addressable units:</p>
+<p>All previously identified high-cost files (&gt;40KB) have been split into individually addressable sub-files. Each hub page retains overview content and a routing table to its sub-files.</p>
+<h3 id="chapter-level-splits"><a class="header" href="#chapter-level-splits">Chapter-Level Splits</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Original File</th><th>Now Split Into</th><th>Index Page</th></tr>
+<tr><th>Hub Page</th><th>Sub-Files</th><th>Directory</th></tr>
 </thead>
 <tbody>
-<tr><td><code>src/decisions/09f-tools.md</code></td><td><code>src/decisions/09f/D016-*.md</code> … <code>D057-*.md</code> (6 files)</td><td><code>09f-tools.md</code> (routing table only)</td></tr>
-<tr><td><code>src/decisions/09g-interaction.md</code></td><td><code>src/decisions/09g/D058-*.md</code> … <code>D069-*.md</code> (4 files)</td><td><code>09g-interaction.md</code> (routing table only)</td></tr>
-<tr><td><code>src/decisions/09b-networking.md</code></td><td><code>src/decisions/09b/D006-*.md</code> … <code>D060-*.md</code> (8 files)</td><td><code>09b-networking.md</code> (routing table only)</td></tr>
-<tr><td><code>src/decisions/09e-community.md</code></td><td><code>src/decisions/09e/D030-*.md</code> … <code>D061-*.md</code> (10 files)</td><td><code>09e-community.md</code> (routing table only)</td></tr>
-<tr><td><code>src/decisions/09d-gameplay.md</code></td><td><code>src/decisions/09d/D013-*.md</code> … <code>D070-*.md</code> (11 files)</td><td><code>09d-gameplay.md</code> (routing table only)</td></tr>
-<tr><td><code>src/02-ARCHITECTURE.md</code></td><td><code>src/architecture/*.md</code> (13 subsystem files)</td><td><code>02-ARCHITECTURE.md</code> (core invariants + routing table)</td></tr>
-<tr><td><code>src/17-PLAYER-FLOW.md</code></td><td><code>src/player-flow/*.md</code> (16 screen files)</td><td><code>17-PLAYER-FLOW.md</code> (UX principles + state machine + routing table)</td></tr>
+<tr><td><code>02-ARCHITECTURE.md</code></td><td>13 subsystem files</td><td><code>architecture/</code></td></tr>
+<tr><td><code>03-NETCODE.md</code></td><td>13 subsystem files</td><td><code>netcode/</code></td></tr>
+<tr><td><code>04-MODDING.md</code></td><td>10 topic files</td><td><code>modding/</code></td></tr>
+<tr><td><code>05-FORMATS.md</code></td><td>3 topic files</td><td><code>formats/</code></td></tr>
+<tr><td><code>06-SECURITY.md</code></td><td>9 vulnerability-group files</td><td><code>security/</code></td></tr>
+<tr><td><code>08-ROADMAP.md</code></td><td>1 sub-file (Phases 6a–7)</td><td><code>roadmap/</code></td></tr>
+<tr><td><code>10-PERFORMANCE.md</code></td><td>6 topic files</td><td><code>performance/</code></td></tr>
+<tr><td><code>11-OPENRA-FEATURES.md</code></td><td>7 section files</td><td><code>openra-features/</code></td></tr>
+<tr><td><code>14-METHODOLOGY.md</code></td><td>1 sub-file (Research Rigor)</td><td><code>methodology/</code></td></tr>
+<tr><td><code>15-SERVER-GUIDE.md</code></td><td>1 sub-file (Operations)</td><td><code>server-guide/</code></td></tr>
+<tr><td><code>16-CODING-STANDARDS.md</code></td><td>1 sub-file (Quality &amp; Review)</td><td><code>coding-standards/</code></td></tr>
+<tr><td><code>17-PLAYER-FLOW.md</code></td><td>16 screen files</td><td><code>player-flow/</code></td></tr>
 </tbody>
 </table>
 </div>
-<p><strong>Retrieval pattern:</strong> Read the index page (~500–800 tokens) to identify which sub-file to load, then load only that sub-file (~2k–12k tokens). Never load the full original content unless doing a cross-cutting audit.</p>
+<h3 id="decision-category-splits"><a class="header" href="#decision-category-splits">Decision Category Splits</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Hub Page</th><th>Individual Decision Files</th><th>Directory</th></tr>
+</thead>
+<tbody>
+<tr><td><code>decisions/09a-foundation.md</code></td><td>10 files</td><td><code>decisions/09a/</code></td></tr>
+<tr><td><code>decisions/09b-networking.md</code></td><td>8 files</td><td><code>decisions/09b/</code></td></tr>
+<tr><td><code>decisions/09c-modding.md</code></td><td>15 files</td><td><code>decisions/09c/</code></td></tr>
+<tr><td><code>decisions/09d-gameplay.md</code></td><td>16 files</td><td><code>decisions/09d/</code></td></tr>
+<tr><td><code>decisions/09e-community.md</code></td><td>10 files</td><td><code>decisions/09e/</code></td></tr>
+<tr><td><code>decisions/09f-tools.md</code></td><td>8 files</td><td><code>decisions/09f/</code></td></tr>
+<tr><td><code>decisions/09g-interaction.md</code></td><td>4 files</td><td><code>decisions/09g/</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="individual-decision-sub-splits"><a class="header" href="#individual-decision-sub-splits">Individual Decision Sub-Splits</a></h3>
+<p>Large individual decisions have been further split into sub-files:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Decision Hub</th><th>Sub-Files</th><th>Directory</th></tr>
+</thead>
+<tbody>
+<tr><td><code>D016-llm-missions.md</code></td><td>6 sub-files</td><td><code>decisions/09f/D016/</code></td></tr>
+<tr><td><code>D019-balance-presets.md</code></td><td>1 sub-file</td><td><code>decisions/09d/D019/</code></td></tr>
+<tr><td><code>D030-workshop-registry.md</code></td><td>1 sub-file</td><td><code>decisions/09e/D030/</code></td></tr>
+<tr><td><code>D031-observability.md</code></td><td>1 sub-file</td><td><code>decisions/09e/D031/</code></td></tr>
+<tr><td><code>D034-sqlite.md</code></td><td>1 sub-file</td><td><code>decisions/09e/D034/</code></td></tr>
+<tr><td><code>D038-scenario-editor.md</code></td><td>6 sub-files</td><td><code>decisions/09f/D038/</code></td></tr>
+<tr><td><code>D049-workshop-assets.md</code></td><td>3 sub-files</td><td><code>decisions/09e/D049/</code></td></tr>
+<tr><td><code>D052-community-servers.md</code></td><td>4 sub-files</td><td><code>decisions/09b/D052/</code></td></tr>
+<tr><td><code>D055-ranked-matchmaking.md</code></td><td>1 sub-file</td><td><code>decisions/09b/D055/</code></td></tr>
+<tr><td><code>D058-command-console.md</code></td><td>3 sub-files</td><td><code>decisions/09g/D058/</code></td></tr>
+<tr><td><code>D059-communication.md</code></td><td>5 sub-files</td><td><code>decisions/09g/D059/</code></td></tr>
+<tr><td><code>D061-data-backup.md</code></td><td>2 sub-files</td><td><code>decisions/09e/D061/</code></td></tr>
+<tr><td><code>D065-tutorial.md</code></td><td>5 sub-files</td><td><code>decisions/09g/D065/</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="tracking--planning-splits"><a class="header" href="#tracking--planning-splits">Tracking &amp; Planning Splits</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Hub Page</th><th>Sub-Files</th><th>Directory</th></tr>
+</thead>
+<tbody>
+<tr><td><code>18-PROJECT-TRACKER.md</code></td><td>6 tracker files</td><td><code>tracker/</code></td></tr>
+<tr><td><code>tracker/decision-tracker.md</code></td><td>4 D-range files</td><td><code>tracker/</code></td></tr>
+<tr><td><code>tracking/milestone-dependency-map.md</code></td><td>9 cluster/ladder files</td><td><code>tracking/milestone-deps/</code></td></tr>
+<tr><td><code>tracking/testing-strategy.md</code></td><td>3 topic files</td><td><code>tracking/testing/</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="sub-file-splits-within-existing-directories"><a class="header" href="#sub-file-splits-within-existing-directories">Sub-File Splits Within Existing Directories</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Hub Page</th><th>Sub-File</th><th>In Directory</th></tr>
+</thead>
+<tbody>
+<tr><td><code>architecture/api-misuse-defense.md</code></td><td><code>api-misuse-patterns.md</code></td><td><code>architecture/</code></td></tr>
+<tr><td><code>modding/tera-templating.md</code></td><td><code>tera-templating-advanced.md</code></td><td><code>modding/</code></td></tr>
+<tr><td><code>modding/workshop.md</code></td><td><code>workshop-features.md</code></td><td><code>modding/</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Retrieval pattern:</strong> Read the hub/index page (~500–2,000 tokens) to identify which sub-file to load, then load only that sub-file (~2k–12k tokens). Never load the full original content unless doing a cross-cutting audit.</p>
 <hr>
 <h2 id="decision-capsule-standard-pointer"><a class="header" href="#decision-capsule-standard-pointer">Decision Capsule Standard (Pointer)</a></h2>
 <p>For better RAG summaries and lower retrieval cost, add a short <strong>Decision Capsule</strong> near the top of each decision (or decision file).</p>

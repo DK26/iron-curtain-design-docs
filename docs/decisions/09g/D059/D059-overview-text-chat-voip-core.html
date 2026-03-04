@@ -1,0 +1,575 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Overview, Text Chat &amp; VoIP Core - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09g/D059/D059-overview-text-chat-voip-core.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d059-in-game-communication--text-chat-voice-beacons-and-coordination"><a class="header" href="#d059-in-game-communication--text-chat-voice-beacons-and-coordination">D059: In-Game Communication — Text Chat, Voice, Beacons, and Coordination</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th></th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Status</strong></td><td>Accepted</td></tr>
+<tr><td><strong>Phase</strong></td><td>Phase 3 (text chat, beacons), Phase 5 (VoIP, voice-in-replay)</td></tr>
+<tr><td><strong>Depends on</strong></td><td>D006 (NetworkModel), D007 (Relay Server), D024 (Lua API), D033 (QoL Toggles), D054 (Transport), D058 (Chat/Command Console)</td></tr>
+<tr><td><strong>Driver</strong></td><td>No open-source RTS has built-in VoIP. OpenRA has no voice chat. The Remastered Collection added basic lobby voice via Steam. This is a major opportunity for IC to set the standard.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="problem"><a class="header" href="#problem">Problem</a></h3>
+<p>RTS multiplayer requires three kinds of player coordination:</p>
+<ol>
+<li><strong>Text communication</strong> — chat channels (all, team, whisper), emoji, mod-registered phrases</li>
+<li><strong>Voice communication</strong> — push-to-talk VoIP for real-time callouts during gameplay</li>
+<li><strong>Spatial signaling</strong> — beacons, pings, map markers, tactical annotations that convey <em>where</em> and <em>what</em> without words</li>
+</ol>
+<p>D058 designed the text input/command system (chat box, <code>/</code> prefix routing, command dispatch). What D058 did NOT address:</p>
+<ul>
+<li>Chat <strong>channel routing</strong> — how messages reach the right recipients (all, team, whisper, observers)</li>
+<li><strong>VoIP architecture</strong> — codec, transport, relay integration, bandwidth management</li>
+<li><strong>Beacons and pings</strong> — the non-verbal coordination layer that Apex Legends proved is often more effective than voice</li>
+<li><strong>Voice-in-replay</strong> — whether and how voice recordings are preserved for replay playback</li>
+<li>How all three systems integrate with the existing <code>MessageLane</code> infrastructure (<code>03-NETCODE.md</code>) and <code>Transport</code> trait (D054)</li>
+</ul>
+<h3 id="decision"><a class="header" href="#decision">Decision</a></h3>
+<p>Build a unified coordination system with three tiers: text chat channels, relay-forwarded VoIP, and a contextual ping/beacon system — plus novel coordination tools (chat wheel, minimap drawing, tactical markers). Voice is optionally recorded into replays as a separate stream with explicit consent.</p>
+<p><strong>Revision note (2026-02-22):</strong> Revised platform guidance to define mobile minimap/bookmark coexistence (minimap cluster + adjacent bookmark dock) and explicit touch interaction precedence so future mobile coordination features (pings, chat wheel, minimap drawing) do not conflict with fast camera navigation. This revision was informed by mobile RTS UX research and touch-layout requirements (see <code>research/mobile-rts-ux-onboarding-community-platform-analysis.md</code>).</p>
+<h3 id="decision-capsule-llmrag-summary"><a class="header" href="#decision-capsule-llmrag-summary">Decision Capsule (LLM/RAG Summary)</a></h3>
+<ul>
+<li><strong>Status:</strong> Accepted (Revised 2026-02-22)</li>
+<li><strong>Phase:</strong> Phase 3 (text chat, beacons), Phase 5 (VoIP, voice-in-replay)</li>
+<li><strong>Canonical for:</strong> In-game communication architecture (text chat, voice, pings/beacons, tactical coordination) and integration with commands/replay/network lanes</li>
+<li><strong>Scope:</strong> <code>ic-ui</code> chat/voice/ping UX, <code>ic-net</code> message lanes/relay forwarding, replay voice stream policy, moderation/muting, mobile coordination input behavior</li>
+<li><strong>Decision:</strong> IC provides a unified coordination system with <strong>text chat channels</strong>, <strong>relay-forwarded VoIP</strong>, and <strong>contextual pings/beacons/markers</strong>, with optional voice recording in replays via explicit consent.</li>
+<li><strong>Why:</strong> RTS coordination needs verbal, textual, and spatial communication; open-source RTS projects under-serve VoIP and modern ping tooling; IC can set a higher baseline.</li>
+<li><strong>Non-goals:</strong> Text-only communication as the sole coordination path; separate mobile and desktop communication rules that change gameplay semantics.</li>
+<li><strong>Invariants preserved:</strong> Communication integrates with existing order/message infrastructure; D058 remains the input/command console foundation and D012 validation remains relevant for command-side actions.</li>
+<li><strong>Defaults / UX behavior:</strong> Text chat channels are first-class and sticky; voice is optional; advanced coordination tools (chat wheel/minimap drawing/tactical markers) layer onto the same system.</li>
+<li><strong>Mobile / accessibility impact:</strong> Mobile minimap and bookmark dock coexist in one cluster with explicit touch precedence rules to avoid conflicts between camera navigation and communication gestures.</li>
+<li><strong>Security / Trust impact:</strong> Moderation, muting, observer restrictions, and replay/voice consent rules are part of the core communication design.</li>
+<li><strong>Public interfaces / types / commands:</strong> <code>ChatChannel</code>, chat message orders/routing, voice packet/lane formats, beacon/ping/tactical marker events (see body sections)</li>
+<li><strong>Affected docs:</strong> <code>src/03-NETCODE.md</code>, <code>src/06-SECURITY.md</code>, <code>src/17-PLAYER-FLOW.md</code>, <code>src/decisions/09g-interaction.md</code> (D058/D065)</li>
+<li><strong>Revision note summary:</strong> Added mobile minimap/bookmark cluster coexistence and touch precedence so communication gestures do not break mobile camera navigation.</li>
+<li><strong>Keywords:</strong> chat, voip, pings, beacons, minimap drawing, communication lanes, replay voice, mobile coordination, command console integration</li>
+</ul>
+<h3 id="1-text-chat--channel-architecture"><a class="header" href="#1-text-chat--channel-architecture">1. Text Chat — Channel Architecture</a></h3>
+<p>D058 defined the chat <em>input</em> system. This section defines the chat <em>routing</em> system — how messages are delivered to the correct recipients.</p>
+<h4 id="channel-model"><a class="header" href="#channel-model">Channel Model</a></h4>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Chat channel identifiers. Sent as part of every ChatMessage order.
+/// The channel determines who receives the message. Channel selection
+/// is sticky — the player's last-used channel persists until changed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ChatChannel {
+    /// All players and observers see the message.
+    All,
+    /// Only players on the same team (including shared-control allies).
+    Team,
+    /// Private message to a specific player. Not visible to others.
+    /// Observers cannot whisper to players (anti-coaching, V41).
+    Whisper { target: PlayerId },
+    /// Observer-only channel. Players do not see these messages.
+    /// Prevents spectator coaching during live games (V41).
+    Observer,
+}
+<span class="boring">}</span></code></pre>
+<h4 id="chat-message-order"><a class="header" href="#chat-message-order">Chat Message Order</a></h4>
+<p>Chat messages flow through the order pipeline — they are <code>PlayerOrder</code> variants, validated by the sim (D012), and replayed deterministically:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Chat message as a player order. Part of the deterministic order stream.
+/// This means chat is captured in replays and can be replayed alongside
+/// gameplay — matching SC2's `replay.message.events` stream.
+pub enum PlayerOrder {
+    // ... existing variants ...
+    ChatMessage {
+        channel: ChatChannel,
+        /// UTF-8 text, bounded by ProtocolLimits::max_chat_message_length (512 chars, V15).
+        text: String,
+    },
+    /// Notification-only metadata marker: player started/stopped voice transmission.
+    /// NOT the audio data itself — that flows outside the order pipeline
+    /// via MessageLane::Voice (see D059 § VoIP Architecture). This order exists
+    /// solely so the sim can record voice activity timestamps in the replay's
+    /// analysis event stream. The sim DOES NOT process, decode, or relay any audio.
+    /// "VoIP is not part of the simulation" — VoiceActivity is a timestamp marker,
+    /// not audio data.
+    VoiceActivity {
+        active: bool,
+    },
+    /// Tactical ping placed on the map. Sim-side so it appears in replays.
+    TacticalPing {
+        ping_type: PingType,
+        pos: WorldPos,
+        /// Optional entity target (e.g., "attack this unit").
+        target: Option&lt;UnitTag&gt;,
+    },
+    /// Chat wheel phrase selected. Sim-side for deterministic replay.
+    ChatWheelPhrase {
+        phrase_id: u16,
+    },
+    /// Minimap annotation stroke (batch of points). Sim-side for replay.
+    MinimapDraw {
+        points: Vec&lt;WorldPos&gt;,
+        color: PlayerColor,
+    },
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Why chat is in the order stream:</strong> SC2 stores chat in a separate <code>replay.message.events</code> stream alongside <code>replay.game.events</code> (orders) and <code>replay.tracker.events</code> (analysis). IC follows this model — <code>ChatMessage</code> orders are part of the tick stream, meaning replays preserve the full text conversation. During replay playback, the chat overlay shows messages at the exact tick they were sent. This is essential for tournament review and community content creation.</p>
+<h4 id="channel-routing"><a class="header" href="#channel-routing">Channel Routing</a></h4>
+<p>Chat routing is a relay server concern, not a sim concern. The relay inspects <code>ChatChannel</code> to determine forwarding:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Channel</th><th>Relay Forwards To</th><th>Replay Visibility</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>All</code></td><td>All connected clients (players + observers)</td><td>Full</td><td>Standard all-chat</td></tr>
+<tr><td><code>Team</code></td><td>Same-team players only</td><td>Full (after game)</td><td>Hidden from opponents during live game</td></tr>
+<tr><td><code>Whisper { target }</code></td><td>Target player only + sender echo</td><td>Sender only</td><td>Private — not in shared replay</td></tr>
+<tr><td><code>Observer</code></td><td>All observers only</td><td>Full</td><td>Players never see observer chat during live game</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Anti-coaching:</strong> During a live game, observer messages are never forwarded to players. This prevents spectator coaching in competitive matches. In replay playback, all channels are visible (the information is historical).</p>
+<p><strong>Chat cooldown:</strong> Rate-limited at the relay: max 5 messages per 3 seconds per player (configurable via server cvar). Exceeding the limit queues messages with a “slow mode” indicator. This prevents chat spam without blocking legitimate rapid communication during intense moments.</p>
+<h4 id="channel-switching"><a class="header" href="#channel-switching">Channel Switching</a></h4>
+<pre><code>Enter         → Open chat in last-used channel
+Shift+Enter   → Open chat in All (if last-used was Team)
+Tab           → Cycle: All → Team → Observer (if spectating)
+/w &lt;name&gt;     → Switch to whisper channel targeting &lt;name&gt;
+/all           → Switch to All channel (D058 command)
+/team          → Switch to Team channel (D058 command)  
+</code></pre>
+<p>The active channel is displayed as a colored prefix in the chat input: <code>[ALL]</code>, <code>[TEAM]</code>, <code>[WHISPER → Alice]</code>, <code>[OBS]</code>.</p>
+<h4 id="emoji-and-rich-text"><a class="header" href="#emoji-and-rich-text">Emoji and Rich Text</a></h4>
+<p>Chat messages support a limited set of inline formatting:</p>
+<ul>
+<li><strong>Emoji shortcodes</strong> — <code>:gg:</code>, <code>:glhf:</code>, <code>:allied:</code>, <code>:soviet:</code> mapped to sprite-based emoji (not Unicode — ensures consistent rendering across platforms). Custom emoji can be registered by mods via YAML.</li>
+<li><strong>Unit/building links</strong> — <code>[Tank]</code> auto-links to the unit’s encyclopedia entry (if <code>ic-ui</code> has one). Parsed client-side, not in the order stream.</li>
+<li><strong>No markdown, no HTML, no BBCode.</strong> Chat is plain text with emoji shortcodes. This eliminates an entire class of injection attacks and keeps the parser trivial.</li>
+</ul>
+<h3 id="2-voice-over-ip--architecture"><a class="header" href="#2-voice-over-ip--architecture">2. Voice-over-IP — Architecture</a></h3>
+<p>No open-source RTS engine has built-in VoIP. OpenRA relies on Discord/TeamSpeak. The Remastered Collection added lobby voice via Steam’s API (Steamworks <code>ISteamNetworkingMessages</code>). IC’s VoIP is engine-native — no external service dependency.</p>
+<h4 id="design-principles"><a class="header" href="#design-principles">Design Principles</a></h4>
+<ol>
+<li>
+<p><strong>VoIP is NOT part of the simulation.</strong> Voice data never enters <code>ic-sim</code>. It is pure I/O — captured, encoded, transmitted, decoded, and played back entirely in <code>ic-net</code> and <code>ic-audio</code>. The sim is unaware that voice exists (Invariant #1: simulation is pure and deterministic).</p>
+</li>
+<li>
+<p><strong>Voice flows through the relay.</strong> Not P2P. This maintains D007’s architecture: the relay prevents IP exposure, provides consistent routing, and enables server-side mute enforcement. P2P voice would leak player IP addresses — a known harassment vector in competitive games.</p>
+</li>
+<li>
+<p><strong>Push-to-talk is the default.</strong> Voice activation detection (VAD) is available as an option but not default. PTT prevents accidental transmission of background noise, private conversations, and keyboard/mouse sounds — problems that plague open-mic games.</p>
+</li>
+<li>
+<p><strong>Voice is best-effort.</strong> Lost voice packets are not retransmitted. Human hearing tolerates ~5% packet loss with Opus’s built-in PLC (packet loss concealment). Retransmitting stale voice data adds latency without improving quality.</p>
+</li>
+<li>
+<p><strong>Voice never delays gameplay.</strong> The <code>MessageLane::Voice</code> lane has lower priority than <code>Orders</code> and <code>Control</code> — voice packets are dropped before order packets under bandwidth pressure.</p>
+</li>
+<li>
+<p><strong>End-to-end latency target: &lt;150ms.</strong> Mouth-to-ear latency must stay under 150ms for natural conversation. Budget: capture buffer ~5ms + encode ~2ms + network RTT/2 (typically 30-80ms) + jitter buffer (20-60ms) + decode ~1ms + playback buffer ~5ms = 63-153ms. CS2 and Valorant achieve ~100-150ms. Mumble achieves ~50-80ms on LAN, ~100-150ms on WAN. At &gt;200ms, conversation becomes turn-taking rather than natural overlap — unacceptable for real-time RTS callouts. The adaptive jitter buffer (see below) is the primary latency knob: on good networks it stays at 1 frame (20ms); on poor networks it expands up to 10 frames (200ms) as a tradeoff. Monitoring this budget is exposed via <code>VoiceDiagnostics</code> (see UI Indicators).</p>
+</li>
+</ol>
+<h4 id="codec-opus"><a class="header" href="#codec-opus">Codec: Opus</a></h4>
+<p><strong>Opus</strong> (RFC 6716) is the only viable choice. It is:</p>
+<ul>
+<li>Royalty-free and open-source (BSD license)</li>
+<li>The standard game voice codec (used by Discord, Steam, ioquake3, Mumble, WebRTC)</li>
+<li>Excellent at low bitrates (usable at 6 kbps, good at 16 kbps, transparent at 32 kbps)</li>
+<li>Built-in forward error correction (FEC) and packet loss concealment (PLC)</li>
+<li>Native Rust bindings available via <code>audiopus</code> crate (safe wrapper around libopus)</li>
+</ul>
+<p><strong>Encoding parameters:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Default</th><th>Range</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Sample rate</td><td>48 kHz</td><td>Fixed</td><td>Opus native rate; input is resampled if needed</td></tr>
+<tr><td>Channels</td><td>1 (mono)</td><td>Fixed</td><td>Voice chat is mono; stereo is wasted bandwidth</td></tr>
+<tr><td>Frame size</td><td>20 ms</td><td>10, 20, 40 ms</td><td>20 ms is the standard balance of latency vs. overhead</td></tr>
+<tr><td>Bitrate</td><td>32 kbps</td><td>8–64 kbps</td><td>Adaptive (see below). 32 kbps matches Discord/Mumble quality expectations</td></tr>
+<tr><td>Application mode</td><td><code>VOIP</code></td><td>Fixed</td><td>Opus <code>OPUS_APPLICATION_VOIP</code> — optimized for speech, enables DTX</td></tr>
+<tr><td>Complexity</td><td>7</td><td>0–10</td><td>Mumble uses 10, Discord similar; 7 is quality/CPU sweet spot</td></tr>
+<tr><td>DTX (Discontinuous Tx)</td><td>Enabled</td><td>On/Off</td><td>Stops transmitting during silence — major bandwidth savings</td></tr>
+<tr><td>In-band FEC</td><td>Enabled</td><td>On/Off</td><td>Encodes lower-bitrate redundancy of previous frame — helps packet loss</td></tr>
+<tr><td>Packet loss percentage</td><td>Dynamic</td><td>0–100</td><td>Fed from <code>VoiceBitrateAdapter.loss_ratio</code> — adapts FEC to actual loss</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Bandwidth budget per player:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Bitrate</th><th>Opus payload/frame (20ms)</th><th>+ overhead (per packet)</th><th>Per second</th><th>Quality</th></tr>
+</thead>
+<tbody>
+<tr><td>8 kbps</td><td>20 bytes</td><td>~48 bytes</td><td>~2.4 KB/s</td><td>Intelligible</td></tr>
+<tr><td>16 kbps</td><td>40 bytes</td><td>~68 bytes</td><td>~3.4 KB/s</td><td>Good</td></tr>
+<tr><td>24 kbps</td><td>60 bytes</td><td>~88 bytes</td><td>~4.4 KB/s</td><td>Very good</td></tr>
+<tr><td>32 kbps</td><td>80 bytes</td><td>~108 bytes</td><td>~5.4 KB/s</td><td><strong>Default</strong></td></tr>
+<tr><td>64 kbps</td><td>160 bytes</td><td>~188 bytes</td><td>~9.4 KB/s</td><td>Music-grade</td></tr>
+</tbody>
+</table>
+</div>
+<p>Overhead = 28 bytes UDP/IP + lane header. With DTX enabled, actual bandwidth is ~60% of these figures (voice is ~60% activity, ~40% silence in typical conversation). An 8-player game where 2 players speak simultaneously at the default 32 kbps uses 2 × 5.4 KB/s = ~10.8 KB/s inbound — negligible compared to the order stream.</p>
+<h4 id="adaptive-bitrate"><a class="header" href="#adaptive-bitrate">Adaptive Bitrate</a></h4>
+<p>The relay monitors per-connection bandwidth using the same ack vector RTT measurements used for order delivery (<code>03-NETCODE.md</code> § Per-Ack RTT Measurement). When bandwidth is constrained:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Voice bitrate adaptation based on available bandwidth.
+/// Runs on the sending client. The relay reports congestion via
+/// a VoiceBitrateHint control message (not an order — control lane).
+pub struct VoiceBitrateAdapter {
+    /// Current target bitrate (Opus encoder parameter).
+    pub current_bitrate: u32,
+    /// Minimum acceptable bitrate. Below this, voice is suspended
+    /// with a "low bandwidth" indicator to the UI.
+    pub min_bitrate: u32,       // default: 8_000
+    /// Maximum bitrate when bandwidth is plentiful.
+    pub max_bitrate: u32,       // default: 32_000
+    /// Smoothed trip time from ack vectors (updated every packet).
+    pub srtt_us: u64,
+    /// Packet loss ratio (0.0–1.0) from ack vector analysis.
+    pub loss_ratio: f32,        // f32 OK — this is I/O, not sim
+}
+
+impl VoiceBitrateAdapter {
+    /// Called each frame. Returns the bitrate to configure on the encoder.
+    /// Also updates Opus's OPUS_SET_PACKET_LOSS_PERC hint dynamically
+    /// (learned from Mumble/Discord — static loss hints under-optimize FEC).
+    pub fn adapt(&amp;mut self) -&gt; u32 {
+        if self.loss_ratio &gt; 0.15 {
+            // Heavy loss: drop to minimum, prioritize intelligibility
+            self.current_bitrate = self.min_bitrate;
+        } else if self.loss_ratio &gt; 0.05 {
+            // Moderate loss: reduce by 25%
+            self.current_bitrate = (self.current_bitrate * 3 / 4).max(self.min_bitrate);
+        } else if self.srtt_us &lt; 100_000 {
+            // Low latency, low loss: increase toward max
+            self.current_bitrate = (self.current_bitrate * 5 / 4).min(self.max_bitrate);
+        }
+        self.current_bitrate
+    }
+
+    /// Returns the packet loss percentage hint for OPUS_SET_PACKET_LOSS_PERC.
+    /// Dynamic: fed from observed loss_ratio rather than a static 10% default.
+    /// At higher loss hints, Opus allocates more bits to in-band FEC.
+    pub fn opus_loss_hint(&amp;self) -&gt; i32 {
+        // Quantize to 0, 5, 10, 15, 20, 25 — Opus doesn't need fine granularity
+        ((self.loss_ratio * 100.0) as i32 / 5 * 5).clamp(0, 25)
+    }
+}
+<span class="boring">}</span></code></pre>
+<h4 id="message-lane-voice"><a class="header" href="#message-lane-voice">Message Lane: Voice</a></h4>
+<p>Voice traffic uses a new <code>MessageLane::Voice</code> lane, positioned between <code>Chat</code> and <code>Bulk</code>:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum MessageLane {
+    Orders = 0,
+    Control = 1,
+    Chat = 2,
+    Voice = 3,    // NEW — voice frames
+    Bulk = 4,     // was 3, renumbered
+}
+<span class="boring">}</span></code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Lane</th><th>Priority</th><th>Weight</th><th>Buffer</th><th>Reliability</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Orders</code></td><td>0</td><td>1</td><td>4 KB</td><td>Reliable</td><td>Orders must arrive; missed = Idle (deadline is the cap)</td></tr>
+<tr><td><code>Control</code></td><td>0</td><td>1</td><td>2 KB</td><td>Unreliable</td><td>Latest sync hash wins; stale hashes are useless</td></tr>
+<tr><td><code>Chat</code></td><td>1</td><td>1</td><td>8 KB</td><td>Reliable</td><td>Chat messages should arrive but can wait</td></tr>
+<tr><td><code>Voice</code></td><td>1</td><td>2</td><td>16 KB</td><td>Unreliable</td><td>Real-time voice; dropped frames use Opus PLC (not retransmit)</td></tr>
+<tr><td><code>Bulk</code></td><td>2</td><td>1</td><td>64 KB</td><td>Unreliable</td><td>Telemetry/observer data uses spare bandwidth</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Voice and Chat share priority tier 1</strong> with a 2:1 weight ratio — voice gets twice the bandwidth share because it’s time-sensitive. Under bandwidth pressure, Orders and Control are served first (tier 0), then Voice and Chat split the remainder (tier 1, 67%/33%), then Bulk gets whatever is left (tier 2). This ensures voice never delays order delivery, but voice frames are prioritized over chat messages within the non-critical tier.</p>
+<p><strong>Buffer limit:</strong> 16 KB allows ~73ms of buffered voice at the default 32 kbps (~148 frames at 108 bytes each). If the buffer fills (severe congestion), the oldest voice frames are dropped — this is correct behavior for real-time audio (stale audio is worse than silence).</p>
+<h4 id="voice-packet-format"><a class="header" href="#voice-packet-format">Voice Packet Format</a></h4>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Voice data packet. Travels on MessageLane::Voice.
+/// NOT a PlayerOrder — voice never enters the sim.
+/// Encoded in the lane's framing, not the order TLV format.
+pub struct VoicePacket {
+    /// Which player is speaking. Set by relay (not client) to prevent spoofing.
+    pub speaker: PlayerId,
+    /// Monotonically increasing sequence number for ordering + loss detection.
+    pub sequence: u32,
+    /// Opus frame count in this packet (typically 1, max 3 for 60ms bundling).
+    pub frame_count: u8,
+    /// Voice routing target. The relay uses this to determine forwarding.
+    pub target: VoiceTarget,
+    /// Flags: SPATIAL (positional audio hint), FEC (frame contains FEC data).
+    pub flags: VoiceFlags,
+    /// Opus-encoded audio payload. Size determined by bitrate and frame_count.
+    pub data: Vec&lt;u8&gt;,
+}
+
+/// Who should hear this voice transmission.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VoiceTarget {
+    /// All players and observers hear the transmission.
+    All,
+    /// Only same-team players.
+    Team,
+    /// Specific player (private voice — rare, but useful for coaching/tutoring).
+    Player(PlayerId),
+}
+
+bitflags! {
+    pub struct VoiceFlags: u8 {
+        /// Positional audio hint — the listener should spatialize this
+        /// voice based on the speaker's camera position or selected units.
+        /// Opt-in via D033 QoL toggle. Disabled by default.
+        const SPATIAL = 0x01;
+        /// This packet contains Opus in-band FEC data for the previous frame.
+        const FEC     = 0x02;
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Speaker ID is relay-assigned.</strong> The client sends voice data; the relay stamps <code>speaker</code> before forwarding. This prevents voice spoofing — a client cannot impersonate another player’s voice. Same pattern as ioquake3’s server-side VoIP relay (where <code>sv_client.c</code> stamps the client number on forwarded voice packets).</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../decisions/09g/D059-communication.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../decisions/09g/D059/D059-voip-relay-moderation.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../decisions/09g/D059-communication.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../decisions/09g/D059/D059-voip-relay-moderation.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../../mark-09e88c2c.min.js"></script>
+        <script src="../../../searcher-c2a407aa.js"></script>
+
+        <script src="../../../clipboard-1626706a.min.js"></script>
+        <script src="../../../highlight-abc7f01d.js"></script>
+        <script src="../../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

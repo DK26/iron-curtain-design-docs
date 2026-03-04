@@ -1,0 +1,347 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Gates &amp; Mappings - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/tracking/milestone-deps/gates-and-mappings.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="ux-surface-gate-clusters-cross-check-for-milestone-completeness"><a class="header" href="#ux-surface-gate-clusters-cross-check-for-milestone-completeness">UX Surface Gate Clusters (Cross-Check for Milestone Completeness)</a></h2>
+<p>These clusters are used to prevent milestone definitions from becoming backend-only.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>UX Cluster ID</th><th>Milestone Gate</th><th>Required Flow Surface</th><th>Canonical Docs</th></tr>
+</thead>
+<tbody>
+<tr><td><code>UXG.M3.FIRST_RUN_TO_SKIRMISH</code></td><td><code>M3</code></td><td>D069 setup → main menu → skirmish launch path</td><td><code>17-PLAYER-FLOW.md</code>, <code>09g-interaction.md</code></td></tr>
+<tr><td><code>UXG.M4.ONLINE_CONNECT_MINIMAL</code></td><td><code>M4</code></td><td>Minimal online connect/host flow without tracker/ranked assumptions</td><td><code>17-PLAYER-FLOW.md</code>, <code>03-NETCODE.md</code></td></tr>
+<tr><td><code>UXG.M5.CAMPAIGN_RUNTIME_LOOP</code></td><td><code>M5</code></td><td>Briefing → mission → debrief → next flow + save/load</td><td><code>17-PLAYER-FLOW.md</code>, <code>modding/campaigns.md</code></td></tr>
+<tr><td><code>UXG.M7.LOBBY_BROWSER_RANKED_TRUST</code></td><td><code>M7</code></td><td>Browser/lobby/ranked trust labels + report/block/avoid/reporting surfaces</td><td><code>17-PLAYER-FLOW.md</code>, <code>07-CROSS-ENGINE.md</code></td></tr>
+<tr><td><code>UXG.M9.SDK_SCENARIO_AUTHORING</code></td><td><code>M9</code></td><td>SDK scenario editor + validate/test/publish + resource manager + workshop hooks</td><td><code>17-PLAYER-FLOW.md</code>, <code>09f-tools.md</code></td></tr>
+<tr><td><code>UXG.M10.SDK_CAMPAIGN_AND_MODES</code></td><td><code>M10</code></td><td>Campaign editor + game mode templates + D070 role-aware authoring surfaces</td><td><code>17-PLAYER-FLOW.md</code>, <code>09f-tools.md</code>, <code>09d-gameplay.md</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="policy--external-gate-nodes"><a class="header" href="#policy--external-gate-nodes">Policy / External Gate Nodes</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Gate Node ID</th><th>Type</th><th>Blocks Validation Of</th><th>Canonical Source</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>PG.P002.FIXED_POINT_SCALE</code></td><td>Pending decision</td><td><code>M2</code>, <code>M3</code></td><td><code>09-DECISIONS.md</code> pending table</td><td>Numeric scale must be fixed before implementing/tuning deterministic math and pathfinding</td></tr>
+<tr><td><code>PG.P003.AUDIO_LIBRARY</code></td><td>Pending decision</td><td><code>M3</code>, <code>M6</code></td><td><code>09-DECISIONS.md</code> pending table</td><td>Blocks final audio/music integration choice</td></tr>
+<tr><td><code>PG.P004.LOBBY_WIRE_DETAILS</code></td><td>Pending decision</td><td><code>M7</code> (and some <code>M4</code> polish)</td><td><code>09-DECISIONS.md</code> pending table</td><td>Architecture is resolved; wire/product details still need a lock</td></tr>
+<tr><td><code>PG.LEGAL.ENTITY_FORMED</code></td><td>Policy gate</td><td><code>M7</code>, <code>M9</code> production validation</td><td><code>08-ROADMAP.md</code>, <code>06-SECURITY.md</code></td><td>Needed before public server infra and user-data-bearing services go live</td></tr>
+<tr><td><code>PG.LEGAL.DMCA_AGENT</code></td><td>Policy gate</td><td><code>M9</code> Workshop production validation</td><td><code>08-ROADMAP.md</code>, <code>09e-community.md</code></td><td>Required before accepting user uploads under safe harbor expectations</td></tr>
+<tr><td><code>PG.LEGAL.CNC_FREEWARE_MIRROR_RIGHTS_POLICY</code></td><td>Policy gate</td><td>Any official/community Workshop mirroring of legacy/freeware C&amp;C content (<code>M8.COM.FREEWARE_MIRROR_STARTER_CONTENT</code>)</td><td><code>09e-community.md</code>, <code>06-SECURITY.md</code></td><td>Must explicitly define rights basis, provenance labels, and takedown/update policy; D069 owned-install import remains available regardless</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="external-source-study-mappings-confirmatory-research---overlay"><a class="header" href="#external-source-study-mappings-confirmatory-research---overlay">External Source Study Mappings (Confirmatory Research -&gt; Overlay)</a></h2>
+<p>Use this section to record <strong>accepted takeaways</strong> from source studies that refine implementation emphasis, docs, or execution sequencing without necessarily creating a new <code>Dxxx</code>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Source Study</th><th>Accepted Takeaway</th><th>Mapped Clusters</th><th>Action Type</th><th>Why It Matters</th></tr>
+</thead>
+<tbody>
+<tr><td><code>research/bar-recoil-source-study.md</code></td><td>Fast local creator iteration through a real game path (BAR <code>.sdd</code>/devmode-style concept adapted to IC)</td><td><code>M8.SDK.CLI_FOUNDATION</code>, <code>M8.COM.MINIMAL_WORKSHOP</code>, <code>M9.SDK.D038_SCENARIO_EDITOR_CORE</code></td><td>Execution emphasis / DX refinement</td><td>Reduces creator-loop friction and prevents “package/install every test” workflow debt</td></tr>
+<tr><td><code>research/bar-recoil-source-study.md</code></td><td>Explicit authoritative vs client-local scripting/API labeling (Recoil synced/unsynced lesson adapted to IC docs/tooling)</td><td><code>M5.SP.LUA_MISSION_RUNTIME</code>, <code>M8.SDK.AUTHORING_REFERENCE_FOUNDATION</code>, <code>M9.SDK.EMBEDDED_AUTHORING_MANUAL</code>, <code>M7.SEC.BEHAVIORAL_ANALYSIS_REPORTING</code></td><td>Docs taxonomy / trust-boundary clarity</td><td>Protects determinism and anti-cheat/trust messaging by making authority scope obvious to creators</td></tr>
+<tr><td><code>research/bar-recoil-source-study.md</code></td><td>Extension taxonomy for gameplay-authoritative vs local UI/QoL addons (adapted, not copied)</td><td><code>M9.COM.D049_FULL_WORKSHOP_CAS</code>, <code>M10.MOD.D066_RA1_EXPORT_EXTENSIBILITY</code>, <code>M10.SDK.LOCALIZATION_PLUGIN_HARDENING</code></td><td>Ecosystem policy vocabulary / labeling</td><td>Prevents plugin/UI extension ambiguity and competitive-integrity confusion as creator ecosystem grows</td></tr>
+<tr><td><code>research/bar-recoil-source-study.md</code></td><td>Deep, searchable manual/docs are product-critical (BAR/Recoil docs culture)</td><td><code>M8.SDK.AUTHORING_REFERENCE_FOUNDATION</code>, <code>M9.SDK.EMBEDDED_AUTHORING_MANUAL</code></td><td>Priority reinforcement (no milestone shift)</td><td>Confirms current sequencing that docs/manual work belongs in creator milestones, not post-polish</td></tr>
+<tr><td><code>research/bar-recoil-source-study.md</code></td><td>Keep lockstep buffering/jitter/rejoin behavior visible in diagnostics/trust messaging (Recoil lockstep pain confirms IC emphasis)</td><td><code>M4.NET.RELAY_TIME_AUTHORITY_AND_VALIDATION</code>, <code>M4.UX.MINIMAL_ONLINE_CONNECT_FLOW</code>, <code>M7.SEC.BEHAVIORAL_ANALYSIS_REPORTING</code>, <code>M7.NET.SPECTATOR_TOURNAMENT</code></td><td>Diagnostics/UX emphasis (no milestone shift)</td><td>Prevents opaque “net feels bad” failure modes and preserves honest trust claims</td></tr>
+<tr><td><code>research/bar-recoil-source-study.md</code></td><td>Protocol migration hygiene: explicit capability/trust labels for experimental vs certified paths (BAR Tachyon rollout signal)</td><td><code>M7.NET.TRACKING_BROWSER_DISCOVERY</code>, <code>M7.NET.CROSS_ENGINE_BRIDGE_AND_TRUST</code>, <code>M7.NET.D052_SIGNED_CREDS_RESULTS</code></td><td>Rollout/process UX emphasis</td><td>Helps netcode/bridge evolution without confusing users about ranked/certified guarantees</td></tr>
+<tr><td><code>research/bar-recoil-source-study.md</code></td><td>Moderation capability granularity: avoid “mute” semantics that accidentally disable unrelated functions (BAR moderation lesson)</td><td><code>M7.UX.REPORT_BLOCK_AVOID_REVIEW</code>, <code>M7.NET.RANKED_MATCHMAKING</code>, <code>M11.COM.ECOSYSTEM_POLISH_GOVERNANCE</code></td><td>Moderation policy/UX refinement</td><td>Keeps sanctions proportional and prevents protocol-coupled UX breakage</td></tr>
+<tr><td><code>research/bar-recoil-source-study.md</code></td><td>Pathfinding API/tuning humility: bounded script-facing path estimates + conformance-first exposure (Recoil changelog signal)</td><td><code>M2.CORE.PATH_SPATIAL</code>, <code>M5.SP.LUA_MISSION_RUNTIME</code>, <code>M8.SDK.AUTHORING_REFERENCE_FOUNDATION</code></td><td>API surface discipline / regression emphasis</td><td>Protects deterministic hot paths and frames path queries as explicit, documented capabilities</td></tr>
+<tr><td><code>research/open-source-rts-communication-markers-study.md</code></td><td>Treat OpenRA-compatible beacons/radar pings as a first-class D059 compatibility and replay-UX requirement (not just a Lua edge case)</td><td><code>M5.SP.LUA_MISSION_RUNTIME</code>, <code>M7.UX.D059_BEACONS_MARKERS_LABELS</code>, <code>M10.GAME.D070_TEMPLATE_TOOLKIT</code></td><td>Communication compatibility / schema hardening</td><td>Keeps Lua/UI/console/replay marker behavior coherent for classic C&amp;C expectations and co-op authoring</td></tr>
+<tr><td><code>research/open-source-rts-communication-markers-study.md</code></td><td>Marker semantics must stay icon/type-first; color + labels are bounded style metadata (accessibility and spectator clarity)</td><td><code>M7.UX.D059_BEACONS_MARKERS_LABELS</code>, <code>M7.NET.SPECTATOR_TOURNAMENT</code>, <code>M11.PLAT.BROWSER_MOBILE_POLISH</code></td><td>UX/readability discipline</td><td>Prevents color-only beacon semantics and preserves clarity across KBM/controller/touch and replay/spectator views</td></tr>
+<tr><td><code>research/open-source-rts-communication-markers-study.md</code></td><td>Communication capability scoping (chat/voice/ping/draw/vote) must remain distinct under moderation/sanctions</td><td><code>M7.UX.REPORT_BLOCK_AVOID_REVIEW</code>, <code>M7.NET.RANKED_MATCHMAKING</code>, <code>M11.COM.ECOSYSTEM_POLISH_GOVERNANCE</code>, <code>M7.UX.D059_BEACONS_MARKERS_LABELS</code></td><td>Moderation/comms UX hardening</td><td>Avoids sanction side effects that break tactical coordination or ranked match integrity</td></tr>
+<tr><td><code>research/open-source-rts-communication-markers-study.md</code></td><td>Replay-preserved coordination context (pings/markers/labels) is a force multiplier for moderation, teaching, and D070 iteration</td><td><code>M7.SEC.BEHAVIORAL_ANALYSIS_REPORTING</code>, <code>M7.NET.SPECTATOR_TOURNAMENT</code>, <code>M7.UX.D059_BEACONS_MARKERS_LABELS</code>, <code>M10.GAME.D070_TEMPLATE_TOOLKIT</code></td><td>Replay/moderation/co-op iteration emphasis</td><td>Improves post-match understanding and reduces guesswork in moderation and co-op mode tuning</td></tr>
+<tr><td><code>research/open-source-rts-communication-markers-study.md</code></td><td>Generals-derived UX refinements: explicit recipient/visibility semantics behind UI chat scopes, persistent-marker active caps with clear failure feedback, and draft-preserving chat entry behavior</td><td><code>M7.UX.D059_BEACONS_MARKERS_LABELS</code>, <code>M7.UX.REPORT_BLOCK_AVOID_REVIEW</code>, <code>M7.NET.SPECTATOR_TOURNAMENT</code>, <code>M11.PLAT.BROWSER_MOBILE_POLISH</code></td><td>Communication UX hardening / anti-spam refinement</td><td>Converts concrete Generals source patterns into IC D059 deliverables without importing legacy engine/network assumptions</td></tr>
+<tr><td><code>research/rtl-bidi-open-source-implementation-study.md</code></td><td>RTL correctness requires shaping + BiDi + role-aware font fallback + selective layout direction policy (not font coverage alone), plus explicit D059 anti-spoof vs legitimate RTL split</td><td><code>M6.UX.RTL_BIDI_GAME_UI_BASELINE</code>, <code>M7.UX.D059_RTL_CHAT_MARKER_TEXT_SAFETY</code>, <code>M7.UX.D059_BEACONS_MARKERS_LABELS</code>, <code>M9.SDK.RTL_BASIC_EDITOR_UI_LAYOUT</code>, <code>M10.SDK.RTL_BIDI_LOCALIZATION_WORKBENCH_PREVIEW</code>, <code>M10.SDK.LOCALIZATION_PLUGIN_HARDENING</code>, <code>M11.PLAT.BROWSER_MOBILE_POLISH</code></td><td>Localization/UX correctness hardening + test emphasis</td><td>Prevents “Unicode glyph coverage” false positives and keeps runtime/editor/chat RTL behavior aligned before localization claims scale</td></tr>
+<tr><td><code>research/source-sdk-2013-source-study.md</code></td><td>Fixed-point determinism validated: Source’s float prediction requires NaN checks, bit-level comparison, platform-specific friction, and runtime divergence logging — all eliminated by <code>i32</code>/<code>i64</code></td><td><code>M2.CORE.SIM_FIXED_POINT_AND_ORDERS</code>, <code>M0.QA.CI_PIPELINE_FOUNDATION</code></td><td>Architecture validation (no milestone shift)</td><td>Strongest empirical evidence for fixed-point math decision; Source’s <code>CDiffManager</code> concept maps to IC’s CI-grade determinism test</td></tr>
+<tr><td><code>research/source-sdk-2013-source-study.md</code></td><td>Safe parsing validated: every major Source CVE (buffer overflow, integer underflow, path traversal) is in C/C++ content parsing code that Rust prevents at compile time</td><td><code>M1.CORE.RA_FORMATS_PARSE</code>, <code>M0.QA.CI_PIPELINE_FOUNDATION</code></td><td>Security validation + fuzz emphasis</td><td>Reinforces no-<code>unsafe</code>-in-content-pipeline rule and fuzz testing priority for <code>ra-formats</code>, YAML, replay, and network parsers</td></tr>
+<tr><td><code>research/source-sdk-2013-source-study.md</code></td><td>Capability tokens validated: Source’s opt-in ConVar security flags (<code>FCVAR_CHEAT</code>) failed because one forgotten flag = exploit; secure-by-default capability tokens are the correct answer</td><td><code>M0.QA.TYPE_SAFETY_ENFORCEMENT</code>, <code>M6.SEC.WASM_INTERMODULE_ISOLATION</code></td><td>Security architecture validation</td><td>Confirms IC’s secure-by-default approach over Source’s opt-in security annotation model</td></tr>
+<tr><td><code>research/source-sdk-2013-source-study.md</code></td><td>Typestate validated: Source’s <code>CTeamplayRoundBasedRules</code> 11-state machine uses runtime enums with unrestricted transitions — IC’s compile-time typestate prevents invalid transitions</td><td><code>M0.QA.TYPE_SAFETY_ENFORCEMENT</code></td><td>Type-safety validation (no milestone shift)</td><td>Runtime enum state machines are a known Source pattern that IC explicitly improves upon</td></tr>
+<tr><td><code>research/source-sdk-2013-source-study.md</code></td><td>Single-schema wire format validated: Source’s manual SendProp/RecvProp table mirroring causes silent desync when tables drift — IC’s <code>ic-protocol</code> single-schema approach prevents this</td><td><code>M4.NET.MINIMAL_LOCKSTEP_ONLINE</code></td><td>Protocol safety validation</td><td>Manual schema mirroring is a known footgun in Source multiplayer code</td></tr>
+<tr><td><code>research/source-sdk-2013-source-study.md</code></td><td>Zero testing infrastructure: Source SDK has no unit tests, no CI, no fuzz testing; CVE-2021-30481 exploited a 2003-era library undetected for 18 years</td><td><code>M0.QA.CI_PIPELINE_FOUNDATION</code></td><td>Testing priority reinforcement</td><td>Confirms that CI from day one and fuzz testing for all parsers are non-negotiable</td></tr>
+<tr><td><code>research/source-sdk-2013-source-study.md</code></td><td>A* marker system: global generation counter eliminates O(n) clear between searches; closest-reachable fallback prevents “no path” failures; cost functor template enables per-unit-type pathfinding</td><td><code>M2.CORE.PATH_SPATIAL</code></td><td>Pathfinding implementation pattern (no milestone shift)</td><td>Essential for 1000-unit RTS: marker system + binary heap + fixed-point costs; Source’s sorted linked list and float costs are anti-patterns at RTS scale</td></tr>
+<tr><td><code>research/source-sdk-2013-source-study.md</code></td><td>AI interrupt condition masks (bitmask AND per tick), strategy slots for squad coordination, efficiency tiering, and six pathfinding cache types</td><td><code>M6.SP.SKIRMISH_AI_BASELINE</code>, <code>M2.CORE.PATH_SPATIAL</code></td><td>AI/pathfinding implementation patterns (no milestone shift)</td><td>Interrupt masks are O(1) per unit; strategy slots prevent tactical degeneracy; all caches must expire by sim tick (not wall-clock) for determinism</td></tr>
+<tr><td><code>research/source-sdk-2013-source-study.md</code></td><td>FGD editor metadata manually maintained separately from code (7 locations per entity definition, guaranteed drift); entity I/O data-driven wiring is powerful UX but unvalidated at compile time</td><td><code>M8.SDK.CLI_FOUNDATION</code>, <code>M9.SDK.D038_SCENARIO_EDITOR_CORE</code></td><td>SDK architecture validation</td><td>Confirms single-source YAML schema approach: one definition serves as runtime validation, editor metadata, and CLI tooling input; validates CLI-first (M8) before visual editor (M9)</td></tr>
+<tr><td><code>research/source-sdk-2013-source-study.md</code></td><td>PVS filtering (per-client entity visibility) maps to fog-authoritative relay; <code>sv_max_usercmd_future_ticks</code> caps client command lookahead; baseline+delta for reconnection</td><td><code>M4.NET.RELAY_TIME_AUTHORITY_AND_VALIDATION</code>, <code>M4.NET.RECONNECT_BASELINE</code></td><td>Netcode pattern validation (no milestone shift)</td><td>Three Source netcode patterns translate directly to lockstep: fog authority, tick-count validation, and snapshot-based reconnection</td></tr>
+<tr><td><code>research/source-sdk-2013-source-study.md</code></td><td><code>net_graph 1/2/3</code> layered diagnostic overlay → IC’s <code>/diag 0-3</code> system: 4-level real-time observability, graph history mode, mod diagnostic API, mobile support</td><td><code>M2.CORE.DIAG_OVERLAY_L1</code>, <code>M3.GAME.DIAG_OVERLAY_L2</code>, <code>M4.NET.DIAG_OVERLAY_NET</code>, <code>M6.SP.DIAG_OVERLAY_DEV</code>, <code>M8.SDK.MOD_DIAG_API</code></td><td>New design (inspired by Source, formally specified)</td><td>Phased rollout: L1 basic (M2) → L2 detailed (M3) → network panels (M4) → developer panels (M6) → mod API (M8). See <code>10-PERFORMANCE.md</code> § Diagnostic Overlay, D058 <code>/diag</code> commands</td></tr>
+<tr><td><code>research/generals-zero-hour-diagnostic-tools-study.md</code></td><td>SAGE PerfGather gross/net time distinction for per-system bars; command arrival cushion metric for lockstep network panel; configurable collection interval for expensive L2 metrics</td><td><code>M2.CORE.DIAG_OVERLAY_L1</code>, <code>M3.GAME.DIAG_OVERLAY_L2</code>, <code>M4.NET.DIAG_OVERLAY_NET</code></td><td>Diagnostic overlay refinement (enhances existing design)</td><td>Gross/net prevents double-counting in hierarchical systems; cushion is the most meaningful lockstep metric; 500ms batch avoids per-frame overhead for expensive queries</td></tr>
+<tr><td><code>research/generals-zero-hour-diagnostic-tools-study.md</code></td><td>SAGE W3DDebugIcons world markers (category-filtered); frame-gated desync logging (auto-capture around divergence); tick-stepping (<code>/step</code>) for determinism debugging</td><td><code>M6.SP.DIAG_OVERLAY_DEV</code>, <code>M4.NET.DIAG_OVERLAY_NET</code></td><td>Developer tool additions (new capabilities)</td><td>Category-filtered markers essential for 1000-unit scale; frame-gated logging avoids always-on overhead; <code>/step</code> enables fine-grained sim debugging</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="mapping-rules-how-to-keep-this-page-useful"><a class="header" href="#mapping-rules-how-to-keep-this-page-useful">Mapping Rules (How to Keep This Page Useful)</a></h2>
+<ol>
+<li><strong>Cluster-level, not bullet-level sprawl:</strong> map roadmap deliverables and exit criteria into stable feature clusters unless a bullet is itself a dependency boundary.</li>
+<li><strong>Dxxx ownership lives in <code>18-PROJECT-TRACKER.md</code>:</strong> this page references decisions at cluster level for dependency reasoning.</li>
+<li><strong>Gameplay familiarity ordering follows <code>11-OPENRA-FEATURES.md</code>:</strong> <code>P0</code> gates <code>M2</code>, <code>P1/P2</code> gate <code>M3</code>, <code>P3</code> is explicitly deferred and tracked.</li>
+<li><strong>Mark policy/legal prerequisites as <code>policy_gate</code> nodes, not hidden assumptions.</strong></li>
+<li><strong>Keep the “minimal online slice” narrow:</strong> <code>M4</code> must not absorb browser/ranked/spectator requirements.</li>
+<li><strong>Keep “creator foundation” distinct from “full visual editor”:</strong> <code>M8</code> is a parallel lane, <code>M9</code> is the visual authoring platform milestone.</li>
+<li><strong>New features must be inserted in sequence, not appended as unsorted TODOs:</strong> every accepted feature proposal gets a milestone position and dependency edges in the same planning pass.</li>
+<li><strong>Priority is mandatory for placement decisions:</strong> new clusters should be classified (<code>P-Core</code>, <code>P-Differentiator</code>, <code>P-Creator</code>, <code>P-Scale</code>, <code>P-Optional</code>) and placed so higher-priority critical-path work is not silently displaced.</li>
+<li><strong>If a feature spans multiple milestones, split the cluster or add explicit <code>validation_depends_on</code> / <code>integration_gate</code> edges</strong> instead of hiding sequencing inside notes.</li>
+<li><strong>If non-indexed decision references reappear, normalize the decision index in the same planning pass</strong> and update tracker coverage.</li>
+<li><strong>When a source study yields accepted implementation refinements, map them here</strong> (cluster references + action type) so they influence execution planning instead of living only in <code>research/*.md</code>.</li>
+<li><strong>Future/deferred wording in canonical docs must map here when it implies accepted work.</strong> If a statement is a planned deferral, add/update the affected cluster row (or create one) in the same planning pass and update <code>tracking/future-language-audit.md</code>; if it cannot be placed, it is proposal-only or a <code>Pxxx</code>, not scheduled work.</li>
+<li><strong>If accepted work changes external implementation-repo onboarding or code navigation expectations, update the bootstrap and template docs</strong> (<code>tracking/external-code-project-bootstrap.md</code>, <code>tracking/external-project-agents-template.md</code>, <code>tracking/source-code-index-template.md</code>) in the same planning pass.</li>
+</ol>
+<h2 id="new-feature-intake-dependency-map-workflow"><a class="header" href="#new-feature-intake-dependency-map-workflow">New Feature Intake (Dependency Map Workflow)</a></h2>
+<p>Use this workflow whenever a new feature/mode/tooling surface is added to the design:</p>
+<ol>
+<li><strong>Decide whether it is a <code>Dxxx</code> decision, a feature cluster, or both.</strong></li>
+<li><strong>Assign a primary milestone</strong> (<code>M0–M11</code>) based on what must exist before the feature becomes implementable.</li>
+<li><strong>Add hard/soft/validation/policy/integration edges</strong> to existing milestones/clusters.</li>
+<li><strong>Record the canonical docs + roadmap phase mapping</strong> in the cluster row.</li>
+<li><strong>Check for milestone displacement:</strong> if the feature would delay a higher-priority milestone, mark it <code>P-Optional</code>/experimental or move it later.</li>
+<li><strong>Update <code>18-PROJECT-TRACKER.md</code> in the same change set</strong> (milestone snapshot/risk/coverage impact and Dxxx row if applicable).</li>
+<li><strong>If the feature docs introduce future/deferred wording, classify it and update <code>tracking/future-language-audit.md</code></strong> (and use <code>tracking/deferral-wording-patterns.md</code> for replacement wording where needed).</li>
+<li><strong>If the feature changes expected codebase structure or implementer routing, update the external bootstrap/AGENTS/code-index templates</strong> so external repos inherit the same assumptions.</li>
+</ol>
+<h3 id="deferred-feature-placement-examples-canonical-patterns"><a class="header" href="#deferred-feature-placement-examples-canonical-patterns">Deferred Feature Placement Examples (Canonical Patterns)</a></h3>
+<ul>
+<li><strong>Good (planned deferral):</strong> “Deferred to <code>M10</code> (<code>P-Creator</code>) after <code>M9.SDK.D038_SCENARIO_EDITOR_CORE</code>; not part of <code>M9</code> exit criteria.”<br>Result: add/update an <code>M10.*</code> cluster row with hard/soft edges and note the out-of-scope boundary.</li>
+<li><strong>Good (north star):</strong> “Long-term vision only; depends on <code>M7.NET.CROSS_ENGINE_BRIDGE_AND_TRUST</code> + <code>M11.VISUAL.D048_AND_RENDER_MOD_INFRA</code>; trust-labeled and not a ranked promise.”<br>Result: no new cluster if already covered, but add/update tracker risk/trust-label notes.</li>
+<li><strong>Bad (ambiguous):</strong> “Could add later if players want it.”<br>Result: rewrite into planned deferral + overlay mapping, or mark proposal-only / <code>Pxxx</code>.</li>
+<li><strong>Good (external implementation handoff):</strong> “This introduces a new first-class subsystem boundary; update <code>CODE-INDEX.md</code> template examples and external <code>AGENTS.md</code> guidance in <code>M0</code> tooling docs.”
+Result: preserve LLM/human navigation quality across implementation repos as the architecture grows.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../tracking/milestone-deps/clusters-m10-m11.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../tracking/project-tracker-schema.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../tracking/milestone-deps/clusters-m10-m11.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../tracking/project-tracker-schema.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-c2a407aa.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

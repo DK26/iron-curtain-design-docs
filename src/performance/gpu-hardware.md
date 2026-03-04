@@ -171,21 +171,21 @@ pub enum TonemappingMode {
 
 **Bevy component mapping:** Every field in `RenderSettings` maps to a Bevy component or resource. The `RenderSettingsSync` system (runs in `PostUpdate`) reads changes and applies them:
 
-| `RenderSettings` field | Bevy Component / Resource | Notes |
-|---|---|---|
-| `msaa` | `Msaa` (global resource) | Set to `Off` when SMAA is active |
-| `smaa` | `Smaa` (camera component) | Added/removed on camera entity |
-| `bloom` | `Bloom` (camera component) | Added/removed; fields map 1:1 |
-| `tonemapping` | `Tonemapping` (camera component) | Enum variant maps directly |
-| `deband_dither` | `DebandDither` (camera component) | `Enabled` / `Disabled` |
-| `shadow_filter` | `ShadowFilteringMethod` (camera component) | `Hardware2x2`, `Gaussian`, `Temporal` |
-| `ambient_occlusion` | `ScreenSpaceAmbientOcclusion` (camera component) | Added/removed with quality settings |
-| `vsync` | `WinitSettings` / `PresentMode` | Requires window recreation for some modes |
-| `fps_cap` | Frame limiter system (custom) | `thread::sleep` or Bevy `FramepacePlugin` |
-| `resolution_scale` | Render target size override | Renders to smaller target, upscales |
-| `dynamic_lighting` | Point/spot light entity visibility | Toggles `Visibility` on light entities |
-| `shadows_enabled` | `DirectionalLight.shadows_enabled` | Per-light shadow toggle |
-| `shadow_quality` | `DirectionalLightShadowMap.size` | 512 / 1024 / 2048 / 4096 |
+| `RenderSettings` field | Bevy Component / Resource                        | Notes                                     |
+| ---------------------- | ------------------------------------------------ | ----------------------------------------- |
+| `msaa`                 | `Msaa` (global resource)                         | Set to `Off` when SMAA is active          |
+| `smaa`                 | `Smaa` (camera component)                        | Added/removed on camera entity            |
+| `bloom`                | `Bloom` (camera component)                       | Added/removed; fields map 1:1             |
+| `tonemapping`          | `Tonemapping` (camera component)                 | Enum variant maps directly                |
+| `deband_dither`        | `DebandDither` (camera component)                | `Enabled` / `Disabled`                    |
+| `shadow_filter`        | `ShadowFilteringMethod` (camera component)       | `Hardware2x2`, `Gaussian`, `Temporal`     |
+| `ambient_occlusion`    | `ScreenSpaceAmbientOcclusion` (camera component) | Added/removed with quality settings       |
+| `vsync`                | `WinitSettings` / `PresentMode`                  | Requires window recreation for some modes |
+| `fps_cap`              | Frame limiter system (custom)                    | `thread::sleep` or Bevy `FramepacePlugin` |
+| `resolution_scale`     | Render target size override                      | Renders to smaller target, upscales       |
+| `dynamic_lighting`     | Point/spot light entity visibility               | Toggles `Visibility` on light entities    |
+| `shadows_enabled`      | `DirectionalLight.shadows_enabled`               | Per-light shadow toggle                   |
+| `shadow_quality`       | `DirectionalLightShadowMap.size`                 | 512 / 1024 / 2048 / 4096                  |
 
 ### Auto-Detection Algorithm
 
@@ -344,20 +344,20 @@ pub fn default_settings_for_tier(tier: RenderTier) -> RenderSettings {
 
 Beyond tier detection, the engine recognizes specific hardware families and applies targeted overrides on top of the tier defaults. These are **refinements, not replacements** — tier detection runs first, then hardware-specific tweaks adjust individual parameters.
 
-| Hardware Signature | Detected Via | Base Tier | Overrides Applied |
-|---|---|---|---|
-| **Intel HD 4000** (Ivy Bridge) | `adapter_info.name` contains "HD 4000" or "Ivy Bridge" | Baseline | `particle_density: 0.2`, `camera_smoothing: false` (save CPU) |
-| **Intel HD 5000–6000** (Haswell/Broadwell) | `adapter_info.name` match | Standard | `shadow_quality: Off`, `bloom: None` (iGPU bandwidth limited) |
-| **Intel UHD 620–770** (modern iGPU) | `adapter_info.name` match | Standard | `shadow_quality: Low`, `particle_density: 0.5` |
-| **Steam Deck** (AMD Van Gogh) | `adapter_info.name` contains "Van Gogh" or env `SteamDeck=1` | Enhanced | `fps_cap: V30`, `resolution_scale: 0.75`, `shadow_quality: Medium`, `smaa: Medium`, `ambient_occlusion: None` (battery + thermal) |
-| **GTX 600–700** (Kepler) | `adapter_info.name` match | Standard | Default Standard (no overrides) |
-| **GTX 900 / RX 400** (Maxwell/Polaris) | `adapter_info.name` match | Enhanced | Default Enhanced (no overrides) |
-| **RTX 2000+ / RX 5000+** | `adapter_info.name` match | Ultra | Default Ultra (no overrides) |
-| **Apple M1** | `adapter_info.backend == Metal` + name match | Enhanced | `vsync: On` (Metal VSync is efficient), `anisotropic_filtering: 16` |
-| **Apple M2+** | `adapter_info.backend == Metal` + name match | Ultra | Same Metal-specific tweaks |
-| **WebGPU (browser)** | `adapter_info.backend == BrowserWebGpu` | Standard | `fps_cap: V60`, `resolution_scale: 0.8`, `ambient_occlusion: None` (WASM overhead) |
-| **WebGL2 (browser fallback)** | `adapter_info.backend == Gl` + WASM target | Baseline | `particle_density: 0.15`, `texture_filtering: Nearest` |
-| **Mobile (Android/iOS)** | Platform detection | Standard | `fps_cap: V30`, `resolution_scale: 0.7`, `shadows_enabled: false`, `bloom: None`, `particle_density: 0.3` (battery + thermals) |
+| Hardware Signature                         | Detected Via                                                 | Base Tier | Overrides Applied                                                                                                                 |
+| ------------------------------------------ | ------------------------------------------------------------ | --------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Intel HD 4000** (Ivy Bridge)             | `adapter_info.name` contains "HD 4000" or "Ivy Bridge"       | Baseline  | `particle_density: 0.2`, `camera_smoothing: false` (save CPU)                                                                     |
+| **Intel HD 5000–6000** (Haswell/Broadwell) | `adapter_info.name` match                                    | Standard  | `shadow_quality: Off`, `bloom: None` (iGPU bandwidth limited)                                                                     |
+| **Intel UHD 620–770** (modern iGPU)        | `adapter_info.name` match                                    | Standard  | `shadow_quality: Low`, `particle_density: 0.5`                                                                                    |
+| **Steam Deck** (AMD Van Gogh)              | `adapter_info.name` contains "Van Gogh" or env `SteamDeck=1` | Enhanced  | `fps_cap: V30`, `resolution_scale: 0.75`, `shadow_quality: Medium`, `smaa: Medium`, `ambient_occlusion: None` (battery + thermal) |
+| **GTX 600–700** (Kepler)                   | `adapter_info.name` match                                    | Standard  | Default Standard (no overrides)                                                                                                   |
+| **GTX 900 / RX 400** (Maxwell/Polaris)     | `adapter_info.name` match                                    | Enhanced  | Default Enhanced (no overrides)                                                                                                   |
+| **RTX 2000+ / RX 5000+**                   | `adapter_info.name` match                                    | Ultra     | Default Ultra (no overrides)                                                                                                      |
+| **Apple M1**                               | `adapter_info.backend == Metal` + name match                 | Enhanced  | `vsync: On` (Metal VSync is efficient), `anisotropic_filtering: 16`                                                               |
+| **Apple M2+**                              | `adapter_info.backend == Metal` + name match                 | Ultra     | Same Metal-specific tweaks                                                                                                        |
+| **WebGPU (browser)**                       | `adapter_info.backend == BrowserWebGpu`                      | Standard  | `fps_cap: V60`, `resolution_scale: 0.8`, `ambient_occlusion: None` (WASM overhead)                                                |
+| **WebGL2 (browser fallback)**              | `adapter_info.backend == Gl` + WASM target                   | Baseline  | `particle_density: 0.15`, `texture_filtering: Nearest`                                                                            |
+| **Mobile (Android/iOS)**                   | Platform detection                                           | Standard  | `fps_cap: V30`, `resolution_scale: 0.7`, `shadows_enabled: false`, `bloom: None`, `particle_density: 0.3` (battery + thermals)    |
 
 ```rust
 /// Hardware-specific refinements applied after tier detection.

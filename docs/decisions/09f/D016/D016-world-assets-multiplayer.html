@@ -1,0 +1,559 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>World Assets &amp; Multiplayer - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09f/D016/D016-world-assets-multiplayer.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h4 id="world-map-assets"><a class="header" href="#world-map-assets">World Map Assets</a></h4>
+<p>World maps are <strong>game-module-provided and moddable assets</strong> — not hardcoded. A world map can represent anything: Cold War Europe, the entire globe, a fictional continent, an alien planet, a galactic star map, a subway network — whatever fits the game or mod. The engine doesn’t care what the map <em>is</em>, only that it has regions with connections. Each game module ships with default world maps, and modders can create their own for any setting they imagine.</p>
+<p><strong>World map definition:</strong></p>
+<pre><code class="language-yaml"># World map asset — shipped with the game module or created by modders
+world_map:
+  id: "europe_1953"
+  display_name: "Europe 1953"
+  game_module: red_alert              # which game module this map is for
+  
+  # Visual asset — the actual map image
+  # Supports multiple render modes (D048): sprite, vector, or 3D globe
+  visual:
+    base_image: "maps/world/europe_1953.png"    # background image
+    region_overlays: "maps/world/europe_1953_regions.png"  # color-coded regions
+    faction_colors: true                         # color regions by controlling faction
+    animation: frontline_glow                    # animated frontlines between factions
+  
+  # Region definitions (see region YAML above)
+  regions:
+    # ... region definitions with adjacency, terrain, resources, etc.
+  
+  # Starting configurations (selectable in setup)
+  scenarios:
+    - id: "cold_war_heats_up"
+      description: "Classical East vs. West. Soviets hold Eastern Europe, Allies hold the West."
+      faction_assignments:
+        soviet: ["moscow", "leningrad", "stalingrad", "kiev", "minsk", "warsaw"]
+        allied: ["london", "paris", "rome", "berlin", "madrid"]
+        neutral: ["stockholm", "bern", "ankara", "cairo", "istanbul"]
+    - id: "last_stand"
+      description: "Soviets control most of Europe. Allies hold only Britain and France."
+      faction_assignments:
+        soviet: ["moscow", "leningrad", "stalingrad", "kiev", "minsk", "warsaw", "berlin", "prague", "vienna", "budapest", "rome"]
+        allied: ["london", "paris"]
+        neutral: ["stockholm", "bern", "ankara", "cairo", "istanbul"]
+</code></pre>
+<p><strong>Game-module world maps:</strong></p>
+<p>Each game module provides at least one default world map:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Game module</th><th>Default world map</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Red Alert</td><td><code>europe_1953</code></td><td>Cold War Europe — Soviets vs. Allies</td></tr>
+<tr><td>Tiberian Dawn</td><td><code>gdi_nod_global</code></td><td>Global map — GDI vs. Nod, Tiberium spread zones</td></tr>
+<tr><td>(Community)</td><td>Anything</td><td>The map is whatever the modder wants it to be</td></tr>
+</tbody>
+</table>
+</div>
+<p>Community world map examples (the kind of thing modders could create):</p>
+<ul>
+<li><strong>Pacific Theater</strong> — island-hopping across the Pacific; naval-heavy campaigns</li>
+<li><strong>Entire globe</strong> — six continents, dozens of regions, full world war</li>
+<li><strong>Fictional continent</strong> — Westeros, Middle-earth, or an original fantasy setting</li>
+<li><strong>Galactic star map</strong> — planets as regions, fleets as garrisons, a sci-fi total conversion</li>
+<li><strong>Single city</strong> — district-by-district urban warfare; each “region” is a city block or neighborhood</li>
+<li><strong>Underground network</strong> — cavern systems, bunker complexes, tunnel connections</li>
+<li><strong>Alternate history</strong> — what if the Roman Empire never fell? What if the Cold War went hot in 1962?</li>
+<li><strong>Abstract/non-geographic</strong> — a network of space stations, a corporate org chart, whatever the mod needs</li>
+</ul>
+<p>The world map is a YAML + image asset, loadable from any source: game module defaults, Workshop (D030), or local mod folders. The Campaign Editor (D038) includes a world map editor for creating and editing regions, adjacencies, and starting scenarios.</p>
+<p><strong>World maps as Workshop resources:</strong></p>
+<p>World maps are a first-class Workshop resource category (<code>category: world-map</code>). This makes them discoverable, installable, version-tracked, and composable like any other Workshop content:</p>
+<pre><code class="language-yaml"># Workshop manifest for a world map package
+package:
+  name: "galactic-conquest-map"
+  publisher: "scifi-modding-collective"
+  version: "2.1.0"
+  license: "CC-BY-SA-4.0"
+  description: "A 40-region galactic star map for sci-fi total conversions"
+  category: world-map
+  game_module: any                     # or a specific module
+  engine_version: "^0.3.0"
+  
+  tags: ["sci-fi", "galactic", "space", "large"]
+  ai_usage: allow                       # LLM can select this map for generated campaigns
+  
+  dependencies:
+    - id: "scifi-modding-collective/space-faction-pack"
+      version: "^1.0"                  # faction definitions this map references
+
+files:
+  world_map.yaml: { sha256: "..." }   # region definitions, adjacency, scenarios
+  assets/galaxy_background.png: { sha256: "..." }
+  assets/region_overlays.png: { sha256: "..." }
+  assets/faction_icons/: {}            # per-faction marker icons
+  preview.png: { sha256: "..." }       # Workshop listing thumbnail
+</code></pre>
+<p>Workshop world maps support the full Workshop lifecycle:</p>
+<ul>
+<li><strong>Discovery</strong> — browse/search by game module, region count, theme tags, rating. Filter by “maps with 20+ regions” or “fantasy setting” or “historical.”</li>
+<li><strong>One-click install</strong> — download the <code>.icpkg</code>, world map appears in the campaign setup screen under “Community Maps.”</li>
+<li><strong>Dependency resolution</strong> — a world map can depend on faction packs, terrain packs, or sprite sets. Workshop resolves and installs dependencies automatically.</li>
+<li><strong>Versioning</strong> — semver; breaking changes (region ID renames, adjacency changes) require major version bumps. Saved campaigns pin the world map version they were started with.</li>
+<li><strong>Forking</strong> — any published world map can be forked. “I like that galactic map but I want to add a wormhole network” → fork, edit in Campaign Editor, republish as a derivative (license permitting).</li>
+<li><strong>LLM integration</strong> — world maps with <code>ai_usage: allow</code> can be discovered by the LLM during campaign generation. The LLM reads region metadata (terrain types, strategic values, flavor text) to generate contextually appropriate missions. A rich, well-annotated world map gives the LLM more material to work with.</li>
+<li><strong>Composition</strong> — a world map can reference other Workshop resources. Faction packs define the factions. Terrain packs provide the visual assets. Music packs set the atmosphere. The world map is the strategic skeleton; other Workshop resources flesh it out.</li>
+<li><strong>Rating and reviews</strong> — community rates world maps on balance, visual quality, replayability. High-rated maps surface in “Featured” listings.</li>
+</ul>
+<p><strong>World map as an engine feature, not a campaign feature:</strong></p>
+<p>The world map renderer is in <code>ic-ui</code> — it’s a general-purpose interactive map component. The World Domination campaign mode uses it as its primary interface, but the same component powers:</p>
+<ul>
+<li>The “World Map” intermission template in D038 (for non-domination campaigns that want a mission-select map)</li>
+<li>Strategic overview displays in Game Master mode</li>
+<li>Multiplayer lobby map selection (showing region-based game modes)</li>
+<li>Mod-defined strategic layers (e.g., a Generals mod with a global war on terror, a Star Wars mod with a galactic conquest, a fantasy mod with a continent map)</li>
+</ul>
+<p>The engine imposes no assumptions about what the map represents. Regions are abstract nodes with connections, properties, and an image overlay. Whether those nodes are countries, planets, city districts, or dungeon rooms is entirely up to the content creator. The engine provides the map renderer; the game module and mods provide the map data.</p>
+<p>Because world maps are Workshop resources, the community can build a library of strategic maps independently of the engine team. A thriving Workshop means a player launching World Domination for the first time can browse dozens of community-created maps — historical, fictional, fantastical — and start a campaign on any of them without the modder needing to ship a full game module.</p>
+<h4 id="workshop-resource-integration"><a class="header" href="#workshop-resource-integration">Workshop Resource Integration</a></h4>
+<p>The LLM doesn’t generate everything from scratch. It draws on the player’s configured Workshop sources (D030) for maps, terrain packs, music, and other assets — the same pipeline described in § LLM-Driven Resource Discovery above.</p>
+<p><strong>How this works in campaign generation:</strong></p>
+<ol>
+<li>The LLM plans a mission: “Arctic base assault in a fjord.”</li>
+<li>The generation system searches Workshop: <code>tags=["arctic", "fjord", "base"], ai_usage=Allow</code>.</li>
+<li>If a suitable map exists → use it as the terrain base, generate objectives/triggers/briefing on top.</li>
+<li>If no map exists → generate the map from scratch (YAML terrain definition).</li>
+<li>Music, ambient audio, and voice packs from Workshop enhance the atmosphere — the LLM selects thematically appropriate resources from those available.</li>
+</ol>
+<p>This makes generative campaigns richer in communities with active Workshop content creators. A well-stocked Workshop full of diverse maps and assets becomes a palette the LLM paints from. Resource attribution is tracked: the campaign’s <code>mod.yaml</code> lists all Workshop dependencies, crediting the original creators.</p>
+<h4 id="no-llm-campaign-still-works"><a class="header" href="#no-llm-campaign-still-works">No LLM? Campaign Still Works</a></h4>
+<p>The generative campaign system follows the core D016 principle: <strong>LLM is for creation, not for play.</strong></p>
+<ul>
+<li>A player with an LLM generates a campaign → plays it → it’s saved as standard D021.</li>
+<li>A player without an LLM → imports and plays a shared campaign from Workshop. No different from playing a hand-crafted campaign.</li>
+<li>A player starts a generative campaign, generates 12/24 missions, then loses LLM access → the 12 generated missions are fully playable. The campaign is “shorter than planned” but complete up to that point. When LLM access returns, generation resumes from mission 12.</li>
+<li>A community member takes a generated 24-mission campaign, opens it in the Campaign Editor, and hand-edits missions 15–24 to improve them. No LLM needed for editing.</li>
+</ul>
+<p>The LLM is a tool in the content creation pipeline — the same pipeline that includes the Scenario Editor, Campaign Editor, and hand-authored YAML. Generated campaigns are first-class citizens of the same content ecosystem.</p>
+<h4 id="multiplayer--co-op-generative-campaigns"><a class="header" href="#multiplayer--co-op-generative-campaigns">Multiplayer &amp; Co-op Generative Campaigns</a></h4>
+<p>Everything described above — narrative campaigns, open-ended campaigns, world domination, cinematic generation — works in multiplayer. The generative campaign system builds on D038’s co-op infrastructure (Player Slots, Co-op Mission Modes, Per-Player Objectives) and the D010 snapshottable sim. These are the multiplayer modes the generative system supports:</p>
+<p><strong>Co-op generative campaigns:</strong></p>
+<p>Two or more players share a generative campaign. They play together, the LLM generates for all of them, and the campaign adapts to their combined performance.</p>
+<pre><code class="language-yaml"># Co-op generative campaign setup
+campaign_parameters:
+  mode: generative
+  player_count: 2                      # 2-4 players
+  co_op_mode: allied_factions          # each player controls their own faction
+  # Alternative modes from D038:
+  # shared_command — both control the same army
+  # commander_ops — one builds, one fights
+  # split_objectives — different goals on the same map
+  # asymmetric — one RTS player, one GM/support
+
+  faction_player_1: soviet
+  faction_player_2: allied             # co-op doesn't mean same faction
+  difficulty: hard
+  campaign_type: narrative             # or open_ended, world_domination
+  length: 16
+  tone: serious
+</code></pre>
+<p><strong>What the LLM generates differently for co-op:</strong></p>
+<p>The LLM knows it’s generating for multiple players. This changes mission design:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Aspect</th><th>Single-player</th><th>Co-op</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Map layout</strong></td><td>One base, one frontline</td><td>Multiple bases or sectors per player</td></tr>
+<tr><td><strong>Objectives</strong></td><td>Unified objective list</td><td>Per-player objectives + shared goals</td></tr>
+<tr><td><strong>Briefings</strong></td><td>One briefing</td><td>Per-player briefings (different intel, different roles)</td></tr>
+<tr><td><strong>Radar comms</strong></td><td>Addressed to “Commander”</td><td>Addressed to specific players by role/faction</td></tr>
+<tr><td><strong>Dialogue choices</strong></td><td>One player decides</td><td>Each player gets their own choices; disagreements create narrative tension</td></tr>
+<tr><td><strong>Character assignment</strong></td><td>All characters with the player</td><td>Named characters distributed across players</td></tr>
+<tr><td><strong>Mission difficulty</strong></td><td>Scaled for one</td><td>Scaled for combined player power + coordination challenge</td></tr>
+<tr><td><strong>Narrative</strong></td><td>One protagonist’s story</td><td>Interweaving storylines that converge at key moments</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Player disagreements as narrative fuel:</strong></p>
+<p>The most interesting co-op feature: <strong>what happens when players disagree.</strong> In a single-player campaign, the player makes all dialogue choices. In co-op, each player makes their own choices in intermissions and mid-mission dialogues. The LLM uses disagreements as narrative material:</p>
+<ul>
+<li>Player 1 wants to spare the prisoner. Player 2 wants to execute them. The LLM generates a confrontation scene between the players’ commanding officers, then resolves based on a configurable rule: majority wins, mission commander decides (rotating role), or the choice splits into two consequences.</li>
+<li>Player 1 wants to attack the eastern front. Player 2 wants to defend the west. In World Domination mode, they can split — each player tackles a different region simultaneously (parallel missions at the same point in the campaign).</li>
+<li>Persistent disagreements shift character loyalties — an NPC commander who keeps getting overruled becomes resentful, potentially defecting (Campaign Event Patterns).</li>
+</ul>
+<p><strong>Saving, pausing, and resuming co-op campaigns:</strong></p>
+<p>Co-op campaigns are long. Players can’t always finish in one sitting. The system supports <strong>pause, save, and resume</strong> for multiplayer campaigns:</p>
+<pre><code>┌────────────────────────────────────────────────────────────────┐
+│                  Co-op Campaign Session Flow                    │
+│                                                                │
+│  1. Player A creates a co-op generative campaign               │
+│     └── Campaign saved to Player A's local storage             │
+│                                                                │
+│  2. Player A invites Player B (friend list, lobby code, link)  │
+│     └── Player B receives campaign metadata + join token       │
+│                                                                │
+│  3. Both players play missions together                        │
+│     └── Campaign state synced: both have a local copy          │
+│                                                                │
+│  4. Mid-campaign: players want to stop                         │
+│     ├── Either player can request pause                        │
+│     ├── Current mission: standard multiplayer save (D010)      │
+│     │   └── Full sim snapshot + order history + campaign state  │
+│     └── Campaign state saved: mission progress, roster, flags  │
+│                                                                │
+│  5. Resume later (hours, days, weeks)                          │
+│     ├── Player A loads campaign from "My Campaigns"            │
+│     ├── Player A re-invites Player B                           │
+│     ├── Player B's client receives the campaign state delta    │
+│     └── Resume from exactly where they left off                │
+│                                                                │
+│  6. Player B unavailable? Options:                             │
+│     ├── Wait for Player B                                      │
+│     ├── AI takes Player B's slot (temporary)                   │
+│     ├── Invite Player C to take over (with B's consent)        │
+│     └── Continue solo (B's faction runs on AI)                 │
+└────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>How multiplayer save works (technically):</strong></p>
+<ul>
+<li><strong>Mid-mission save:</strong> Uses D010 — full sim snapshot. Both players receive the snapshot. Either player can host the resume session. The save file is a standard <code>.icsave</code> containing the sim snapshot, order history, and campaign state.</li>
+<li><strong>Between-mission save:</strong> The natural pause point. Campaign state (D021) is serialized — roster, flags, mission graph position, world map state (if World Domination). No sim snapshot needed — the next mission hasn’t started yet.</li>
+<li><strong>Campaign ownership:</strong> The campaign is “owned” by the creating player but the save state is portable. If Player A disappears, Player B has a full local copy and can resume solo or with a new partner.</li>
+</ul>
+<p><strong>Co-op World Domination:</strong></p>
+<p>World Domination campaigns with multiple human players — each controlling a faction on the world map. The LLM generates missions for all players, weaving their actions into a shared narrative. Two modes:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mode</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Allied co-op</strong></td><td>Players share a team against AI factions. They coordinate attacks on different fronts simultaneously. One player attacks Berlin while the other defends Moscow.</td><td>2 players (Soviet team) vs. AI (Allied + Neutral)</td></tr>
+<tr><td><strong>Competitive co-op</strong></td><td>Players are rival factions on the same map. Each plays their own campaign missions. When players’ territories are adjacent, they fight each other. An AI faction provides a shared threat.</td><td>Player 1 (Soviet) vs. Player 2 (Allied) vs. AI (Rogue faction)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Allied co-op World Domination is particularly compelling — two friends on voice chat, splitting their forces across a continent, coordinating strategy: “I’ll push into Scandinavia if you hold the Polish border.” The LLM generates missions for both fronts simultaneously, with narrative crossover: “Intelligence reports your ally has broken through in Norway. Allied forces are retreating south — expect increased resistance on your front.”</p>
+<p><strong>Asynchronous campaign play:</strong></p>
+<p>Not every multiplayer session needs to be real-time. For players in different time zones or with unpredictable schedules, the system supports <strong>asynchronous play</strong> in competitive World Domination campaigns:</p>
+<pre><code class="language-yaml">async_config:
+  mode: async_competitive              # players play their campaigns asynchronously
+  move_deadline: 48h                   # max time before AI plays your next mission
+  notification: true                   # notify when the other player has completed a mission
+  ai_fallback_on_deadline: true        # AI plays your mission if you don't show up
+</code></pre>
+<p>How it works:</p>
+<ol>
+<li>Player A logs in, sees the world map. The LLM (or template system) presents their next mission — an attack, defense, or narrative event.</li>
+<li>Player A plays the RTS mission in real-time. The mission resolves. The campaign state updates. Notification sent to Player B.</li>
+<li>Player B logs in hours/days later. They see how the map changed based on Player A’s results. The LLM presents Player B’s next mission based on the updated state.</li>
+<li>Player B plays their mission. The map updates again. Notification sent to Player A.</li>
+</ol>
+<p>The RTS missions are fully real-time (you play a complete battle). The asynchronous part is <em>when</em> each player sits down to play — not what they do when they’re playing. The LLM (or strategic AI fallback) generates narrative that acknowledges the asynchronous pacing — no urgent “the enemy is attacking NOW!” when the other player won’t see it for 12 hours.</p>
+<p><strong>Generative challenge campaigns:</strong></p>
+<p>The LLM generates short, self-contained challenges that the community can attempt and compete on:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Challenge type</th><th>Description</th><th>Competitive element</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Weekly challenge</strong></td><td>A generated 3-mission mini-campaign with a leaderboard. Same seed = same campaign for all players.</td><td>Score (time, casualties, objectives)</td></tr>
+<tr><td><strong>Ironman run</strong></td><td>A generated campaign with permadeath — no save/reload. Campaign ends when you lose.</td><td>How far you get (mission count)</td></tr>
+<tr><td><strong>Speed campaign</strong></td><td>Generated campaign optimized for speed — short missions, tight timers.</td><td>Total completion time</td></tr>
+<tr><td><strong>Impossible odds</strong></td><td>Generated campaign where the LLM deliberately creates unfair scenarios.</td><td>Binary: did you survive?</td></tr>
+<tr><td><strong>Community vote</strong></td><td>Players vote on campaign parameters. The LLM generates one campaign that everyone plays.</td><td>Score leaderboard</td></tr>
+</tbody>
+</table>
+</div>
+<p>Weekly challenges reuse the same seed and LLM output — the campaign is generated once, published to the community, and everyone plays the identical missions. This is fair because the content is deterministic once generated. Leaderboards are per-challenge, stored via the community server (D052) with signed credential records.</p>
+<p><strong>Spectator and observer mode:</strong></p>
+<p>Live campaigns (especially co-op and competitive World Domination) can be observed:</p>
+<ul>
+<li><strong>Live spectator</strong> — watch a co-op campaign in progress (delay configurable for competitive fairness). See both players’ perspectives.</li>
+<li><strong>Replay spectator</strong> — watch a completed campaign, switching between player perspectives. The replay includes all dialogue choices, intermission decisions, and world map actions.</li>
+<li><strong>Commentary mode</strong> — a spectator can record voice commentary over a replay, creating a “let’s play” package sharable on Workshop.</li>
+<li><strong>Campaign streaming</strong> — the campaign state can be broadcast to a spectator server. Community members watch the world map update in real-time during community events.</li>
+<li><strong>Author-guided camera</strong> — scenario authors place Spectator Bookmark modules (D038) at key map locations and wire them to triggers. Spectators cycle bookmarks with hotkeys; replays auto-cut to bookmarks at dramatic moments. Free camera remains available — bookmarks are hints, not constraints.</li>
+<li><strong>Spectator appeal as design input</strong> — Among Us became a cultural phenomenon through streaming because social dynamics are more entertaining to <em>watch</em> than many games are to play. Modes like Mystery (accusation moments), Nemesis (escalating rivalry), and Defection (betrayal) are inherently watchable — LLM-generated dialogue, character reactions, and dramatic pivots create spectator-friendly narrative beats. This is a validation of the existing spectator infrastructure, not a new feature: the commentary mode, War Dispatches, and replay system already capture these moments. When the LLM generates campaign content, it should mark <strong>spectator-highlight moments</strong> (accusations, betrayals, nemesis confrontations, moral dilemmas) in the campaign save so replays can auto-cut to them.</li>
+</ul>
+<p><strong>Co-op resilience (eliminated player engagement):</strong></p>
+<p>In any co-op campaign, a critical question: what happens when one player’s forces are devastated mid-mission? Among Us’s insight is that eliminated players keep playing — dead crewmates complete tasks and observe. IC applies this principle: a player whose army is destroyed doesn’t sit idle. Options compose from existing systems:</p>
+<ul>
+<li><strong>Intelligence/advisor role</strong> — the eliminated player transitions to managing the intermission-layer intelligence network (Espionage mode) or providing strategic guidance through the shared chat. They see the full battlefield (observer perspective) and can ping locations, mark threats, and coordinate with the surviving player.</li>
+<li><strong>Reinforcement controller</strong> — the eliminated player controls reinforcement timing and positioning for the surviving partner. They decide <em>when</em> and <em>where</em> reserve units deploy, adding a cooperative command layer.</li>
+<li><strong>Rebuild mission</strong> — the eliminated player receives a smaller side-mission to re-establish from a secondary base or rally point. Success in the side-mission provides reinforcements to the surviving player’s main mission.</li>
+<li><strong>Game Master lite</strong> — using the scenario’s reserve pool, the eliminated player places emergency supply drops, triggers scripted reinforcements, or activates defensive structures. A subset of Game Master (D038) powers, scoped to assist rather than control.</li>
+</ul>
+<p>The specific role available depends on the campaign mode and scenario design. The key principle: <strong>no player should ever watch an empty screen in a co-op campaign</strong>. Even total military defeat is a phase transition, not an ejection.</p>
+<p><strong>Generative multiplayer scenarios (non-campaign):</strong></p>
+<p>Beyond campaigns, the LLM generates one-off multiplayer scenarios:</p>
+<ul>
+<li><strong>Generated skirmish maps</strong> — “Generate a 4-player free-for-all map with lots of chokepoints and limited resources.” The LLM creates a balanced multiplayer map.</li>
+<li><strong>Generated team scenarios</strong> — “Create a 2v2 co-op defense mission against waves of enemies.” The LLM generates a PvE scenario with scaling difficulty.</li>
+<li><strong>Generated party modes</strong> — “Make a king-of-the-hill map where the hill moves every 5 minutes.” Creative game modes generated on demand.</li>
+<li><strong>Tournament map packs</strong> — “Generate 7 balanced 1v1 maps for a tournament, varied terrain, no water.” A set of maps with consistent quality and design language.</li>
+</ul>
+<p>These generate as standard IC content — the same maps and scenarios that human designers create. They can be played immediately, saved, edited, or published to Workshop.</p>
+<h4 id="persistent-heroes--named-squads"><a class="header" href="#persistent-heroes--named-squads">Persistent Heroes &amp; Named Squads</a></h4>
+<p>The infrastructure for hero-centric, squad-based campaigns with long-term character development is fully supported by existing systems — no new engine features required. Everything described below composes from D021 (persistent rosters), D016 (character construction + CharacterState), D029 (component library), the veterancy system, and YAML/Lua modding.</p>
+<p><strong>What the engine already provides:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Capability</th><th>Source</th><th>How it applies</th></tr>
+</thead>
+<tbody>
+<tr><td>Named units persist across missions</td><td>D021 carryover modes</td><td>A hero unit that survives mission 3 is the <em>same entity</em> in mission 15 — same health, same veterancy, same kill count</td></tr>
+<tr><td>Veterancy accumulates permanently</td><td>D021 + veterancy system</td><td>A commando who kills 50 enemies across 10 missions earns promotions that change their stats, voice lines, and visual appearance</td></tr>
+<tr><td>Permanent death</td><td>D021 + CharacterState</td><td>If Volkov dies in mission 7, <code>CharacterStatus::Dead</code> — he’s gone forever. The campaign adapts around his absence. No reloading in Iron Man mode.</td></tr>
+<tr><td>Character personality persists</td><td>D016 CharacterState</td><td>MBTI type, speech style, flaw/desire/fear, loyalty, relationship — all tracked and evolved by the LLM across the full campaign</td></tr>
+<tr><td>Characters react to their own history</td><td>D016 battle reports + narrative threads</td><td>A hero who was nearly killed in mission 5 develops caution. One who was betrayed develops trust issues. The LLM reads <code>notable_events</code> and adjusts behavior.</td></tr>
+<tr><td>Squad composition matters</td><td>D021 roster + D029 components</td><td>A hand-picked 5-unit squad with complementary abilities (commando + engineer + sniper + medic + demolitions) plays differently than a conventional army. Equipment captured in one mission equips the squad in the next.</td></tr>
+<tr><td>Upgrades and equipment persist</td><td>D021 equipment carryover + D029 upgrade system</td><td>A hero’s captured experimental weapon, earned battlefield upgrades, and scavenged equipment carry forward permanently</td></tr>
+<tr><td>Customizable unit identity</td><td>YAML unit definitions + Lua</td><td>Named units can have custom names, visual markings (kill tallies, custom insignia via Lua), and unique voice lines</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Campaign modes this enables:</strong></p>
+<p><strong>Commando campaign (“Tanya Mode”):</strong> A series of behind-enemy-lines missions with 1–3 hero units and no base building. Every mission is a commando operation. The heroes accumulate kills, earn abilities, and develop personality through LLM-generated briefing dialogue. Losing your commando ends the campaign (Iron Man) or branches to a rescue mission (standard). The LLM generates increasingly personal rivalry between your commando and an enemy commander who’s hunting them.</p>
+<p><strong>Squad campaign (“Band of Brothers”):</strong> A persistent squad of 5–12 named soldiers. Each squad member has an MBTI personality, a role specialization, and a relationship to the others. Between missions, the LLM generates squad interactions — arguments, bonding moments, confessions, humor — driven by MBTI dynamics and recent battle events. A medic (ISFJ) who saved the sniper (INTJ) in mission 4 develops a protective bond. The demolitions expert (ESTP) and the squad leader (ISTJ) clash over tactics. When a squad member dies, the LLM writes the other characters’ grief responses consistent with their personalities and relationships. Replacements arrive — but they’re new personalities who have to earn the squad’s trust.</p>
+<p><strong>Hero army campaign (“Generals”):</strong> A conventional campaign where 3–5 hero units lead a full army. Heroes are special units with unique abilities, voice lines, and narrative arcs. They appear in briefings, issue orders to the player, argue with each other about strategy, and can be sent on solo objectives within larger missions. Losing a hero doesn’t end the campaign but permanently changes it — the army loses a capability, the other heroes react, and the enemy adapts.</p>
+<p><strong>Cross-campaign hero persistence (“Legacy”):</strong> Heroes from a completed campaign carry over to the next campaign. A veteran commando from “Soviet Campaign” appears as a grizzled mentor in “Soviet Campaign 2” — with their full history, personality evolution, and kill count. <code>CharacterState</code> serializes to campaign save files and can be imported. The LLM reads the imported history and writes the character accordingly — a war hero is treated like a war hero.</p>
+<p><strong>Iron Man integration:</strong> All hero modes compose with Iron Man (no save/reload). Death is permanent. The campaign adapts. This is where the character investment pays off most intensely — the player who nursed a hero through 15 missions has real emotional stakes when that hero is sent into a dangerous situation. The LLM knows this and uses it: “Volkov volunteers for the suicide mission. He’s your best commando. But if he goes in alone, he won’t come back.”</p>
+<p><strong>Modding support:</strong> All of this is achievable through YAML + Lua (Tier 1-2 modding). A modder defines named hero units in YAML with custom stats, abilities, and visual markings. Lua scripts handle special hero abilities (“Volkov plants the charges — 30-second timer”), squad interaction triggers, and custom carryover rules. The LLM’s character construction system works with any modder-defined units — the MBTI framework and flaw/desire/fear triangle apply regardless of the game module. A Total Conversion mod in a fantasy setting could have a persistent party of heroes with swords instead of guns — the personality simulation works the same way.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../decisions/09f/D016/D016-branching-world-campaigns.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../decisions/09f/D016/D016-extensions-factions-tools.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../decisions/09f/D016/D016-branching-world-campaigns.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../decisions/09f/D016/D016-extensions-factions-tools.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../../mark-09e88c2c.min.js"></script>
+        <script src="../../../searcher-c2a407aa.js"></script>
+
+        <script src="../../../clipboard-1626706a.min.js"></script>
+        <script src="../../../highlight-abc7f01d.js"></script>
+        <script src="../../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

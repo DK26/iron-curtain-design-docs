@@ -30,12 +30,12 @@ pub trait NetworkModel: Send + Sync {
 
 The same netcode runs in five modes. The first two are utility adapters (no network involved). The last three are real multiplayer deployments of the same protocol:
 
-| Implementation         | What It Is                                        | When Used                             | Phase   |
-| ---------------------- | ------------------------------------------------- | ------------------------------------- | ------- |
-| `LocalNetwork`         | Pass-through — orders go straight to sim          | Single player, automated tests        | Phase 2 |
-| `ReplayPlayback`       | File reader — feeds saved orders into sim         | Watching replays                      | Phase 2 |
+| Implementation         | What It Is                                        | When Used                                  | Phase   |
+| ---------------------- | ------------------------------------------------- | ------------------------------------------ | ------- |
+| `LocalNetwork`         | Pass-through — orders go straight to sim          | Single player, automated tests             | Phase 2 |
+| `ReplayPlayback`       | File reader — feeds saved orders into sim         | Watching replays                           | Phase 2 |
 | `EmbeddedRelayNetwork` | Listen server — host embeds `RelayCore` and plays | Casual, community, LAN, "Host Game" button | Phase 5 |
-| `RelayLockstepNetwork` | Dedicated relay (recommended for online)          | Internet multiplayer, ranked          | Phase 5 |
+| `RelayLockstepNetwork` | Dedicated relay (recommended for online)          | Internet multiplayer, ranked               | Phase 5 |
 
 `EmbeddedRelayNetwork` and `RelayLockstepNetwork` implement the same netcode. The differences are topology and trust:
 

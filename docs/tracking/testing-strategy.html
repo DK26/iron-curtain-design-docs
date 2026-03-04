@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-da66c284.js";
+            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-b6ee3c41.js"></script>
+        <script src="../toc-2281c970.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -272,386 +272,17 @@
 </table>
 </div>
 <p><strong>Gate rule:</strong> Failures block release candidates. Weekly results feed into release-readiness dashboard.</p>
-<h2 id="test-infrastructure-requirements"><a class="header" href="#test-infrastructure-requirements">Test Infrastructure Requirements</a></h2>
-<h3 id="custom-test-harness-ic-test-harness"><a class="header" href="#custom-test-harness-ic-test-harness">Custom Test Harness (<code>ic-test-harness</code>)</a></h3>
-<p>A dedicated crate providing:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// Run a deterministic sim scenario and return the final state hash.
-pub fn run_scenario(scenario: &amp;Scenario, seed: u64) -&gt; SimStateHash;
-
-/// Run the same scenario N times and assert all hashes match.
-pub fn assert_deterministic(scenario: &amp;Scenario, seed: u64, runs: usize);
-
-/// Run a scenario with a known-cheat replay and assert detection fires.
-pub fn assert_cheat_detected(replay: &amp;ReplayFile, expected: CheatType);
-
-/// Run a scenario with a known-clean replay and assert no flags.
-pub fn assert_no_false_positive(replay: &amp;ReplayFile);
-
-/// Run a scenario with deliberate desync injection and assert detection.
-pub fn assert_desync_detected(scenario: &amp;Scenario, desync_at: SimTick);
-<span class="boring">}</span></code></pre>
-<h3 id="performance-benchmark-suite-ic-bench"><a class="header" href="#performance-benchmark-suite-ic-bench">Performance Benchmark Suite (<code>ic-bench</code>)</a></h3>
-<p>Using <code>criterion</code> for statistical benchmarks with regression detection:</p>
+<hr>
+<h2 id="sub-pages"><a class="header" href="#sub-pages">Sub-Pages</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Benchmark</th><th>Budget</th><th>Regression Threshold</th></tr>
+<tr><th>Section</th><th>Topic</th><th>File</th></tr>
 </thead>
 <tbody>
-<tr><td>Sim tick (100 units)</td><td>&lt; 2ms</td><td>+10% = warning</td></tr>
-<tr><td>Sim tick (1000 units)</td><td>&lt; 10ms</td><td>+10% = warning</td></tr>
-<tr><td>Pathfinding (A*, 256x256)</td><td>&lt; 1ms</td><td>+20% = warning</td></tr>
-<tr><td>Fog-of-war update</td><td>&lt; 0.5ms</td><td>+15% = warning</td></tr>
-<tr><td>Network serialization</td><td>&lt; 0.1ms/message</td><td>+10% = warning</td></tr>
-<tr><td>YAML config load</td><td>&lt; 50ms</td><td>+25% = warning</td></tr>
-<tr><td>Replay frame write</td><td>&lt; 0.05ms/frame</td><td>+20% = warning</td></tr>
-<tr><td>Pathfinding LOD transition (256x256, 500 units)</td><td>&lt; 0.25ms</td><td>+15% = warning</td></tr>
-<tr><td>Stagger schedule overhead (1000 units)</td><td>&lt; 2.5ms</td><td>+15% = warning</td></tr>
-<tr><td>Spatial hash query (1M entities, 8K result)</td><td>&lt; 1ms</td><td>+20% = warning</td></tr>
-<tr><td>Flowfield generation (256x256)</td><td>&lt; 0.5ms</td><td>+15% = warning</td></tr>
-<tr><td>ECS cache miss rate (hot tick loop)</td><td>&lt; 5% L1 misses</td><td>+2% absolute = warning</td></tr>
-<tr><td>Weather state update (full map)</td><td>&lt; 0.3ms</td><td>+20% = warning</td></tr>
-<tr><td>Merkle tree hash (32 archetypes)</td><td>&lt; 0.2ms</td><td>+15% = warning</td></tr>
-<tr><td>Order validation (256 orders/tick)</td><td>&lt; 0.5ms</td><td>+10% = warning</td></tr>
-</tbody>
-</table>
-</div>
-<p><strong>Allocation tracking:</strong> Hot-path benchmarks also measure heap allocations. Any allocation in a previously zero-alloc path is a test failure.</p>
-<h3 id="fuzz-testing-targets"><a class="header" href="#fuzz-testing-targets">Fuzz Testing Targets</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Target</th><th>Input Source</th><th>Known CVE Coverage</th></tr>
-</thead>
-<tbody>
-<tr><td><code>ra-formats</code> (.oramap)</td><td>Random archive bytes</td><td>Zip Slip, decompression bomb, path traversal</td></tr>
-<tr><td><code>ra-formats</code> (.mix)</td><td>Random file bytes</td><td>Buffer overread, integer overflow</td></tr>
-<tr><td>YAML tier config</td><td>Random YAML</td><td>V33 injection vectors</td></tr>
-<tr><td>Network protocol messages</td><td>Random byte stream</td><td>V17 state saturation, oversized messages</td></tr>
-<tr><td>Replay file parser</td><td>Random replay bytes</td><td>V45 frame loss, signature chain gaps</td></tr>
-<tr><td><code>strict-path</code> inputs</td><td>Random path strings</td><td>19+ CVE patterns (symlink, ADS, 8.3, etc.)</td></tr>
-<tr><td>Display name validator</td><td>Random Unicode</td><td>V46 confusable/homoglyph corpus</td></tr>
-<tr><td>BiDi sanitizer</td><td>Random Unicode</td><td>V56 override injection vectors</td></tr>
-<tr><td>Pathfinding input</td><td>Random topology + start/end</td><td>Buffer overflow, infinite loop on pathological graphs</td></tr>
-<tr><td>Campaign DAG definition</td><td>Random YAML graph</td><td>Cycles, unreachable nodes, missing outcome refs</td></tr>
-<tr><td>Workshop manifest + deps</td><td>Random package manifests</td><td>Circular deps, version constraint contradictions</td></tr>
-<tr><td>WASM memory requests</td><td>Adversarial <code>memory.grow</code> sequences</td><td>OOM, growth beyond sandbox limit</td></tr>
-<tr><td>Balance preset YAML</td><td>Random inheritance chains</td><td>Cycles, missing parents, conflicting overrides</td></tr>
-<tr><td>Cross-engine map format</td><td>Random .mpr/.mmx bytes</td><td>Malformed geometry, out-of-bounds spawns</td></tr>
-<tr><td>LLM-generated mission YAML</td><td>Random trigger/objective trees</td><td>Unreachable objectives, invalid trigger refs</td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="labeled-replay-corpus"><a class="header" href="#labeled-replay-corpus">Labeled Replay Corpus</a></h3>
-<p>For anti-cheat calibration (V54):</p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Category</th><th>Source</th><th>Minimum Count</th></tr>
-</thead>
-<tbody>
-<tr><td>Confirmed-cheat</td><td>Test accounts with known cheat tools</td><td>500 replays</td></tr>
-<tr><td>Confirmed-clean</td><td>Tournament players, manually verified</td><td>2000 replays</td></tr>
-<tr><td>Edge-case</td><td>High-APM legitimate players (pro gamers)</td><td>200 replays</td></tr>
-<tr><td>Bot-assisted</td><td>Known automation scripts</td><td>100 replays</td></tr>
-<tr><td>Platform-bug desync</td><td>Reproduced cross-platform desyncs (V55)</td><td>50 replays</td></tr>
-</tbody>
-</table>
-</div>
-<h2 id="subsystem-test-specifications"><a class="header" href="#subsystem-test-specifications">Subsystem Test Specifications</a></h2>
-<p>Detailed test specifications organized by subsystem. Each entry defines: what is tested, test method, pass criteria, and CI tier.</p>
-<h3 id="simulation-fairness-d008"><a class="header" href="#simulation-fairness-d008">Simulation Fairness (D008)</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Test</th><th>Method</th><th>Pass Criteria</th><th>Tier</th></tr>
-</thead>
-<tbody>
-<tr><td>Sub-tick tiebreak determinism</td><td>Two players issue Move orders to same target at identical sub-tick timestamps. Run 100 times</td><td>Player with lower <code>PlayerId</code> always wins tiebreak. Results identical across all runs</td><td>T2 + T3 (proptest)</td></tr>
-<tr><td>Timestamp ordering correctness</td><td>Player A timestamps at T+100us, Player B at T+200us for same contested resource</td><td>Player A always wins. Reversing timestamps reverses winner</td><td>T2</td></tr>
-<tr><td>Relay timestamp envelope clamping</td><td>Client submits timestamp outside feasible envelope (too far in the future or past)</td><td>Relay clamps to envelope boundary. Anti-abuse telemetry event fires</td><td>T2</td></tr>
-<tr><td>Listen-server relay parity</td><td>Same scenario run with <code>EmbeddedRelayNetwork</code> vs <code>RelayLockstepNetwork</code></td><td>Identical <code>TickOrders</code> output from both paths</td><td>T2</td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="order-validation-matrix-d012"><a class="header" href="#order-validation-matrix-d012">Order Validation Matrix (D012)</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Test</th><th>Method</th><th>Pass Criteria</th><th>Tier</th></tr>
-</thead>
-<tbody>
-<tr><td>Exhaustive rejection matrix</td><td>For each order type (Move, Attack, Build, etc.) × each of the 8 rejection categories (ownership, unit-type mismatch, out-of-range, insufficient resources, tech prerequisite, placement invalid, budget exceeded, unsupported-for-phase): construct an order that triggers exactly that rejection</td><td>Correct <code>OrderRejection</code> variant returned for every cell in the matrix</td><td>T1</td></tr>
-<tr><td>Random order validation</td><td>Proptest generates random <code>PlayerOrder</code> values with arbitrary fields</td><td>Validation never panics; always returns a valid <code>OrderValidity</code> variant</td><td>T3</td></tr>
-<tr><td>Validation purity</td><td>Run <code>validate_order_checked</code> with debug assertions enabled; verify sim state hash before and after validation</td><td>State hash unchanged — validation has zero side effects</td><td>T1</td></tr>
-<tr><td>Rejection telemetry</td><td>Submit 50 invalid orders from one player across 10 ticks</td><td>All 50 rejections appear in anti-cheat telemetry with correct categories</td><td>T2</td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="merkle-tree-desync-localization"><a class="header" href="#merkle-tree-desync-localization">Merkle Tree Desync Localization</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Test</th><th>Method</th><th>Pass Criteria</th><th>Tier</th></tr>
-</thead>
-<tbody>
-<tr><td>Single-archetype divergence</td><td>Run two sim instances. At tick T, inject deliberate mutation in one archetype on instance B</td><td>Merkle roots diverge. Tree traversal identifies mutated archetype leaf in ≤ ceil(log2(N)) rounds</td><td>T2</td></tr>
-<tr><td>Multi-archetype divergence</td><td>Inject divergence in 3 archetypes simultaneously</td><td>All 3 divergent archetypes identified</td><td>T2</td></tr>
-<tr><td>Proof verification</td><td>For a given leaf, verify the Merkle proof path reconstructs to the correct root hash</td><td>Proof verifies. Tampered proof fails verification</td><td>T3 (proptest)</td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="reconnection-snapshot-verification"><a class="header" href="#reconnection-snapshot-verification">Reconnection Snapshot Verification</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Test</th><th>Method</th><th>Pass Criteria</th><th>Tier</th></tr>
-</thead>
-<tbody>
-<tr><td>Happy-path reconnection</td><td>2-player game. Player B disconnects at tick 500. Player B reconnects, receives snapshot, resumes</td><td>After 1000 more ticks, Player B’s state hash matches Player A’s</td><td>T2</td></tr>
-<tr><td>Corrupted snapshot rejection</td><td>Flip one byte of the snapshot during transfer</td><td>Receiving client detects hash mismatch and rejects snapshot</td><td>T4</td></tr>
-<tr><td>Stale snapshot rejection</td><td>Send snapshot from tick 400 instead of 500</td><td>Client detects tick mismatch and requests correct snapshot</td><td>T4</td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="workshop-dependency-resolution-d030"><a class="header" href="#workshop-dependency-resolution-d030">Workshop Dependency Resolution (D030)</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Test</th><th>Method</th><th>Pass Criteria</th><th>Tier</th></tr>
-</thead>
-<tbody>
-<tr><td>Transitive resolution</td><td>Package A → B → C. Install A</td><td>All three installed in dependency order; versions satisfy constraints</td><td>T1</td></tr>
-<tr><td>Version conflict detection</td><td>Package A requires B v2, Package C requires B v1. Install A + C</td><td>Conflict detected and reported with both constraint chains</td><td>T1</td></tr>
-<tr><td>Circular dependency rejection</td><td>A → B → C → A dependency cycle. Attempt resolution</td><td>Resolver returns cycle error with full cycle path</td><td>T1</td></tr>
-<tr><td>Diamond dependency</td><td>A→B, A→C, B→D, C→D. Install A</td><td>D installed once; version satisfies both B and C constraints</td><td>T1</td></tr>
-<tr><td>Version immutability</td><td>Attempt to re-publish same <code>publisher/name@version</code></td><td>Publish rejected. Existing package unchanged</td><td>T2</td></tr>
-<tr><td>Random dependency graphs</td><td>Proptest generates random dependency graphs with varying depths and widths</td><td>Resolver terminates for all inputs; detects all cycles; produces valid install order or error</td><td>T3</td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="campaign-graph-validation-d021"><a class="header" href="#campaign-graph-validation-d021">Campaign Graph Validation (D021)</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Test</th><th>Method</th><th>Pass Criteria</th><th>Tier</th></tr>
-</thead>
-<tbody>
-<tr><td>Valid DAG acceptance</td><td>Construct valid branching campaign graph. Validate</td><td>All missions reachable from entry. All outcomes lead to valid next missions or campaign end</td><td>T1</td></tr>
-<tr><td>Cycle rejection</td><td>Insert cycle (mission 3 outcome routes back to mission 1)</td><td>Validation returns cycle error with path</td><td>T1</td></tr>
-<tr><td>Dangling reference rejection</td><td>Mission outcome points to nonexistent <code>MissionId</code></td><td>Validation returns dangling reference error</td><td>T1</td></tr>
-<tr><td>Unit roster carryover</td><td>Complete mission with 5 surviving units (varied health/veterancy). Start next mission</td><td>Roster contains exactly those 5 units with correct health and veterancy levels</td><td>T2</td></tr>
-<tr><td>Story flag persistence</td><td>Set flag in M1, unset in M2, read in M3</td><td>Correct value at each point</td><td>T2</td></tr>
-<tr><td>Campaign save mid-transition</td><td>Save during mission-to-mission transition. Load. Continue</td><td>State matches uninterrupted playthrough</td><td>T4</td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="wasm-sandbox-security-v50"><a class="header" href="#wasm-sandbox-security-v50">WASM Sandbox Security (V50)</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Test</th><th>Method</th><th>Pass Criteria</th><th>Tier</th></tr>
-</thead>
-<tbody>
-<tr><td>Cross-module data probe</td><td>Module A calls host API requesting Module B’s ECS data via crafted query</td><td>Host returns permission error. Module B’s state unchanged</td><td>T3</td></tr>
-<tr><td>Memory growth attack</td><td>Module requests <code>memory.grow(65536)</code> (4GB)</td><td>Growth denied at configured limit. Module receives trap. Host stable</td><td>T3</td></tr>
-<tr><td>Cross-module function call</td><td>Module A attempts to call Module B’s exported functions directly</td><td>Call fails. Only host-mediated communication permitted</td><td>T3</td></tr>
-<tr><td>WASM float rejection</td><td>Module performs <code>f32</code> arithmetic and attempts to write result to sim state</td><td>Sim API rejects float values. Fixed-point conversion required</td><td>T3</td></tr>
-<tr><td>Module startup time budget</td><td>Module with artificially slow initialization (1000ms)</td><td>Module loading cancelled at timeout. Game continues without module</td><td>T3</td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="balance-preset-validation-d019"><a class="header" href="#balance-preset-validation-d019">Balance Preset Validation (D019)</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Test</th><th>Method</th><th>Pass Criteria</th><th>Tier</th></tr>
-</thead>
-<tbody>
-<tr><td>Inheritance chain resolution</td><td>Preset chain: Base → Competitive → Tournament. Query effective values</td><td>Tournament overrides Competitive, which overrides Base. No gaps in resolved values</td><td>T2</td></tr>
-<tr><td>Circular inheritance rejection</td><td>Preset A inherits B inherits A</td><td>Loader rejects with cycle error</td><td>T1</td></tr>
-<tr><td>Multiplayer preset enforcement</td><td>All players in lobby must resolve to identical effective preset</td><td>SHA-256 hash of resolved preset identical across all clients</td><td>T2</td></tr>
-<tr><td>Negative value rejection</td><td>Preset sets unit cost to -500 or health to 0</td><td>Schema validator rejects with specific field error</td><td>T1</td></tr>
-<tr><td>Random inheritance chains</td><td>Proptest generates random preset inheritance trees</td><td>Resolver terminates; detects all cycles; produces valid resolved preset or error</td><td>T3</td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="weather-state-machine-determinism-d022"><a class="header" href="#weather-state-machine-determinism-d022">Weather State Machine Determinism (D022)</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Test</th><th>Method</th><th>Pass Criteria</th><th>Tier</th></tr>
-</thead>
-<tbody>
-<tr><td>Schedule determinism</td><td>Run identical weather schedule on two sim instances with same seed</td><td><code>WeatherState</code> (type, intensity, transition_remaining) identical at every tick</td><td>T2</td></tr>
-<tr><td>Surface state sync</td><td>Weather transition triggers surface state update</td><td>Surface condition buffer matches between instances. Fixed-point intensity ramp is bit-exact</td><td>T2</td></tr>
-<tr><td>Weather serialization</td><td>Save game during blizzard → load → continue 1000 ticks</td><td>Weather state persists. Hash matches fresh run from same point</td><td>T3</td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="ai-behavior-determinism-d041d043"><a class="header" href="#ai-behavior-determinism-d041d043">AI Behavior Determinism (D041/D043)</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Test</th><th>Method</th><th>Pass Criteria</th><th>Tier</th></tr>
-</thead>
-<tbody>
-<tr><td>Seed reproducibility</td><td>Run AI with seed S on map M for 1000 ticks. Repeat 10 times</td><td>Build order, unit positions, resource totals identical across all 10 runs</td><td>T2</td></tr>
-<tr><td>Cross-platform match</td><td>Run same AI scenario on Linux and Windows</td><td>State hash match at every tick</td><td>T3</td></tr>
-<tr><td>Performance budget</td><td>AI tick for 500 units</td><td>&lt; 0.5ms. No heap allocations in steady state</td><td>T3</td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="console-command-security-d058"><a class="header" href="#console-command-security-d058">Console Command Security (D058)</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Test</th><th>Method</th><th>Pass Criteria</th><th>Tier</th></tr>
-</thead>
-<tbody>
-<tr><td>Permission enforcement</td><td>Non-admin client sends admin-only command</td><td>Command rejected with permission error. No state change</td><td>T1</td></tr>
-<tr><td>Cvar bounds clamping</td><td>Set cvar to value outside <code>[MIN, MAX]</code> range</td><td>Value clamped to nearest bound. Telemetry event fires</td><td>T1</td></tr>
-<tr><td>Command rate limiting</td><td>Send 1000 commands in one tick</td><td>Commands beyond rate limit dropped. Client notified. Remaining budget recovers next tick</td><td>T2</td></tr>
-<tr><td>Dev mode replay flagging</td><td>Execute dev command during game. Save replay</td><td>Replay metadata records dev-mode flag. Replay ineligible for ranked leaderboard</td><td>T2</td></tr>
-<tr><td>Autoexec.cfg gameplay rejection</td><td>Ranked mode loads autoexec.cfg with gameplay commands (<code>/build harvester</code>)</td><td>Gameplay commands rejected. Only cvars accepted</td><td>T2</td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="scr-credential-security-d052"><a class="header" href="#scr-credential-security-d052">SCR Credential Security (D052)</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Test</th><th>Method</th><th>Pass Criteria</th><th>Tier</th></tr>
-</thead>
-<tbody>
-<tr><td>Monotonic sequence enforcement</td><td>Present SCR with sequence number lower than last accepted</td><td>SCR rejected as replayed/rolled-back</td><td>T2</td></tr>
-<tr><td>Key rotation grace period</td><td>Rotate key. Authenticate with old key during grace period</td><td>Authentication succeeds with deprecation warning</td><td>T4</td></tr>
-<tr><td>Post-grace rejection</td><td>Authenticate with old key after grace period expires</td><td>Authentication rejected. Error directs to key recovery</td><td>T4</td></tr>
-<tr><td>Emergency revocation</td><td>Revoke key via BIP-39 mnemonic</td><td>Old key immediately invalid. New key works</td><td>T4</td></tr>
-<tr><td>Malformed SCR rejection</td><td>Truncated signature, invalid version byte, corrupted payload</td><td>All rejected with specific error codes</td><td>T3 (fuzz)</td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="cross-engine-map-exchange"><a class="header" href="#cross-engine-map-exchange">Cross-Engine Map Exchange</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Test</th><th>Method</th><th>Pass Criteria</th><th>Tier</th></tr>
-</thead>
-<tbody>
-<tr><td>OpenRA map round-trip</td><td>Import <code>.oramap</code> with known geometry. Export to IC format. Re-import</td><td>Spawn points, terrain, resources match original within defined tolerance</td><td>T2</td></tr>
-<tr><td>Out-of-bounds spawn rejection</td><td>Import map with spawn coordinates beyond map dimensions</td><td>Validator rejects with clear error</td><td>T2</td></tr>
-<tr><td>Malformed map fuzzing</td><td>Random map file bytes</td><td>Parser never panics; produces clean error or valid map</td><td>T3</td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="mod-profile-fingerprinting-d062"><a class="header" href="#mod-profile-fingerprinting-d062">Mod Profile Fingerprinting (D062)</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Test</th><th>Method</th><th>Pass Criteria</th><th>Tier</th></tr>
-</thead>
-<tbody>
-<tr><td>Fingerprint stability</td><td>Compute fingerprint, serialize/deserialize mod set, recompute</td><td>Identical fingerprints. Stable across runs</td><td>T2</td></tr>
-<tr><td>Ordering independence</td><td>Compute fingerprint with mods [A, B, C] and [C, A, B]</td><td>Identical fingerprints regardless of insertion order</td><td>T2</td></tr>
-<tr><td>Conflict resolution determinism</td><td>Two mods override same YAML key with different values. Apply with explicit priority</td><td>Winner matches declared priority. All clients agree on resolved value</td><td>T3</td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="llm-generated-content-validation-d016d038"><a class="header" href="#llm-generated-content-validation-d016d038">LLM-Generated Content Validation (D016/D038)</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Test</th><th>Method</th><th>Pass Criteria</th><th>Tier</th></tr>
-</thead>
-<tbody>
-<tr><td>Objective reachability</td><td>Generated mission with objectives at known positions</td><td>All objectives reachable from player starting position via pathfinding</td><td>T3</td></tr>
-<tr><td>Invalid trigger rejection</td><td>Generated Lua triggers with syntax errors or undefined references</td><td>Validation pass catches all errors before mission loads</td><td>T3</td></tr>
-<tr><td>Invalid unit type rejection</td><td>Generated YAML referencing nonexistent unit types</td><td>Content validator rejects with specific missing-type errors</td><td>T3</td></tr>
-<tr><td>Seed reproducibility</td><td>Generate mission with same seed twice</td><td>Identical YAML output</td><td>T4</td></tr>
-</tbody>
-</table>
-</div>
-<h2 id="coverage-mapping-design-features--tests"><a class="header" href="#coverage-mapping-design-features--tests">Coverage Mapping: Design Features → Tests</a></h2>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Design Feature</th><th>Primary Test Tier</th><th>Verification Method</th></tr>
-</thead>
-<tbody>
-<tr><td>Deterministic sim (Invariant #1)</td><td>T1 + T2 + T3</td><td>Hash comparison across runs/platforms</td></tr>
-<tr><td>Pluggable network model (Invariant #2)</td><td>T2</td><td>Integration tests with mock network</td></tr>
-<tr><td>Tiered modding (Invariant #3)</td><td>T1 + T3</td><td>Sandbox smoke + escape vector suite</td></tr>
-<tr><td>Fog-authoritative server</td><td>T2 + T3</td><td>Anti-cheat detection + desync injection</td></tr>
-<tr><td>Ed25519 session auth</td><td>T2</td><td>Protocol handshake + replay signing</td></tr>
-<tr><td>Workshop package integrity</td><td>T2 + T4</td><td>Sign/verify chain + ecosystem lifecycle</td></tr>
-<tr><td>RTL/BiDi text handling</td><td>T3</td><td>QA corpus regression suite</td></tr>
-<tr><td>Display name validation (V46)</td><td>T3</td><td>UTS #39 confusable corpus</td></tr>
-<tr><td>Key rotation (V47)</td><td>T4</td><td>Full rotation exercise</td></tr>
-<tr><td>Anti-cheat behavioral detection</td><td>T3 + T4</td><td>Labeled replay corpus evaluation</td></tr>
-<tr><td>Desync classification (V55)</td><td>T4</td><td>Injected bug vs cheat classification</td></tr>
-<tr><td>Performance budgets</td><td>T3</td><td>criterion benchmarks with regression gates</td></tr>
-<tr><td>Save/load integrity</td><td>T3</td><td>Round-trip hash comparison</td></tr>
-<tr><td>Path security (<code>strict-path</code>)</td><td>T1 + T3</td><td>Unit tests + fuzz testing</td></tr>
-<tr><td>WASM inter-module isolation (V50)</td><td>T3</td><td>Cross-module probe attempts → all blocked</td></tr>
-<tr><td>P2P replay attestation (V53)</td><td>T4</td><td>Multi-peer verification exercise</td></tr>
-<tr><td>Campaign completion</td><td>T4</td><td>Automated playthrough</td></tr>
-<tr><td>Visual UI consistency</td><td>T4</td><td>Pixel-diff regression</td></tr>
-<tr><td>Sub-tick ordering fairness (D008)</td><td>T2 + T3</td><td>Simultaneous-order scenarios; timestamp tiebreak verification</td></tr>
-<tr><td>Order validation completeness (D012)</td><td>T1 + T3</td><td>Exhaustive order-type × rejection-category matrix; proptest</td></tr>
-<tr><td>Merkle tree desync localization</td><td>T2 + T3</td><td>Inject divergence → verify O(log N) leaf identification</td></tr>
-<tr><td>Snapshot reconnection (D007)</td><td>T2 + T4</td><td>Disconnect/reconnect/hash-match; corruption/stale rejection</td></tr>
-<tr><td>Workshop dependency resolution (D030)</td><td>T1 + T3</td><td>Transitive, diamond, circular, and conflict dependency graphs</td></tr>
-<tr><td>Campaign DAG validation (D021)</td><td>T1 + T3</td><td>Cycle/reachability/dangling-ref rejection at construction</td></tr>
-<tr><td>Campaign roster carryover (D021)</td><td>T2 + T4</td><td>Surviving units + veterancy persist across mission transitions</td></tr>
-<tr><td>Mod profile fingerprint stability (D062)</td><td>T2 + T3</td><td>Serialize/deserialize/recompute identity; ordering independence</td></tr>
-<tr><td>WASM memory growth defense (V50)</td><td>T3</td><td>Adversarial <code>memory.grow</code> → denied; host stable</td></tr>
-<tr><td>WASM float rejection in sim</td><td>T3</td><td>Module attempts float write to sim → rejected</td></tr>
-<tr><td>Pathfinding LOD + multi-layer (D013)</td><td>T2 + T3</td><td>Path correctness across LOD transitions; benchmark vs budget</td></tr>
-<tr><td>Balance preset inheritance (D019)</td><td>T1 + T2 + T3</td><td>Chain resolution, cycle rejection, multiplayer hash match</td></tr>
-<tr><td>Weather determinism (D022)</td><td>T2 + T3</td><td>Schedule sync + surface state match across instances</td></tr>
-<tr><td>AI behavior determinism (D041)</td><td>T2 + T3</td><td>Same seed → identical build order; cross-platform hash match</td></tr>
-<tr><td>Command permission enforcement (D058)</td><td>T1 + T2</td><td>Privileged command rejection; cvar bounds clamping</td></tr>
-<tr><td>Rate limiting (D007/V17)</td><td>T2 + T3</td><td>Exceed <code>OrderBudget</code> → excess dropped; budget recovery timing</td></tr>
-<tr><td>LLM content validation (D016)</td><td>T3 + T4</td><td>Objective reachability; trigger syntax; unit-type existence</td></tr>
-<tr><td>Relay time-authority (D007)</td><td>T2 + T3</td><td>Timestamp envelope clamping; listen-server parity</td></tr>
-<tr><td>SCR sequence enforcement (D052)</td><td>T2 + T4</td><td>Monotonic sequence; key rotation grace period; emergency revocation</td></tr>
-<tr><td>Cross-engine map exchange (D011)</td><td>T2 + T3</td><td>OpenRA <code>.oramap</code> round-trip; out-of-bounds rejection</td></tr>
-<tr><td>Conflict resolution ordering (D062)</td><td>T2 + T3</td><td>Explicit priority determinism; all clients agree on resolved values</td></tr>
-<tr><td>Chat scope enforcement</td><td>T1 + T2</td><td>Team message routed only to team; all-chat routed to all; scope conversion requires explicit call</td></tr>
-<tr><td>Theme loading + switching (D032)</td><td>T2 + T4</td><td>Theme YAML schema validation; mid-gameplay switch produces no visual corruption; missing asset fallback</td></tr>
-<tr><td>AI personality application (D043)</td><td>T2 + T3</td><td><code>PersonalityId</code> resolves to valid preset; undefined personality rejected; AI behavior matches declared profile</td></tr>
-</tbody>
-</table>
-</div>
-<h2 id="release-criteria"><a class="header" href="#release-criteria">Release Criteria</a></h2>
-<p>A release candidate is shippable when:</p>
-<ol>
-<li><strong>All Tier 1–3 tests pass</strong> on the release branch</li>
-<li><strong>Latest Tier 4 run has no blockers</strong> (within the past 7 days)</li>
-<li><strong>Performance benchmarks show no regressions</strong> vs the previous release</li>
-<li><strong>Fuzz testing has run ≥1M iterations</strong> per target with no new crashes</li>
-<li><strong>Anti-cheat false-positive rate</strong> meets V54 thresholds on the labeled corpus</li>
-<li><strong>Cross-platform determinism</strong> verified (Linux ↔ Windows ↔ macOS)</li>
-</ol>
-<h2 id="phase-rollout"><a class="header" href="#phase-rollout">Phase Rollout</a></h2>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Phase</th><th>Testing Scope Added</th></tr>
-</thead>
-<tbody>
-<tr><td>M0–M1</td><td>Tier 1 pipeline, determinism harness, <code>strict-path</code> tests, clippy/fmt gates</td></tr>
-<tr><td>M2</td><td>Tier 2 pipeline, replay round-trip, <code>ra-formats</code> fuzz targets, Merkle tree unit tests, order validation matrix</td></tr>
-<tr><td>M3</td><td>Performance benchmark suite (incl. pathfinding LOD, spatial hash, flowfield, stagger schedule, ECS cache benchmarks), zero-alloc assertions, save/load tests</td></tr>
-<tr><td>M4</td><td>Network protocol tests, desync injection, Lua sandbox escape suite, sub-tick fairness scenarios, relay timestamp clamping, reconnection snapshot verification, order rate limiting</td></tr>
-<tr><td>M5</td><td>Anti-cheat calibration corpus, false-positive evaluation, ranked tests, SCR sequence enforcement, command permission tests, cvar bounds tests, AI determinism (cross-platform)</td></tr>
-<tr><td>M6</td><td>RTL/BiDi QA corpus regression, display name validation, visual regression</td></tr>
-<tr><td>M7–M8</td><td>Workshop ecosystem tests (dependency cycle detection, version immutability), WASM escape vectors, cross-module isolation, WASM memory growth fuzzing, mod profile fingerprint stability, balance preset validation, weather determinism, D059 RTL chat/marker text safety tests</td></tr>
-<tr><td>M9</td><td>Full Tier 4 weekly suite, release criteria enforcement, campaign DAG validation, roster carryover tests, LLM content validation</td></tr>
-<tr><td>M10–M11</td><td>Campaign playthrough automation, extended fuzz campaigns, cross-engine map exchange, full WASM memory growth fuzzing</td></tr>
+<tr><td>Infrastructure &amp; Subsystems</td><td>Test infrastructure requirements (harness, benchmarks, fuzz, replay corpus) + 16 subsystem test specifications</td><td><a href="testing/testing-infrastructure-subsystems.html">testing-infrastructure-subsystems.md</a></td></tr>
+<tr><td>Properties, Misuse &amp; Integration</td><td>Property-based testing (proptest) + API misuse test matrix + integration scenario matrix + measurement/metrics framework</td><td><a href="testing/testing-properties-misuse-integration.html">testing-properties-misuse-integration.md</a></td></tr>
+<tr><td>Coverage &amp; Release</td><td>Coverage mapping (design features to tests) + release criteria + phase rollout</td><td><a href="testing/testing-coverage-release.html">testing-coverage-release.md</a></td></tr>
 </tbody>
 </table>
 </div>
@@ -664,7 +295,7 @@ pub fn assert_desync_detected(scenario: &amp;Scenario, desync_at: SimTick);
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../09-DECISIONS.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../tracking/testing/testing-infrastructure-subsystems.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -678,7 +309,7 @@ pub fn assert_desync_detected(scenario: &amp;Scenario, desync_at: SimTick);
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../09-DECISIONS.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../tracking/testing/testing-infrastructure-subsystems.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

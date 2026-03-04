@@ -31,15 +31,15 @@ Each tier is optional. A modder who wants to change tank cost never sees code. A
 
 ## Section Index
 
-| Section | Description | File |
-|---------|-------------|------|
-| **Tier 1: YAML Rules** | Data-driven modding: YAML syntax, inheritance, OpenRA compatibility (D003/D023/D025/D026), hot-reload, actor definitions, weapons, prerequisites | [yaml-rules](modding/yaml-rules.md) |
-| **Tier 2: Lua Scripting** | Mission scripting, event hooks, triggers, OpenRA Lua API superset (D024), sandboxing, deterministic execution | [lua-scripting](modding/lua-scripting.md) |
-| **Tier 3: WASM Modules** | Total conversion power: component registration, lifecycle hooks, spatial queries, WASM API, deterministic constraints, cross-language support (D005) | [wasm-modules](modding/wasm-modules.md) |
-| **Tera Templating** | Template-driven YAML generation for faction variants, balance matrices, veterancy tables (D014). Load-time only, optional | [tera-templating](modding/tera-templating.md) |
-| **Resource Packs** | Selective asset replacement: sprites, audio, music, video, UI themes. Priority-layered loading, format conversion | [resource-packs](modding/resource-packs.md) |
-| **Campaign System** | Branching mission graphs, persistent state, unit roster carryover, hero progression, Lua campaign API (D021) | [campaigns](modding/campaigns.md) |
-| **Workshop** | Federated resource registry, P2P distribution (D049), semver deps (D030), moderation, creator reputation, Steam integration | [workshop](modding/workshop.md) |
-| **Mod SDK & Dev Experience** | `ic` CLI, project scaffolding, hot-reload workflow, validation, OpenRA mod migration, SDK application (D020) | [mod-sdk](modding/mod-sdk.md) |
-| **LLM-Readable Metadata** | `llm:` metadata blocks for AI-assisted mod authoring, balance analysis, documentation generation (D016) | [llm-metadata](modding/llm-metadata.md) |
-| **Mod API Stability** | Versioning strategy, deprecation warnings, compatibility adapters, `ic mod migrate` CLI, Migration Workbench | [api-stability](modding/api-stability.md) |
+| Section                      | Description                                                                                                                                          | File                                          |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| **Tier 1: YAML Rules**       | Data-driven modding: YAML syntax, inheritance, OpenRA compatibility (D003/D023/D025/D026), hot-reload, actor definitions, weapons, prerequisites     | [yaml-rules](modding/yaml-rules.md)           |
+| **Tier 2: Lua Scripting**    | Mission scripting, event hooks, triggers, OpenRA Lua API superset (D024), sandboxing, deterministic execution                                        | [lua-scripting](modding/lua-scripting.md)     |
+| **Tier 3: WASM Modules**     | Total conversion power: component registration, lifecycle hooks, spatial queries, WASM API, deterministic constraints, cross-language support (D005) | [wasm-modules](modding/wasm-modules.md)       |
+| **Tera Templating**          | Template-driven YAML generation for faction variants, balance matrices, veterancy tables (D014). Load-time only, optional                            | [tera-templating](modding/tera-templating.md) |
+| **Resource Packs**           | Selective asset replacement: sprites, audio, music, video, UI themes. Priority-layered loading, format conversion                                    | [resource-packs](modding/resource-packs.md)   |
+| **Campaign System**          | Branching mission graphs, persistent state, unit roster carryover, hero progression, Lua campaign API (D021)                                         | [campaigns](modding/campaigns.md)             |
+| **Workshop**                 | Federated resource registry, P2P distribution (D049), semver deps (D030), moderation, creator reputation, Steam integration                          | [workshop](modding/workshop.md)               |
+| **Mod SDK & Dev Experience** | `ic` CLI, project scaffolding, hot-reload workflow, validation, OpenRA mod migration, SDK application (D020)                                         | [mod-sdk](modding/mod-sdk.md)                 |
+| **LLM-Readable Metadata**    | `llm:` metadata blocks for AI-assisted mod authoring, balance analysis, documentation generation (D016)                                              | [llm-metadata](modding/llm-metadata.md)       |
+| **Mod API Stability**        | Versioning strategy, deprecation warnings, compatibility adapters, `ic mod migrate` CLI, Migration Workbench                                         | [api-stability](modding/api-stability.md)     |

@@ -1,0 +1,539 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Overview &amp; Architecture - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09g/D058/D058-overview-architecture.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="d058-in-game-command-console--unified-chat-and-command-system"><a class="header" href="#d058-in-game-command-console--unified-chat-and-command-system">D058: In-Game Command Console — Unified Chat and Command System</a></h2>
+<p><strong>Status:</strong> Settled
+<strong>Scope:</strong> <code>ic-ui</code> (chat input, dev console UI), <code>ic-game</code> (CommandDispatcher, wiring), <code>ic-sim</code> (order pipeline), <code>ic-script</code> (Lua execution)
+<strong>Phase:</strong> Phase 3 (Game Chrome — chat + basic commands), Phase 4 (Lua console), Phase 6a (mod-registered commands)
+<strong>Depends on:</strong> D004 (Lua Scripting), D006 (Pluggable Networking — commands produce PlayerOrders that flow through NetworkModel), D007 (Relay Server — server-enforced rate limits), D012 (Order Validation), D033 (QoL Toggles), D036 (Achievements), D055 (Ranked Matchmaking — competitive integrity)</p>
+<p><strong>Crate ownership:</strong> The <code>CommandDispatcher</code> lives in <code>ic-game</code> — it cannot live in <code>ic-sim</code> (would violate Invariant #1: no I/O in the simulation) and is too cross-cutting for <code>ic-ui</code> (CLI and scripts also use it). <code>ic-game</code> is the wiring crate that depends on all library crates, making it the natural home for the dispatcher.
+<strong>Inspired by:</strong> Mojang’s Brigadier (command tree architecture), Factorio (unified chat+command UX), Source Engine (developer console + cvars)</p>
+<p><strong>Revision note (2026-02-22):</strong> Revised to formalize camera bookmarks (<code>/bookmark_set</code>, <code>/bookmark</code>) as a first-class cross-platform navigation feature with explicit desktop/touch UI affordances, and to clarify that mobile tempo comfort guidance around <code>/speed</code> is advisory UI only (no new simulation/network authority path). This revision was driven by mobile/touch UX design work and cross-device tutorial integration (see D065 and <code>research/mobile-rts-ux-onboarding-community-platform-analysis.md</code>).</p>
+<h3 id="decision-capsule-llmrag-summary"><a class="header" href="#decision-capsule-llmrag-summary">Decision Capsule (LLM/RAG Summary)</a></h3>
+<ul>
+<li><strong>Status:</strong> Settled (Revised 2026-02-22)</li>
+<li><strong>Phase:</strong> Phase 3 (chat + basic commands), Phase 4 (Lua console), Phase 6a (mod-registered commands)</li>
+<li><strong>Canonical for:</strong> Unified chat/command console design, command dispatch model, cvar/command UX, and competitive-integrity command policy</li>
+<li><strong>Scope:</strong> <code>ic-ui</code> text input/dev console UI, <code>ic-game</code> command dispatcher, command→order routing, Lua console integration, mod command registration</li>
+<li><strong>Decision:</strong> IC uses a <strong>unified chat/command input</strong> (Brigadier-style command tree) as the primary interface, plus an optional developer console overlay for power users; both share the same dispatcher and permission/rule system.</li>
+<li><strong>Why:</strong> Unified input is more discoverable and portable, while a separate power-user console still serves advanced workflows (multi-line input, cvars, debugging, admin tasks).</li>
+<li><strong>Non-goals:</strong> Chat-only magic-string commands with no structured parser; a desktop-only tilde-console model that excludes touch/console platforms.</li>
+<li><strong>Invariants preserved:</strong> <code>CommandDispatcher</code> lives outside <code>ic-sim</code>; commands affecting gameplay flow through normal validated order/network paths; competitive integrity is enforced by permissions/rules, not hidden UI.</li>
+<li><strong>Defaults / UX behavior:</strong> Enter opens the primary text field; <code>/</code> routes to commands; command/help/autocomplete behavior is shared across unified input and console overlay.</li>
+<li><strong>Mobile / accessibility impact:</strong> Command access has GUI/touch-friendly paths; camera bookmarks are first-class across desktop and touch; mobile tempo guidance around <code>/speed</code> is advisory UI only.</li>
+<li><strong>Security / Trust impact:</strong> Rate limits, permissions, anti-trolling measures, and ranked restrictions are part of the command system design.</li>
+<li><strong>Public interfaces / types / commands:</strong> Brigadier-style command tree, cvars, <code>/bookmark_set</code>, <code>/bookmark</code>, <code>/speed</code>, mod-registered commands (<code>.iccmd</code>, Lua registration as defined in body)</li>
+<li><strong>Affected docs:</strong> <code>src/03-NETCODE.md</code>, <code>src/06-SECURITY.md</code>, <code>src/17-PLAYER-FLOW.md</code>, <code>src/decisions/09g-interaction.md</code> (D059/D065)</li>
+<li><strong>Revision note summary:</strong> Added formal camera bookmark command/UI semantics and clarified mobile tempo guidance is advisory-only with no new authority path.</li>
+<li><strong>Keywords:</strong> command console, unified chat commands, brigadier, cvars, bookmarks, speed command, mod commands, competitive integrity, mobile command UX, diagnostic overlay, net_graph, /diag, real-time observability</li>
+</ul>
+<h3 id="problem"><a class="header" href="#problem">Problem</a></h3>
+<p>IC needs two text-input capabilities during gameplay:</p>
+<ol>
+<li><strong>Player chat</strong> — team messages, all-chat, whispers in multiplayer</li>
+<li><strong>Commands</strong> — developer cheats, server administration, configuration tweaks, Lua scripting, mod-injected commands</li>
+</ol>
+<p>These could be separate systems (Source Engine’s tilde console vs. in-game chat) or unified (Factorio’s <code>/</code> prefix in chat, Minecraft’s Brigadier-powered <code>/</code> system). The choice affects UX, security, trolling surface, modding ergonomics, and platform portability.</p>
+<h3 id="how-other-games-handle-this"><a class="header" href="#how-other-games-handle-this">How Other Games Handle This</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Game/Engine</th><th>Architecture</th><th>Console Type</th><th>Cheat Consequence</th><th>Mod Commands</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Factorio</strong></td><td>Unified: chat + <code>/command</code> + <code>/c lua</code></td><td>Same input field, <code>/</code> prefix routes to commands</td><td><code>/c</code> permanently disables achievements for the save</td><td>Mods register Lua commands via <code>commands.add_command()</code></td></tr>
+<tr><td><strong>Minecraft</strong></td><td>Unified: chat + Brigadier <code>/command</code></td><td>Same input field, Brigadier tree parser</td><td>Commands in survival may disable advancements</td><td>Mods inject nodes into the Brigadier command tree</td></tr>
+<tr><td><strong>Source Engine (CS2, HL2)</strong></td><td>Separate: <code>~</code> developer console + team chat</td><td>Dedicated half-screen overlay (tilde key)</td><td><code>sv_cheats 1</code> flags match</td><td>Server plugins register ConCommands</td></tr>
+<tr><td><strong>StarCraft 2</strong></td><td>No text console; debug tools = GUI</td><td>Chat only; no command input</td><td>N/A (no player-accessible console)</td><td>Limited custom UI via Galaxy editor</td></tr>
+<tr><td><strong>OpenRA</strong></td><td>GUI-only: DevMode checkbox menu</td><td>No text console; toggle flags in GUI panel</td><td>Flags replay as cheated</td><td>No mod-injected commands</td></tr>
+<tr><td><strong>Age of Empires 2/4</strong></td><td>Chat-embedded: type codes in chat box</td><td>Same input field, magic strings</td><td>Flags game; disables achievements</td><td>No mod commands</td></tr>
+<tr><td><strong>Arma 3 / OFP</strong></td><td>Separate: debug console (editor) + chat</td><td>Dedicated windowed Lua/SQF console</td><td>Editor-only; not in normal gameplay</td><td>Full SQF/Lua API access</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Key patterns observed:</strong></p>
+<ol>
+<li>
+<p><strong>Unified wins for UX.</strong> Factorio and Minecraft prove that a single input field with prefix routing (<code>/</code> = command, no prefix = chat) is more discoverable and less jarring than a separate overlay. Players don’t need to remember two different keybindings. Tab completion works everywhere.</p>
+</li>
+<li>
+<p><strong>Separate console wins for power users.</strong> Source Engine’s tilde console supports multi-line input, scrollback history, cvar browsing, and autocomplete — features that are awkward in a single-line chat field. Power users (modders, server admins, developers) need this.</p>
+</li>
+<li>
+<p><strong>Achievement/ranking consequences are universal.</strong> Every game that supports both commands and competitive play permanently marks saves/matches when cheats are used. No exceptions.</p>
+</li>
+<li>
+<p><strong>Trolling via chat is a solved problem.</strong> Muting, ignoring, rate limiting, and admin tools handle chat abuse. The command system introduces a new trolling surface only if commands can affect other players — which is controlled by permissions, not by hiding the console.</p>
+</li>
+<li>
+<p><strong>Platform portability matters.</strong> A tilde console assumes a physical keyboard. Mobile and console platforms need command access through a GUI or touch-friendly interface.</p>
+</li>
+</ol>
+<h3 id="decision"><a class="header" href="#decision">Decision</a></h3>
+<p>IC uses a <strong>unified chat/command system</strong> with a <strong>Brigadier-style command tree</strong>, plus an optional <strong>developer console overlay</strong> for power users. The two interfaces share the same command dispatcher — they differ only in presentation.</p>
+<h4 id="the-unified-input-primary"><a class="header" href="#the-unified-input-primary">The Unified Input (Primary)</a></h4>
+<p>A single text input field, opened by pressing Enter (configurable). Prefix routing:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Input</th><th>Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td><code>hello team</code></td><td>Team chat message (default)</td></tr>
+<tr><td><code>/help</code></td><td>Execute command</td></tr>
+<tr><td><code>/give 5000</code></td><td>Execute command with arguments</td></tr>
+<tr><td><code>/s hello everyone</code></td><td>Shout to all players (all-chat)</td></tr>
+<tr><td><code>/w PlayerName msg</code></td><td>Whisper to specific player</td></tr>
+<tr><td><code>/c game.player.print(42)</code></td><td>Execute Lua (if permitted)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong><code>/s</code> vs <code>/all</code> distinction:</strong> <code>/s &lt;message&gt;</code> is a <strong>one-shot</strong> all-chat message — it sends the rest of the line to all players without changing your active channel. <code>/all</code> (D059 § Channel Switching) is a <strong>sticky</strong> channel switch — it changes your default channel to All so subsequent messages go to all-chat until you switch back. Same distinction as IRC’s <code>/say</code> vs <code>/join</code>.</p>
+<p>This matches Factorio’s model exactly — proven UX with millions of users. The <code>/</code> prefix is universal (Minecraft, Factorio, Discord, IRC, MMOs). No learning curve.</p>
+<p><strong>Tab completion</strong> powered by the command tree. Typing <code>/he</code> and pressing Tab suggests <code>/help</code>. Typing <code>/give </code> suggests valid argument types. The Brigadier-style tree generates completions automatically — mods that register commands get tab completion for free.</p>
+<p><strong>Command visibility.</strong> Following Factorio’s principle: by default, all commands executed by any player are visible to all players in the chat log. This prevents covert cheating in multiplayer. Players see <code>[Admin] /give 5000</code> or <code>[Player] /reveal_map</code>. Lua commands (<code>/c</code>) can optionally use <code>/sc</code> (silent command) — but only for the host/admin, and the fact that a silent command was executed is still logged (the output is hidden, not the execution).</p>
+<h4 id="the-developer-console-secondary-power-users"><a class="header" href="#the-developer-console-secondary-power-users">The Developer Console (Secondary, Power Users)</a></h4>
+<p>Toggled by <code>~</code> (tilde/grave, configurable). A half-screen overlay rendered via <code>bevy_egui</code>, inspired by Source Engine:</p>
+<ul>
+<li><strong>Multi-line input</strong> with syntax highlighting for Lua</li>
+<li><strong>Scrollable output history</strong> with filtering (errors, warnings, info, chat)</li>
+<li><strong>Cvar browser</strong> — searchable list of all configuration variables with current values, types, and descriptions</li>
+<li><strong>Autocomplete</strong> — same Brigadier tree, but with richer display (argument types, descriptions, permission requirements)</li>
+<li><strong>Command history</strong> — up/down arrow scrolls through previous commands, persisted across sessions in SQLite (D034)</li>
+</ul>
+<p>The developer console dispatches commands through the <strong>same <code>CommandDispatcher</code></strong> as the chat input. It provides a better interface for the same underlying system — not a separate system with different commands.</p>
+<p><strong>Compile-gated sections:</strong> The Lua console (<code>/c</code>, <code>/sc</code>, <code>/mc</code>) and debug commands are behind <code>#[cfg(feature = "dev-tools")]</code> in release builds. Regular players see only the chat/command interface. The tilde console is always available but shows only non-dev commands unless dev-tools is enabled.</p>
+<h4 id="command-tree-architecture-brigadier-style"><a class="header" href="#command-tree-architecture-brigadier-style">Command Tree Architecture (Brigadier-Style)</a></h4>
+<p>Already identified in <code>04-MODDING.md</code> as the design target. Formalized here:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// The source of a command — who is executing it and in what context.
+pub struct CommandSource {
+    pub origin: CommandOrigin,
+    pub permissions: PermissionLevel,
+    pub player_id: Option&lt;PlayerId&gt;,
+}
+
+pub enum CommandOrigin {
+    /// Typed in the in-game chat/command input
+    ChatInput,
+    /// Typed in the developer console overlay
+    DevConsole,
+    /// Executed from the CLI tool (`ic` binary)
+    Cli,
+    /// Executed from a Lua script (mission/mod)
+    LuaScript { script_id: String },
+    /// Executed from a WASM module
+    WasmModule { module_id: String },
+    /// Executed from a configuration file
+    ConfigFile { path: String },
+}
+
+/// How the player physically invoked the action — the hardware/UI input method.
+/// Attached to PlayerOrder (not CommandSource) for replay analysis and APM tracking.
+/// This is a SEPARATE concept from CommandOrigin: CommandOrigin tracks WHERE the
+/// command was dispatched (chat input, dev console, Lua script); InputSource tracks
+/// HOW the player physically triggered it (keyboard shortcut, mouse click, etc.).
+///
+/// NOTE: InputSource is client-reported and advisory only. A modified open-source
+/// client can fake any InputSource value. Replay analysis tools should treat it as
+/// a hint, not proof. The relay server can verify ORDER VOLUME (spoofing-proof)
+/// but not input source (client-reported). See "Competitive Integrity Principles"
+/// § CI-3 below.
+pub enum InputSource {
+    /// Triggered via a keyboard shortcut / hotkey
+    Keybinding,
+    /// Triggered via mouse click on the game world or GUI button
+    MouseClick,
+    /// Typed as a chat/console command (e.g., `/move 120,80`)
+    ChatCommand,
+    /// Loaded from a config file or .iccmd script on startup
+    ConfigFile,
+    /// Issued by a Lua or WASM script (mission/mod automation)
+    Script,
+    /// Touchscreen input (mobile/tablet)
+    Touch,
+    /// Controller input (Steam Deck, console)
+    Controller,
+}
+
+pub enum PermissionLevel {
+    /// Regular player — chat, help, basic status commands
+    Player,
+    /// Game host — server config, kick/ban, dev mode toggle
+    Host,
+    /// Server administrator — full server management
+    Admin,
+    /// Developer — debug commands, Lua console, fault injection
+    Developer,
+}
+
+/// A typed argument parser — Brigadier's `ArgumentType&lt;T&gt;` in Rust.
+pub trait ArgumentType: Send + Sync {
+    type Output;
+    fn parse(&amp;self, reader: &amp;mut StringReader) -&gt; Result&lt;Self::Output, CommandError&gt;;
+    fn suggest(&amp;self, context: &amp;CommandContext, builder: &amp;mut SuggestionBuilder);
+    fn examples(&amp;self) -&gt; &amp;[&amp;str];
+}
+
+/// Built-in argument types.
+pub struct IntegerArg { pub min: Option&lt;i64&gt;, pub max: Option&lt;i64&gt; }
+pub struct FloatArg { pub min: Option&lt;f64&gt;, pub max: Option&lt;f64&gt; }
+pub struct StringArg { pub kind: StringKind }  // Word, Quoted, Greedy
+pub struct BoolArg;
+pub struct PlayerArg;           // autocompletes to connected player names
+pub struct UnitTypeArg;         // autocompletes to valid unit type names from YAML rules
+pub struct PositionArg;         // parses "x,y" or "x,y,z" coordinates
+pub struct ColorArg;            // named color or R,G,B
+
+/// The command dispatcher — shared by chat input, dev console, CLI, and scripts.
+pub struct CommandDispatcher {
+    root: CommandNode,
+}
+
+impl CommandDispatcher {
+    /// Register a command. Mods call this via Lua/WASM API.
+    pub fn register(&amp;mut self, node: CommandNode);
+
+    /// Parse input into a command + arguments. Does NOT execute.
+    pub fn parse(&amp;self, input: &amp;str, source: &amp;CommandSource) -&gt; ParseResult;
+
+    /// Execute a previously parsed command.
+    pub fn execute(&amp;self, parsed: &amp;ParseResult) -&gt; CommandResult;
+
+    /// Generate tab-completion suggestions at cursor position.
+    pub fn suggest(&amp;self, input: &amp;str, cursor: usize, source: &amp;CommandSource) -&gt; Vec&lt;Suggestion&gt;;
+
+    /// Generate human-readable usage string for a command.
+    pub fn usage(&amp;self, command: &amp;str, source: &amp;CommandSource) -&gt; String;
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Permission filtering:</strong> Commands whose root node’s permission requirement exceeds the source’s level are invisible — not shown in <code>/help</code>, not tab-completed, not executable. A regular player never sees <code>/kick</code> or <code>/c</code>. This is Brigadier’s <code>requirement</code> predicate.</p>
+<p><strong>Append-only registration:</strong> Mods register commands by adding children to the root node. A mod can also extend existing commands by adding new sub-nodes. Two mods adding <code>/spawn</code> would conflict — the second registration merges into the first’s node, following Brigadier’s merge semantics.</p>
+<h4 id="configuration-variables-cvars"><a class="header" href="#configuration-variables-cvars">Configuration Variables (Cvars)</a></h4>
+<p>Runtime-configurable values, inspired by Source Engine’s ConVar system but adapted for IC’s YAML-first philosophy:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// A runtime-configurable variable with type, default, bounds, and metadata.
+pub struct Cvar {
+    pub name: String,                    // dot-separated: "render.shadows", "sim.fog_enabled"
+    pub description: String,
+    pub value: CvarValue,
+    pub default: CvarValue,
+    pub flags: CvarFlags,
+    pub category: String,                // for grouping in the cvar browser
+}
+
+pub enum CvarValue {
+    Bool(bool),
+    Int(i64),
+    Float(f64),
+    String(String),
+}
+
+bitflags! {
+    pub struct CvarFlags: u32 {
+        /// Persisted to config file on change
+        const PERSISTENT = 0b0001;
+        /// Requires dev mode to modify (gameplay-affecting)
+        const DEV_ONLY   = 0b0010;
+        /// Server-authoritative in multiplayer (clients can't override)
+        const SERVER     = 0b0100;
+        /// Read-only — informational, cannot be set by commands
+        const READ_ONLY  = 0b1000;
+    }
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Loading from config file:</strong></p>
+<pre><code class="language-toml"># config.toml (user configuration — loaded at startup, saved on change)
+[render]
+shadows = true
+shadow_quality = 2          # 0=off, 1=low, 2=medium, 3=high
+vsync = true
+max_fps = 144
+
+[audio]
+master_volume = 80
+music_volume = 60
+eva_volume = 100
+
+[gameplay]
+scroll_speed = 5
+control_group_steal = false
+auto_rally_harvesters = true
+
+[net]
+show_diagnostics = false        # toggle network overlay (latency, jitter, tick timing)
+sync_frequency = 120            # ticks between full state hash checks (SERVER)
+# DEV_ONLY parameters — debug builds only:
+# desync_debug_level = 0        # 0-3, see 03-NETCODE.md § Debug Levels
+# visual_prediction = true       # cosmetic prediction; disable for latency testing
+# simulate_latency = 0           # artificial one-way latency (ms)
+# simulate_loss = 0.0            # artificial packet loss (%)
+# simulate_jitter = 0            # artificial jitter (ms)
+
+[debug]
+show_fps = true
+show_network_stats = false
+diag_level = 0            # 0-3, diagnostic overlay level (see 10-PERFORMANCE.md)
+diag_position = "tr"      # tl, tr, bl, br — overlay corner position
+diag_scale = 1.0          # overlay text scale factor (0.5-2.0)
+diag_opacity = 0.8        # overlay background opacity (0.0-1.0)
+diag_history_seconds = 30  # graph history duration in seconds
+diag_batch_interval_ms = 500  # collection interval for expensive L2 metrics (ms)
+</code></pre>
+<p>Cvars are the runtime mirror of <code>config.toml</code>. Changing a cvar with <code>PERSISTENT</code> flag writes back to <code>config.toml</code>. Cvars map to the same keys as the TOML config — <code>render.shadows</code> in the cvar system corresponds to <code>[render] shadows</code> in the file. This means <code>config.toml</code> is both the startup configuration file and the serialized cvar state.</p>
+<p><strong>Cvar commands:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>/set &lt;cvar&gt; &lt;value&gt;</code></td><td>Set a cvar</td><td><code>/set render.shadows false</code></td></tr>
+<tr><td><code>/get &lt;cvar&gt;</code></td><td>Display current value</td><td><code>/get render.max_fps</code></td></tr>
+<tr><td><code>/reset &lt;cvar&gt;</code></td><td>Reset to default</td><td><code>/reset render.shadows</code></td></tr>
+<tr><td><code>/find &lt;pattern&gt;</code></td><td>Search cvars by name/description</td><td><code>/find shadow</code></td></tr>
+<tr><td><code>/cvars [category]</code></td><td>List all cvars (optionally filtered)</td><td><code>/cvars audio</code></td></tr>
+<tr><td><code>/toggle &lt;cvar&gt;</code></td><td>Toggle boolean cvar</td><td><code>/toggle render.vsync</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Sim-affecting cvars</strong> (like fog of war, game speed) use the <code>DEV_ONLY</code> flag and flow through the order pipeline as <code>PlayerOrder::SetCvar(name, value)</code> — deterministic, validated, visible to all clients. Client-only cvars (render settings, audio) take effect immediately without going through the sim.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../decisions/09g/D058-command-console.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../decisions/09g/D058/D058-commands-catalog.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../decisions/09g/D058-command-console.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../decisions/09g/D058/D058-commands-catalog.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../../mark-09e88c2c.min.js"></script>
+        <script src="../../../searcher-c2a407aa.js"></script>
+
+        <script src="../../../clipboard-1626706a.min.js"></script>
+        <script src="../../../highlight-abc7f01d.js"></script>
+        <script src="../../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

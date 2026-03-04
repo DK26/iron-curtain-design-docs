@@ -8,11 +8,11 @@ IC follows an **efficiency-first** philosophy: better algorithms → cache-frien
 
 ## Section Index
 
-| Section | Description | File |
-|---------|-------------|------|
-| **Efficiency Pyramid** | Core principle, 6-layer optimization hierarchy (algorithm → cache → LOD → amortize → zero-alloc → parallelism) | [efficiency-pyramid](performance/efficiency-pyramid.md) |
-| **Targets & Comparisons** | Performance targets, vs C# RTS engines, input responsiveness vs OpenRA | [targets](performance/targets.md) |
-| **GPU & Hardware Compatibility** | wgpu backend matrix, 2012 laptop problem, render quality tiers, auto-detection, hardware profiles, config.toml render section | [gpu-hardware](performance/gpu-hardware.md) |
-| **Profiling & Regression** | Profiling strategy, regression testing, benchmark infrastructure | [profiling](performance/profiling.md) |
-| **Delta Encoding & Invariants** | Change tracking performance, decision record, cross-document performance invariants | [delta-encoding](performance/delta-encoding.md) |
-| **RAM Mode** | Minimal memory footprint mode for constrained environments | [ram-mode](performance/ram-mode.md) |
+| Section                          | Description                                                                                                                   | File                                                    |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| **Efficiency Pyramid**           | Core principle, 6-layer optimization hierarchy (algorithm → cache → LOD → amortize → zero-alloc → parallelism)                | [efficiency-pyramid](performance/efficiency-pyramid.md) |
+| **Targets & Comparisons**        | Performance targets, vs C# RTS engines, input responsiveness vs OpenRA                                                        | [targets](performance/targets.md)                       |
+| **GPU & Hardware Compatibility** | wgpu backend matrix, 2012 laptop problem, render quality tiers, auto-detection, hardware profiles, config.toml render section | [gpu-hardware](performance/gpu-hardware.md)             |
+| **Profiling & Regression**       | Profiling strategy, regression testing, benchmark infrastructure                                                              | [profiling](performance/profiling.md)                   |
+| **Delta Encoding & Invariants**  | Change tracking performance, decision record, cross-document performance invariants                                           | [delta-encoding](performance/delta-encoding.md)         |
+| **RAM Mode**                     | Minimal memory footprint mode for constrained environments                                                                    | [ram-mode](performance/ram-mode.md)                     |

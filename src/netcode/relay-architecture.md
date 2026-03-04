@@ -73,9 +73,9 @@ impl RelayCore {
 
 This creates three relay deployment modes:
 
-| Mode                 | Who Runs RelayCore                             | Who Plays                    | Relay Quality                                | QoS Calibration                                    | Use Case                              |
-| -------------------- | ---------------------------------------------- | ---------------------------- | -------------------------------------------- | -------------------------------------------------- | ------------------------------------- |
-| **Dedicated server** | Standalone binary (`relay-server`)             | All clients connect remotely | Full sub-tick, multi-game, neutral authority | Full (relay-driven calibration + bounded auto-tune) | Server rooms, Pi, competitive, ranked |
+| Mode                 | Who Runs RelayCore                             | Who Plays                    | Relay Quality                                | QoS Calibration                                     | Use Case                                   |
+| -------------------- | ---------------------------------------------- | ---------------------------- | -------------------------------------------- | --------------------------------------------------- | ------------------------------------------ |
+| **Dedicated server** | Standalone binary (`relay-server`)             | All clients connect remotely | Full sub-tick, multi-game, neutral authority | Full (relay-driven calibration + bounded auto-tune) | Server rooms, Pi, competitive, ranked      |
 | **Listen server**    | Game client embeds it (`EmbeddedRelayNetwork`) | Host plays + others connect  | Full sub-tick, single game, host plays       | Full (same `RelayCore` calibration pipeline)        | Casual, community, LAN, "Host Game" button |
 
 **What "relay-only" means for players.** Every multiplayer game runs through a relay — but the relay can be the host's own machine. A player clicking "Host Game" runs `RelayCore` locally; friends connect via join code, direct IP, or game browser. No external server, no account, no infrastructure. This is the same player experience as direct P2P ("I host, you join, we play") with the addition of neutral timing, anti-cheat, and signed replays that raw P2P cannot provide. The only scenario requiring external infrastructure is ranked/competitive play, where the matchmaking system routes through a dedicated relay on trusted infrastructure so neither player is the host.

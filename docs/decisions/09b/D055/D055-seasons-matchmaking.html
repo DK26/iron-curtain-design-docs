@@ -1,0 +1,500 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Seasons &amp; Matchmaking - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09b/D055/D055-seasons-matchmaking.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h4 id="season-structure"><a class="header" href="#season-structure">Season Structure</a></h4>
+<pre><code class="language-yaml"># Server configuration (community server operators can customize)
+season:
+  duration_days: 91              # ~3 months (matching SC2, CS2, AoE4)
+  placement_matches: 10          # Required before rank is assigned
+  soft_reset:
+    # At season start, compress all ratings toward default:
+    # new_rating = default + (old_rating - default) * compression_factor
+    compression_factor: 700       # 0-1000 fixed-point (0.7 = keep 70% of distance from default)
+    default_rating: 1500          # Center point
+    reset_deviation: true         # Set deviation to placement level (fast convergence)
+    placement_deviation: 350      # High deviation during placement (ratings move fast)
+  rewards:
+    # Per-tier season-end rewards (cosmetic only — no gameplay advantage)
+    enabled: true
+    # Specific rewards defined per-season by competitive committee (D037)
+  leaderboard:
+    min_matches: 5                # Minimum matches to appear on leaderboard
+    min_distinct_opponents: 5     # Must have played at least 5 different opponents (V26)
+</code></pre>
+<p><strong>Season lifecycle:</strong></p>
+<ol>
+<li><strong>Season start:</strong> All player ratings compressed toward 1500 (soft reset). Deviation set to placement level (350). Players lose their tier badge until placement completes.</li>
+<li><strong>Placement (10 matches):</strong> High deviation means rating moves fast. Uses D041’s seeding formula for brand-new players. Returning players converge quickly because their pre-reset rating provides a strong prior. <strong>Hidden matchmaking rating (V30):</strong> during placement, matchmaking searches near the player’s pre-reset rating (not the compressed value), preventing cross-skill mismatches in the first few days of each season. Placement also requires <strong>10 distinct opponents</strong> (soft requirement — degrades gracefully to <code>max(3, available * 0.5)</code> on small servers) to prevent win-trading (V26).</li>
+<li><strong>Active season:</strong> Normal Glicko-2 rating updates. Deviation decreases with more matches (rating stabilizes). Tier badge updates immediately after every match (no delayed batches — avoiding OW2’s mistake).</li>
+<li><strong>Season end:</strong> Peak tier badge saved to profile (D053). Season statistics archived. Season rewards distributed. Leaderboard frozen for display.</li>
+<li><strong>Inter-season:</strong> Short transition period (~1 week) with unranked competitive practice queue.</li>
+</ol>
+<p><strong>Why 3-month seasons:</strong></p>
+<ul>
+<li>Matches SC2’s proven cadence for RTS</li>
+<li>Long enough for ratings to stabilize and leaderboards to mature</li>
+<li>Short enough to prevent stagnation (the C&amp;C Remastered problem)</li>
+<li>Aligns naturally with quarterly balance patches and competitive map pool rotations</li>
+</ul>
+<h4 id="faction-specific-ratings-optional"><a class="header" href="#faction-specific-ratings-optional">Faction-Specific Ratings (Optional)</a></h4>
+<pre><code class="language-yaml"># Player opted into faction tracking:
+faction_ratings:
+  enabled: true                  # Player's choice — optional
+  # Separate rating tracked per faction played
+  # Matchmaking uses the rating for the selected faction
+  # Profile shows all faction ratings
+</code></pre>
+<p>Inspired by SC2’s per-race MMR. When enabled:</p>
+<ul>
+<li>Each faction (e.g., Allies, Soviets) has a separate <code>PlayerRating</code></li>
+<li>Matchmaking uses the rating for the faction the player queues with</li>
+<li>Profile displays all faction ratings (D053 statistics card)</li>
+<li>If disabled, one unified rating is used regardless of faction choice</li>
+</ul>
+<p><strong>Why optional:</strong> Some players want one rating that represents their overall skill. Others want per-faction tracking because they’re “Diamond Allies but Gold Soviets.” Making it opt-in respects both preferences without splitting the matchmaking pool (matchmaking always uses the relevant rating — either faction-specific or unified).</p>
+<h4 id="matchmaking-queue-design"><a class="header" href="#matchmaking-queue-design">Matchmaking Queue Design</a></h4>
+<p><strong>Queue modes:</strong></p>
+<ul>
+<li><strong>Ranked 1v1:</strong> Primary competitive mode. Map veto from seasonal pool.</li>
+<li><strong>Ranked Team:</strong> 2v2, 3v3 (match size defined by game module). Separate team rating. Party restrictions: maximum 1 tier difference between party members (anti-boosting, same as LoL’s duo restrictions).</li>
+<li><strong>Unranked Competitive:</strong> Same rules as ranked but no rating impact. For practice, warm-up, or playing with friends across wide skill gaps.</li>
+</ul>
+<p><strong>Map selection (ranked 1v1):</strong>
+Both players alternately ban maps from the competitive map pool (curated per-season by competitive committee, D037). The remaining map is played — similar to CS2 Premier’s pick/ban system but adapted for 1v1 RTS.</p>
+<p><strong>Map pool curation guidelines:</strong> The competitive committee should evaluate maps for competitive suitability beyond layout and balance. Relevant considerations include:</p>
+<ul>
+<li><strong>Weather sim effects (D022):</strong> Maps with <code>sim_effects: true</code> introduce movement variance from dynamic weather (snow slowing units, ice enabling water crossing, mud bogging vehicles). The committee may include weather-active maps if the weather schedule is deterministic and strategically interesting, or exclude them if the variance is deemed unfair. Tournament organizers can override this via lobby settings.</li>
+<li><strong>Map symmetry and spawn fairness:</strong> Standard competitive map criteria — positional balance, resource distribution, rush distance equity.</li>
+<li><strong>Performance impact:</strong> Maps with extreme cell counts, excessive weather particles, or complex terrain should be tested against the 500-unit performance target (10-PERFORMANCE.md) before inclusion.</li>
+</ul>
+<p><strong>Anonymous veto (V27):</strong> During the veto sequence, opponents are shown as “Opponent” — no username, rating, or tier badge. Identity is revealed only after the final map is determined and both players confirm ready. Leaving during the veto sequence counts as a loss (escalating cooldown: 5min → 30min → 2hr). This prevents identity-based queue dodging while preserving strategic map bans.</p>
+<pre><code>Seasonal pool: 7 maps
+Player A bans 1 → 6 remain
+Player B bans 1 → 5 remain
+Player A bans 1 → 4 remain
+Player B bans 1 → 3 remain
+Player A bans 1 → 2 remain
+Player B bans 1 → 1 remains → this map is played
+</code></pre>
+<p><strong>Player Avoid Preferences (ranked-safe, best-effort):</strong></p>
+<p>Players need a way to avoid repeat bad experiences (toxicity, griefing, suspected cheating) without turning ranked into a dodge-by-name system. IC supports <strong><code>Avoid Player</code></strong> as a <strong>soft matchmaking preference</strong>, not a hard opponent-ban feature.</p>
+<p><strong>Design split (do not merge these):</strong></p>
+<ul>
+<li><strong>Mute / Block</strong> (D059): personal communication controls, immediate and local</li>
+<li><strong>Report</strong> (D059 + D052): moderation signal with evidence and review path</li>
+<li><strong>Avoid Player</strong> (D055): queue matching preference, <strong>best-effort only</strong></li>
+</ul>
+<p><strong>Ranked defaults:</strong></p>
+<ul>
+<li>No permanent “never match me with this opponent again” guarantees</li>
+<li>Avoid entries are <strong>limited</strong> (community-configurable slot count)</li>
+<li>Avoid entries <strong>expire automatically</strong> (recommended 7-30 days)</li>
+<li>Avoid preferences are <strong>community-scoped</strong>, not global across all communities</li>
+<li>Matchmaking may ignore avoid preferences under queue pressure / low population</li>
+<li>UI must label the feature as <strong>best-effort</strong>, not guaranteed</li>
+</ul>
+<p><strong>Team queue policy (recommended):</strong></p>
+<ul>
+<li>Prefer supporting <strong>avoid as teammate</strong> first (higher priority)</li>
+<li>Treat <strong>avoid as opponent</strong> as lower priority or disable it in small populations / high MMR brackets (this should be the <strong>default policy</strong> given IC’s expected RTS population size; operators can loosen in larger communities)</li>
+</ul>
+<p>This addresses griefing/harassment pain in team games without creating a strong queue-dodging tool in 1v1.</p>
+<p><strong>Matchmaking behavior:</strong> Avoid preferences should be implemented as a <strong>candidate-scoring penalty</strong>, not a hard filter:</p>
+<ul>
+<li>prefer non-avoided pairings when multiple acceptable matches exist</li>
+<li>relax the penalty as queue time widens</li>
+<li>never violate <code>min_match_quality</code> just to satisfy avoid preferences</li>
+<li>do not bypass dodge penalties (leaving ready-check/veto remains penalized)</li>
+</ul>
+<p><strong>Small-population matchmaking degradation:</strong></p>
+<p>Critical for RTS communities. The queue must work with 50 players as well as 5,000.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Matchmaking search parameters — widen over time.
+/// These are server-configurable defaults.
+pub struct MatchmakingConfig {
+    /// Initial rating search range (one-sided).
+    /// A player at 1500 searches 1500 ± initial_range.
+    pub initial_range: i64,           // default: 100
+
+    /// Range widens by this amount every `widen_interval` seconds.
+    pub widen_step: i64,              // default: 50
+
+    /// How often (seconds) to widen the search range.
+    pub widen_interval_secs: u32,     // default: 30
+
+    /// Maximum search range before matching with anyone available.
+    pub max_range: i64,               // default: 500
+
+    /// After this many seconds, match with any available player.
+    /// Only activates if ≥3 players are in queue (V31).
+    pub desperation_timeout_secs: u32, // default: 300 (5 minutes)
+
+    /// Minimum match quality (fairness score from D041).
+    /// Matches below this threshold are not created even at desperation (V30).
+    pub min_match_quality: f64,       // default: 0.3
+}
+<span class="boring">}</span></code></pre>
+<p>The UI displays estimated queue time based on current population and the player’s rating position. At low population, the UI shows “~2 min (12 players in queue)” transparently rather than hiding the reality.</p>
+<p><strong>New account anti-smurf measures:</strong></p>
+<ul>
+<li>First 10 ranked matches have high deviation (fast convergence to true skill)</li>
+<li>New accounts with extremely high win rates in placement are fast-tracked to higher ratings (D041 seeding formula)</li>
+<li>Relay server behavioral analysis (Phase 5 anti-cheat) detects mechanical skill inconsistent with account age</li>
+<li>Optional: phone verification for ranked queue access (configurable by community server operator)</li>
+<li>Diminishing <code>information_content</code> for repeated pairings: <code>weight = base * 0.5^(n-1)</code> where n = recent rematches within 30 days (V26)</li>
+<li>Desperation matches (created after search widening) earn reduced rating change proportional to skill gap (V31)</li>
+<li>Collusion detection: accounts with &gt;50% matches against the same opponent in a 14-day window are flagged for review (V26)</li>
+</ul>
+<h4 id="peak-rank-display"><a class="header" href="#peak-rank-display">Peak Rank Display</a></h4>
+<p>Each player’s profile (D053) shows:</p>
+<ul>
+<li><strong>Current rank:</strong> The tier + division where the player stands right now</li>
+<li><strong>Peak rank (this season):</strong> The highest tier achieved this season — never decreases within a season</li>
+</ul>
+<p>This is inspired by Valorant’s act rank and Dota 2’s medal system. It answers “what’s the best I reached?” without the full one-way-medal problem (Dota 2’s medals never drop, making them meaningless by season end). IC’s approach: current rank is always accurate, but peak rank is preserved as an achievement.</p>
+<h3 id="ranked-client-mod-policy"><a class="header" href="#ranked-client-mod-policy">Ranked Client-Mod Policy</a></h3>
+<p>BAR’s experience with 291 client-side widgets demonstrates that UI extensions are a killer feature — but also a competitive integrity challenge. Some widgets provide automation advantages (auto-reclaim, camera helpers, analytics overlays) that create a grey area in ranked play.</p>
+<p>IC addresses this with a three-tier policy:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mod Category</th><th>Ranked Status</th><th>Examples</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Sim-affecting mods</strong> (custom pathfinders, balance changes, WASM modules)</td><td><strong>Blocked</strong> unless hash-whitelisted and certified (D045)</td><td>Custom pathfinder, new unit types</td></tr>
+<tr><td><strong>Client-only cosmetic</strong> (UI themes, sound packs, palette swaps)</td><td><strong>Allowed</strong> — no gameplay impact</td><td>D032 UI themes, announcer packs</td></tr>
+<tr><td><strong>Client-only informational</strong> (overlays, analytics, automation helpers)</td><td><strong>Restricted</strong> — official IC client provides the baseline feature set; third-party informational widgets are disabled in ranked queues</td><td>Custom damage indicators, APM overlays, auto-queue helpers</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Rationale:</strong> The “restricted informational” tier prevents an arms race where competitive players must install community widgets to remain competitive. The official client includes the features that matter (production hotkeys, control groups, minimap pings, rally points). Community widgets remain fully available in casual, custom, and single-player modes.</p>
+<p><strong>Enforcement:</strong> The relay server validates the client’s active mod manifest hash at match start. Ranked lobbies reject clients with non-whitelisted mods loaded. This is lightweight — the manifest hash is a single SHA-256 transmitted during lobby setup, not a full client integrity check.</p>
+<p><strong>Community server override:</strong> Per D052, community servers can define their own ranked mod policies. A community that wants to allow specific informational widgets in their ranked queue can whitelist those widget hashes. The official IC ranked queue uses the restrictive default.</p>
+<h3 id="rating-edge-cases--bounds"><a class="header" href="#rating-edge-cases--bounds">Rating Edge Cases &amp; Bounds</a></h3>
+<p><strong>Rating floor:</strong> Glicko-2 ratings are unbounded below in the standard algorithm. IC enforces a minimum rating of <strong>100</strong> — below this, the rating is clamped. This prevents confusing negative or near-zero display values (a problem BAR encountered with OpenSkill). The floor is enforced after each rating update: <code>rating = max(100, computed_rating)</code>.</p>
+<p><strong>Rating ceiling:</strong> No hard ceiling. The top of the rated population naturally compresses around 2200–2400 with standard Glicko-2. Supreme Commander tier (top 200) is defined by relative standing, not an absolute rating threshold, so ceiling effects don’t distort it.</p>
+<p><strong>Small-population convergence:</strong> When the active ranked population is small (&lt; 100), the same players match repeatedly. Glicko-2 naturally handles this — repeated opponents provide diminishing information as RD stabilizes. However, the <code>information_content</code> rematch penalty (V26: <code>weight = base × 0.5^(n-1)</code> for the n-th match against the same opponent in a 24-hour window) prevents farming rating from a single opponent.</p>
+<p><strong>Placement match tier assignment:</strong> After 10 placement matches, the player’s computed rating maps to a tier via the standard threshold table. No rounding or special logic — if the rating after placement is 1523, the player lands in whichever tier contains 1523. There is no “placement boost” or “benefit of the doubt” — the system is the same for placement matches and regular matches.</p>
+<p><strong>Volatility bounds:</strong> The Glicko-2 volatility parameter σ is bounded: <code>σ_min = 0.01</code>, <code>σ_max = 0.15</code> (standard recommended range). The iterative Illinois algorithm convergence is capped at 100 iterations — if convergence hasn’t occurred, the algorithm uses the last approximation. In practice, convergence occurs in 5–15 iterations.</p>
+<p><strong>Zero-game seasons:</strong> A player who is ranked but plays zero games in a season still has their RD grow via inactivity (Adaptation 4). At season end, they receive no seasonal reward but their rating persists into the next season. They are not “unranked” — they simply have high uncertainty.</p>
+<h3 id="community-replaceability"><a class="header" href="#community-replaceability">Community Replaceability</a></h3>
+<p>Per D052’s federated model, ranked matchmaking is <strong>community-owned:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>Official IC default</th><th>Community can customize?</th></tr>
+</thead>
+<tbody>
+<tr><td>Rating algorithm</td><td>Glicko-2 (<code>Glicko2Provider</code>)</td><td>Yes — <code>RankingProvider</code> trait (D041)</td></tr>
+<tr><td>Tier names &amp; icons</td><td>Cold War military (RA module)</td><td>Yes — YAML per game module/mod</td></tr>
+<tr><td>Tier thresholds</td><td>Defined in <code>ranked-tiers.yaml</code></td><td>Yes — YAML per game module/community</td></tr>
+<tr><td>Number of tiers</td><td>7 + 2 elite = 9</td><td>Yes — YAML-configurable</td></tr>
+<tr><td>Season duration</td><td>91 days</td><td>Yes — server configuration</td></tr>
+<tr><td>Placement match count</td><td>10</td><td>Yes — server configuration</td></tr>
+<tr><td>Map pool</td><td>Curated by competitive committee</td><td>Yes — per-community</td></tr>
+<tr><td>Queue modes</td><td>1v1, team</td><td>Yes — game module defines available modes</td></tr>
+<tr><td>Anti-smurf measures</td><td>Behavioral analysis + fast convergence</td><td>Yes — server operator toggles</td></tr>
+<tr><td>Balance preset per queue</td><td>Classic RA (D019)</td><td>Yes — community chooses per-queue</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>What is NOT community-customizable</strong> (hard requirements):</p>
+<ul>
+<li>Match certification must use relay-signed <code>CertifiedMatchResult</code> (D007) — no self-reported results</li>
+<li>Rating records must use D052’s SCR format — portable credentials require standardized format</li>
+<li>Tier resolution logic is engine-provided — communities customize the YAML data, not the resolution code</li>
+</ul>
+<h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
+<ul>
+<li><strong>Raw rating only, no tiers</strong> (rejected — C&amp;C Remastered showed that numbers alone lack motivational hooks. The research clearly shows that named milestones drive engagement in every successful ranked system)</li>
+<li><strong>LoL-style LP system with promotion series</strong> (rejected — LP/MMR disconnect is the most complained-about feature in LoL. Promotion series were so unpopular that Riot removed them in 2024. IC should not repeat this error)</li>
+<li><strong>Dota 2-style one-way medals</strong> (rejected — medals that never decrease within a season become meaningless by season end. A “Divine” player who dropped to “Archon” MMR still shows Divine — misleading, not motivating)</li>
+<li><strong>OW2-style delayed rank updates</strong> (rejected — rank updating only after 5 wins or 15 losses was universally criticized. Players want immediate feedback after every match)</li>
+<li><strong>CS2-style per-map ranking</strong> (rejected for launch — fragments an already-small RTS population. Per-map statistics can be tracked without separate per-map ratings. Could be reconsidered if IC’s population is large enough)</li>
+<li><strong>Elo instead of Glicko-2</strong> (rejected as default — Glicko-2 handles uncertainty better, which is critical for players who play infrequently. D041’s <code>RankingProvider</code> trait allows communities to use Elo if they prefer)</li>
+<li><strong>10+ named tiers</strong> (rejected — too many tiers for expected RTS population size. Adjacent tiers become meaningless when population is small. 7+2 matches SC2’s proven structure)</li>
+<li><strong>Single global ranking across all community servers</strong> (rejected — violates D052’s federated model. Each community owns its rankings. Cross-community credential verification via SCR ensures portability without centralization)</li>
+<li><strong>Mandatory phone verification for ranked</strong> (rejected as mandatory — makes ranked inaccessible in regions without phone access, on WASM builds, and for privacy-conscious users. Available as opt-in toggle for community operators)</li>
+<li><strong>Performance-based rating adjustments</strong> (deferred to <code>M11</code>, <code>P-Optional</code> — Valorant uses individual stats to adjust RR gains. For RTS this would be complex: which metrics predict skill beyond win/loss? Economy score, APM, unit efficiency? Risks encouraging stat-chasing over winning. If the community wants it, this would be a <code>RankingProvider</code> extension with a separate fairness review and explicit opt-in policy, not part of launch ranked.)</li>
+<li><strong>SC2-style leagues with player groups</strong> (rejected — SC2’s league system places players into divisions of ~100 who compete against each other within a tier. This requires thousands of concurrent players to fill meaningful groups. IC’s expected population — hundreds to low thousands — can’t sustain this. Ranks are pure rating thresholds: deterministic, portable across federated communities (D052), and functional with 50 players or 50,000. See § “Why Ranks, Not Leagues” above)</li>
+<li><strong>Color bands instead of named ranks</strong> (rejected — CS2 Premier uses color bands (Grey → Gold) which are universal but generic. Military rank names are IC’s thematic identity: “Colonel” means something in an RTS where you command armies. Color bands could be a community-provided alternative via YAML, but the default should carry the Cold War fantasy)</li>
+<li><strong>Enlisted ranks as lower tiers</strong> (rejected — having “Private” or “Corporal” as the lowest ranks breaks the RTS fantasy: the player is always commanding armies, not following orders as a foot soldier. All tiers are officer-grade because the player is always in a command role. “Cadet” as the lowest tier signals “unproven officer” rather than “infantry grunt”)</li>
+<li><strong>Naval rank names</strong> (rejected — “Commander” is a naval rank, not army. “Commodore” and “Admiral” belong at sea. IC’s default is an army hierarchy: Lieutenant → Captain → Major → Colonel → General. A naval mod could define its own tier names via YAML)</li>
+<li><strong>Modified Glicko-2 with performance bonuses</strong> (rejected — some systems (Valorant, CS2) adjust rating gains based on individual performance metrics like K/D or round impact. For RTS this creates perverse incentives: optimizing eco score or APM instead of winning. The result (Win/Loss/Draw) is the only input to Glicko-2. Match duration weighting through <code>information_content</code> is the extent of non-result adjustment)</li>
+</ul>
+<h4 id="ranked-match-lifecycle"><a class="header" href="#ranked-match-lifecycle">Ranked Match Lifecycle</a></h4>
+<p>D055 defines the rating system and matchmaking queue. The full competitive match lifecycle — ready-check, game pause, surrender, disconnect penalties, spectator delay, and post-game flow — is specified in <code>03-NETCODE.md</code> § “Match Lifecycle.” This separation is deliberate: the match lifecycle is a network protocol concern that applies to all game modes (with ranked-specific constraints), while D055 is specifically about the rating and tier system.</p>
+<p><strong>Key ranked-specific constraints</strong> (enforced by the relay server based on lobby mode):</p>
+<ul>
+<li>Ready-check accept timeout: 30 seconds. Declining = escalating queue cooldown.</li>
+<li>Pause: 2 per player, 120 seconds max total per player, 30-second grace before opponent can unpause.</li>
+<li>Surrender: Immediate in 1v1 (<code>/gg</code> or surrender button). Vote in team games. No surrender before 5 minutes.</li>
+<li>Kick: Kicked player receives full loss + queue cooldown (same as abandon). Team’s units redistributed.</li>
+<li>Remake: Voided match, no rating change. Only available in first 5 minutes.</li>
+<li>Draw: Treated as Glicko-2 draw (0.5 result). Both players’ deviations decrease.</li>
+<li>Disconnect: Full loss + escalating queue cooldown (5min → 30min → 2hr). Reconnection within 60s = no penalty. Grace period voiding for early abandons (&lt;2 min, &lt;5% game progress).</li>
+<li>Spectator delay: 2 minutes (3,600 ticks). Players cannot disable spectating in ranked (needed for anti-cheat review).</li>
+<li>Post-game: 30-second lobby with stats, rating change display, report button, instant re-queue option.</li>
+</ul>
+<p>See <code>03-NETCODE.md</code> § “Match Lifecycle” for the full protocol, data structures, rationale, and the In-Match Vote Framework that generalizes surrender/kick/remake/draw into a unified callvote system.</p>
+<h3 id="integration-with-existing-decisions"><a class="header" href="#integration-with-existing-decisions">Integration with Existing Decisions</a></h3>
+<ul>
+<li><strong>D041 (RankingProvider):</strong> <code>display_rating()</code> method implementations use the tier configuration YAML to resolve rating → tier name. The trait’s existing interface supports D055 without modification — tier resolution is a display concern in <code>ic-ui</code>, not a trait responsibility.</li>
+<li><strong>D052 (Community Servers):</strong> Each community server’s ranking authority stores tier configuration alongside its <code>RankingProvider</code> implementation. SCR records store the raw rating; tier resolution is display-side.</li>
+<li><strong>D053 (Player Profile):</strong> The statistics card (rating ± deviation, peak rating, match count, win rate, streak, faction distribution) now includes tier badge, peak tier this season, and season history. The <code>[Rating Graph →]</code> link opens the Rating Details panel — full Glicko-2 parameter visibility, rating history chart, faction breakdown, confidence interval, and population distribution.</li>
+<li><strong>D037 (Competitive Governance):</strong> The competitive committee curates the seasonal map pool, recommends tier threshold adjustments based on population distribution, and proposes balance preset selections for ranked queues.</li>
+<li><strong>D019 (Balance Presets):</strong> Ranked queues can be tied to specific balance presets — e.g., “Classic RA” ranked vs. “IC Balance” ranked as separate queues with separate ratings.</li>
+<li><strong>D036 (Achievements):</strong> Seasonal achievements: “Reach Captain,” “Place in top 100,” “Win 50 ranked matches this season,” etc.</li>
+<li><strong>D034 (SQLite Storage):</strong> <code>MatchmakingStorage</code> trait’s existing methods (<code>update_rating()</code>, <code>record_match()</code>, <code>get_leaderboard()</code>) handle all ranked data persistence. Season history added as new tables.</li>
+<li><strong>03-NETCODE.md (Match Lifecycle):</strong> Ready-check, pause, surrender, disconnect penalties, spectator delay, and post-game flow. D055 sets ranked-specific parameters; the match lifecycle protocol is game-mode-agnostic. The <strong>In-Match Vote Framework</strong> (<code>03-NETCODE.md</code> § “In-Match Vote Framework”) generalizes the surrender vote into a generic callvote system (surrender, kick, remake, draw, mod-defined) with per-vote-type ranked constraints.</li>
+<li><strong>05-FORMATS.md (Analysis Event Stream):</strong> <code>PauseEvent</code>, <code>MatchEnded</code>, and <code>VoteEvent</code> analysis events record match lifecycle moments in the replay for tooling without re-simulation.</li>
+</ul>
+<h3 id="relationship-to-researchranked-matchmaking-analysismd"><a class="header" href="#relationship-to-researchranked-matchmaking-analysismd">Relationship to <code>research/ranked-matchmaking-analysis.md</code></a></h3>
+<p>This decision is informed by cross-game analysis of CS2/CSGO, StarCraft 2, League of Legends, Valorant, Dota 2, Overwatch 2, Age of Empires IV, and C&amp;C Remastered Collection’s competitive systems. Key takeaways incorporated:</p>
+<ol>
+<li><strong>Transparency trend</strong> (§ 4.2): dual display of tier + rating from day one</li>
+<li><strong>Tier count sweet spot</strong> (§ 4.3): 7+2 = 9 tiers for RTS population sizes</li>
+<li><strong>3-month seasons</strong> (§ 4.4): RTS community standard (SC2), prevents stagnation</li>
+<li><strong>Small-population design</strong> (§ 4.5): graceful matchmaking degradation, configurable widening</li>
+<li><strong>C&amp;C Remastered lessons</strong> (§ 3.4): community server ownership, named milestones &gt; raw numbers, seasonal structure prevents stagnation</li>
+<li><strong>Faction-specific ratings</strong> (§ 2.1): SC2’s per-race MMR adapted for IC’s faction system</li>
+</ol>
+<hr>
+<hr>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../decisions/09b/D055-ranked-matchmaking.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../decisions/09b/D060-netcode-params.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../decisions/09b/D055-ranked-matchmaking.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../decisions/09b/D060-netcode-params.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../../mark-09e88c2c.min.js"></script>
+        <script src="../../../searcher-c2a407aa.js"></script>
+
+        <script src="../../../clipboard-1626706a.min.js"></script>
+        <script src="../../../highlight-abc7f01d.js"></script>
+        <script src="../../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

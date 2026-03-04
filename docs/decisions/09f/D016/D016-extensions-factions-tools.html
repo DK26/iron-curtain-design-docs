@@ -1,0 +1,424 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Extensions, Factions &amp; Tools - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../../css/general-2459343d.css">
+        <link rel="stylesheet" href="../../../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../toc-2281c970.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/DK26/iron-curtain-design-docs/edit/main/src/decisions/09f/D016/D016-extensions-factions-tools.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h4 id="extended-generative-campaign-modes"><a class="header" href="#extended-generative-campaign-modes">Extended Generative Campaign Modes</a></h4>
+<p>The three core generative modes — <strong>Narrative</strong> (fixed-length), <strong>Open-Ended</strong> (condition-driven), and <strong>World Domination</strong> (world map + LLM narrative director) — are the structural foundations. But the LLM’s expressive range and IC’s compositional architecture enable a much wider vocabulary of campaign experiences. Each mode below composes from existing systems (D021 branching, CharacterState, MBTI dynamics, battle reports, roster persistence, story flags, world map renderer, Workshop resources) — no new engine changes required.</p>
+<p>These modes are drawn from the deepest wells of human storytelling: philosophy, cinema, literature, military history, game design, and the universal experiences that make stories resonate across cultures. The test for each: <strong>does it make the toy soldiers come alive in a way no other mode does?</strong></p>
+<hr>
+<p><strong>The Long March (Survival Exodus)</strong></p>
+<p><em>Inspired by: Battlestar Galactica, FTL: Faster Than Light, the Biblical Exodus, Xenophon’s Anabasis, the real Long March, Oregon Trail, refugee crises throughout history.</em></p>
+<p>You’re not conquering — you’re surviving. Your army has been shattered, your homeland overrun. You must lead what remains of your people across hostile territory to safety. Every mission is a waypoint on a desperate journey. The world map shows your route — not territory you hold, but ground you must cross.</p>
+<p>The LLM generates waypoint encounters: ambushes at river crossings, abandoned supply depots (trap or salvation?), hostile garrisons blocking mountain passes, civilian populations who might shelter you or sell you out. The defining tension is <strong>resource scarcity</strong> — you can’t replace what you lose. A tank destroyed in mission 4 is gone forever. A hero killed at the third river crossing never reaches the promised land. Every engagement forces a calculation: fight (risk losses), sneak (risk detection), or negotiate (risk betrayal).</p>
+<p>What makes this profoundly different from conquest modes: the emotional arc is inverted. In a normal campaign, the player grows stronger. Here, the player holds on. Victory isn’t domination — it’s survival. The LLM tracks the convoy’s dwindling strength and generates missions that match: early missions are organized retreats with rear-guard actions; mid-campaign missions are desperate scavenging operations; late missions are harrowing last stands at chokepoints. The finale isn’t assaulting the enemy capital — it’s crossing the final border with whatever you have left.</p>
+<p>Every unit that makes it to the end feels earned. A veteran tank that survived 20 missions of running battles, ambushes, and near-misses isn’t just a unit — it’s a story.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Aspect</th><th>Solo</th><th>Multiplayer</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Structure</strong></td><td>One player leads the exodus</td><td>Co-op: each player commands part of the convoy. Split up to cover more ground (faster but weaker) or stay together (slower but safer).</td></tr>
+<tr><td><strong>Tension</strong></td><td>Resource triage — what do you leave behind?</td><td>Social triage — whose forces protect the rear guard? Who gets the last supply drop?</td></tr>
+<tr><td><strong>Failure</strong></td><td>Convoy destroyed or starved</td><td>One player’s column is wiped out — the other must continue without their forces. Or go back for them.</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<p><strong>Cold War Espionage (The Intelligence Campaign)</strong></p>
+<p><em>Inspired by: John le Carré (The Spy Who Came in from the Cold, Tinker Tailor Soldier Spy), The Americans (TV), Bridge of Spies, Metal Gear Solid, the real Cold War intelligence apparatus.</em></p>
+<p>The war is fought with purpose. Every mission is a full RTS engagement — Extract→Build→Amass→Crush — but the <em>objectives</em> are intelligence-driven. You assault a fortified compound to extract a defecting scientist before the enemy can evacuate them. You defend a relay station for 15 minutes while your signals team intercepts a critical transmission. You raid a convoy to capture communications equipment that reveals the next enemy offensive. The LLM generates these intelligence-flavored objectives, but what the player actually <em>does</em> is build bases, train armies, and fight battles.</p>
+<p>Between missions, the player manages an intelligence network in the intermission layer. The LLM generates a web of agents, double agents, handlers, and informants, each with MBTI-driven motivations that determine when they cooperate, when they lie, and when they defect. Each recruited agent has a loyalty score, a personality type, and a price. An ISFJ agent spies out of duty but breaks under moral pressure. An ENTP agent spies for the thrill but gets bored with routine operations. The LLM uses these personality models to simulate when an agent provides good intelligence, when they feed disinformation (intentionally or under duress), and when they get burned.</p>
+<p>Intelligence gathered between missions shapes the next battle. Good intel reveals enemy base locations, unlocks alternative starting positions, weakens enemy forces through pre-mission sabotage, or provides reinforcement timelines. Bad intel — from burned agents or double agents feeding disinformation — sends the player into missions with false intelligence: the enemy base isn’t where your agent said it was, the “lightly defended” outpost is a trap, the reinforcements that were supposed to arrive don’t exist. The campaign’s strategic metagame is information quality; the moment-to-moment gameplay is commanding armies.</p>
+<p>The MBTI interaction system drives the intermission layer: every agent conversation is a negotiation, every character is potentially lying, and reading people’s personalities correctly determines the quality of intel you bring into battle. Petrov (ISTJ) can be trusted because duty-bound types don’t betray without extreme cause. Sonya (ENTJ) is useful but dangerous — her ambition makes her a powerful asset and an unpredictable risk. The LLM simulates these dynamics through dialogue that reveals (or conceals) character intentions based on their personality models.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Aspect</th><th>Solo</th><th>Multiplayer</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Structure</strong></td><td>RTS missions with intelligence-driven objectives; agent network between</td><td>Adversarial: two players run competing spy networks between missions. Better intel = battlefield advantage in the next engagement.</td></tr>
+<tr><td><strong>Tension</strong></td><td>Is your intel good — or did a burned agent just send you into a trap?</td><td>Your best double agent might be feeding your opponent better intel than you. The battlefield reveals who was lied to.</td></tr>
+<tr><td><strong>Async multiplayer</strong></td><td>N/A</td><td>Espionage metagame is inherently asynchronous. Plant an operation between missions, see the results on the next battlefield.</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<p><strong>The Defection (Two Wars in One)</strong></p>
+<p><em>Inspired by: The Americans, Metal Gear Solid 3: Snake Eater, Bridge of Spies, real Cold War defection stories (Oleg Gordievsky, Aldrich Ames), Star Wars: The Force Awakens (Finn’s defection).</em></p>
+<p>Act 1: You fight for one side. You know your commanders. You trust (or distrust) your team. You fight the enemy as defined by your faction. Then something happens — an order you can’t follow, a truth you can’t ignore, an atrocity that changes everything. Act 2: You defect. Everything inverts. Your former allies hunt you with the tactics you taught them. Your new allies don’t trust you. The characters you built relationships with in Act 1 react to your betrayal according to their MBTI types — the ISTJ commander feels personally betrayed, the ESTP commando grudgingly respects your courage, the ENTJ intelligence officer was expecting it and already has a contingency plan.</p>
+<p>What makes this structurally unique: the same CharacterState instances exist in both acts, but their <code>allegiance</code> and <code>relationship_to_player</code> values flip. The LLM generates Act 2 dialogue where former friends reference specific events from Act 1 — “I trusted you at the bridge, Commander. I won’t make that mistake again.” The personality system ensures each character’s reaction to the defection is psychologically consistent: some hunt you with rage, some with sorrow, some with professional detachment.</p>
+<p>The defection trigger can be player-chosen (a moral crisis) or narrative-driven (you discover your faction’s war crimes). The LLM builds toward it across Act 1 — uncomfortable orders, suspicious intelligence, moral gray areas — so it feels earned, not arbitrary. The <code>hidden_agenda</code> field and <code>loyalty</code> score track the player’s growing doubts through story flags.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Aspect</th><th>Solo</th><th>Multiplayer</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Structure</strong></td><td>One player, two acts, two factions</td><td>Co-op: both players defect, or one defects and the other doesn’t — the campaign splits. Former co-op partners become enemies.</td></tr>
+<tr><td><strong>Tension</strong></td><td>Your knowledge of your old faction is your weapon — and your vulnerability</td><td>The betrayal is social, not just narrative. Your co-op partner didn’t expect you to switch sides.</td></tr>
+<tr><td><strong>Emotional core</strong></td><td>“Were we ever fighting for the right side?”</td><td>“Can I trust someone who’s already betrayed one allegiance?”</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<p><strong>Nemesis (The Personal War)</strong></p>
+<p><em>Inspired by: Shadow of Mordor’s Nemesis system, Captain Ahab and the white whale (Moby-Dick), Holmes/Moriarty, Batman/Joker, Heat (Mann), the primal human experience of rivalry.</em></p>
+<p>The entire campaign is structured around a single, escalating rivalry with an enemy commander who adapts, learns, remembers, and grows. The Nemesis isn’t a scripted boss — they’re a fully realized CharacterState with an MBTI personality, their own flaw/desire/fear triangle, and a relationship to the player that evolves based on actual battle outcomes.</p>
+<p>The LLM reads every battle report and updates the Nemesis’s behavior. Player loves tank rushes? The Nemesis develops anti-armor obsession — mines every approach, builds AT walls, taunts the player about predictability. Player won convincingly in mission 5? The Nemesis retreats to rebuild, and the LLM generates 2-3 missions of fragile peace before the Nemesis returns with a new strategy and a grudge. Player barely wins? The Nemesis respects the challenge and begins treating the war as a personal duel rather than a strategic campaign.</p>
+<p>What separates this from the existing “Rival commander” pattern: the Nemesis IS the campaign. Not a subplot — the main plot. The arc follows the classical rivalry structure: introduction (missions 1-3), first confrontation (4-5), escalation (6-12), reversal (the Nemesis wins one — 13-14), obsession (15-18), and final reckoning (19-24). Both characters are changed by the end. The LLM generates the Nemesis’s personal narrative — their own setbacks, alliances, and moral evolution — and delivers fragments through intercepted communications, captured intel, and enemy officer interrogations.</p>
+<p>The deepest philosophical parallel: the Nemesis is a mirror. Their MBTI type is deliberately chosen as the player’s faction’s shadow — strategically complementary, personally incompatible. An INTJ strategic mastermind opposing the player’s blunt-force army creates a “brains vs. brawn” struggle. An ENFP charismatic rebel opposing the player’s disciplined advance creates “heart vs. machine.” The LLM makes the Nemesis compelling enough that defeating them feels bittersweet.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Aspect</th><th>Solo</th><th>Multiplayer</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Structure</strong></td><td>Player vs. LLM-driven Nemesis</td><td>Symmetric: each player IS the other’s Nemesis. Your victories write their villain’s story.</td></tr>
+<tr><td><strong>Adaptation</strong></td><td>The Nemesis learns from your battle reports</td><td>Both players adapt simultaneously — a genuine arms race with narrative weight.</td></tr>
+<tr><td><strong>Climax</strong></td><td>Final confrontation after 20+ missions of escalation</td><td>The players meet in a final battle that their entire campaign has been building toward.</td></tr>
+<tr><td><strong>Export</strong></td><td>After finishing, export your Nemesis as a Workshop character — other players face the villain YOUR campaign created</td><td>Post-campaign, challenge a friend: “Can you beat the commander who almost beat me?”</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<p><strong>Moral Complexity Parameter (Tactical Dilemmas)</strong></p>
+<p><em>Inspired by: Spec Ops: The Line (tonal caution), Papers Please (systemic moral choices), the trolley problem (Philippa Foot), Walzer’s “Just and Unjust Wars,” the enduring human interest in difficult decisions under pressure.</em></p>
+<p>Moral complexity is not a standalone campaign mode — it’s a <strong>parameter available on any generative campaign mode</strong>. It controls how often the LLM generates tactical dilemmas with no clean answer, and how much character personality drives the fallout. Three levels:</p>
+<ul>
+<li><strong>Low</strong> (default): Straightforward tactical choices. The mission has a clear objective; characters react to victory and defeat but not to moral ambiguity. Standard C&amp;C fare — good guys, bad guys, blow stuff up.</li>
+<li><strong>Medium</strong>: Tactical trade-offs with character consequences. Occasional missions present two valid approaches with different costs. Destroy the bridge to cut off enemy reinforcements, or leave it intact so civilians can evacuate? The choice affects the next mission’s conditions AND how your MBTI-typed commanders view your leadership. No wrong answer — but each choice shifts character loyalty.</li>
+<li><strong>High</strong>: Genuine moral weight with long-tail consequences. The LLM generates dilemmas where both options have defensible logic and painful costs. Tactical, not gratuitous — these stay within the toy-soldier abstraction of C&amp;C:
+<ul>
+<li>A fortified enemy position is using a civilian structure as cover. Shelling it ends the siege quickly but your ISFJ field commander loses respect for your methods. Flanking costs time and units but preserves your team’s trust.</li>
+<li>You’ve intercepted intelligence that an enemy officer wants to defect — but extracting them requires diverting forces from a critical defensive position. Commit to the extraction (gain a valuable asset, risk the defense) or hold the line (lose the defector, secure the front).</li>
+<li>Two allied positions are under simultaneous attack. You can only reinforce one in time. The LLM ensures both positions have named characters the player has built relationships with. Whoever you don’t reinforce takes heavy casualties — and remembers.</li>
+</ul>
+</li>
+</ul>
+<p>The LLM tracks choices in campaign story flags and generates <strong>long-tail consequences</strong>. A choice from mission 3 might resurface in mission 15 — the officer you extracted becomes a critical ally, or the position you didn’t reinforce never fully trusts your judgment again. Characters react according to their MBTI type: TJ types evaluate consequences; FP types evaluate intent; SJ types evaluate duty; NP types evaluate principle. Loyalty shifts based on personality-consistent moral frameworks, not a universal morality scale.</p>
+<p>At <strong>High</strong> in co-op campaigns, both players must agree on dilemma choices — creating genuine social negotiation. “Do we divert for the extraction or hold the line?” becomes a real conversation between real people with different strategic instincts.</p>
+<p>This parameter composes with every mode: a Nemesis campaign at High moral complexity generates dilemmas where the Nemesis exploits the player’s past choices. A Generational Saga at High carries moral consequences across generations — Generation 3 lives with Generation 1’s trade-offs. A Mystery campaign at Medium lets the traitor steer the player toward choices that look reasonable but serve enemy interests.</p>
+<hr>
+<p><strong>Generational Saga (The Hundred-Year War)</strong></p>
+<p><em>Inspired by: Crusader Kings (Paradox), Foundation (Asimov), Dune (Herbert), The Godfather trilogy, Fire Emblem (permadeath + inheritance), the lived experience of generational trauma and inherited conflict.</em></p>
+<p>The war spans three generations. Each generation is ~8 missions. Characters age, retire, die of old age or in combat. Young lieutenants from Generation 1 are old generals in Generation 3. The decisions of grandparents shape the world their grandchildren inherit.</p>
+<p>Generation 1 establishes the conflict. The player’s commanders are young, idealistic, sometimes reckless. Their victories and failures set the starting conditions for everything that follows. The LLM generates the world state that Generation 2 inherits: borders drawn by Generation 1’s campaigns, alliances forged by their diplomacy, grudges created by their atrocities, technology unlocked by their captured facilities.</p>
+<p>Generation 2 lives in their predecessors’ shadow. The LLM generates characters who are the children or proteges of Generation 1’s heroes — with inherited MBTIs modified by upbringing. A legendary commander’s daughter might be an ENTJ like her father… or an INFP who rejects everything he stood for. The Nemesis from Generation 1 might be dead, but their successor inherited their grudge and their tactical files. “Your father destroyed my father’s army at Stalingrad. I’ve spent 20 years studying how.”</p>
+<p>Generation 3 brings resolution. The war’s original cause may be forgotten — the LLM tracks how meaning shifts across generations. What started as liberation becomes occupation becomes tradition becomes identity. The final generation must either find peace or perpetuate a war that nobody remembers starting. The LLM generates characters who question why they’re fighting — and the MBTI system determines who accepts “it’s always been this way” (SJ types) and who demands “but why?” (NP types).</p>
+<p>Cross-campaign hero persistence (Legacy mode) provides the technical infrastructure. CharacterState serializes between generations. Veterancy, notable events, and relationship history persist in the save. The LLM writes Generation 3’s dialogue with explicit callbacks to Generation 1’s battles — events the <em>player</em> remembers but the <em>characters</em> only know as stories.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Aspect</th><th>Solo</th><th>Multiplayer</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Structure</strong></td><td>One player, three eras, one evolving war</td><td>Two dynasties: each player leads a family across three generations. Your grandfather’s enemy’s grandson is your rival.</td></tr>
+<tr><td><strong>Investment</strong></td><td>Watching characters age and pass the torch</td><td>Shared 20+ year fictional history between two real players</td></tr>
+<tr><td><strong>Climax</strong></td><td>Generation 3 resolves (or doesn’t) the conflict that Generation 1 started</td><td>The final generation can negotiate peace — or realize they’ve become exactly what Generation 1 fought against</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<p><strong>Parallel Timelines (The Chronosphere Fracture)</strong></p>
+<p><em>Inspired by: Sliding Doors (film), Everything Everywhere All at Once, Bioshock Infinite, the Many-Worlds interpretation of quantum mechanics, the universal human experience of “what if I’d chosen differently?”</em></p>
+<p>This mode is uniquely suited to Red Alert’s lore — the Chronosphere is literally a time machine. A Chronosphere malfunction fractures reality into two parallel timelines diverging from a single critical decision. The player alternates missions between Timeline A (where they made one choice) and Timeline B (where they made the opposite).</p>
+<p>The LLM generates both timelines from the same campaign skeleton but with diverging consequences. In Timeline A, you destroyed the bridge — the enemy can’t advance, but your reinforcements can’t reach you either. In Timeline B, you saved the bridge — the enemy pours across, but so do your reserves. The same characters exist in both timelines but develop differently based on divergent circumstances. Sonya (ENTJ) in Timeline A seizes power during the chaos; Sonya in Timeline B remains loyal because the bridge gave her the resources she needed. Same personality, different circumstances, different trajectory — the MBTI system ensures both versions are psychologically plausible.</p>
+<p>The player experiences both consequences simultaneously. Every 2 missions, the timeline switches. The LLM generates narrative parallels and contrasts — events that rhyme across timelines. Mission 6A is a desperate defense; Mission 6B is an easy victory. But the easy victory in B created a complacency that sets up a devastating ambush in 8B, while the desperate defense in A forged a harder, warier force that handles 8A better. The timelines teach different lessons.</p>
+<p>The climax: the timelines threaten to collapse into each other (Chronosphere overload). The player must choose which timeline becomes “real” — with full knowledge of what they’re giving up. Or, in the boldest variant, the two timelines collide and the player must fight their way through a reality-fractured final mission where enemies and allies from both timelines coexist.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Aspect</th><th>Solo</th><th>Multiplayer</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Structure</strong></td><td>One player alternates between two timelines</td><td>Each player IS a timeline. They can’t communicate directly — but their timelines leak into each other (Chronosphere interference).</td></tr>
+<tr><td><strong>Tension</strong></td><td>“Which timeline do I want to keep?”</td><td>“My partner’s timeline is falling apart because of a choice I made in mine”</td></tr>
+<tr><td><strong>Lore fit</strong></td><td>The Chronosphere is already RA’s signature technology</td><td>Chronosphere multiplayer events: one player’s Chronosphere experiment affects the other’s battlefield</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<p><strong>The Mystery (Whodunit at War)</strong></p>
+<p><em>Inspired by: Agatha Christie, The Thing (Carpenter), Among Us, Clue, Knives Out, the universal human fascination with deduction and betrayal.</em></p>
+<p>Someone in your own command structure is sabotaging operations. Missions keep going wrong in ways that can’t be explained by bad luck — the enemy always knows your plans, supply convoys vanish, key systems fail at critical moments. The campaign is simultaneously a military campaign and a murder mystery. The player must figure out which of their named characters is the traitor — while still winning a war.</p>
+<p>The LLM randomly selects the traitor at campaign start from the named cast and plays that character’s MBTI type <em>as if they were loyal</em> — because a good traitor acts normal. But the LLM plants clues in mission outcomes and character behavior. An ISFJ traitor might “accidentally” route supplies to the wrong location (duty-driven guilt creates mistakes). An ENTJ traitor might push too hard for a specific strategic decision that happens to benefit the enemy (ambition overrides subtlety). An ESTP traitor makes bold, impulsive moves that look like heroism but create exploitable vulnerabilities.</p>
+<p>The player gathers evidence through mission outcomes, character dialogue inconsistencies, and optional investigation objectives (hack a communications relay, interrogate a captured enemy, search a character’s quarters). At various points the campaign offers “accuse” branching — name the traitor and take action. Accuse correctly → the conspiracy unravels and the campaign pivots to hunting the traitor’s handlers. Accuse incorrectly → you’ve just purged a loyal officer, damaged morale, and the real traitor is still operating. The LLM generates the fallout either way.</p>
+<p>What makes this work with MBTI: each character type hides guilt differently, leaks information differently, and responds to suspicion differently. The LLM generates behavioral tells that are personality-consistent — learnable but not obvious. Repeat playthroughs with the same characters but a different traitor create genuinely different mystery experiences because the deception patterns change with the traitor’s personality type.</p>
+<p><strong>Marination — trust before betrayal:</strong> The LLM follows a deliberate escalation curve inspired by Among Us’s best impostors. The traitor character performs <em>exceptionally well</em> in early missions — perhaps saving the player from a tough situation, providing critical intelligence, or volunteering for dangerous assignments. The first 30–40% of the campaign builds genuine trust. Clues begin appearing only after the player has formed a real attachment to every character (including the traitor). In co-op Traitor mode, divergent objectives start trivially small — capture a minor building that barely affects the mission outcome — and escalate gradually as the campaign progresses. This ensures the eventual reveal feels earned rather than random, and the player’s “I trusted you” reaction has genuine emotional weight.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Aspect</th><th>Solo</th><th>Multiplayer</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Structure</strong></td><td>Player deduces the traitor from clues across missions</td><td>Co-op with explicit opt-in “Traitor” party mode: one player receives secret <em>divergent</em> objectives from the LLM (capture instead of destroy, let a specific unit escape, secure a specific building). Not sabotage — different priorities.</td></tr>
+<tr><td><strong>Tension</strong></td><td>“Which of my commanders is lying to me?”</td><td>“Is my co-op partner pursuing a different objective, or are we playing the same mission?” Subtle divergence, not griefing.</td></tr>
+<tr><td><strong>Climax</strong></td><td>The accusation — right or wrong, the campaign changes</td><td>The reveal — when divergent objectives surface, the campaign’s entire history is recontextualized. Both players were playing their own version of the war.</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Verifiable actions (trust economy):</strong> In co-op Traitor mode, the system tracks <strong>verifiable actions</strong> — things that both players can confirm through shared battlefield data. “I defended the northern flank solo for 8 minutes” is system-confirmable from the replay. “I captured objective Alpha as requested” appears in the shared mission summary. A player building trust spends time on verifiable actions visible to their partner — but this diverts from optimal play or from pursuing secret divergent objectives. The traitor faces a genuine strategic choice: build trust through verifiable actions (slower divergent progress, safer cover) or pursue secret objectives aggressively (faster but riskier if the partner is watching closely). This creates an Among Us-style “visual tasks” dynamic where proving innocence has a real cost.</p>
+<p><strong>Intelligence review (structured suspicion moments):</strong> In co-op Mystery campaigns, each intermission functions as an <strong>intelligence review</strong> — a structured moment where both players see a summary of mission outcomes and the LLM surfaces anomalies. “Objective Alpha was captured instead of destroyed — consistent with enemy priorities.” “Forces were diverted from Sector 7 during the final push — 12% efficiency loss.” The system generates this data automatically from divergent-objective tracking and presents it neutrally. Players discuss before the next mission — creating a natural accusation-or-trust moment without pausing gameplay. This mirrors Among Us’s emergency meeting mechanic: action stops, evidence is reviewed, and players must decide whether to confront suspicion or move on.</p>
+<p><strong>Asymmetric briefings (information asymmetry in all co-op modes):</strong> Beyond Mystery, ALL co-op campaign modes benefit from a lesson Among Us teaches about information asymmetry: <strong>each player’s pre-mission briefing should include information the other player doesn’t have</strong>. Player A’s intelligence report mentions an enemy weapons cache in the southeast; Player B’s report warns of reinforcements arriving from the north. Neither briefing is wrong — they’re simply incomplete. This creates natural “wait, what did YOUR briefing say?” conversations that build cooperative engagement. In Mystery co-op, asymmetric briefings also provide cover for the traitor’s divergent objectives — they can claim “my briefing said to capture that building” and the other player can’t immediately verify it. The LLM generates briefing splits based on each player’s assigned intelligence network and agent roster.</p>
+<hr>
+<h4 id="solomultiplayer-bridges"><a class="header" href="#solomultiplayer-bridges">Solo–Multiplayer Bridges</a></h4>
+<p>The modes above work as standalone solo or multiplayer experiences. But the most interesting innovation is allowing <strong>ideas to cross between solo and multiplayer</strong> — things you create alone become part of someone else’s experience, and vice versa. These bridges emerge naturally from IC’s existing architecture (CharacterState serialization, Workshop sharing, D042 player behavioral profiles, campaign save portability):</p>
+<p><strong>Nemesis Export:</strong> Complete a Nemesis campaign. Your nemesis — their MBTI personality, their adapted tactics (learned from your battle reports), their grudge, their dialogue patterns — serializes to a Workshop-sharable character file. Another player imports your nemesis into their own campaign. Now they’re fighting a villain that was forged by YOUR gameplay. The nemesis “remembers” their history and references it: “The last commander who tried that tactic… I made them regret it.” Community-curated nemesis libraries let players challenge themselves against the most compelling villain characters the community has generated.</p>
+<p><strong>Ghost Operations (Asynchronous Competition):</strong> A solo player completes a campaign. Their campaign save — including every tactical decision, unit composition, timing, and outcome — becomes a “ghost.” Another player plays the same campaign seed but races against the ghost’s performance. Not a replay — a parallel run. The ghost’s per-mission results appear as benchmark data: “The ghost completed this mission in 12 minutes with 3 casualties. Can you do better?” This transforms solo campaigns into asynchronous races. Weekly challenges already use fixed seeds; ghost operations extend this to full campaigns.</p>
+<p><strong>War Dispatches (Narrative Fragments):</strong> A solo player’s campaign generates “dispatches” — short, LLM-written narrative summaries of key campaign moments, formatted as fictional news reports, radio intercepts, or intelligence briefings. These dispatches are shareable. Other players can subscribe to a friend’s campaign dispatches — following their war as a serialized story. A dispatch might say: “Reports confirm the destruction of the 3rd Allied Armored Division at the Rhine crossing. Soviet commander [player name] is advancing unchecked.” The reader sees the story; the player lived it.</p>
+<p><strong>Community Front Lines (Persistent World):</strong> Every solo player’s World Domination campaign contributes to a shared community war map. Your victories advance your faction’s front lines; your defeats push them back. Weekly aggregation: the community’s collective Solo campaigns determine the global state. Weekly community briefings (LLM-generated from aggregate data) report on the state of the war. “The Allied front in Northern Europe has collapsed after 847 Soviet campaign victories this week. The community’s attention shifts to the Pacific theater.” This doesn’t affect individual campaigns — it’s a metagame visualization. But it creates the feeling that your solo campaign matters to something larger.</p>
+<p><strong>Tactical DNA (D042 Profile as Challenge):</strong> Complete a campaign. Your D042 player behavioral profile — which tracks your strategic tendencies, unit preferences, micro patterns — exports as a “tactical DNA” file. An AI opponent can load your tactical DNA and play <em>as you</em>. Another player can challenge your tactical DNA: “Can you beat the AI version of Copilot? They love air rushes, never build naval, and always go for the tech tree.” This creates asymmetric AI opponents that are genuinely personal — not generic difficulty levels, but specific human-like play patterns. Community members share and compete against each other’s tactical DNA in skirmish mode.</p>
+<hr>
+<p>All extended modes produce standard D021 campaigns. All are playable without an LLM once generated. All are saveable, shareable via Workshop, editable in the Campaign Editor, and replayable. The LLM provides the creative act; the engine provides the infrastructure. Modders can create new modes by combining the same building blocks differently — the modes above are a curated library, not an exhaustive list.</p>
+<blockquote>
+<p><strong>See also D057 (Skill Library):</strong> Proven mission generation patterns — which scene template combinations, parameter values, and narrative structures produce highly-rated missions — are stored in the skill library and retrieved as few-shot examples for future generation. This makes D016’s template-filling approach more reliable over time without changing the generation architecture.</p>
+</blockquote>
+<hr>
+<h2 id="sub-pages"><a class="header" href="#sub-pages">Sub-Pages</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Section</th><th>File</th></tr>
+</thead>
+<tbody>
+<tr><td>LLM-Generated Custom Factions &amp; Editor Tool Bindings</td><td><a href="D016-factions-editor-tools.html">D016-factions-editor-tools.md</a></td></tr>
+</tbody>
+</table>
+</div>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../decisions/09f/D016/D016-world-assets-multiplayer.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../decisions/09f/D016/D016-factions-editor-tools.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../decisions/09f/D016/D016-world-assets-multiplayer.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../decisions/09f/D016/D016-factions-editor-tools.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../../mark-09e88c2c.min.js"></script>
+        <script src="../../../searcher-c2a407aa.js"></script>
+
+        <script src="../../../clipboard-1626706a.min.js"></script>
+        <script src="../../../highlight-abc7f01d.js"></script>
+        <script src="../../../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

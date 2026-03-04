@@ -41,12 +41,12 @@ IC needs a **player-visible diagnostic overlay** — the equivalent of Source En
 
 The overlay has four levels, toggled by `/diag <level>` or the cvar `debug.diag_level`. Higher levels include everything from lower levels.
 
-| Level | Name | Audience | What It Shows | Feature Gate |
-| ----- | ---- | -------- | ------------- | ------------ |
-| 0 | Off | — | Nothing | — |
-| 1 | Basic | All players | FPS, sim tick time, network latency (RTT), entity count | Always available |
-| 2 | Detailed | Power users, modders | Per-system tick breakdown, pathfinding stats, order queue depth, memory, tick sync status | Always available |
-| 3 | Full | Developers, debugging | ECS component inspector, AI state viewer, fog debug visualization, network packet log, desync hash comparison | `dev-tools` feature flag |
+| Level | Name     | Audience              | What It Shows                                                                                                 | Feature Gate             |
+| ----- | -------- | --------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| 0     | Off      | —                     | Nothing                                                                                                       | —                        |
+| 1     | Basic    | All players           | FPS, sim tick time, network latency (RTT), entity count                                                       | Always available         |
+| 2     | Detailed | Power users, modders  | Per-system tick breakdown, pathfinding stats, order queue depth, memory, tick sync status                     | Always available         |
+| 3     | Full     | Developers, debugging | ECS component inspector, AI state viewer, fog debug visualization, network packet log, desync hash comparison | `dev-tools` feature flag |
 
 **Level 1 — Basic** (the "net_graph 1" equivalent):
 
@@ -125,23 +125,23 @@ Adds interactive panels rendered via `bevy_egui`:
 
 All diagnostic overlay commands go through the existing `CommandDispatcher` (D058). They are **client-local** — they do not produce `PlayerOrder`s and do not flow through the network. They read telemetry data that is already being collected.
 
-| Command | Behavior | Permission |
-| ------- | -------- | ---------- |
-| `/diag` or `/diag 1` | Toggle basic overlay (level 1) | Player |
-| `/diag 0` | Turn off overlay | Player |
-| `/diag 2` | Detailed overlay | Player |
-| `/diag 3` | Full developer overlay | Developer (`dev-tools` required) |
-| `/diag net` | Show only the network panel (any level) | Player |
-| `/diag sim` | Show only the sim tick breakdown panel | Player |
-| `/diag path` | Show only the pathfinding panel | Player |
-| `/diag mem` | Show only the memory panel | Player |
-| `/diag ai` | Show AI state viewer for selected unit(s) | Developer |
-| `/diag orders` | Show order queue inspector | Developer |
-| `/diag fog` | Toggle fog debug visualization | Developer |
-| `/diag desync` | Show desync debugger panel | Developer |
-| `/diag pos <corner>` | Move overlay position: `tl`, `tr`, `bl`, `br` (default: `tr`) | Player |
-| `/diag scale <0.5-2.0>` | Scale overlay text size (accessibility) | Player |
-| `/diag export` | Dump current overlay state to a timestamped JSON file | Player |
+| Command                 | Behavior                                                      | Permission                       |
+| ----------------------- | ------------------------------------------------------------- | -------------------------------- |
+| `/diag` or `/diag 1`    | Toggle basic overlay (level 1)                                | Player                           |
+| `/diag 0`               | Turn off overlay                                              | Player                           |
+| `/diag 2`               | Detailed overlay                                              | Player                           |
+| `/diag 3`               | Full developer overlay                                        | Developer (`dev-tools` required) |
+| `/diag net`             | Show only the network panel (any level)                       | Player                           |
+| `/diag sim`             | Show only the sim tick breakdown panel                        | Player                           |
+| `/diag path`            | Show only the pathfinding panel                               | Player                           |
+| `/diag mem`             | Show only the memory panel                                    | Player                           |
+| `/diag ai`              | Show AI state viewer for selected unit(s)                     | Developer                        |
+| `/diag orders`          | Show order queue inspector                                    | Developer                        |
+| `/diag fog`             | Toggle fog debug visualization                                | Developer                        |
+| `/diag desync`          | Show desync debugger panel                                    | Developer                        |
+| `/diag pos <corner>`    | Move overlay position: `tl`, `tr`, `bl`, `br` (default: `tr`) | Player                           |
+| `/diag scale <0.5-2.0>` | Scale overlay text size (accessibility)                       | Player                           |
+| `/diag export`          | Dump current overlay state to a timestamped JSON file         | Player                           |
 
 **Cvar mappings** (for `config.toml` and persistent configuration):
 
@@ -219,13 +219,13 @@ Mod diagnostics are sandboxed: mods publish metrics through the API, the engine 
 
 The diagnostic overlay itself must not become a performance problem:
 
-| Level | Overhead | Mechanism |
-| ----- | -------- | --------- |
-| 0 (Off) | Zero | No reads, no rendering |
-| 1 (Basic) | < 0.1ms/frame | Read 5 atomic counters + render 6 text lines via egui |
-| 2 (Detailed) | < 0.5ms/frame | Read ~20 metrics + render breakdown bars + text |
-| 3 (Full) | < 2ms/frame | ECS query for selected entity + scrollable log rendering |
-| Graph history | +0.2ms/frame | Ring buffer append + line graph rendering |
+| Level         | Overhead      | Mechanism                                                |
+| ------------- | ------------- | -------------------------------------------------------- |
+| 0 (Off)       | Zero          | No reads, no rendering                                   |
+| 1 (Basic)     | < 0.1ms/frame | Read 5 atomic counters + render 6 text lines via egui    |
+| 2 (Detailed)  | < 0.5ms/frame | Read ~20 metrics + render breakdown bars + text          |
+| 3 (Full)      | < 2ms/frame   | ECS query for selected entity + scrollable log rendering |
+| Graph history | +0.2ms/frame  | Ring buffer append + line graph rendering                |
 
 All metric reads are **lock-free**: the sim writes to atomic counters/gauges, the overlay reads them on the render thread. No mutex contention, no sim slowdown from enabling the overlay. The ECS inspector (Level 3) uses Bevy's standard query system and runs in the render schedule, not the sim schedule.
 

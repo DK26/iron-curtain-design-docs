@@ -177,22 +177,22 @@ Campaign Graph    — branching mission graph with persistent state (not a linea
 
 **Built-in scene template library (examples):**
 
-| Scene Template    | Parameters                                             | Pre-built Logic                                                |
-| ----------------- | ------------------------------------------------------ | -------------------------------------------------------------- |
-| `ambush`          | location, attacker_units, trigger_zone, delay          | Units hide until player enters zone, then attack from cover    |
-| `patrol`          | waypoints, unit_composition, alert_radius              | Units cycle waypoints, engage if player detected within radius |
-| `convoy_escort`   | route, convoy_units, ambush_points[], escort_units     | Convoy follows route, ambushes trigger at defined points       |
-| `defend_position` | position, waves[], interval, reinforcement_schedule    | Enemies attack in waves with escalating strength               |
-| `base_building`   | start_resources, available_structures, tech_tree_limit | Player builds base, unlocked structures based on tech level    |
-| `timed_objective` | target, time_limit, failure_trigger                    | Player must complete objective before timer expires            |
-| `reinforcements`  | trigger, units, entry_point, delay                     | Units arrive from map edge when trigger fires                  |
-| `scripted_scene`  | actors[], dialogue[], camera_positions[]               | Non-interactive cutscene or briefing with camera movement      |
-| `video_playback`  | video_ref, trigger, display_mode, skippable            | Play a video on trigger — see display modes below              |
-| `weather`         | type, intensity, trigger, duration, sim_effects        | Weather system — see weather effects below                     |
-| `extraction`      | pickup_zone, transport_type, signal_trigger            | Player moves units to extraction zone, transport arrives       |
-| `map_expansion`   | trigger, layer_name, transition, reinforcements[], briefing | Activates a map layer — reveals shroud, extends bounds, wakes entities. See § Dynamic Mission Flow. |
-| `sub_map_transition` | portal_region, sub_map, allowed_units[], transition, outcomes{} | Unit enters building → loads interior sub-map → outcomes affect parent map. See § Dynamic Mission Flow. |
-| `phase_briefing`  | briefing_ref, video_ref, display_mode, layer_name, reinforcements[] | Combines briefing/video with layer activation and reinforcements — the "next phase" one-stop module. |
+| Scene Template       | Parameters                                                          | Pre-built Logic                                                                                         |
+| -------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `ambush`             | location, attacker_units, trigger_zone, delay                       | Units hide until player enters zone, then attack from cover                                             |
+| `patrol`             | waypoints, unit_composition, alert_radius                           | Units cycle waypoints, engage if player detected within radius                                          |
+| `convoy_escort`      | route, convoy_units, ambush_points[], escort_units                  | Convoy follows route, ambushes trigger at defined points                                                |
+| `defend_position`    | position, waves[], interval, reinforcement_schedule                 | Enemies attack in waves with escalating strength                                                        |
+| `base_building`      | start_resources, available_structures, tech_tree_limit              | Player builds base, unlocked structures based on tech level                                             |
+| `timed_objective`    | target, time_limit, failure_trigger                                 | Player must complete objective before timer expires                                                     |
+| `reinforcements`     | trigger, units, entry_point, delay                                  | Units arrive from map edge when trigger fires                                                           |
+| `scripted_scene`     | actors[], dialogue[], camera_positions[]                            | Non-interactive cutscene or briefing with camera movement                                               |
+| `video_playback`     | video_ref, trigger, display_mode, skippable                         | Play a video on trigger — see display modes below                                                       |
+| `weather`            | type, intensity, trigger, duration, sim_effects                     | Weather system — see weather effects below                                                              |
+| `extraction`         | pickup_zone, transport_type, signal_trigger                         | Player moves units to extraction zone, transport arrives                                                |
+| `map_expansion`      | trigger, layer_name, transition, reinforcements[], briefing         | Activates a map layer — reveals shroud, extends bounds, wakes entities. See § Dynamic Mission Flow.     |
+| `sub_map_transition` | portal_region, sub_map, allowed_units[], transition, outcomes{}     | Unit enters building → loads interior sub-map → outcomes affect parent map. See § Dynamic Mission Flow. |
+| `phase_briefing`     | briefing_ref, video_ref, display_mode, layer_name, reinforcements[] | Combines briefing/video with layer activation and reinforcements — the "next phase" one-stop module.    |
 
 **`video_playback` display modes:**
 
@@ -543,6 +543,6 @@ A "convoy escort with two ambushes and a base-building finale" is 3 scene templa
 
 ## Sub-Pages
 
-| Section | Topic | File |
-| --- | --- | --- |
+| Section             | Topic                                                                                                                                                                                             | File                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | Advanced Templating | Dynamic mission flow, campaign integration, multiplayer template negotiation, Workshop template distribution, template debugging, LLM integration, migration from MiniYAML, implementation phases | [tera-templating-advanced.md](tera-templating-advanced.md) |
