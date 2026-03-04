@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2281c970.js"></script>
@@ -181,11 +181,18 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h2 id="crate-dependency-graph"><a class="header" href="#crate-dependency-graph">Crate Dependency Graph</a></h2>
+<h3 id="external-standalone-crates-d076-tier-1--separate-repos-mit-or-apache-20"><a class="header" href="#external-standalone-crates-d076-tier-1--separate-repos-mit-or-apache-20">External Standalone Crates (D076 Tier 1 — separate repos, MIT OR Apache-2.0)</a></h3>
+<pre><code>cnc-formats         (clean-room C&amp;C binary format parsing: .mix, .shp, .pal, .aud, .tmp, .vqa)
+fixed-game-math     (deterministic fixed-point arithmetic: Fixed&lt;N&gt;, trig, CORDIC, Newton sqrt)
+deterministic-rng   (seedable platform-identical PRNG: range sampling, weighted selection, shuffle)
+</code></pre>
+<p>These exist from Phase 0, day one, in separate repositories (D076). They have zero IC-specific dependencies.</p>
+<h3 id="ic-monorepo-crates-gpl-v3-with-modding-exception"><a class="header" href="#ic-monorepo-crates-gpl-v3-with-modding-exception">IC Monorepo Crates (GPL v3 with modding exception)</a></h3>
 <pre><code>ic-protocol  (shared types: PlayerOrder, TimestampedOrder)
-    ↑
-    ├── ic-sim      (depends on: ic-protocol, ra-formats)
+    ↑         (depends on: fixed-game-math)
+    ├── ic-sim      (depends on: ic-protocol, ra-formats, fixed-game-math, deterministic-rng)
     ├── ic-net      (depends on: ic-protocol; contains RelayCore library + relay-server binary)
-    ├── ra-formats  (standalone — .mix, .shp, .pal, YAML)
+    ├── ra-formats  (wraps cnc-formats + EA-derived constants — .mix, .shp, .pal, YAML)
     ├── ic-render   (depends on: ic-sim for reading state)
     ├── ic-ui       (depends on: ic-sim, ic-render; reads SQLite for player analytics — D034)
     ├── ic-audio    (depends on: ra-formats)
@@ -284,7 +291,7 @@
 <li>A Bevy system polls <code>result_rx.try_recv()</code> each frame and injects results into the ECS world as events or resource mutations.</li>
 <li>The sim never touches any of this — it remains pure.</li>
 </ol>
-<p><strong>Channel choice:</strong> <code>crossbeam-channel</code> for the sync↔async boundary (already used by IC’s replay writer and voice pipeline — see <code>05-FORMATS.md</code> § Replay Recording and D059 § Voice Pipeline). Within the tokio runtime, <code>tokio::sync::mpsc</code> for intra-task communication.</p>
+<p><strong>Channel choice:</strong> <code>crossbeam-channel</code> for the sync↔async boundary (already used by IC’s replay writer and voice pipeline — see <code>netcode/network-model-trait.md</code> § BackgroundReplayWriter and D059 § Voice Pipeline). Within the tokio runtime, <code>tokio::sync::mpsc</code> for intra-task communication.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Commands sent from Bevy systems to the tokio I/O thread.
@@ -703,7 +710,7 @@ pub struct WasmInstance {
     pub mod_id: ModId,
 }
 <span class="boring">}</span></code></pre>
-<p><strong>Determinism guarantee:</strong> Both Lua and WASM execute at a fixed point in the system pipeline (<code>trigger_system()</code> step). All clients run the same mod code with the same game state at the same tick. Lua’s string hash seed is fixed. <code>math.random()</code> is replaced with the sim’s deterministic PRNG.</p>
+<p><strong>Determinism guarantee:</strong> Both Lua and WASM execute at a fixed point in the system pipeline (<code>trigger_system()</code> step). All clients run the same mod code with the same game state at the same tick. Lua’s string hash seed is fixed. <code>math.random()</code> is redirected to the sim’s deterministic PRNG (not removed — OpenRA compat requires it).</p>
 <p><strong>WASM determinism nuance:</strong> WASM execution is deterministic for integer and fixed-point operations, but the WASM spec permits non-determinism in floating-point NaN bit patterns. If a WASM mod uses <code>f32</code>/<code>f64</code> internally (which is legal — the sim’s fixed-point invariant applies to <code>ic-sim</code> Rust code, not to mod-internal computation), different CPU architectures may produce different NaN payloads, causing deterministic divergence (desync). Mitigations:</p>
 <ul>
 <li><strong>Runtime mandate:</strong> IC uses <code>wasmtime</code> exclusively. All clients use the same <code>wasmtime</code> version (engine-pinned). <code>wasmtime</code> canonicalizes NaN outputs for WASM arithmetic operations, which eliminates NaN bit-pattern divergence across platforms.</li>

@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2281c970.js"></script>
@@ -221,7 +221,7 @@ impl StateMerkleTree {
 }
 <span class="boring">}</span></code></pre>
 <p><strong>This pattern comes from blockchain state tries</strong> (Ethereum’s Patricia-Merkle trie, Bitcoin’s Merkle trees for transaction verification), adapted for game state. The original insight — that a tree structure over hashed state enables O(log N) divergence localization without transmitting full state — is one of the few genuinely useful ideas to emerge from the Web3 ecosystem. IC uses it for desync debugging, not consensus.</p>
-<p><strong>Selective replay verification</strong> also benefits: a viewer can verify that a specific tick’s state is authentic by checking the Merkle path from the tick’s root hash to the replay’s signature chain — without replaying the entire game. See <code>05-FORMATS.md</code> § Signature Chain for how this integrates with relay-signed replays.</p>
+<p><strong>Selective replay verification</strong> also benefits: a viewer can verify that a specific tick’s state is authentic by checking the Merkle path from the tick’s root hash to the replay’s signature chain — without replaying the entire game. See <code>formats/save-replay-formats.md</code> § “Signature Chain” for how this integrates with relay-signed replays.</p>
 <p><strong>Phase:</strong> Flat <code>state_hash()</code> ships in Phase 2 (sufficient for detection). Merkle tree structure added in Phase 2+ when desync diagnosis tooling is built. The tree is a strict upgrade — same root hash, more information on mismatch.</p>
 <h4 id="debug-levels-from-openttd"><a class="header" href="#debug-levels-from-openttd">Debug Levels (from OpenTTD)</a></h4>
 <p>Desync diagnosis uses configurable debug levels. Each level adds overhead, so higher levels are only enabled when actively hunting a bug:</p>

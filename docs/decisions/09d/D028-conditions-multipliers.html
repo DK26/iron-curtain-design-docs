@@ -35,7 +35,7 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-2281c970.js"></script>
@@ -211,8 +211,9 @@
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Per-entity condition state. Ref-counted so multiple sources can grant the same condition.
+/// BTreeMap, not HashMap — deterministic iteration (ic-sim collection policy, see type-safety.md).
 pub struct Conditions {
-    active: HashMap&lt;ConditionId, u32&gt;,  // name → grant count
+    active: BTreeMap&lt;ConditionId, u32&gt;,  // name → grant count
 }
 
 impl Conditions {

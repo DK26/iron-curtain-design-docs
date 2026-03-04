@@ -35,7 +35,7 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../../../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc-2281c970.js"></script>
@@ -377,7 +377,10 @@ impl CommandDispatcher {
     /// Parse input into a command + arguments. Does NOT execute.
     pub fn parse(&amp;self, input: &amp;str, source: &amp;CommandSource) -&gt; ParseResult;
 
-    /// Execute a previously parsed command.
+    /// Execute a previously parsed **local-only** command (e.g., `/help`, `/volume`).
+    /// Sim-affecting mod commands are NOT executed here — they are packaged into
+    /// `PlayerOrder::ChatCommand` and routed through the deterministic order pipeline.
+    /// See "Mod command execution contract" below.
     pub fn execute(&amp;self, parsed: &amp;ParseResult) -&gt; CommandResult;
 
     /// Generate tab-completion suggestions at cursor position.
@@ -387,8 +390,10 @@ impl CommandDispatcher {
     pub fn usage(&amp;self, command: &amp;str, source: &amp;CommandSource) -&gt; String;
 }
 <span class="boring">}</span></code></pre>
+<p><strong>Mod command execution contract:</strong> <code>CommandDispatcher</code> lives in <code>ic-game</code>, but mod command handlers that perform trigger-context mutations (e.g., <code>Reinforcements.Spawn()</code>, <code>Actor.Create()</code>) are <strong>not executed by the dispatcher directly</strong>. Instead, the dispatcher packages the parsed command into a <code>PlayerOrder::ChatCommand { cmd, args }</code> which flows through the deterministic order pipeline. On every client, the sim’s <code>OrderValidator</code> (D041 — runs before <code>apply_orders</code>, see <code>02-ARCHITECTURE.md</code> § OrderValidator Trait) validates the <code>ChatCommand</code> by re-parsing each string argument against the registered <code>CommandNode</code> types. If validation passes, <code>apply_orders</code> (step 1) queues the command, and <code>trigger_system()</code> (step 19) invokes the mod handler in trigger context — the same execution environment as mission trigger callbacks. This guarantees determinism: every client runs the same handler with the same state at the same pipeline step. The dispatcher’s <code>execute()</code> method is used only for <strong>local-only commands</strong> (e.g., <code>/help</code>, <code>/volume</code>) that produce no <code>PlayerOrder</code>.</p>
+<p><strong>ChatCommand argument canonicalization:</strong> The <code>args: Vec&lt;String&gt;</code> on the wire uses a canonical string encoding to ensure all clients parse identically. Typed arguments (e.g., <code>PositionArg</code>, <code>IntegerArg</code>) are serialized to their canonical string form by the sending client’s <code>CommandDispatcher::parse()</code> — positions as <code>"x,y"</code> or <code>"x,y,z"</code> (fixed-point decimal), integers as decimal digits, booleans as <code>"true"</code>/<code>"false"</code>, player names as their canonical display form. On the sim side, <code>OrderValidator</code> re-parses each string argument using the same <code>CommandNode</code> argument type registered at mod load time. If re-parsing fails (type mismatch, out-of-range, unknown player), the order is <strong>rejected at validation time</strong> — before <code>apply_orders</code>, before any system runs. This is deterministic rejection on all clients (D012). <code>trigger_system()</code> (step 19) receives only pre-validated <code>ChatCommand</code>s and invokes the handler with guaranteed-valid arguments. This two-phase parse→serialize→re-parse design means the wire format is always <code>Vec&lt;String&gt;</code> (simple, versionable), while type safety is enforced at both ends.</p>
 <p><strong>Permission filtering:</strong> Commands whose root node’s permission requirement exceeds the source’s level are invisible — not shown in <code>/help</code>, not tab-completed, not executable. A regular player never sees <code>/kick</code> or <code>/c</code>. This is Brigadier’s <code>requirement</code> predicate.</p>
-<p><strong>Append-only registration:</strong> Mods register commands by adding children to the root node. A mod can also extend existing commands by adding new sub-nodes. Two mods adding <code>/spawn</code> would conflict — the second registration merges into the first’s node, following Brigadier’s merge semantics.</p>
+<p><strong>Append-only registration:</strong> Mods register commands by adding children to the root node. A mod can also extend existing commands by adding new sub-nodes. Two mods adding different sub-commands under <code>/spawn</code> coexist — the second registration merges into the first’s node (Brigadier tree merge). If two mods register the exact same leaf command (e.g., both register <code>/spawn tank</code>), the last mod loaded replaces the earlier handler, with a warning logged. This is the same rule applied to unprefixed namespace collisions in D058 § “Mod-Registered Commands.”</p>
 <h4 id="configuration-variables-cvars"><a class="header" href="#configuration-variables-cvars">Configuration Variables (Cvars)</a></h4>
 <p>Runtime-configurable values, inspired by Source Engine’s ConVar system but adapted for IC’s YAML-first philosophy:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -478,7 +483,7 @@ diag_batch_interval_ms = 500  # collection interval for expensive L2 metrics (ms
 </tbody>
 </table>
 </div>
-<p><strong>Sim-affecting cvars</strong> (like fog of war, game speed) use the <code>DEV_ONLY</code> flag and flow through the order pipeline as <code>PlayerOrder::SetCvar(name, value)</code> — deterministic, validated, visible to all clients. Client-only cvars (render settings, audio) take effect immediately without going through the sim.</p>
+<p><strong>Sim-affecting cvars</strong> (like fog of war, game speed) use the <code>DEV_ONLY</code> flag and flow through the order pipeline as <code>PlayerOrder::SetCvar { name, value }</code> — deterministic, validated, visible to all clients. Client-only cvars (render settings, audio) take effect immediately without going through the sim.</p>
 
                     </main>
 

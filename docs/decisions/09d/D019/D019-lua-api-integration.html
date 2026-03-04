@@ -35,7 +35,7 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../../../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc-2281c970.js"></script>
@@ -337,7 +337,7 @@
 <li>
 <p><strong>Condition system:</strong></p>
 <ul>
-<li><code>Conditions</code> component: <code>HashMap&lt;ConditionId, u32&gt;</code> (ref-counted named conditions per entity)</li>
+<li><code>Conditions</code> component: <code>BTreeMap&lt;ConditionId, u32&gt;</code> (ref-counted named conditions per entity; <code>BTreeMap</code> per ic-sim deterministic collection policy)</li>
 <li>Condition sources: <code>GrantConditionOnMovement</code>, <code>GrantConditionOnDamageState</code>, <code>GrantConditionOnDeploy</code>, <code>GrantConditionOnAttack</code>, <code>GrantConditionOnTerrain</code>, <code>GrantConditionOnVeterancy</code> — exposed in YAML</li>
 <li>Condition consumers: any component field can declare <code>requires:</code> or <code>disabled_by:</code> conditions</li>
 <li>Runtime: systems check <code>conditions.is_active("deployed")</code> via fast bitset or hash lookup</li>

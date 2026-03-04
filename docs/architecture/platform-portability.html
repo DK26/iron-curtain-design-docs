@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2281c970.js"></script>
@@ -244,7 +244,7 @@
 <p><strong>Render quality is configurable per device.</strong> FPS cap, particle density, post-FX toggles, resolution scaling, shadow quality — all runtime-configurable. Mobile caps at 30fps; desktop targets 60-240fps. The renderer reads a <code>RenderSettings</code> resource, not compile-time constants. Four render quality tiers (Baseline → Standard → Enhanced → Ultra) are auto-detected from <code>wgpu::Adapter</code> capabilities at startup. Tier 0 (Baseline) targets GL 3.3 / WebGL2 hardware — no compute shaders, no post-FX, CPU particle fallback, palette tinting for weather. <strong>Advanced Bevy rendering features (3D render modes, heavy post-FX, dynamic lighting) are optional layers, not baseline requirements; the classic 2D game must remain fully playable on no-dedicated-GPU systems that meet the downlevel hardware floor.</strong> See <code>10-PERFORMANCE.md</code> § “GPU &amp; Hardware Compatibility” for tier definitions and hardware floor analysis.</p>
 </li>
 <li>
-<p><strong>No raw filesystem I/O.</strong> All asset loading goes through Bevy’s asset system, never <code>std::fs</code> directly. Mobile and browser have sandboxed filesystems; WASM has no filesystem at all. Save games use platform-appropriate storage (e.g., <code>localStorage</code> on web, app sandbox on mobile).</p>
+<p><strong>No raw filesystem I/O.</strong> All asset loading goes through Bevy’s asset system, never <code>std::fs</code> directly. Mobile and browser have sandboxed filesystems; WASM targets use browser storage APIs (OPFS primary, IndexedDB fallback, localStorage for settings only — see <code>05-FORMATS.md</code> § Browser Asset Storage). Save games use platform-appropriate storage (OPFS/IndexedDB on web, app sandbox on mobile).</p>
 </li>
 <li>
 <p><strong>App lifecycle is handled.</strong> Mobile and consoles require suspend/resume/save-on-background. The snapshottable sim makes this trivial — <code>snapshot()</code> on suspend, <code>restore()</code> on resume. This must be an engine-level lifecycle hook, not an afterthought.</p>

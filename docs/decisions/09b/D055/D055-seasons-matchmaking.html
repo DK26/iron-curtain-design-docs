@@ -35,7 +35,7 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../../../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc-2281c970.js"></script>
@@ -427,7 +427,7 @@ pub struct MatchmakingConfig {
 <li><strong>D036 (Achievements):</strong> Seasonal achievements: “Reach Captain,” “Place in top 100,” “Win 50 ranked matches this season,” etc.</li>
 <li><strong>D034 (SQLite Storage):</strong> <code>MatchmakingStorage</code> trait’s existing methods (<code>update_rating()</code>, <code>record_match()</code>, <code>get_leaderboard()</code>) handle all ranked data persistence. Season history added as new tables.</li>
 <li><strong>03-NETCODE.md (Match Lifecycle):</strong> Ready-check, pause, surrender, disconnect penalties, spectator delay, and post-game flow. D055 sets ranked-specific parameters; the match lifecycle protocol is game-mode-agnostic. The <strong>In-Match Vote Framework</strong> (<code>03-NETCODE.md</code> § “In-Match Vote Framework”) generalizes the surrender vote into a generic callvote system (surrender, kick, remake, draw, mod-defined) with per-vote-type ranked constraints.</li>
-<li><strong>05-FORMATS.md (Analysis Event Stream):</strong> <code>PauseEvent</code>, <code>MatchEnded</code>, and <code>VoteEvent</code> analysis events record match lifecycle moments in the replay for tooling without re-simulation.</li>
+<li><strong>formats/save-replay-formats.md (Analysis Event Stream):</strong> <code>PauseEvent</code>, <code>MatchEnded</code>, and <code>VoteEvent</code> analysis events record match lifecycle moments in the replay for tooling without re-simulation.</li>
 </ul>
 <h3 id="relationship-to-researchranked-matchmaking-analysismd"><a class="header" href="#relationship-to-researchranked-matchmaking-analysismd">Relationship to <code>research/ranked-matchmaking-analysis.md</code></a></h3>
 <p>This decision is informed by cross-game analysis of CS2/CSGO, StarCraft 2, League of Legends, Valorant, Dota 2, Overwatch 2, Age of Empires IV, and C&amp;C Remastered Collection’s competitive systems. Key takeaways incorporated:</p>

@@ -35,7 +35,7 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../../../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc-2281c970.js"></script>
@@ -224,16 +224,17 @@ pub struct VoiceReplayFrame {
     pub target: VoiceTarget,
 }
 <span class="boring">}</span></code></pre>
-<p><strong>Header extension:</strong> The replay header (<code>ReplayHeader</code>) gains a new field:</p>
+<p><strong>Header extension:</strong> The replay header (<code>ReplayHeader</code>) gains voice-related fields. The full canonical header is defined in <code>formats/save-replay-formats.md</code>; only the voice-specific additions are shown here:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct ReplayHeader {
-    // ... existing fields ...
+    // ... existing fields (magic, version, compression, flags, offsets, hashes,
+    //     lost_frame_count) — see formats/save-replay-formats.md for complete definition ...
     pub voice_offset: u32,       // 0 if no voice stream
     pub voice_length: u32,       // Compressed length of voice stream
 }
 <span class="boring">}</span></code></pre>
-<p>The <code>flags</code> field gains a <code>HAS_VOICE</code> bit. Replay viewers check this flag before attempting to load voice data.</p>
+<p>The <code>flags</code> field gains a <code>HAS_VOICE</code> bit (bit 3). The canonical <code>flags</code> definition also includes <code>INCOMPLETE</code> (bit 4, for frame-loss tracking — see V45). Replay viewers check the <code>HAS_VOICE</code> flag before attempting to load voice data.</p>
 <h4 id="storage-cost"><a class="header" href="#storage-cost">Storage Cost</a></h4>
 <div class="table-wrapper">
 <table>
@@ -646,9 +647,9 @@ requests:
 <li><strong>D055 (Ranked Matchmaking):</strong> Voice is stripped from ranked replay submissions. Chat and pings are preserved (they are orders in the deterministic stream).</li>
 <li><strong>D058 (Chat/Command Console):</strong> All coordination features are accessible via console commands. D058 defined the input system; D059 defines the routing, voice, spatial signaling, and voice effect selection that D058’s commands control. The <code>/all</code>, <code>/team</code>, <code>/w</code> commands were placeholder in D058 — D059 specifies their routing implementation. Voice effect commands (<code>/voice effect list</code>, <code>/voice effect set</code>, <code>/voice effect preview</code>) give console-first access to the voice effects system.</li>
 <li><strong>D070 (Asymmetric Commander &amp; Field Ops Co-op):</strong> D059 provides the standardized request/response coordination UX, typed support markers, and status vocabulary for D070 scenarios. D070 defines gameplay meaning and authoring; D059 defines the communication surfaces and feedback loops.</li>
-<li><strong>05-FORMATS.md (Replay Format):</strong> Voice stream extends the replay file format with a new section. The replay header gains <code>voice_offset</code>/<code>voice_length</code> fields and a <code>HAS_VOICE</code> flag bit. Voice is independent of the order and analysis streams — tools that don’t process voice ignore it.</li>
+<li><strong>05-FORMATS.md (Replay Format):</strong> Voice stream extends the replay file format with a new section. The replay header gains <code>voice_offset</code>/<code>voice_length</code> fields and a <code>HAS_VOICE</code> flag bit (bit 3). The canonical replay header also includes <code>lost_frame_count</code> and an <code>INCOMPLETE</code> flag (bit 4) for frame-loss tracking (V45) — see <code>formats/save-replay-formats.md</code> for the complete header definition. Voice is independent of the order and analysis streams — tools that don’t process voice ignore it.</li>
 <li><strong>06-SECURITY.md:</strong> New <code>ProtocolLimits</code> fields for voice, ping, and drawing rate limits. Voice spoofing prevention (relay-stamped speaker ID). Voice-in-replay consent model addresses privacy requirements.</li>
-<li><strong>D010 (Snapshots) / Analysis Event Stream:</strong> The replay analysis event stream now includes <strong>camera position samples</strong> (<code>CameraPositionSample</code>), <strong>selection tracking</strong> (<code>SelectionChanged</code>), <strong>control group events</strong> (<code>ControlGroupEvent</code>), <strong>ability usage</strong> (<code>AbilityUsed</code>), <strong>pause events</strong> (<code>PauseEvent</code>), and <strong>match end events</strong> (<code>MatchEnded</code>) — see <code>05-FORMATS.md</code> § “Analysis Event Stream” for the full enum. Camera samples are lightweight (~8 bytes per player per sample at 2 Hz = ~1 KB/min for 8 players). D059 notes this integration because voice-in-replay is most valuable when combined with camera tracking — hearing what a player said while seeing what they were looking at.</li>
+<li><strong>D010 (Snapshots) / Analysis Event Stream:</strong> The replay analysis event stream now includes <strong>camera position samples</strong> (<code>CameraPositionSample</code>), <strong>selection tracking</strong> (<code>SelectionChanged</code>), <strong>control group events</strong> (<code>ControlGroupEvent</code>), <strong>ability usage</strong> (<code>AbilityUsed</code>), <strong>pause events</strong> (<code>PauseEvent</code>), and <strong>match end events</strong> (<code>MatchEnded</code>) — see <code>formats/save-replay-formats.md</code> § “Analysis Event Stream” for the full enum. Camera samples are lightweight (~8 bytes per player per sample at 2 Hz = ~1 KB/min for 8 players). D059 notes this integration because voice-in-replay is most valuable when combined with camera tracking — hearing what a player said while seeing what they were looking at.</li>
 <li><strong>03-NETCODE.md (Match Lifecycle):</strong> D059’s competitive voice rules (pause behavior, eliminated player routing, ranked restrictions, coach slot) integrate with the match lifecycle protocol defined in <code>03-NETCODE.md</code> § “Match Lifecycle.” Voice pause behavior follows the game pause state — voice continues during pause per D059’s competitive voice rules. Surrender and disconnect events affect voice routing (eliminated-to-observer transition). The <strong>In-Match Vote Framework</strong> (<code>03-NETCODE.md</code> § “In-Match Vote Framework”) extends D059’s tactical coordination: tactical polls build on the chat wheel phrase system (<code>poll: true</code> phrases in <code>chat_wheel_phrases.yaml</code>), and <code>/callvote</code> commands are registered via D058’s Brigadier command tree. See vote framework research: <code>research/vote-callvote-system-analysis.md</code>.</li>
 </ul>
 <h3 id="shared-infrastructure-voice-game-netcode--workshop-cross-pollination"><a class="header" href="#shared-infrastructure-voice-game-netcode--workshop-cross-pollination">Shared Infrastructure: Voice, Game Netcode &amp; Workshop Cross-Pollination</a></h3>

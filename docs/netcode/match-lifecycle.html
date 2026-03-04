@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2281c970.js"></script>
@@ -483,7 +483,8 @@ pub struct ActiveVote {
     /// Eligible voters for this vote (determined at proposal time).
     pub eligible_voters: Vec&lt;PlayerId&gt;,
     /// Votes cast so far. Key = voter, value = choice.
-    pub ballots: HashMap&lt;PlayerId, VoteChoice&gt;,
+    /// BTreeMap, not HashMap — deterministic iteration (ic-sim collection policy).
+    pub ballots: BTreeMap&lt;PlayerId, VoteChoice&gt;,
     /// Tick when the vote was proposed.
     pub started_at: u64,
     /// Tick when the vote expires (started_at + duration_ticks).
@@ -526,7 +527,14 @@ pub enum VoteFailReason {
     ProposerLeft,
 }
 <span class="boring">}</span></code></pre>
-<h4 id="vote-configuration-yaml"><a class="header" href="#vote-configuration-yaml">Vote Configuration (YAML)</a></h4>
+<h4 id="vote-configuration"><a class="header" href="#vote-configuration">Vote Configuration</a></h4>
+<p>Vote configuration follows D067’s format split: <strong>YAML defines game-content defaults</strong>, <strong>TOML provides server-operator overrides</strong>.</p>
+<p><strong>Precedence (highest wins):</strong></p>
+<ol>
+<li><strong>Lobby settings</strong> (host/tournament organizer overrides for this match)</li>
+<li><strong><code>server_config.toml</code> <code>[votes]</code> section</strong> (server operator preferences — D064)</li>
+<li><strong><code>vote_config.yaml</code></strong> (game module defaults shipped with the mod)</li>
+</ol>
 <p>Each vote type’s parameters are defined in YAML, configurable per lobby, per server, and per game module. Tournament organizers override via lobby settings.</p>
 <pre><code class="language-yaml"># vote_config.yaml — defaults, overridable per lobby/server
 vote_framework:
@@ -666,7 +674,8 @@ pub struct ActivePoll {
     pub id: PollId,
     pub proposer: PlayerId,
     pub phrase_id: u16,           // maps to chat_wheel_phrases.yaml
-    pub responses: HashMap&lt;PlayerId, bool&gt;,
+    /// BTreeMap, not HashMap — deterministic iteration (ic-sim collection policy).
+    pub responses: BTreeMap&lt;PlayerId, bool&gt;,
     pub expires_at: u64,          // 15 seconds after proposal
 }
 <span class="boring">}</span></code></pre>

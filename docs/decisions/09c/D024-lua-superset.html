@@ -35,7 +35,7 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-2281c970.js"></script>
@@ -200,7 +200,7 @@
 </ul>
 </li>
 <li><strong>Non-goals:</strong> Binary compatibility with OpenRA’s C# Lua host. IC uses <code>mlua</code> (Rust); same API surface, different host implementation. Also not a goal: supporting OpenRA’s deprecated or internal-only Lua functions.</li>
-<li><strong>Invariants preserved:</strong> Deterministic sim (Lua scripts produce <code>PlayerOrder</code>s that flow through the sim; scripts do not directly mutate sim state). Sandbox boundary (resource limits, no filesystem access without capability tokens).</li>
+<li><strong>Invariants preserved:</strong> Deterministic sim (Lua has two write paths, both deterministic: order methods that enqueue <code>PlayerOrder</code>s, and trigger-context mutations that execute direct sim writes inside <code>trigger_system()</code> at a fixed pipeline step on every client — see <code>modding/lua-scripting.md</code> § Two Lua Write Paths). Sandbox boundary (resource limits, no filesystem access without capability tokens).</li>
 <li><strong>Public interfaces / types / commands:</strong> 16 OpenRA globals + 11 IC extension globals (see tables below)</li>
 <li><strong>Affected docs:</strong> <code>04-MODDING.md</code> § Lua API, <code>modding/campaigns.md</code> (Campaign global examples)</li>
 <li><strong>Keywords:</strong> Lua API, scripting, OpenRA compatibility, mission scripting, globals, superset, Campaign, Weather, Trigger</li>
@@ -213,7 +213,7 @@
 <tr><th>Global</th><th>Purpose</th></tr>
 </thead>
 <tbody>
-<tr><td><code>Actor</code></td><td>Create, query, manipulate actors</td></tr>
+<tr><td><code>Actor</code></td><td>Create, query actors; mutations via trigger context (see <code>modding/lua-scripting.md</code>)</td></tr>
 <tr><td><code>Map</code></td><td>Terrain, bounds, spatial queries</td></tr>
 <tr><td><code>Trigger</code></td><td>Event hooks (OnKilled, AfterDelay, OnEnteredFootprint, etc.)</td></tr>
 <tr><td><code>Media</code></td><td>Audio, video, text display</td></tr>

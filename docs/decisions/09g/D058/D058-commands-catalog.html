@@ -35,7 +35,7 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../../../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc-2281c970.js"></script>
@@ -571,12 +571,12 @@
 <p><strong>PlayerOrder variant taxonomy:</strong> Commands map to <code>PlayerOrder</code> variants as follows:</p>
 <ul>
 <li><strong>GUI-equivalent commands</strong> (<code>/move</code>, <code>/attack</code>, <code>/build</code>, <code>/sell</code>, <code>/deploy</code>, <code>/stance</code>, <code>/select</code>, <code>/place</code>, etc.) produce the <strong>same native <code>PlayerOrder</code> variant</strong> as their GUI counterpart — e.g., <code>/move 120,80</code> produces <code>PlayerOrder::Move { target: WorldPos(120,80) }</code>, identical to right-clicking the map.</li>
-<li><strong>Cvar mutations</strong> (<code>/set &lt;name&gt; &lt;value&gt;</code>) produce <code>PlayerOrder::SetCvar(name, value)</code> when the cvar has <code>DEV_ONLY</code> or <code>SERVER</code> flags — these flow through order validation.</li>
+<li><strong>Cvar mutations</strong> (<code>/set &lt;name&gt; &lt;value&gt;</code>) produce <code>PlayerOrder::SetCvar { name, value }</code> when the cvar has <code>DEV_ONLY</code> or <code>SERVER</code> flags — these flow through order validation.</li>
 <li><strong>Cheat codes</strong> (hidden phrases typed in chat) produce <code>PlayerOrder::CheatCode(CheatId)</code> — see “Hidden Cheat Codes” below.</li>
 <li><strong>Chat messages</strong> (<code>/s</code>, <code>/w</code>, unprefixed text) produce <code>PlayerOrder::ChatMessage { channel, text }</code> — see D059 § Text Chat.</li>
 <li><strong>Coordination actions</strong> (pings, chat wheel, minimap drawing) produce their respective <code>PlayerOrder</code> variants (<code>TacticalPing</code>, <code>ChatWheelPhrase</code>, <code>MinimapDraw</code>) — see D059 § Coordination.</li>
 <li><strong>Meta-commands</strong> (<code>/help</code>, <code>/locale</code>, <code>/hotkeys</code>, <code>/voice diag</code>, etc.) are <strong>local-only</strong> — they produce no <code>PlayerOrder</code> and never touch the sim.</li>
-<li><strong><code>PlayerOrder::ChatCommand(cmd, args)</code></strong> is used only for mod-registered commands that produce custom sim-side effects not covered by a native variant. Engine commands never use <code>ChatCommand</code>.</li>
+<li><strong><code>PlayerOrder::ChatCommand { cmd, args }</code></strong> is used only for mod-registered commands that produce custom sim-side effects not covered by a native variant. Engine commands never use <code>ChatCommand</code>.</li>
 </ul>
 <p><strong>Game-module registration example (RA1):</strong> The RA1 game module registers all RA1-specific commands during <code>GameModule::register_commands()</code>. A Tiberian Dawn module would register similar but distinct commands (e.g., <code>/sell</code> exists in both, but <code>/power_activate</code> with different superweapon names). A total conversion could register entirely novel commands (<code>/mutate</code>, <code>/terraform</code>, etc.) using the same <code>CommandDispatcher</code> infrastructure. This follows the “game is a mod” principle (13-PHILOSOPHY.md § Principle 4) — the base game uses the same registration API available to external modules.</p>
 <h4 id="mod-registered-commands"><a class="header" href="#mod-registered-commands">Mod-Registered Commands</a></h4>
@@ -587,18 +587,23 @@ Commands.register("spawn_reinforcements", {
     permission = "host",       -- only host can use
     arguments = {
         { name = "faction", type = "string", suggestions = {"allies", "soviet"} },
+        { name = "unit_type", type = "string", suggestions = {"Tank", "Rifle", "APC"} },
         { name = "count",   type = "integer", min = 1, max = 50 },
-        { name = "location", type = "position" },
+        { name = "location", type = "string", suggestions = {"north", "south", "east", "west"} },
     },
     execute = function(source, args)
-        -- Mod logic here
-        SpawnReinforcements(args.faction, args.count, args.location)
+        -- Mod logic here — note: Reinforcements.Spawn takes
+        -- (faction, unit_type_list, entry_point_id), matching
+        -- the canonical Lua API (see modding/lua-scripting.md).
+        local units = {}
+        for i = 1, args.count do table.insert(units, args.unit_type) end
+        Reinforcements.Spawn(args.faction, units, args.location)
         return "Spawned " .. args.count .. " " .. args.faction .. " reinforcements"
     end
 })
 </code></pre>
 <p><strong>Sandboxing:</strong> Mod commands execute within the same Lua sandbox as mission scripts. A mod command cannot access the filesystem, network, or memory outside its sandbox. The <code>CommandSource</code> tracks which mod registered the command — if a mod command crashes or times out, the error is attributed to the mod, not the engine.</p>
-<p><strong>Namespace collision:</strong> Mod commands are prefixed with the mod name by default: a mod named <code>cool_units</code> registering <code>spawn</code> creates <code>/cool_units:spawn</code>. Mods can request unprefixed registration (<code>/spawn</code>) but collisions are resolved by load order — last mod wins, with a warning logged. The convention follows Minecraft’s <code>namespace:command</code> pattern.</p>
+<p><strong>Namespace collision:</strong> Mod commands are prefixed with the mod name by default: a mod named <code>cool_units</code> registering <code>spawn</code> creates <code>/cool_units:spawn</code>. Mods can request unprefixed registration (<code>/spawn</code>) but collisions are resolved deterministically: sub-commands under the same parent node are merged (Brigadier tree merge — two mods adding different sub-commands under <code>/spawn</code> coexist). If two mods register the exact same leaf command path, the last mod loaded replaces the earlier handler, with a warning logged. The convention follows Minecraft’s <code>namespace:command</code> pattern.</p>
 <h4 id="anti-trolling-measures"><a class="header" href="#anti-trolling-measures">Anti-Trolling Measures</a></h4>
 <p>Chat and commands create trolling surfaces. IC addresses each:</p>
 <div class="table-wrapper">

@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2281c970.js"></script>
@@ -240,10 +240,10 @@
 </li>
 </ol>
 <h3 id="mitigation-2"><a class="header" href="#mitigation-2">Mitigation</a></h3>
-<p><strong>Frame loss tracking:</strong> <code>BackgroundReplayWriter</code> maintains a <code>frames_lost: AtomicU32</code> counter. When <code>try_send</code> fails, the counter increments. The final replay header records the total frames lost. Playback tools display a warning: “This replay has N missing frames.”</p>
-<p><strong><code>send_timeout</code> instead of <code>try_send</code>:</strong> Replace <code>try_send</code> with <code>send_timeout(frame, Duration::from_millis(5))</code>. This gives the writer a brief window to drain the channel during I/O spikes without blocking the sim thread for perceptible time. 5ms is well within a 33ms tick budget.</p>
-<p><strong>Incomplete replay marking:</strong> If any frames are lost, the replay header is marked <code>incomplete</code>. Incomplete replays are playable (the sim handles frame gaps by using the last known state) but cannot be submitted for ranked verification or used as evidence in anti-cheat disputes.</p>
-<p><strong>Signature chain gap handling:</strong> The hash chain must account for frame gaps explicitly. When a frame is lost, the next frame’s signature includes the gap (e.g., <code>hash(prev_hash, gap_marker, frame_index, frame_data)</code>). Verifiers reconstruct the chain by recognizing gap markers instead of treating them as tampering.</p>
+<p><strong>Frame loss tracking:</strong> <code>BackgroundReplayWriter</code> maintains a <code>lost_frame_count: AtomicU32</code> counter. When <code>send_timeout</code> expires, the counter increments. The final replay header records the total lost frame count. Playback tools display a warning: “This replay has N missing frames.”</p>
+<p><strong><code>send_timeout</code> instead of <code>try_send</code>:</strong> Replace <code>try_send</code> with <code>send_timeout(frame, Duration::from_millis(5))</code>. This gives the writer a brief window to drain the channel during I/O spikes without blocking the sim thread for perceptible time. 5 ms is well within a 33 ms tick budget.</p>
+<p><strong>Incomplete replay marking:</strong> If any frames are lost, the replay header’s <code>INCOMPLETE</code> flag (bit 4) is set and <code>lost_frame_count</code> records the total. Incomplete replays are playable (the sim handles frame gaps by using the last known state) but cannot be submitted for ranked verification or used as evidence in anti-cheat disputes.</p>
+<p><strong>Signature chain gap handling:</strong> The hash chain must account for frame gaps explicitly. Each <code>TickSignature</code> carries a <code>skipped_ticks: u32</code> field (0 when contiguous). When frames are lost, the next signature includes the gap count: <code>hash(prev_sig_hash, skipped_ticks, tick, state_hash)</code>. The relay co-signs <code>(skipped_ticks, tick, state_hash, prev_sig_hash)</code>. Verifiers reconstruct the chain by incorporating <code>skipped_ticks</code> into the hash — gaps are accounted for rather than treated as tampering. See <code>formats/save-replay-formats.md</code> § TickSignature for the schema.</p>
 <p><strong>Phase:</strong> Replay writer hardening ships with replay system (Phase 2). Frame loss tracking is a Phase 2 exit criterion.</p>
 <h2 id="vulnerability-46-player-display-name-unicode-confusable-impersonation"><a class="header" href="#vulnerability-46-player-display-name-unicode-confusable-impersonation">Vulnerability 46: Player Display Name Unicode Confusable Impersonation</a></h2>
 <h3 id="the-problem-3"><a class="header" href="#the-problem-3">The Problem</a></h3>

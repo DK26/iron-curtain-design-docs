@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2281c970.js"></script>
@@ -947,7 +947,7 @@ pub struct ScreenShake {
 <h4 id="camera-in-replays-and-save-games"><a class="header" href="#camera-in-replays-and-save-games">Camera in Replays and Save Games</a></h4>
 <ul>
 <li><strong>Save games:</strong> <code>GameCamera</code> state (position, zoom, follow target) is serialized alongside other client-side state. On load, the camera restores to where the player was looking.</li>
-<li><strong>Replays:</strong> <code>CameraPositionSample</code> events (see <code>05-FORMATS.md</code>) record each player’s viewport center and zoom level at 2 Hz. Replay viewers can follow any player’s camera or use free camera. The replay camera is independent of the recorded camera data — the viewer controls their own viewport.</li>
+<li><strong>Replays:</strong> <code>CameraPositionSample</code> events (see <code>formats/save-replay-formats.md</code> § “Analysis Event Stream”) record each player’s viewport center and zoom level at 2 Hz. Replay viewers can follow any player’s camera or use free camera. The replay camera is independent of the recorded camera data — the viewer controls their own viewport.</li>
 <li><strong>Observer mode:</strong> Observers have independent camera control with no zoom restrictions (they can zoom out further than players for overview). The <code>follow_player</code> option (see <code>ObserverState</code>) syncs the observer’s camera to a player’s recorded <code>CameraPositionSample</code> stream.</li>
 </ul>
 <h4 id="camera-configuration-yaml"><a class="header" href="#camera-configuration-yaml">Camera Configuration (YAML)</a></h4>
@@ -1070,7 +1070,7 @@ pub struct AmmoPool {
 <span class="boring">}</span></code></pre>
 <p><strong>Army overlay:</strong> Bar chart of unit counts per player, grouped by type. <strong>Production overlay:</strong> List of active queues per player. <strong>Economy overlay:</strong> Income rate graph. These are render-only — no sim interaction. Observer UI is an <code>ic-ui</code> concern.</p>
 <h4 id="game-score--performance-metrics"><a class="header" href="#game-score--performance-metrics">Game Score / Performance Metrics</a></h4>
-<p>The sim tracks a comprehensive <code>GameScore</code> per player, updated every tick. This powers the observer economy overlay, post-game stats screen, and the replay analysis event stream (see <code>05-FORMATS.md</code> § “Analysis Event Stream”). Design informed by SC2’s <code>ScoreDetails</code> protobuf (see <code>research/blizzard-github-analysis.md</code> § Part 2).</p>
+<p>The sim tracks a comprehensive <code>GameScore</code> per player, updated every tick. This powers the observer economy overlay, post-game stats screen, and the replay analysis event stream (see <code>formats/save-replay-formats.md</code> § “Analysis Event Stream”). Design informed by SC2’s <code>ScoreDetails</code> protobuf (see <code>research/blizzard-github-analysis.md</code> § Part 2).</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>#[derive(Clone, Serialize, Deserialize)]

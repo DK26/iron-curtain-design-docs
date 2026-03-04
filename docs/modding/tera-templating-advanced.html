@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2281c970.js"></script>
@@ -332,8 +332,8 @@ function OnAASiteDestroyed()
 
         -- Reinforcements arrive at the newly revealed beach
         Trigger.AfterDelay(150, function()
-            Reinforcements.Arrive("allies", {"Tank", "Tank", "APC", "Rifle", "Rifle"},
-                                  "south_beach_entry")
+            Reinforcements.Spawn("allies", {"Tank", "Tank", "APC", "Rifle", "Rifle"},
+                                 "south_beach_entry")
             PlayEVA("reinforcements_arrived")
         end)
 
@@ -533,7 +533,7 @@ function TriggerPhaseTransition(config)
             -- 3. Spawn reinforcements (if provided)
             if config.reinforcements then
                 for _, r in ipairs(config.reinforcements) do
-                    Reinforcements.Arrive(r.faction, r.units, r.entry_point)
+                    Reinforcements.Spawn(r.faction, r.units, r.entry_point)
                 end
             end
             -- 4. Add new objectives (if provided)

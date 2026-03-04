@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2281c970.js"></script>
@@ -651,7 +651,9 @@ pub fn run_client_match&lt;T: Transport&gt;(
     // 4. Construct NetworkModel over encrypted transport
     let network = RelayLockstepNetwork::new(transport);
 
-    // 5. Construct GameLoop (defined in architecture/game-loop.md)
+    // 5. Construct GameLoop — the client-side frame driver (always renders).
+    //    Headless consumers (servers, bots, tests) drive Simulation directly
+    //    and never instantiate GameLoop. See architecture/game-loop.md.
     let mut game_loop = GameLoop {
         sim: Simulation::new(seed, rules),
         renderer: Renderer::new(),

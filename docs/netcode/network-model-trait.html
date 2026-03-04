@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2281c970.js"></script>
@@ -203,7 +203,7 @@
     fn diagnostics(&amp;self) -&gt; NetworkDiagnostics;
 }
 <span class="boring">}</span></code></pre>
-<p><strong>Trait shape note:</strong> This trait is lockstep-shaped — <code>poll_tick()</code> returns confirmed orders or nothing, matching lockstep’s “wait, then advance” pattern. All shipping implementations fit naturally. See § “Deferred Optional Architectures” for how this constrains non-lockstep experiments (M11).</p>
+<p><strong>Trait shape note:</strong> This trait is lockstep-shaped — <code>poll_tick()</code> returns confirmed orders or nothing, matching lockstep’s “wait, then advance” pattern. All shipping implementations fit naturally. See § “Additional NetworkModel Architectures” for how this constrains non-lockstep experiments (M11).</p>
 <h3 id="deployment-modes"><a class="header" href="#deployment-modes">Deployment Modes</a></h3>
 <p>The same netcode runs in five modes. The first two are utility adapters (no network involved). The last three are real multiplayer deployments of the same protocol:</p>
 <div class="table-wrapper">
@@ -294,7 +294,20 @@ impl&lt;B: ProtocolBridge&gt; NetworkModel for NetcodeBridgeModel&lt;B&gt; {
     }
     
     fn poll_tick(&amp;mut self) -&gt; Option&lt;TickOrders&gt; {
-        // Always ready — no waiting for other clients
+        // Accumulator-based: tracks how much real time has elapsed and
+        // emits one tick per TICK_DURATION of accumulated time. This
+        // preserves the fixed 30 tps rate independent of frame rate —
+        // if a frame arrives late, multiple ticks are available on the
+        // next calls (bounded by GameLoop's MAX_TICKS_PER_FRAME cap).
+        let now = Instant::now();
+        let elapsed = now - self.last_poll_time;
+        if elapsed &lt; TICK_DURATION {
+            return None; // Not enough time for the next tick
+        }
+        // Deduct one tick's worth of time; remainder carries forward.
+        // This prevents drift — late frames catch up, early frames wait.
+        self.last_poll_time += TICK_DURATION;
+        self.tick += 1;
         Some(TickOrders {
             tick: self.tick,
             orders: std::mem::take(&amp;mut self.pending),
@@ -302,7 +315,7 @@ impl&lt;B: ProtocolBridge&gt; NetworkModel for NetcodeBridgeModel&lt;B&gt; {
     }
 }
 <span class="boring">}</span></code></pre>
-<p>At 30 tps, a click-to-move in single player is confirmed within ~33ms — imperceptible to humans (reaction time is ~200ms). Combined with visual prediction, the game feels <strong>instant</strong>.</p>
+<p>At 30 tps, a click-to-move in single player is confirmed within ~33 ms — imperceptible to humans (reaction time is ~200 ms). The accumulator pattern (<code>last_poll_time += TICK_DURATION</code> instead of <code>= now + TICK_DURATION</code>) ensures the sim maintains exactly 30 tps regardless of frame rate — missed time is caught up via multiple ticks per frame, bounded by <code>GameLoop</code>’s <code>MAX_TICKS_PER_FRAME</code> cap. Combined with visual prediction, the game feels <strong>instant</strong>.</p>
 <h3 id="replay-playback"><a class="header" href="#replay-playback">Replay Playback</a></h3>
 <p>Replays are a natural byproduct of the architecture:</p>
 <pre><code>Replay file = initial state + sequence of TickOrders
@@ -310,35 +323,45 @@ Playback = feed TickOrders through Simulation via ReplayPlayback NetworkModel
 </code></pre>
 <p>Replays are signed by the relay server for tamper-proofing (see <code>06-SECURITY.md</code>).</p>
 <h3 id="background-replay-writer"><a class="header" href="#background-replay-writer">Background Replay Writer</a></h3>
-<p>During live games, the replay file is written by a <strong>background writer</strong> using a lock-free queue — the sim thread never blocks on I/O. This prevents disk write latency from causing frame hitches (a problem observed in 0 A.D.’s synchronous replay recording — see <code>research/0ad-warzone2100-netcode-analysis.md</code>):</p>
+<p>During live games, the replay file is written by a <strong>background writer</strong> using a bounded channel — the sim thread spends at most 5 ms on I/O per tick. This prevents disk write latency from causing sustained frame hitches (a problem observed in 0 A.D.’s synchronous replay recording — see <code>research/0ad-warzone2100-netcode-analysis.md</code>):</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>/// Non-blocking replay recorder. The sim thread pushes tick frames
-/// into a lock-free queue; a background thread drains and writes.
+</span>use std::sync::atomic::{AtomicU32, Ordering};
+use std::time::Duration;
+
+/// Bounded-latency replay recorder. The sim thread pushes tick frames
+/// into a bounded channel; a background thread drains and writes.
 pub struct BackgroundReplayWriter {
     queue: crossbeam::channel::Sender&lt;ReplayTickFrame&gt;,
     handle: std::thread::JoinHandle&lt;()&gt;,
+    /// Counts frames lost due to channel backpressure (V45).
+    lost_frame_count: AtomicU32,
 }
 
 impl BackgroundReplayWriter {
-    /// Called from the sim thread after each tick. Never blocks.
+    /// Called from the sim thread after each tick. Blocks at most 5ms
+    /// (send_timeout) — bounded latency, not lock-free.
     pub fn record_tick(&amp;self, frame: ReplayTickFrame) {
-        // crossbeam bounded channel — if the writer falls behind,
-        // oldest frames are still in memory (not dropped). The buffer
-        // is sized for ~10 seconds of ticks (300 frames at 30 tps).
-        let _ = self.queue.try_send(frame);
+        // crossbeam bounded channel sized for ~10 seconds of ticks
+        // (300 frames at 30 tps). Use send_timeout to avoid blocking
+        // the sim thread while giving the writer a chance to drain.
+        // If the timeout expires, the frame is lost — tracked in the
+        // replay header (see V45 mitigations below).
+        match self.queue.send_timeout(frame, Duration::from_millis(5)) {
+            Ok(()) =&gt; {},
+            Err(_) =&gt; self.lost_frame_count.fetch_add(1, Ordering::Relaxed),
+        }
     }
 }
 <span class="boring">}</span></code></pre>
 <blockquote>
-<p><strong>Security (V45):</strong> <code>try_send</code> silently drops frames when the channel is full — contradicting the code comment. Lost frames break the Ed25519 signature chain (V4). Mitigations: track frame loss count in replay header, use <code>send_timeout(frame, 5ms)</code> instead of <code>try_send</code>, mark replays with lost frames as <code>incomplete</code> (playable but not ranked-verifiable), handle signature chain gaps explicitly. See <code>06-SECURITY.md</code> § Vulnerability 45.</p>
+<p><strong>Security (V45):</strong> The <code>send_timeout</code> pattern above bounds blocking to 5ms. If the writer still can’t keep up, frames are lost — <code>lost_frame_count</code> is recorded in the replay header. Lost frames break the Ed25519 signature chain (V4). Replays with lost frames are marked <code>incomplete</code> (playable but not ranked-verifiable). The signature chain handles gaps via the <code>skipped_ticks</code> field in <code>TickSignature</code> — see <code>formats/save-replay-formats.md</code> § TickSignature and <code>06-SECURITY.md</code> § Vulnerability 45.</p>
 </blockquote>
-<p>The background thread writes frames incrementally — the <code>.icrep</code> file is always valid (see <code>05-FORMATS.md</code> § Replay File Format). If the game crashes, the replay up to the last flushed frame is recoverable. On game end, the writer flushes remaining frames, writes the final header (total ticks, final state hash), and closes the file.</p>
-<h2 id="deferred-optional-architectures-not-shipping"><a class="header" href="#deferred-optional-architectures-not-shipping">Deferred Optional Architectures (Not Shipping)</a></h2>
-<p>The <code>NetworkModel</code> trait preserves architectural escape hatches for fundamentally different networking approaches. <strong>None of these are part of the shipping netcode.</strong> IC ships one netcode: relay-assisted deterministic lockstep with sub-tick ordering. Everything above this section — sub-tick, QoS calibration, timing feedback, adaptive run-ahead, never-stall relay, visual prediction — is part of that single integrated lockstep system.</p>
-<p>These deferred architectures are outside <code>M4</code> and <code>M7</code> core lockstep scope. They would require a separate explicit decision and execution-overlay placement to become active work.</p>
-<h3 id="fog-authoritative-server-anti-maphack-p-optional--m11"><a class="header" href="#fog-authoritative-server-anti-maphack-p-optional--m11">Fog-Authoritative Server (anti-maphack, <code>P-Optional</code> / <code>M11</code>)</a></h3>
-<p>Server runs full sim, sends each client only visible entities. Eliminates maphack architecturally. Requires server compute per game. See <code>06-SECURITY.md</code> § Vulnerability 1 and <code>research/fog-authoritative-server-design.md</code> for the full design.</p>
+<p>The background thread writes frames incrementally — the <code>.icrep</code> file is always valid (see <code>formats/save-replay-formats.md</code> § Replay File Format). If the game crashes, the replay up to the last flushed frame is recoverable. On game end, the writer flushes remaining frames, writes the final header (<code>total_ticks</code>, <code>final_state_hash</code>, <code>lost_frame_count</code>), sets the <code>INCOMPLETE</code> flag (bit 4) if any frames were lost, and closes the file.</p>
+<h2 id="additional-networkmodel-architectures"><a class="header" href="#additional-networkmodel-architectures">Additional NetworkModel Architectures</a></h2>
+<p>The <code>NetworkModel</code> trait enables fundamentally different networking approaches beyond the default relay lockstep. IC ships relay-assisted deterministic lockstep with sub-tick ordering as the default. Everything above this section — sub-tick, QoS calibration, timing feedback, adaptive run-ahead, never-stall relay, visual prediction — is part of that default lockstep system.</p>
+<h3 id="fog-authoritative-server-anti-maphack"><a class="header" href="#fog-authoritative-server-anti-maphack">Fog-Authoritative Server (anti-maphack)</a></h3>
+<p>Server runs full sim, sends each client only visible entities. Eliminates maphack architecturally. Requires server compute per game. An operator enables it per-room or per-match-type via <code>ic-server</code> capability flags (D074) — it is not a separate product. See <code>06-SECURITY.md</code> § Vulnerability 1, <code>decisions/09b/D074-community-server-bundle.md</code>, and <code>research/fog-authoritative-server-design.md</code> for the full design. Implementation milestone: <code>M11</code> (<code>P-Optional</code>), but the <code>NetworkModel</code> trait abstraction and <code>ic-server</code> capability infrastructure are designed to support it from day one.</p>
 <h3 id="rollback--ggpo-style-p-optional--m11"><a class="header" href="#rollback--ggpo-style-p-optional--m11">Rollback / GGPO-Style (<code>P-Optional</code> / <code>M11</code>)</a></h3>
 <p>Client predicts with local input, rolls back on misprediction. Requires snapshottable sim (D010 — already designed). Rollback and lockstep are <strong>alternative architectures, never mixed</strong> — none of the lockstep features above (sub-tick, calibration, timing feedback, run-ahead) would exist in a rollback <code>NetworkModel</code>. The current <code>NetworkModel</code> trait is lockstep-shaped (<code>poll_tick()</code> returns confirmed-or-nothing); rollback would need trait extension or game loop restructuring in <code>ic-game</code>. <code>ic-sim</code> stays untouched (invariant #2). Stormgate (2024) proved RTS rollback is production-viable at 64 tps; delta rollback (Dehaene, 2024) reduces snapshot cost to ~5% via Bevy <code>Changed&lt;T&gt;</code> change detection. Full analysis in <code>research/stormgate-rollback-relay-landscape-analysis.md</code>.</p>
 <h3 id="cross-engine-protocol-adapter"><a class="header" href="#cross-engine-protocol-adapter">Cross-Engine Protocol Adapter</a></h3>

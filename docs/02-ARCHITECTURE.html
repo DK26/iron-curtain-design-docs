@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-2281c970.js"></script>
@@ -217,7 +217,7 @@
 │                                             │
 │  Input(I) → Network(N) → Sim (tick) → Render│
 │                                             │
-│  Sim runs at fixed tick rate (e.g., 15/sec) │
+│  Sim runs at fixed 30 tps (D060)            │
 │  Renderer interpolates between sim states   │
 │  Renderer can run at any FPS independently  │
 └─────────────────────────────────────────────┘
@@ -228,7 +228,7 @@
 <li><strong>Pure:</strong> No I/O, no floats in game logic, no network awareness</li>
 <li><strong>Fixed-point math:</strong> <code>i32</code>/<code>i64</code> with known scale (never <code>f32</code>/<code>f64</code> in sim)</li>
 <li><strong>Snapshottable:</strong> Full state serializable for replays, save games, desync debugging, rollback, campaign state persistence (D021)</li>
-<li><strong>Headless-capable:</strong> Can run without renderer (dedicated servers, AI training, automated testing)</li>
+<li><strong>Headless-capable:</strong> <code>ic-sim</code> can run without a renderer (dedicated servers, AI training, automated testing). External consumers drive <code>Simulation</code> directly — <code>GameLoop</code> is the client-side frame loop and always renders (see <code>architecture/game-loop.md</code>).</li>
 <li><strong>Library-first:</strong> <code>ic-sim</code> is a Rust library crate usable by external projects — not just an internal dependency of <code>ic-game</code></li>
 </ul>
 <h3 id="external-sim-api-bot-development--research"><a class="header" href="#external-sim-api-bot-development--research">External Sim API (Bot Development &amp; Research)</a></h3>
@@ -312,8 +312,10 @@ impl Simulation {
     }
 
     /// Snapshot for rollback / desync debugging / save games.
-    /// Uses crash-safe serialization: payload written first, header
-    /// updated atomically after fsync (Fossilize pattern — see D010).
+    /// Returns a SimSnapshot (in-memory serialized state). Pure — no I/O.
+    /// Callers (in ic-game) persist snapshots using crash-safe I/O:
+    /// payload written first, header updated atomically after fsync
+    /// (Fossilize pattern — see D010 and state-recording.md).
     pub fn snapshot(&amp;self) -&gt; SimSnapshot { /* serialize everything */ }
     pub fn restore(&amp;mut self, snap: &amp;SimSnapshot) { /* deserialize */ }
 
@@ -446,7 +448,7 @@ pub trait FogProvider: Send + Sync {
     fn visible_entities(&amp;self, player: PlayerId) -&gt; &amp;[EntityId];
 }
 <span class="boring">}</span></code></pre>
-<p>RA1 registers <code>RadiusFogProvider</code> (circle-based, fast, matches original RA). RA2/TS would register <code>ElevationFogProvider</code> (raycasts against terrain heightmap). A deferred fog-authoritative <code>NetworkModel</code> variant (not part of <code>M1-M4</code>; see multiplayer trust/productization milestones) reuses the same trait on the server side to determine which entities to send per client. See D041 in <code>decisions/09d-gameplay.md</code> for full rationale.</p>
+<p>RA1 registers <code>RadiusFogProvider</code> (circle-based, fast, matches original RA). RA2/TS would register <code>ElevationFogProvider</code> (raycasts against terrain heightmap). The fog-authoritative <code>NetworkModel</code> variant (D074 — operator-enabled capability, implementation at <code>M11</code>) reuses the same trait on the server side to determine which entities to send per client. See D041 in <code>decisions/09d-gameplay.md</code> for full rationale.</p>
 <h4 id="entity-visibility-model"><a class="header" href="#entity-visibility-model">Entity Visibility Model</a></h4>
 <p>The <code>FogProvider</code> output determines how entities appear to each player. Following SC2’s proven model (see <code>research/blizzard-github-analysis.md</code> § 1.4), each entity observed by a player carries a <strong>visibility classification</strong> that controls which data fields are available:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -515,16 +517,19 @@ impl&lt;T&gt; DoubleBuffered&lt;T&gt; {
 <tr><th>Data Structure</th><th>Writer System</th><th>Reader Systems</th><th>Why Not Single Buffer</th></tr>
 </thead>
 <tbody>
-<tr><td><code>FogProvider</code> output (visibility grid)</td><td><code>fog_system()</code> (step 21)</td><td><code>targeting_system()</code>, <code>ai_system()</code>, render</td><td>Targeting must see same visibility as AI — mid-tick update breaks determinism</td></tr>
-<tr><td>Influence maps (AI)</td><td><code>influence_map_system()</code></td><td><code>military_manager</code>, <code>economy_manager</code>, <code>building_placement</code></td><td>Multiple AI managers read influence data; rebuilding mid-decision corrupts scoring</td></tr>
-<tr><td>Global condition modifiers (D028)</td><td><code>condition_system()</code> (step 12)</td><td><code>damage_system()</code>, <code>movement_system()</code>, <code>production_system()</code></td><td>A “low power” modifier applied mid-tick means some systems use old damage values, others new</td></tr>
-<tr><td>Weather terrain effects (D022)</td><td><code>weather_system()</code> (step 16)</td><td><code>movement_system()</code>, <code>pathfinding</code>, render</td><td>Terrain surface state (mud, ice) affects movement cost; inconsistency causes desync</td></tr>
+<tr><td><code>FogProvider</code> output (visibility grid)</td><td><code>fog_system()</code> (step 21)</td><td><code>combat_system()</code>, AI managers, render</td><td>Combat targeting must see same visibility as AI — mid-tick update breaks determinism</td></tr>
+<tr><td>Influence maps (AI)</td><td><code>influence_map_system()</code> (AI subsystem)</td><td><code>military_manager</code>, <code>economy_manager</code>, <code>building_placement</code></td><td>Multiple AI managers read influence data; rebuilding mid-decision corrupts scoring</td></tr>
+<tr><td>Global condition modifiers (D028)</td><td><code>condition_system()</code> (step 14)</td><td><code>combat_system()</code>, <code>movement_system()</code>, <code>production_system()</code></td><td>A “low power” modifier applied mid-tick means some systems use old damage values, others new</td></tr>
+<tr><td>Weather terrain effects (D022)</td><td><code>weather_surface_system()</code> (Phase 4, TBD)</td><td><code>movement_system()</code>, <code>pathfinding</code>, render</td><td>Terrain surface state (mud, ice) affects movement cost; inconsistency causes desync</td></tr>
 </tbody>
 </table>
 </div>
+<blockquote>
+<p><strong>Note:</strong> <code>influence_map_system()</code> and <code>weather_surface_system()</code> are not in the RA1 21-step pipeline above. Influence maps are computed by AI subsystems (Phase 4, D043). <code>weather_surface_system</code> ships with dynamic weather (Phase 4, D022). When added, they will be inserted at defined points in the game module’s pipeline. The double-buffer pattern applies regardless of where in the pipeline they land.</p>
+</blockquote>
 <p><strong>Why not Bevy’s system ordering alone?</strong> Bevy’s scheduler can enforce that <code>fog_system()</code> runs before <code>targeting_system()</code>. But it cannot prevent a system scheduled <em>between</em> two readers from mutating shared state. Double buffering makes the guarantee structural: the read buffer is physically separate from the write buffer. No scheduling mistake can cause a reader to see partial writes.</p>
 <p><strong>Cost:</strong> One extra copy of each double-buffered data structure. For fog visibility (a bit array over map cells), this is ~32KB for a 512×512 map. For influence maps (a <code>[i32; CELLS]</code> array), it’s ~1MB for a 512×512 map. These are allocated once at game start and never reallocated — consistent with Layer 5’s zero-allocation principle.</p>
-<p><strong>Swap timing:</strong> <code>DoubleBuffered::swap()</code> is called in <code>Simulation::apply_tick()</code> before the system pipeline runs. This is a fixed point in the tick — step 0, before step 1 (<code>order_validation_system()</code>). The write buffer from the previous tick becomes the read buffer for the current tick. The swap is a pointer swap (<code>std::mem::swap</code>), not a copy — effectively free.</p>
+<p><strong>Swap timing:</strong> <code>DoubleBuffered::swap()</code> is called in <code>Simulation::apply_tick()</code> before the system pipeline runs. This is a fixed point in the tick — step 0, before the engine runs <code>OrderValidator</code> (D041) and then <code>apply_orders()</code> (step 1). The write buffer from the previous tick becomes the read buffer for the current tick. The swap is a pointer swap (<code>std::mem::swap</code>), not a copy — effectively free.</p>
 <h3 id="ordervalidator-trait-d041"><a class="header" href="#ordervalidator-trait-d041">OrderValidator Trait (D041)</a></h3>
 <p>The engine enforces that ALL orders pass validation before <code>apply_orders()</code> executes them. This formalizes D012’s anti-cheat guarantee — game modules cannot accidentally skip validation:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]

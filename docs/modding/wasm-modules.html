@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2281c970.js"></script>
@@ -361,10 +361,13 @@ pub enum CameraMode {
 
 /// Allocate scratch memory from the engine's pre-allocated pool.
 /// Pathfinding is hot-path — no per-tick heap allocation allowed.
-#[wasm_host_fn] fn ic_pathfind_scratch_alloc(bytes: u32) -&gt; *mut u8;
+/// Returns a u32 offset into the guest's linear memory where the
+/// engine has reserved `bytes` of scratch space. The host writes
+/// into guest memory; the guest accesses it via this offset.
+#[wasm_host_fn] fn ic_pathfind_scratch_alloc(bytes: u32) -&gt; u32;
 
 /// Return scratch memory to the pool.
-#[wasm_host_fn] fn ic_pathfind_scratch_free(ptr: *mut u8, bytes: u32);
+#[wasm_host_fn] fn ic_pathfind_scratch_free(offset: u32, bytes: u32);
 <span class="boring">}</span></code></pre>
 <p><strong>WASM-exported trait functions</strong> (the engine <em>calls</em> these on the mod):</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -481,8 +484,9 @@ mod:
 #[wasm_host_fn] fn ic_ai_issue_order(order: &amp;PlayerOrder) -&gt; bool;
 
 /// Allocate scratch memory from the engine's pre-allocated pool.
-#[wasm_host_fn] fn ic_ai_scratch_alloc(bytes: u32) -&gt; *mut u8;
-#[wasm_host_fn] fn ic_ai_scratch_free(ptr: *mut u8, bytes: u32);
+/// Returns a u32 offset into the guest's linear memory (see pathfinder API for details).
+#[wasm_host_fn] fn ic_ai_scratch_alloc(bytes: u32) -&gt; u32;
+#[wasm_host_fn] fn ic_ai_scratch_free(offset: u32, bytes: u32);
 
 /// String table lookups — resolve u32 type IDs to human-readable names.
 /// Called once at game start or on-demand; results cached WASM-side.

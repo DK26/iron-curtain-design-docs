@@ -35,7 +35,7 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../../../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc-2281c970.js"></script>
@@ -385,7 +385,7 @@ cheat_codes:
 <tr><td><strong>Arbitrary Lua execution</strong></td><td>Lua runs in the D004 sandbox — no filesystem, no network, no <code>os.*</code>. <code>loadstring()</code> disabled. Execution timeout (100ms default). Memory limit per invocation.</td></tr>
 <tr><td><strong>Cvar manipulation for cheating</strong></td><td>Sim-affecting cvars require <code>DEV_ONLY</code> flag and flow through order validation. Render/audio cvars cannot affect gameplay. A <code>/set</code> command for a <code>DEV_ONLY</code> cvar without dev mode active is rejected.</td></tr>
 <tr><td><strong>Chat message buffer overflow</strong></td><td>Chat messages are bounded (512 chars, same as <code>ProtocolLimits::max_chat_message_length</code> from <code>06-SECURITY.md</code> § V15). Command input bounded similarly. The <code>StringReader</code> parser rejects input exceeding the limit before parsing.</td></tr>
-<tr><td><strong>Command injection in multiplayer</strong></td><td>Commands execute locally on the issuing client. Sim-affecting commands go through the order pipeline as <code>PlayerOrder::ChatCommand(cmd, args)</code> — validated by the sim like any other order. A malicious client cannot execute commands on another client’s behalf.</td></tr>
+<tr><td><strong>Command injection in multiplayer</strong></td><td>Commands execute locally on the issuing client. Sim-affecting engine commands produce native <code>PlayerOrder</code> variants (e.g., <code>PlayerOrder::CheatCode(CheatId)</code>) — validated by the sim like any other order. Mod-registered commands that need sim-side effects use <code>PlayerOrder::ChatCommand { cmd, args }</code>. A malicious client cannot execute commands on another client’s behalf.</td></tr>
 <tr><td><strong>Denial of service via expensive Lua</strong></td><td>Lua execution has a tick budget. <code>/c</code> commands that exceed the budget are interrupted with an error. The chat/console remains responsive because Lua runs in the script system’s time slice, not the UI thread.</td></tr>
 <tr><td><strong>Cvar persistence tampering</strong></td><td><code>config.toml</code> is local — tampering only affects the local client. Server-authoritative cvars (<code>SERVER</code> flag) cannot be overridden by client-side config.</td></tr>
 </tbody>

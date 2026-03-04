@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2281c970.js"></script>
@@ -181,6 +181,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h2 id="game-loop"><a class="header" href="#game-loop">Game Loop</a></h2>
+<p><code>GameLoop</code> is the <strong>client-side</strong> frame loop — it always has a renderer and always draws. Headless consumers (dedicated servers, bot harnesses, automated tests) drive <code>Simulation</code> directly via its public API (see <code>02-ARCHITECTURE.md</code> § External Sim API) and never instantiate <code>GameLoop</code>.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct GameLoop&lt;N: NetworkModel, I: InputSource&gt; {
@@ -200,13 +201,22 @@ impl&lt;N: NetworkModel, I: InputSource&gt; GameLoop&lt;N, I&gt; {
             self.network.submit_order(order);
         }
 
-        // 2. Advance sim as far as confirmed orders allow
+        // 2. Advance sim — bounded to avoid starving the renderer.
+        //    At 30 tps / 60 fps most frames process 0-1 ticks.
+        //    The cap handles edge cases (e.g., multiplayer reconnect backlog,
+        //    system sleep resume) where many ticks are ready at once.
+        const MAX_TICKS_PER_FRAME: u32 = 4;
+        let mut ticks_this_frame = 0;
         while let Some(tick_orders) = self.network.poll_tick() {
             self.sim.apply_tick(&amp;tick_orders);
             self.network.report_sync_hash(
                 self.sim.tick(),
                 self.sim.state_hash(),
             );
+            ticks_this_frame += 1;
+            if ticks_this_frame &gt;= MAX_TICKS_PER_FRAME {
+                break; // Remaining ticks processed next frame
+            }
         }
 
         // 3. Render always runs, interpolates between sim states
@@ -215,6 +225,7 @@ impl&lt;N: NetworkModel, I: InputSource&gt; GameLoop&lt;N, I&gt; {
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Key property:</strong> <code>GameLoop</code> is generic over <code>N: NetworkModel</code> and <code>I: InputSource</code>. It has zero knowledge of whether it’s running single-player or multiplayer, or whether input comes from a mouse, touchscreen, or gamepad. This is the central architectural guarantee.</p>
+<p><strong>Not for headless use.</strong> <code>GameLoop</code> always renders — it is the client-side frame driver. <code>ic-server</code> runs the relay protocol without any <code>GameLoop</code> or <code>Simulation</code> instance. External bot/test harnesses use the external sim API (<code>inject_orders()</code> + <code>step()</code>) in their own loop — see <code>02-ARCHITECTURE.md</code> § External Sim API for a concrete headless loop example. The sim’s headless capability is a property of <code>ic-sim</code>, not of <code>GameLoop</code>.</p>
 <h3 id="game-lifecycle-state-machine"><a class="header" href="#game-lifecycle-state-machine">Game Lifecycle State Machine</a></h3>
 <p>The game application transitions through a fixed set of states. Design informed by SC2’s protocol state machine (see <code>research/blizzard-github-analysis.md</code> § Part 1), adapted for IC’s architecture:</p>
 <pre><code>┌──────────┐     ┌───────────┐     ┌─────────┐     ┌───────────┐

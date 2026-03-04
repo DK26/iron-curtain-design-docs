@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2281c970.js"></script>
@@ -282,7 +282,7 @@
 <tr><td>L4</td><td>Script modifies global state shared between scripts</td><td>mod</td><td>Each Lua script runs in an isolated environment (<code>_ENV</code>). Global tables are read-only from the script’s perspective (metatable <code>__newindex</code> error). Scripts communicate only through host-mediated APIs.</td><td>T3: script A sets global → script B cannot see it</td></tr>
 <tr><td>L5</td><td>Script crafts a <code>UnitTag</code> directly to manipulate units it shouldn’t access</td><td>mod</td><td>Lua receives <code>UnitTag</code> values from host API calls. Lua’s number type represents them as opaque integers. Every host API that accepts a <code>UnitTag</code> validates ownership against the calling script’s <code>PlayerId</code>. Lua cannot construct a valid <code>UnitTag</code> — it must receive one from the host.</td><td>T3: script forges UnitTag for enemy unit → host rejects</td></tr>
 <tr><td>L6</td><td>Script calls <code>Trigger.AfterDelay()</code> with delay=0 to create recursive timer bomb</td><td>mod</td><td>Timer system enforces minimum delay (<code>MIN_TRIGGER_DELAY</code>, e.g., 1 tick). <code>BoundedCvar</code> ensures the minimum cannot be configured to 0. Timer depth is bounded — recursive timer chains exceeding <code>MAX_TRIGGER_DEPTH</code> are terminated.</td><td>T3: delay=0 timer → rejected or clamped; recursive chain → terminated</td></tr>
-<tr><td>L7</td><td>Non-deterministic Lua behavior (e.g., table iteration order, <code>math.random()</code>)</td><td>mod</td><td><code>math.random()</code> is overridden to use the sim’s <code>DeterministicRng</code>. Table creation uses deterministic key ordering by construction. <code>os.time()</code>, <code>os.clock()</code> are removed from the environment.</td><td>T2: Lua script producing random numbers → identical sequence across platforms</td></tr>
+<tr><td>L7</td><td>Non-deterministic Lua behavior (e.g., table iteration order, <code>math.random()</code>)</td><td>mod</td><td><code>math.random()</code> is redirected to the sim’s <code>DeterministicRng</code> (not removed — OpenRA compat). Table creation uses deterministic key ordering by construction. <code>os.time()</code>, <code>os.clock()</code> are removed from the environment.</td><td>T2: Lua script producing random numbers → identical sequence across platforms</td></tr>
 </tbody>
 </table>
 </div>

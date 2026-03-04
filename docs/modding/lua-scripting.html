@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-eb0f51f8.js";
+            window.path_to_searchindex_js = "../searchindex-ee0d544b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2281c970.js"></script>
@@ -210,7 +210,7 @@
 <tr><th>Global</th><th>Purpose</th></tr>
 </thead>
 <tbody>
-<tr><td><code>Actor</code></td><td>Create, query, manipulate actors</td></tr>
+<tr><td><code>Actor</code></td><td>Create, query actors; mutations via trigger context (see below)</td></tr>
 <tr><td><code>Map</code></td><td>Terrain, bounds, spatial queries</td></tr>
 <tr><td><code>Trigger</code></td><td>Event hooks (OnKilled, AfterDelay)</td></tr>
 <tr><td><code>Media</code></td><td>Audio, video, text display</td></tr>
@@ -250,7 +250,15 @@
 </tbody>
 </table>
 </div>
-<p>Each actor reference exposes properties matching its components (<code>.Health</code>, <code>.Location</code>, <code>.Owner</code>, <code>.Move()</code>, <code>.Attack()</code>, <code>.Stop()</code>, <code>.Guard()</code>, <code>.Deploy()</code>, etc.) — identical to OpenRA’s actor property groups.</p>
+<p>Each actor reference exposes <strong>read-only properties</strong> (<code>.Health</code>, <code>.Location</code>, <code>.Owner</code>) and <strong>order-issuing methods</strong> (<code>.Move()</code>, <code>.Attack()</code>, <code>.Stop()</code>, <code>.Guard()</code>, <code>.Deploy()</code>) — identical to OpenRA’s actor property groups. Order-issuing methods enqueue orders into the sim’s order pipeline for the current tick; they do not mutate state directly.</p>
+<blockquote>
+<p><strong>Two Lua write paths (both deterministic):</strong></p>
+<ol>
+<li><strong>Order methods</strong> (<code>.Move()</code>, <code>.Attack()</code>, <code>.Deploy()</code>, etc.) — enqueue <code>PlayerOrder</code>s processed by <code>apply_orders()</code>. Available in all Lua contexts. These are the standard write path.</li>
+<li><strong>Trigger-context mutations</strong> (<code>Actor.Create()</code>, <code>unit:Teleport()</code>, <code>Reinforcements.Spawn()</code>, <code>unit:AddAbility()</code>) — direct sim writes that execute <strong>inside <code>trigger_system()</code> (step 19)</strong>. These run at a fixed point in the pipeline on every client with identical state, making them deterministic. They are available in mission/map trigger callbacks and mod command handlers (<code>Commands.register</code> — see D058), but <strong>not</strong> in standalone mod scripts running outside the trigger pipeline. This is how OpenRA’s Lua missions work — <code>Actor.Create</code> spawns an entity during the trigger step, not via the order queue.</li>
+</ol>
+<p>The critical guarantee: both paths produce identical results on every client because they execute at deterministic points in the system pipeline with identical inputs.</p>
+</blockquote>
 <p><strong>In-game command system (inspired by Mojang’s Brigadier):</strong> Mojang’s Brigadier parser (3,668★, MIT) defines commands as a typed tree where each node is an argument with a parser, suggestions, and permission checks. This architecture — tree-based, type-safe, permission-aware, with mod-injected commands — is the model for IC’s in-game console and chat commands. Mods should be able to register custom commands (e.g., <code>/spawn</code>, <code>/weather</code>, <code>/teleport</code> for mission scripting) using the same tree-based architecture, with tab-completion suggestions generated from the command tree. See <code>research/mojang-wube-modding-analysis.md</code> § Brigadier and <code>decisions/09g/D058-command-console.md</code> for the full command console design.</p>
 <h3 id="api-design-principle-runtime-independent-api-surface"><a class="header" href="#api-design-principle-runtime-independent-api-surface">API Design Principle: Runtime-Independent API Surface</a></h3>
 <p>The Lua API is defined as an <strong>engine-level abstraction</strong>, independent of the Lua VM implementation. This lesson comes from Valve’s Source Engine VScript architecture (see <code>research/valve-github-analysis.md</code> § 2.3): VScript defined a scripting API abstraction layer so the same mod scripts work across Squirrel, Lua, and Python backends — the <em>API surface</em> is the stable contract, not the VM runtime.</p>
@@ -274,13 +282,13 @@
 <pre><code class="language-lua">-- Mission scripting
 function OnPlayerEnterArea(player, area)
   if area == "bridge_crossing" then
-    SpawnReinforcements("allies", {"Tank", "Tank"}, "north")
+    Reinforcements.Spawn("allies", {"Tank", "Tank"}, "north")
     PlayEVA("reinforcements_arrived")
   end
 end
 
--- Custom unit behavior
-Hooks.OnUnitCreated("ChronoTank", function(unit)
+-- Custom unit behavior (Trigger.OnUnitCreated is an IC extension on the OpenRA Trigger global)
+Trigger.OnUnitCreated("ChronoTank", function(unit)
   unit:AddAbility("chronoshift", {
     cooldown = 120,
     range = 15,
@@ -292,9 +300,9 @@ Hooks.OnUnitCreated("ChronoTank", function(unit)
   })
 end)
 
--- Idle unit automation (inspired by SC2's OnUnitIdle callback —
--- see research/blizzard-github-analysis.md § Part 6)
-Hooks.OnUnitIdle("Harvester", function(unit)
+-- Idle unit automation (Trigger.OnUnitIdle is an IC extension — inspired by
+-- SC2's OnUnitIdle callback, see research/blizzard-github-analysis.md § Part 6)
+Trigger.OnUnitIdle("Harvester", function(unit)
   -- Automatically send idle harvesters back to the nearest ore field
   local ore = Map.FindClosestResource(unit.position, "ore")
   if ore then
@@ -320,7 +328,7 @@ end)
 <tr><td><code>base</code></td><td>✅ selective</td><td><code>print</code> redirected to engine log; <code>dofile</code>, <code>loadfile</code>, <code>load</code> <strong>removed</strong> (arbitrary code execution vectors)</td></tr>
 <tr><td><code>table</code></td><td>✅</td><td>Safe — table manipulation only</td></tr>
 <tr><td><code>string</code></td><td>✅</td><td>Safe — string operations only</td></tr>
-<tr><td><code>math</code></td><td>✅ modified</td><td><code>math.random</code> <strong>removed</strong> — replaced by <code>Utils.RandomInteger()</code> from engine’s deterministic PRNG</td></tr>
+<tr><td><code>math</code></td><td>✅ modified</td><td><code>math.random</code> <strong>redirected</strong> to the engine’s deterministic PRNG (same sequence as <code>Utils.RandomInteger()</code>). Not removed — existing OpenRA scripts that call <code>math.random()</code> work unmodified.</td></tr>
 <tr><td><code>coroutine</code></td><td>✅</td><td>Useful for mission scripting flow control</td></tr>
 <tr><td><code>utf8</code></td><td>✅</td><td>Safe — Unicode string handling (Lua 5.4)</td></tr>
 <tr><td><code>io</code></td><td>❌</td><td>Filesystem access — never loaded in sandbox</td></tr>
@@ -330,12 +338,12 @@ end)
 </tbody>
 </table>
 </div>
-<p><strong>Determinism note:</strong> Lua’s internal number type is <code>f64</code>, but this does not affect sim determinism. Lua has <strong>read-only access</strong> to game state and <strong>write access exclusively through orders</strong> (and campaign state writes like <code>Campaign.set_flag()</code>, which are themselves deterministic because they execute at the same pipeline step on every client). The sim processes orders deterministically — Lua cannot directly modify sim components. Lua evaluation produces identical results across all clients because it runs at the same point in the system pipeline (the <code>triggers</code> step, see system execution order in <code>02-ARCHITECTURE.md</code>), with the same game state as input, on every tick. Any Lua-driven campaign state mutations are applied deterministically within this step, ensuring save/load and replay consistency.</p>
+<p><strong>Determinism note:</strong> Lua’s internal number type is <code>f64</code>, but this does not affect sim determinism. Lua has two write paths, both deterministic: (1) <strong>order methods</strong> (<code>.Move()</code>, <code>.Attack()</code>, etc.) enqueue <code>PlayerOrder</code>s processed by the sim’s order pipeline, and (2) <strong>trigger-context mutations</strong> (<code>Actor.Create()</code>, <code>unit:Teleport()</code>, <code>Reinforcements.Spawn()</code>) execute direct sim writes inside <code>trigger_system()</code> (step 19) — available in mission/map trigger callbacks and mod command handlers (D058), but not in standalone mod scripts outside the trigger pipeline. Campaign state writes (<code>Campaign.set_flag()</code>) are also trigger-context mutations. Lua evaluation produces identical results across all clients because it runs at the same point in the system pipeline (the <code>triggers</code> step, see system execution order in <code>02-ARCHITECTURE.md</code>), with the same game state as input, on every tick. All Lua-driven mutations — orders, entity spawns, campaign state — are applied deterministically within this step, ensuring save/load and replay consistency.</p>
 <p><strong>Additional determinism safeguards:</strong></p>
 <ul>
 <li><strong>String hashing → deterministic <code>pairs()</code>:</strong> Lua’s internal string hash uses a randomized seed by default (since Lua 5.3.3). The sandbox initializes <code>mlua</code> with a fixed seed, making hash table slot ordering identical across all clients. Combined with our deterministic pipeline (same code, same state, same insertion order on every client), this makes <code>pairs()</code> iteration order deterministic without modification. No sorted wrapper is needed — <code>pairs()</code> runs at native speed (zero overhead). For mod authors who want <em>explicit</em> ordering for gameplay clarity (e.g., “process units alphabetically”), the engine provides <code>Utils.SortedPairs(t)</code> — but this is a convenience for readability, not a determinism requirement. <code>ipairs()</code> is already deterministic (sequential integer keys) and should be preferred for array-style tables.</li>
 <li><strong>Garbage collection timing:</strong> Lua’s GC is configured with a fixed-step incremental mode (<code>LUA_GCINC</code>) with identical parameters on all clients. Finalizers (<code>__gc</code> metamethods) are disabled in the sandbox — mods cannot register them. This eliminates GC-timing-dependent side effects.</li>
-<li><strong><code>math.random()</code>:</strong> Removed from the sandbox. Mods use the engine-provided <code>Utils.RandomInteger(min, max)</code> which draws from the sim’s deterministic PRNG.</li>
+<li><strong><code>math.random()</code>:</strong> Redirected to the sim’s deterministic PRNG (not removed — OpenRA compat requires it). <code>math.random()</code> returns a deterministic fixed-point number; <code>math.random(m)</code> and <code>math.random(m, n)</code> return deterministic integers. <code>Utils.RandomInteger(min, max)</code> is the preferred IC API but both draw from the same PRNG and produce identical sequences.</li>
 </ul>
 <h3 id="lua-execution-resource-limits"><a class="header" href="#lua-execution-resource-limits">Lua Execution Resource Limits</a></h3>
 <p>WASM mods have <code>WasmExecutionLimits</code> (see Tier 3 below). Lua scripts need equivalent protection — without execution budgets, a Lua <code>while true do end</code> would block the deterministic tick indefinitely, freezing all clients in lockstep.</p>
