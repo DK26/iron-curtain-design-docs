@@ -180,7 +180,62 @@ For the **IC engine/game repository** (primary Rust codebase), pre-filled versio
 - **`tracking/ic-engine-agents.md`** — filled-in `AGENTS.md` with architectural invariants, crate workspace, build commands, milestone targets, and LLM/agent rules
 - **`tracking/ic-engine-code-index.md`** — filled-in `CODE-INDEX.md` with task routing table, all 13 crate subsystem entries, cross-cutting boundaries, and evidence paths
 
-Copy these into a new IC engine repo and update the baseline revision pin. For non-engine repos (relay server, tools, prototypes), use the generic templates and fill in the placeholders.
+**For the engine repo (iron-curtain):** Copy the pre-filled `tracking/ic-engine-agents.md` and `tracking/ic-engine-code-index.md` into the new engine repo, and use the GitHub template repository (`iron-curtain/ic-template`, described below) as your baseline.
+
+**For non-engine repos (relay server, tools, prototypes):** Use the **generic templates** (`tracking/external-project-agents-template.md` and `tracking/source-code-index-template.md`) and fill in the placeholders with your repo's structure.
+
+## GitHub Template Repository (`iron-curtain/ic-template`)
+
+The **GitHub template repository** is the concrete, instantiable deliverable for **engine repos** — a real repo on GitHub marked as a [template repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-template-repository) that a new engine implementation repo is created from via "Use this template." It is NOT a universal template for all IC repos.
+
+### Why a template repo, not just docs
+
+- **One click to correct structure.** A contributor creating a new engine repo gets `AGENTS.md`, `CODE-INDEX.md`, CI workflows, `deny.toml`, SPDX headers, and Cargo workspace scaffold — all wired and passing — without manually copying from markdown docs.
+- **Design authority is baked in.** The template `AGENTS.md` references `iron-curtain-design-docs` as the canonical source of truth for all architectural invariants, decisions, and milestone ordering. Every engine repo inherits this linkage from birth.
+- **CI enforces discipline from first commit.** The template ships with GitHub Actions workflows for clippy, rustfmt, `cargo deny check licenses`, DCO signed-off-by verification, and a design-doc revision pin check; all passing on first push after creation.
+- **Agent/LLM alignment from day one.** `.github/copilot-instructions.md` in the template points agents to the local `AGENTS.md`, which chains to the design-docs repo. Any AI agent working in an engine repo is immediately design-aware.
+
+### Template Contents (Engine Repo Only)
+
+The `iron-curtain/ic-template` is **engine-specific**. Do not use it for relay/tool/prototype repos.
+
+```text
+ic-template/                          # GitHub template repository (engine-specific)
+├── .github/
+│   ├── copilot-instructions.md       # → points to AGENTS.md
+│   └── workflows/
+│       ├── ci.yml                    # clippy + fmt + test + cargo deny
+│       └── dco.yml                   # signed-off-by check
+├── AGENTS.md                         # from tracking/ic-engine-agents.md (ENGINE INVARIANTS)
+├── CODE-INDEX.md                     # from tracking/ic-engine-code-index.md
+├── CONTRIBUTING.md                   # DCO, PR template, design-change escalation
+├── Cargo.toml                        # workspace scaffold (crate stubs for ic-sim, ic-net, ic-render, etc.)
+├── deny.toml                         # GPL-permit config (IC engine is GPL v3)
+├── rustfmt.toml                      # project formatting rules
+├── clippy.toml                       # disallowed_types, project lints
+├── docs/
+│   ├── implementation-notes/         # local impl notes (not design authority)
+│   └── design-gap-requests/          # pending escalations to design-docs repo
+└── crates/                           # stub crates matching AGENTS.md structure
+    ├── ic-sim/
+    ├── ic-net/
+    ├── ic-protocol/
+    └── ...                           # remaining crate stubs
+```
+
+### Relationship to this design-docs repo
+
+The design-docs repo (`iron-curtain-design-docs`) is the **single source of truth** for all design decisions, architectural invariants, and milestone planning. The template repo is an *implementation scaffold for the engine* — it encodes the structure and rules from the design docs into a live, CI-verified starting point. The template repo's `AGENTS.md` pins a specific design-doc revision and includes the no-silent-divergence rule: if implementation reveals a design gap, the gap is escalated to the design-docs repo, not resolved locally.
+
+**For non-engine repos:** Use `tracking/external-project-agents-template.md` and `tracking/source-code-index-template.md` as the basis for your repo's `AGENTS.md` and `CODE-INDEX.md`. Fill in repo-specific context (your crate structure, your decisions, your milestones). The relationship principle remains the same: the design-docs repo is canonical for engine-wide invariants; your implementation repo documents your own feature and dependency topology.
+
+### Maintenance
+
+When the design docs evolve (new decisions, crate renames, milestone changes), the template repo is updated in the same planning pass. The template's `AGENTS.md` revision pin is bumped. Repos already instantiated from the template update their own `AGENTS.md` revision pin as part of their regular sync cycle.
+
+### Phase
+
+Phase 0 deliverable. The template repo is published alongside the standalone crate repos (`M0.OPS.STANDALONE_CRATE_REPOS`) — both are infrastructure that must exist before the first line of engine code.
 
 ## Acceptance Criteria (Bootstrap Complete)
 
@@ -191,6 +246,14 @@ A new external code repo is considered design-aligned only when:
 - the repo declares which `M#`/`G*` it is implementing
 - a design-change escalation path is documented
 - no silent divergence policy is explicit
+
+The GitHub template repository (`iron-curtain/ic-template`) is considered complete when:
+
+- a new engine repo created via "Use this template" has passing CI on first push
+- the template `AGENTS.md` pins a design-doc revision and references the design-docs repo as canonical authority
+- `cargo deny check licenses` **permits** GPL dependencies in the template scaffold (IC engine is GPL v3)
+- non-engine repos follow the appropriate generic template and fill in repo-specific placeholders
+- `.github/copilot-instructions.md` chains to `AGENTS.md` for agent alignment
 
 ## Execution Overlay Mapping
 

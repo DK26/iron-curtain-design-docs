@@ -45,6 +45,12 @@ Phase 0 (Foundation)
 - `deny.toml` + `cargo deny check licenses` in CI pipeline
 - DCO signed-off-by enforcement in CI
 
+### Implementation Repo Template (Engine Repos Only)
+- Publish a **GitHub template repository** (`iron-curtain/ic-template`) that **engine implementation repos** are instantiated from. Non-engine repos (relay, tools, prototypes) use generic templates.
+- Template contains: pre-filled `AGENTS.md` (referencing this design-docs repo as canonical design authority), `CODE-INDEX.md` skeleton, `deny.toml`, CI workflows (clippy, fmt, `cargo deny`, DCO check), SPDX headers, `.github/copilot-instructions.md`, Cargo workspace scaffold matching AGENTS.md crate structure
+- The template `AGENTS.md` pins a design-doc revision (tag or commit hash) and encodes the no-silent-divergence rule, design-change escalation workflow, and milestone/`G*` alignment requirements — all derived from `tracking/external-project-agents-template.md` and `tracking/ic-engine-agents.md`
+- See `tracking/external-code-project-bootstrap.md` for the full bootstrap process
+
 ### Player Data Foundation (D061)
 - Define and document the `<data_dir>` directory layout (stable structure for saves, replays, screenshots, profiles, keys, communities, workshop, backups)
 - Platform-specific `<data_dir>` resolution (Windows: `%APPDATA%\IronCurtain`, macOS: `~/Library/Application Support/IronCurtain`, Linux: `$XDG_DATA_HOME/iron-curtain/`)
@@ -62,6 +68,7 @@ Open source `ra-formats` early. Useful standalone, builds credibility and commun
 - Can convert MiniYAML to standard YAML losslessly
 - Code of conduct and RFC process published (D037)
 - SPDX headers present on all source files; `cargo deny check licenses` passes
+- GitHub template repo published; new repo instantiated from template has passing CI and a working `AGENTS.md` pointing to the design docs
 
 ## Phase 1: Rendering Slice (Months 3–6)
 
@@ -290,6 +297,6 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 
 ## Sub-Pages
 
-| Section | Topic | File |
-| --- | --- | --- |
+| Section     | Topic                                                                                                                                                             | File                                   |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
 | Phases 6a-7 | Phase 6a (Core Modding + Scenario Editor), Phase 6b (Campaign Editor + Game Modes), Phase 7 (LLM Missions + Ecosystem + Polish), post-Phase 7 vision, risk matrix | [phases-6-7.md](roadmap/phases-6-7.md) |
