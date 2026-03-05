@@ -63,6 +63,7 @@ If conflict exists between a decision doc and a non-decision doc, prefer the dec
 | Netcode model / relay / sub-tick / reconnection                           | `src/03-NETCODE.md`, `src/decisions/09b/D052-community-servers.md`, `src/decisions/09b/D006-pluggable-net.md`, `src/decisions/09b/D008-sub-tick.md` | `src/06-SECURITY.md`                                                                                                                                                                                                                                                                                                                                                                     | Use `06-SECURITY.md` to resolve ranked/trust/security policy questions. Index page: `09b-networking.md`                                                                                                                                              |
 | Modding tiers (YAML/Lua/WASM) / export / compatibility                    | `src/04-MODDING.md`, `src/decisions/09c-modding.md`, `src/decisions/09c/D023–D027`                                                                  | `src/07-CROSS-ENGINE.md`                                                                                                                                                                                                                                                                                                                                                                 | `09c` is canonical for accepted decisions; D023–D027 cover OpenRA compat (vocabulary aliases, Lua API, MiniYAML, mod manifest, enums)                                                                                                                |
 | Workshop / packages / CAS / profiles / selective install                  | `src/decisions/09e/D049-workshop-assets.md`, `src/decisions/09e/D030-workshop-registry.md`, `src/decisions/09c-modding.md`                          | `src/player-flow/workshop.md`                                                                                                                                                                                                                                                                                                                                                            | D068 (selective install) is in `09c`; D049 CAS in `09e/D049-workshop-assets.md`                                                                                                                                                                      |
+| Data-sharing flows / P2P replay / content channels / seeding / prefetch   | `src/architecture/data-flows-overview.md`                                                                                                           | `src/decisions/09e/D049/D049-content-channels-integration.md`, `src/decisions/09e/D049/D049-replay-sharing.md`, `src/decisions/09b/D052/D052-transparency-matchmaking-lobby.md`                                                                                                                                                                                                          | Overview page catalogs all 8 data flows; sub-files have per-flow detail                                                                                                                                                                              |
 | Scenario editor / asset studio / SDK UX                                   | `src/decisions/09f/D020-mod-sdk.md`, `src/decisions/09f/D038-scenario-editor.md`, `src/decisions/09f/D040-asset-studio.md`                          | `src/player-flow/sdk.md`, `src/04-MODDING.md`                                                                                                                                                                                                                                                                                                                                            | D020 covers SDK architecture and creative workflow; D038/D040 are normative for individual editors; player-flow has mock screens                                                                                                                     |
 | In-game controls / mobile UX / chat / voice / tutorial                    | `src/decisions/09g/D058-command-console.md`, `src/decisions/09g/D059-communication.md`, `src/decisions/09g/D065-tutorial.md`                        | `src/player-flow/in-game.md`, `src/02-ARCHITECTURE.md`, `research/open-source-rts-communication-markers-study.md`, `research/rtl-bidi-open-source-implementation-study.md`                                                                                                                                                                                                               | Player-flow shows surfaces; `09g/D058-D065` define interaction rules; use the research notes for prior-art communication/beacon/marker UX and RTL/BiDi implementation rationale only                                                                 |
 | Localization / RTL / BiDi / font fallback                                 | `src/02-ARCHITECTURE.md`, `src/decisions/09f/D038-scenario-editor.md`, `src/decisions/09g/D059-communication.md`                                    | `src/player-flow/settings.md`, `src/tracking/rtl-bidi-qa-corpus.md`, `research/rtl-bidi-open-source-implementation-study.md`                                                                                                                                                                                                                                                             | Use architecture for shared text/layout contracts, `09f/D038` for authoring preview/validation, `09g/D059` for chat/marker safety split, the QA corpus for concrete test strings, and the research note for implementation-pattern rationale         |
@@ -161,21 +162,22 @@ All previously identified high-cost files (>40KB) have been split into individua
 
 Large individual decisions have been further split into sub-files:
 
-| Decision Hub                 | Sub-Files   | Directory             |
-| ---------------------------- | ----------- | --------------------- |
-| `D016-llm-missions.md`       | 6 sub-files | `decisions/09f/D016/` |
-| `D019-balance-presets.md`    | 1 sub-file  | `decisions/09d/D019/` |
-| `D030-workshop-registry.md`  | 1 sub-file  | `decisions/09e/D030/` |
-| `D031-observability.md`      | 1 sub-file  | `decisions/09e/D031/` |
-| `D034-sqlite.md`             | 1 sub-file  | `decisions/09e/D034/` |
-| `D038-scenario-editor.md`    | 6 sub-files | `decisions/09f/D038/` |
-| `D049-workshop-assets.md`    | 3 sub-files | `decisions/09e/D049/` |
-| `D052-community-servers.md`  | 4 sub-files | `decisions/09b/D052/` |
-| `D055-ranked-matchmaking.md` | 1 sub-file  | `decisions/09b/D055/` |
-| `D058-command-console.md`    | 3 sub-files | `decisions/09g/D058/` |
-| `D059-communication.md`      | 5 sub-files | `decisions/09g/D059/` |
-| `D061-data-backup.md`        | 2 sub-files | `decisions/09e/D061/` |
-| `D065-tutorial.md`           | 5 sub-files | `decisions/09g/D065/` |
+| Decision Hub                      | Sub-Files   | Directory             |
+| --------------------------------- | ----------- | --------------------- |
+| `D016-llm-missions.md`            | 6 sub-files | `decisions/09f/D016/` |
+| `D019-balance-presets.md`         | 1 sub-file  | `decisions/09d/D019/` |
+| `D030-workshop-registry.md`       | 1 sub-file  | `decisions/09e/D030/` |
+| `D031-observability.md`           | 1 sub-file  | `decisions/09e/D031/` |
+| `D034-sqlite.md`                  | 1 sub-file  | `decisions/09e/D034/` |
+| `D038-scenario-editor.md`         | 6 sub-files | `decisions/09f/D038/` |
+| `D049-workshop-assets.md`         | 5 sub-files | `decisions/09e/D049/` |
+| `D052-community-servers.md`       | 5 sub-files | `decisions/09b/D052/` |
+| `D055-ranked-matchmaking.md`      | 1 sub-file  | `decisions/09b/D055/` |
+| `D058-command-console.md`         | 3 sub-files | `decisions/09g/D058/` |
+| `D059-communication.md`           | 5 sub-files | `decisions/09g/D059/` |
+| `D061-data-backup.md`             | 2 sub-files | `decisions/09e/D061/` |
+| `D065-tutorial.md`                | 5 sub-files | `decisions/09g/D065/` |
+| `D074-community-server-bundle.md` | 1 sub-file  | `decisions/09b/D074/` |
 
 ### Tracking & Planning Splits
 
@@ -188,11 +190,12 @@ Large individual decisions have been further split into sub-files:
 
 ### Sub-File Splits Within Existing Directories
 
-| Hub Page                             | Sub-File                      | In Directory    |
-| ------------------------------------ | ----------------------------- | --------------- |
-| `architecture/api-misuse-defense.md` | `api-misuse-patterns.md`      | `architecture/` |
-| `modding/tera-templating.md`         | `tera-templating-advanced.md` | `modding/`      |
-| `modding/workshop.md`                | `workshop-features.md`        | `modding/`      |
+| Hub Page                             | Sub-File                                         | In Directory    |
+| ------------------------------------ | ------------------------------------------------ | --------------- |
+| `architecture/api-misuse-defense.md` | `api-misuse-patterns.md`                         | `architecture/` |
+| `modding/tera-templating.md`         | `tera-templating-advanced.md`                    | `modding/`      |
+| `modding/workshop.md`                | `workshop-features.md`, `workshop-moderation.md` | `modding/`      |
+| `player-flow/replays.md`             | `replays-analysis-sharing.md`                    | `player-flow/`  |
 
 **Retrieval pattern:** Read the hub/index page (~500–2,000 tokens) to identify which sub-file to load, then load only that sub-file (~2k–12k tokens). Never load the full original content unless doing a cross-cutting audit.
 

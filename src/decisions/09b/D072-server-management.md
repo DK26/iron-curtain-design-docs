@@ -1,10 +1,10 @@
 ## D072: Dedicated Server Management — Simple by Default, Scalable by Choice
 
-|                |                                                                                                                                                                                   |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**     | Accepted                                                                                                                                                                          |
-| **Phase**      | Phase 2 (`/health` + logging), Phase 5 (full CLI + web dashboard + in-game admin + scaling), Phase 6a (self-update + advanced monitoring)                                        |
-| **Depends on** | D007 (relay server), D034 (SQLite), D052 (community servers), D058 (command console), D064 (server config), D071 (ICRP external tool API)                                       |
+|                |                                                                                                                                                                                                                           |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**     | Accepted                                                                                                                                                                                                                  |
+| **Phase**      | Phase 2 (`/health` + logging), Phase 5 (full CLI + web dashboard + in-game admin + scaling), Phase 6a (self-update + advanced monitoring)                                                                                 |
+| **Depends on** | D007 (relay server), D034 (SQLite), D052 (community servers), D058 (command console), D064 (server config), D071 (ICRP external tool API)                                                                                 |
 | **Driver**     | Community server operators need to set up, configure, monitor, and manage dedicated servers with minimal friction. The typical operator is a technically-savvy community member on a $5 VPS, not a professional sysadmin. |
 
 ### Decision Capsule (LLM/RAG Summary)
@@ -39,13 +39,13 @@ That's it. Download binary. Run it. Server is live. Config file created with san
 
 Every server operation is accessible through multiple interfaces. The operator picks whichever fits their workflow. All interfaces call the same underlying functions — they are views into the same system, not separate systems.
 
-| Interface | Best for | Available from |
-|-----------|----------|---------------|
-| **Config file** (`server_config.toml`) | Initial setup, version-controlled infrastructure | Phase 0 (already designed, D064) |
-| **CLI** (`ic server *`) | Automation, scripts, SSH sessions, CI/CD | Phase 5 |
-| **Built-in Web Dashboard** | Visual monitoring, quick admin actions, LAN party management | Phase 5 |
-| **In-Game Admin** | Playing admins who need to kick/pause/announce without alt-tabbing | Phase 5 |
-| **ICRP Remote** (D071) | External tools, Discord bots, tournament software, custom dashboards | Phase 5 (via D071) |
+| Interface                              | Best for                                                             | Available from                   |
+| -------------------------------------- | -------------------------------------------------------------------- | -------------------------------- |
+| **Config file** (`server_config.toml`) | Initial setup, version-controlled infrastructure                     | Phase 0 (already designed, D064) |
+| **CLI** (`ic server *`)                | Automation, scripts, SSH sessions, CI/CD                             | Phase 5                          |
+| **Built-in Web Dashboard**             | Visual monitoring, quick admin actions, LAN party management         | Phase 5                          |
+| **In-Game Admin**                      | Playing admins who need to kick/pause/announce without alt-tabbing   | Phase 5                          |
+| **ICRP Remote** (D071)                 | External tools, Discord bots, tournament software, custom dashboards | Phase 5 (via D071)               |
 
 #### 1. Config File (`server_config.toml`)
 
@@ -53,12 +53,12 @@ Already designed in D064. The single source of truth for server configuration. ~
 
 **Hot-reload categories:**
 
-| Category | Hot-reloadable? | Examples |
-|----------|----------------|---------|
-| **Gameplay** | Between matches only | max_players, map_pool, game_speed |
-| **Administration** | Yes (immediate) | MOTD, rate limits, ban list, admin list |
-| **Network** | Restart required | bind address, port, protocol version |
-| **Database** | Restart required | database path, WAL settings |
+| Category           | Hot-reloadable?      | Examples                                |
+| ------------------ | -------------------- | --------------------------------------- |
+| **Gameplay**       | Between matches only | max_players, map_pool, game_speed       |
+| **Administration** | Yes (immediate)      | MOTD, rate limits, ban list, admin list |
+| **Network**        | Restart required     | bind address, port, protocol version    |
+| **Database**       | Restart required     | database path, WAL settings             |
 
 The server watches `server_config.toml` for filesystem changes (via `notify` crate). When a hot-reloadable setting changes:
 - Apply immediately
@@ -144,15 +144,15 @@ A minimal, zero-dependency web dashboard embedded in the relay binary. Served on
 
 **Dashboard pages:**
 
-| Page | What it shows |
-|------|--------------|
-| **Status** (home) | Server health, active matches, player count, tick rate, CPU/RAM, uptime |
-| **Players** | Connected players with ping, rating, kick/ban buttons, profile links |
-| **Matches** | Active and recent matches with map, players, duration, result, replay download |
-| **Server Log** | Live-tailing log viewer (last 500 lines, filterable by severity) |
-| **Config** | Current `server_config.toml` with inline editing for hot-reloadable fields. Restart-required fields are grayed with a note. |
-| **Bans** | Ban list management (add/remove/search) |
-| **Backups** | List backups, create new, download, restore |
+| Page              | What it shows                                                                                                               |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| **Status** (home) | Server health, active matches, player count, tick rate, CPU/RAM, uptime                                                     |
+| **Players**       | Connected players with ping, rating, kick/ban buttons, profile links                                                        |
+| **Matches**       | Active and recent matches with map, players, duration, result, replay download                                              |
+| **Server Log**    | Live-tailing log viewer (last 500 lines, filterable by severity)                                                            |
+| **Config**        | Current `server_config.toml` with inline editing for hot-reloadable fields. Restart-required fields are grayed with a note. |
+| **Bans**          | Ban list management (add/remove/search)                                                                                     |
+| **Backups**       | List backups, create new, download, restore                                                                                 |
 
 **Auth:** Same ICRP challenge-response password as the API. The dashboard is a web client of ICRP — it makes the same JSON-RPC calls that any external tool would. Login page prompts for the ICRP password.
 
@@ -194,17 +194,17 @@ moderators = [
 
 **Admin vs moderator:**
 
-| Action | Moderator | Admin |
-|--------|-----------|-------|
-| Kick player | Yes | Yes |
-| Mute player | Yes | Yes |
-| Ban player | No | Yes |
-| Pause/unpause | No | Yes |
-| Change map | No | Yes |
-| Change profile | No | Yes |
-| Server announcements | No | Yes |
-| View server status | Yes | Yes |
-| Modify config | No | Yes |
+| Action               | Moderator | Admin |
+| -------------------- | --------- | ----- |
+| Kick player          | Yes       | Yes   |
+| Mute player          | Yes       | Yes   |
+| Ban player           | No        | Yes   |
+| Pause/unpause        | No        | Yes   |
+| Change map           | No        | Yes   |
+| Change profile       | No        | Yes   |
+| Server announcements | No        | Yes   |
+| View server status   | Yes       | Yes   |
+| Modify config        | No        | Yes   |
 
 **Visual indicator:** Admins see a subtle `[A]` badge next to their name in the player list. Moderators see `[M]`. This is visible to all players — transparent authority.
 
@@ -239,6 +239,75 @@ GET http://localhost:19710/health
 ```
 
 Enables: Uptime Kuma, Prometheus blackbox exporter, Kubernetes liveness probes, Discord bot status, Grafana dashboards, custom monitoring scripts — all without ICRP authentication.
+
+**Distinction from `/ready`:** The `/health` endpoint answers "is the process alive?" — it returns HTTP 200 as soon as the binary starts. The `/ready` endpoint (below) answers "can this server accept new traffic?" — it returns 503 during startup, drain, or subsystem failure. External monitoring tools should check `/health` for liveness and `/ready` for routing decisions.
+
+### Readiness Endpoint (`/ready`)
+
+A separate HTTP GET endpoint, zero-auth, rate-limited (1 req/sec). Reports whether the server is ready to accept new traffic — distinct from the `/health` liveness check.
+
+```json
+GET http://localhost:19710/ready
+
+{
+  "ready": true,
+  "checks": {
+    "relay":      { "ok": true },
+    "database":   { "ok": true, "writable": true },
+    "tracker":    { "ok": true },
+    "workshop":   { "ok": true, "seeding": true },
+    "disk_space": { "ok": true, "free_gb": 12.4 }
+  }
+}
+```
+
+HTTP 200 if all critical checks pass. HTTP 503 if any critical check fails.
+
+**Per-capability health:** Each enabled capability (D074) reports its own readiness. If `[capabilities] workshop = true` but the Workshop seeder failed to initialize, the server reports itself as not ready for Workshop traffic — but still ready for relay traffic. Federation routing (see § Server Labels in D074) and load balancers use this to direct traffic only to nodes capable of serving it.
+
+**Startup grace period:** After process start, `/ready` returns 503 until all enabled capabilities have completed initialization (database opened, P2P engine listening, tracker announced). The `/health` endpoint returns 200 immediately (the process is alive). This prevents federation peers from routing traffic to a server that hasn't finished starting up.
+
+**Drain status:** When the server enters drain mode (see § Graceful Shutdown below), `/ready` returns 503 with `"draining": true`. Federation peers and matchmaking services stop routing new players to this server. Active matches continue unaffected.
+
+**Why separate from `/health`?** A server can be alive but not ready. A relay that is running but whose database is locked, or that is mid-migration, or that is draining for restart — it's alive (don't kill it) but not ready (don't send it new traffic). Conflating liveness and readiness is one of the most common operational mistakes in distributed systems (lesson from K8s probe design — see `research/cloud-native-lessons-for-ic-platform.md` § 1).
+
+### Graceful Shutdown — Match-Aware Drain Protocol
+
+Server shutdown follows a four-phase drain protocol that ensures in-flight matches complete without disruption. This replaces the simple "finish current tick, save state, flush DB" model.
+
+**Phase 1 — DRAIN ANNOUNCED:**
+- Server stops accepting new match creation requests
+- `/ready` returns 503 with `"draining": true`
+- Server announces "draining" status to federation peers (protocol message)
+- Matchmaking service stops routing players to this server
+- Active matches continue unaffected
+
+**Phase 2 — DRAIN ACTIVE** (configurable duration, default 30 minutes):
+- In-flight matches run to completion or timeout
+- Players in lobby are notified: "This server is restarting. Your match will not be affected, but no new matches will be created."
+- Idle connections time out normally
+
+**Phase 3 — FORCE DRAIN** (after grace period expires):
+- Remaining matches are saved (snapshot) and players are disconnected with reason `server_restart`
+- Disconnected players receive a suggested alternative server (from federation, if `shutdown_suggest_alternative = true`)
+
+**Phase 4 — SHUTDOWN:**
+- Flush all SQLite databases (`PRAGMA wal_checkpoint(TRUNCATE)`)
+- Close P2P connections cleanly (BT disconnect messages)
+- Log final status and exit
+
+**Configuration:**
+
+```toml
+[server]
+shutdown_grace_period_secs = 1800       # 30 minutes — enough for most RA matches
+shutdown_force_disconnect_reason = "server_restart"
+shutdown_suggest_alternative = true     # tell disconnected players about federated alternatives
+```
+
+**CLI integration:** `ic server stop` initiates the drain protocol. `ic server stop --force` skips to Phase 4 (immediate shutdown). `ic server stop --drain-timeout 3600` overrides the configured grace period for this shutdown.
+
+**Federation drain notification:** The drain announcement is a federation protocol message. Other servers in the trust network learn that this server is draining and stop including it in server listings and matchmaking routing. When the server restarts and `/ready` returns 200, it re-enters federation rotation automatically.
 
 ### Structured Logging
 
@@ -289,11 +358,11 @@ IC does not split a single server into microservices. A dedicated server is one 
 
 **Why not microservices?**
 
-| Approach | Complexity | Benefit | IC verdict |
-|----------|-----------|---------|------------|
-| **Single binary** (IC default) | Minimal — one process, one config, one database | Handles 99% of community server use cases | Default. The $5 VPS path. |
-| **Multiple instances** (horizontal scaling) | Low — same binary, different ports/configs | Handles high player counts by running more servers | Supported. Just run more copies. |
-| **Container per instance** (Docker) | Medium — Dockerfile, volume mounts | Isolation, resource limits, easy deployment on cloud | Optional. Official Dockerfile provided. |
+| Approach                                                                     | Complexity                                                      | Benefit                                                        | IC verdict                                                                       |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| **Single binary** (IC default)                                               | Minimal — one process, one config, one database                 | Handles 99% of community server use cases                      | Default. The $5 VPS path.                                                        |
+| **Multiple instances** (horizontal scaling)                                  | Low — same binary, different ports/configs                      | Handles high player counts by running more servers             | Supported. Just run more copies.                                                 |
+| **Container per instance** (Docker)                                          | Medium — Dockerfile, volume mounts                              | Isolation, resource limits, easy deployment on cloud           | Optional. Official Dockerfile provided.                                          |
 | **Microservice split** (relay + matchmaking + workshop as separate services) | High — service discovery, inter-service auth, distributed state | Only needed at massive scale (thousands of concurrent players) | Not designed for. If IC reaches this scale, it's a future architecture decision. |
 
 **How operators scale:**
@@ -321,10 +390,10 @@ An official Dockerfile and Docker Compose example are provided. They are maintai
 
 **Two image variants** — operators choose based on their needs:
 
-| Variant | Base | Size | Use case |
-|---------|------|------|----------|
-| **`relay:latest`** (scratch + musl) | `scratch` | ~8-12 MB | Production. Minimum attack surface. No shell, no OS, no package manager. Just the binary. |
-| **`relay:debug`** | `debian:bookworm-slim` | ~80 MB | Debugging. Includes shell, curl, sqlite3 CLI for troubleshooting. |
+| Variant                             | Base                   | Size     | Use case                                                                                  |
+| ----------------------------------- | ---------------------- | -------- | ----------------------------------------------------------------------------------------- |
+| **`relay:latest`** (scratch + musl) | `scratch`              | ~8-12 MB | Production. Minimum attack surface. No shell, no OS, no package manager. Just the binary. |
+| **`relay:debug`**                   | `debian:bookworm-slim` | ~80 MB   | Debugging. Includes shell, curl, sqlite3 CLI for troubleshooting.                         |
 
 **Production Dockerfile (scratch + musl static):**
 
@@ -507,15 +576,15 @@ spec:
 
 **What the operator does:**
 
-| Responsibility | How |
-|---------------|-----|
-| **Scaling** | Watches `/health` endpoint on each relay pod. If `player_count / player_max > 0.8` across all instances → spin up a new pod. If instances are idle → scale down (respecting `min`). |
+| Responsibility           | How                                                                                                                                                                                                                                                                                                      |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Scaling**              | Watches `/health` endpoint on each relay pod. If `player_count / player_max > 0.8` across all instances → spin up a new pod. If instances are idle → scale down (respecting `min`).                                                                                                                      |
 | **Match-aware draining** | Before terminating a pod (scale-down, update, node maintenance), the operator sends a `drain` signal via ICRP (`ic/admin.drain`). The relay stops accepting new matches but lets current matches finish. Only after all matches end (or drain timeout) does the pod terminate. No mid-match disconnects. |
-| **Rolling updates** | When the image tag changes, the operator updates pods one at a time. Each pod is drained (match-aware) before replacement. Zero-downtime updates. |
-| **Health monitoring** | Polls `/health` on each pod. Unhealthy pods (failed health check 3x) are restarted automatically. ICRP `admin.config_changed` events are watched for config drift detection. |
-| **Config distribution** | `server_config.toml` stored as a Kubernetes ConfigMap, mounted into each pod. Config changes trigger hot-reload (the relay watches the mounted file). Secrets (RCON password, OAuth tokens) stored as Kubernetes Secrets. |
-| **Service discovery** | Creates a Kubernetes Service that load-balances game traffic across relay pods. The matchmaking service (D052) discovers available relays via the Service endpoint. |
-| **Observability** | Exposes Prometheus metrics from each relay's `/health` data. ServiceMonitor CRD for automatic Prometheus scraping. Optional PodMonitor for per-pod metrics. |
+| **Rolling updates**      | When the image tag changes, the operator updates pods one at a time. Each pod is drained (match-aware) before replacement. Zero-downtime updates.                                                                                                                                                        |
+| **Health monitoring**    | Polls `/health` on each pod. Unhealthy pods (failed health check 3x) are restarted automatically. ICRP `admin.config_changed` events are watched for config drift detection.                                                                                                                             |
+| **Config distribution**  | `server_config.toml` stored as a Kubernetes ConfigMap, mounted into each pod. Config changes trigger hot-reload (the relay watches the mounted file). Secrets (RCON password, OAuth tokens) stored as Kubernetes Secrets.                                                                                |
+| **Service discovery**    | Creates a Kubernetes Service that load-balances game traffic across relay pods. The matchmaking service (D052) discovers available relays via the Service endpoint.                                                                                                                                      |
+| **Observability**        | Exposes Prometheus metrics from each relay's `/health` data. ServiceMonitor CRD for automatic Prometheus scraping. Optional PodMonitor for per-pod metrics.                                                                                                                                              |
 
 **Custom Resource status:**
 
@@ -608,6 +677,7 @@ Standard HPA still works for basic setups (scale on CPU). The operator is for co
 - **D064 (Server Config):** `server_config.toml` schema and deployment profiles are D064. D072 adds hot-reload, CLI, and web editing.
 - **D071 (ICRP):** The web dashboard, CLI, and remote admin all communicate via ICRP. D072 is the UX layer on top of D071.
 - **15-SERVER-GUIDE.md:** Operational best practices, deployment examples, and troubleshooting reference D072's management interfaces.
+- **Cloud-native lessons:** `/ready` endpoint, drain protocol, and operational patterns derived from `research/cloud-native-lessons-for-ic-platform.md`.
 
 ### Execution Overlay Mapping
 

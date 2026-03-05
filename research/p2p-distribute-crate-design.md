@@ -1,7 +1,7 @@
-# `p2p-distribute` — Standalone BitTorrent-Compatible P2P Distribution Engine
+# `p2p-distribute` — Standalone P2P Content Distribution Engine
 
-> **Purpose:** Iron Curtain needs a P2P distribution engine to power its Workshop (mod/map/asset delivery), lobby auto-download, and community server seeding. No existing Rust crate meets IC's requirements — WebRTC browser interop, embeddable tracker, "all knobs" configurability, and WASM support — so we build our own. This document is the complete design specification for that crate.
-> **Date:** 2026-03-03
+> **Purpose:** A foundational, general-purpose P2P content distribution engine. Iron Curtain is the primary consumer — using it across Workshop delivery, lobby auto-download, community server seeding, replay distribution, and update delivery — but the crate is designed as domain-agnostic infrastructure suitable for any application that needs to move content between peers efficiently: game engines, package managers, media platforms, IoT firmware delivery, and beyond. No existing Rust crate meets the combined requirements — WebRTC browser interop, embeddable tracker, priority-aware scheduling, content channels, revocation infrastructure, "all knobs" configurability, and WASM support — so we build our own. This document is the complete design specification for that crate.
+> **Date:** 2026-03-05
 > **License:** MIT OR Apache-2.0 (D076 Tier 3 standalone crate — separate repo, no GPL code)
 > **Referenced by:** D049 (Workshop P2P distribution), D074 (Community Server Bundle), D076 (Standalone Crate Extraction Strategy)
 > **References:** `research/p2p-engine-protocol-design.md` (wire protocol), `research/bittorrent-p2p-libraries.md` (ecosystem study), `src/modding/workshop.md` (Workshop integration)
@@ -12,28 +12,35 @@
 
 ### Why This Exists
 
-Iron Curtain's Workshop (D049/D030) needs to distribute mods, maps, asset packs, and total conversions to players — including auto-download when joining a lobby. The `ic-server` community binary (D074) needs to permanently seed Workshop content. The browser build (WASM target) needs to download content from desktop peers. These requirements demand a P2P engine with:
+Iron Curtain needs P2P content distribution across multiple subsystems — Workshop mod/map delivery (D049/D030), lobby auto-download, community server seeding (D074), replay distribution, and game update delivery — and no existing Rust crate meets the combined requirements. Beyond IC, the same problem recurs in every domain that moves versioned content between parties: package managers, AI model distribution, media platforms, IoT firmware, federated social networks, plugin ecosystems.
 
-- **Embeddable library** — runs inside the game client, the SDK, and the server binary
-- **WebRTC transport** — browser ↔ desktop peer interop for the WASM target
-- **Embedded tracker** — community servers operate as self-contained tracker+seeder nodes
-- **Priority-aware scheduling** — lobby-urgent downloads preempt background seeding
-- **Extensible auth and storage** — IC plugs in Ed25519 community auth (D052) and content-addressed storage (D049)
-- **"All knobs" configurability** — server operators, LAN party hosts, and embedded clients all need different tuning
+`p2p-distribute` is designed as **foundational infrastructure** — a crate that IC depends on broadly, and that other projects can depend on for entirely different use cases. IC uses the features it needs (embeddable sessions, priority scheduling, embedded tracker, WebRTC browser interop, revocation-aware block lists); a media platform uses what it needs (streaming piece selection, content channels); a package manager uses what it needs (integrity, revocation, CAS storage). The crate is capability-rich; consumers are selective.
+
+The requirements that drove the build-over-adopt decision:
+
+- **Embeddable library** — runs inside game clients, server binaries, CLI tools, and any application
+- **WebRTC transport** — browser ↔ desktop peer interop for WASM targets
+- **Embedded tracker** — self-contained tracker+seeder nodes for community/enterprise deployments
+- **Priority-aware scheduling** — lobby-urgent downloads preempt background seeding (generalizes to any multi-priority consumer)
+- **Content channels** — append-only streams of versioned snapshots for mutable/streaming content (live configs, feeds, incremental updates)
+- **Revocation infrastructure** — block lists, tracker de-listing, and revocation-aware piece transfer for supply chain security
+- **Streaming piece selection** — sequential/hybrid strategies for progressive playback and preview-during-download
+- **Extensible auth and storage** — pluggable via traits; IC uses Ed25519 community auth (D052) and CAS storage (D049)
+- **"All knobs" configurability** — server operators, LAN party hosts, embedded clients, and autonomous agents all need different tuning
 
 No existing Rust crate meets these requirements. `librqbit` (the closest) lacks WebRTC, embedded tracker, bandwidth scheduling, and WASM support. So we build our own.
 
 ### What It Is
 
-`p2p-distribute` is a single published Rust crate that implements a BitTorrent-compatible P2P distribution engine, purpose-built to power IC's content delivery but designed cleanly enough to be useful beyond IC. It is a **library first** — embeddable in game clients, server binaries, and CLI tools — with optional surfaces (web API, CLI, metrics) gated behind feature flags.
+`p2p-distribute` is a single published Rust crate that implements a BitTorrent-compatible P2P content distribution engine. It is a **foundational infrastructure library** — embeddable in game clients, server binaries, CLI tools, package managers, media players, IoT controllers, and any application that needs efficient peer-to-peer content transfer. Optional surfaces (web API, CLI, metrics) are gated behind feature flags.
 
-The crate has **zero IC dependencies**. IC-specific behavior (auth, CAS storage, lobby priority) is injected at runtime via extensibility traits. This separation is required by D076 (standalone MIT/Apache-2.0 crate in a separate repo, no GPL contamination).
+The crate has **zero IC dependencies**. IC-specific behavior (auth, CAS storage, lobby priority) is injected at runtime via extensibility traits. This separation is required by D076 (standalone MIT/Apache-2.0 crate in a separate repo, no GPL contamination). Iron Curtain is the primary consumer and validation benchmark, but the crate's API is domain-agnostic.
 
-**Competitive position:** Fills a gap in the Rust ecosystem. `librqbit` is the closest prior art (Apache-2.0, tokio-based) but lacks WebRTC transport, embedded tracker, bandwidth throttling API, WASM support, and the "all knobs" configuration depth of `libtorrent-rasterbar`. `p2p-distribute` targets the intersection: `librqbit`'s Rust-native purity with `libtorrent`'s configurability and protocol completeness.
+**Competitive position:** Fills a gap in the Rust ecosystem. `librqbit` is the closest prior art (Apache-2.0, tokio-based) but lacks WebRTC transport, embedded tracker, bandwidth throttling API, content channels, revocation infrastructure, WASM support, and the "all knobs" configuration depth of `libtorrent-rasterbar`. `p2p-distribute` targets the intersection: `librqbit`'s Rust-native purity with `libtorrent`'s configurability and protocol completeness, plus capabilities no existing BT library offers (content channels, revocation-aware transfers, streaming piece strategies).
 
 ### Guiding Principles
 
-1. **Built for IC, useful to anyone.** IC's Workshop, lobby auto-download, and community servers are the primary design drivers. The crate is general-purpose because good engineering demands clean boundaries — not because generality is the goal.
+1. **Foundational infrastructure, IC-validated.** The crate is designed as general-purpose P2P infrastructure. IC is the primary consumer and validation benchmark — every feature traces to a real requirement from IC or its planned sibling projects (D050). The crate is useful to anyone because it solves universal distribution problems, not as a side effect of clean boundaries.
 2. **Library-first.** The crate is a Rust library with a clean `Session` API. CLI, web API, and metrics are optional feature-gated surfaces.
 3. **One crate, feature-gated surfaces.** A single published crate name. Compile-time feature flags control which protocol extensions (DHT, uTP, PEX), transports (WebRTC), and surfaces (CLI, web API, metrics) are included.
 4. **MIT OR Apache-2.0.** Maximally permissive. No GPL code copied — BEP specs, permissive references (librqbit Apache-2.0, WebTorrent MIT, aquatic Apache-2.0, chihaya BSD-2), and clean-room implementation from protocol specifications only.
@@ -610,7 +617,593 @@ pub trait MetricsSink: Send + Sync + 'static {
 pub trait LogSink: Send + Sync + 'static {
     fn log(&self, level: LogLevel, target: &str, message: &str);
 }
+
+/// Pluggable revocation policy. Default: no revocation.
+/// Custom: registry-backed block lists, CRL-style revocation feeds.
+pub trait RevocationPolicy: Send + Sync + 'static {
+    /// Check whether an info hash is revoked. The engine calls this before
+    /// downloading, seeding, or announcing. Returning `true` causes the
+    /// engine to refuse all transfers for this hash and de-announce from
+    /// trackers/DHT.
+    fn is_revoked(&self, info_hash: &InfoHash) -> bool;
+
+    /// Subscribe to revocation updates. The engine polls or listens for
+    /// newly revoked hashes and applies them to active torrents.
+    fn revocation_updates(&self) -> Option<impl Stream<Item = InfoHash> + Send>;
+
+    /// Callback when a revoked hash is found active. The engine invokes
+    /// this after stopping a torrent due to revocation, allowing the policy
+    /// to log, alert, or delete cached data.
+    fn on_revocation_applied(
+        &self,
+        info_hash: &InfoHash,
+        action: RevocationAction,
+    ) -> impl Future<Output = ()> + Send;
+}
+
+#[derive(Debug, Clone)]
+pub enum RevocationAction {
+    /// Torrent stopped and de-announced, data retained on disk.
+    Stopped,
+    /// Torrent stopped and data deleted.
+    StoppedAndDeleted,
+}
 ```
+
+### 1.5 Storage Middleware Composition (Tower-Style Layers)
+
+The extensibility traits above (§ 1.4) define *what* pluggable behaviors exist. This section defines *how* they compose — specifically for `StorageBackend`, which benefits most from middleware layering.
+
+AnyFS (a Rust filesystem abstraction library) demonstrates that Tower-style `Layer` composition — where each middleware wraps an inner backend and delegates — is the natural pattern for storage concerns that are orthogonal to the core read/write path. `p2p-distribute`'s `StorageBackend` trait is already the right abstraction boundary; adding a `StorageLayer` trait enables composable pipelines without modifying the core trait.
+
+```rust
+/// A layer that wraps a StorageBackend to add cross-cutting concerns.
+/// Inspired by Tower's Service/Layer pattern and AnyFS's Layer<B: Fs> trait.
+pub trait StorageLayer<S: StorageBackend> {
+    type Backend: StorageBackend;
+    fn layer(self, inner: S) -> Self::Backend;
+}
+
+/// Extension trait enabling fluent `.layer()` on any StorageBackend.
+pub trait StorageLayerExt: StorageBackend + Sized {
+    fn layer<L: StorageLayer<Self>>(self, layer: L) -> L::Backend {
+        layer.layer(self)
+    }
+}
+
+impl<S: StorageBackend> StorageLayerExt for S {}
+```
+
+**Built-in storage layers:**
+
+| Layer                 | Purpose                                                              | When to Use                                                   |
+| --------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `IntegrityCheckLayer` | SHA-256 verify piece data on read; detect bit-rot or disk corruption | Always (cheap — hash is already computed for BT verification) |
+| `ReadCacheLayer`      | LRU cache for frequently-read pieces during seeding                  | Seed boxes serving hot content to many peers                  |
+| `MetricsLayer`        | Count read/write ops, bytes transferred, cache hit rate per torrent  | Server deployments with Prometheus/OTEL                       |
+| `WriteBatchLayer`     | Buffer small writes and flush in batches to reduce disk IOPS         | High-throughput download scenarios                            |
+
+**Composition example:**
+
+```rust
+// Seed box storage: integrity + read cache + metrics
+let storage = FilesystemStorage::new("/data/torrents")
+    .layer(IntegrityCheckLayer::new())
+    .layer(ReadCacheLayer::new(256 * 1024 * 1024))  // 256 MB LRU
+    .layer(MetricsLayer::new(registry));
+
+// Embedded minimal client: just raw disk, no layers
+let storage = FilesystemStorage::new("/tmp/downloads");
+
+// WASM client: memory backend with write batching
+let storage = MemoryStorage::new()
+    .layer(WriteBatchLayer::new(Duration::from_millis(100)));
+```
+
+**Interaction with `StorageBackendFactory`:** The factory creates a per-torrent `StorageBackend`. Layers wrap the created backend:
+
+```rust
+pub struct LayeredStorageFactory<F, L> {
+    inner: F,
+    layer: L,
+}
+
+impl<F: StorageBackendFactory, L: StorageLayer<F::Backend> + Clone> StorageBackendFactory
+    for LayeredStorageFactory<F, L>
+{
+    fn create(
+        &self,
+        info_hash: &InfoHash,
+        metadata: &TorrentMetadata,
+        download_dir: &Path,
+    ) -> Result<Box<dyn StorageBackend>, StorageError> {
+        let inner = self.inner.create(info_hash, metadata, download_dir)?;
+        Ok(Box::new(self.layer.clone().layer(inner)))
+    }
+}
+```
+
+**Design notes:**
+
+- **Zero-cost when unused:** Composition is compile-time generics (monomorphized). No boxing unless the user explicitly opts into `Box<dyn StorageBackend>` for runtime flexibility.
+- **Layers are independent of core traits.** The `StorageBackend` trait (§ 1.4) is unchanged. An application that doesn't use layers pays zero cost. Layers are additive infrastructure.
+- **Profile integration:** The `server_seedbox` profile defaults to `IntegrityCheckLayer + ReadCacheLayer`. The `embedded_minimal` profile uses raw storage with no layers. Custom profiles compose layers via the TOML-driven config (§ 3).
+- **Custom layers:** Third parties implement `StorageLayer<S>` for encryption-at-rest, compression, content-addressed deduplication, or application-specific transforms. The trait is minimal enough that a custom layer is ~20 lines of delegation code.
+
+> **Prior art:** AnyFS (`Fs` trait + `Layer<B: Fs>` + `LayerExt` blanket impl), Tower (`Service` + `Layer<S: Service>` + `ServiceExt`). Both demonstrate that the Layer pattern composes cleanly for I/O-bound middleware where the overhead of delegation is negligible relative to actual I/O time. AnyFS's strategic boxing insight also applies: bulk `read_block`/`write_block` return concrete types (zero-cost); only streaming iterators or dynamic dispatch boundaries use `Box`.
+
+---
+
+## 2.5 Content Channels (Feature: `channels`)
+
+A Content Channel is a named, append-only stream of versioned content snapshots. While standard torrents are static (one info hash = one immutable piece set), content channels model **mutable, streaming content** — configuration feeds, live data streams, incremental model checkpoints, live balance patches, or any data flow where new versions arrive over time.
+
+Content channels are an **optional crate feature** (`channels`). They build on the core torrent engine — each snapshot is a small content-addressed blob distributed via the same P2P infrastructure. The tracker manages peer discovery per-channel rather than per-snapshot.
+
+```rust
+/// Feature-gated: requires `channels` feature.
+///
+/// A content channel produces a sequence of snapshots, each identified
+/// by a monotonically increasing sequence number and content hash.
+/// Subscribers receive new snapshots as they are published.
+#[cfg(feature = "channels")]
+pub struct ContentChannel {
+    /// Channel identity — typically `publisher/channel-name`.
+    pub name: String,
+    /// Current head snapshot (latest).
+    pub head: Option<SnapshotInfo>,
+    /// Retention: how many historical snapshots to keep accessible.
+    pub retention: ChannelRetention,
+    /// Maximum snapshot size in bytes.
+    pub max_snapshot_size: u64,
+    /// Content type hint (e.g., "application/json", "application/octet-stream").
+    pub content_type: Option<String>,
+}
+
+#[cfg(feature = "channels")]
+pub struct SnapshotInfo {
+    pub sequence: u64,
+    pub content_hash: Sha256Hash,
+    pub timestamp: SystemTime,
+    pub size_bytes: u64,
+    pub parent_hash: Option<Sha256Hash>, // hash of previous snapshot (chain integrity)
+}
+
+#[cfg(feature = "channels")]
+pub enum ChannelRetention {
+    /// Keep last N snapshots.
+    LastN(u32),
+    /// Keep snapshots from the last duration.
+    Duration(Duration),
+    /// Keep all snapshots (unbounded).
+    Unbounded,
+}
+
+/// Extension to Session for content channel operations.
+#[cfg(feature = "channels")]
+impl Session {
+    /// Create a new content channel (publisher side).
+    pub async fn create_channel(
+        &self,
+        config: ContentChannel,
+    ) -> Result<ChannelHandle, ChannelError>;
+
+    /// Subscribe to an existing channel (consumer side).
+    /// Returns a receiver that yields new snapshots as they arrive.
+    pub async fn subscribe_channel(
+        &self,
+        name: &str,
+        tracker_url: &str,
+    ) -> Result<ChannelSubscription, ChannelError>;
+
+    /// Publish a new snapshot to a channel (publisher side).
+    pub async fn publish_snapshot(
+        &self,
+        channel: &ChannelHandle,
+        data: &[u8],
+    ) -> Result<SnapshotInfo, ChannelError>;
+}
+
+#[cfg(feature = "channels")]
+pub struct ChannelSubscription {
+    /// Stream of incoming snapshots.
+    pub snapshots: impl Stream<Item = Result<SnapshotData, ChannelError>> + Send,
+    /// Current channel head at time of subscription.
+    pub head: Option<SnapshotInfo>,
+}
+
+#[cfg(feature = "channels")]
+pub struct SnapshotData {
+    pub info: SnapshotInfo,
+    pub data: Vec<u8>,
+}
+```
+
+**P2P distribution for snapshots:** Each snapshot is a content-addressed blob. Subscribers who receive a snapshot automatically seed it to other subscribers for a configurable TTL (`retention`). The tracker manages peer discovery per-channel — subscribers announce to the channel's swarm, not per-snapshot. This avoids tracker churn for high-frequency channels.
+
+**Offline-first:** Subscribers cache snapshots locally. On reconnect, they resume from their last received sequence number. Missed snapshots are fetched from peers or the origin. The retention policy determines how far back catch-up is possible.
+
+**Relationship to core API:** Content channels are optional and compose with the core `Session` API. A session can manage both standard torrents and content channels simultaneously. Channel snapshots use the same `StorageBackend` trait as torrents. The `DiscoveryBackend`, `AuthPolicy`, and `PeerFilter` traits apply to channel peer connections identically.
+
+---
+
+## 2.6 Streaming Piece Selection (Feature: `streaming`)
+
+The default piece selection strategy is rarest-first (maximizes swarm health). Some use cases need sequential or hybrid strategies — progressive download for preview-during-download, media streaming, or ordered data pipelines.
+
+```rust
+/// Feature-gated: requires `streaming` feature.
+///
+/// Piece selection strategy that can be set per-torrent via AddTorrentOptions
+/// or changed at runtime via TorrentHandle.
+#[cfg(feature = "streaming")]
+pub enum PieceStrategy {
+    /// Standard BitTorrent: rarest pieces first (maximizes swarm health).
+    /// This is the default and does not require the `streaming` feature.
+    RarestFirst,
+
+    /// Strict sequential: pieces in order. Best for media playback where
+    /// the consumer reads data from the start.
+    Sequential {
+        /// Pieces to pre-fetch ahead of current playback position.
+        readahead: u32,
+    },
+
+    /// Hybrid streaming: sequential near the playback head, rarest-first
+    /// for unclaimed pieces further ahead. Balances playback continuity
+    /// with swarm health.
+    StreamingHybrid {
+        /// Pieces from current position treated as sequential (high priority).
+        sequential_window: u32,
+        /// Beyond the window, use rarest-first.
+        /// Total readahead = sequential_window + rarest_first_lookahead.
+        rarest_first_lookahead: u32,
+    },
+}
+```
+
+The `streaming` feature adds the `StreamingHybrid` strategy and the ability to dynamically reposition the sequential cursor via `TorrentHandle::set_playback_position(piece_index)`. Standard `sequential` mode (already in the `[pieces]` config group) does not require this feature flag.
+
+---
+
+## 2.7 Revocation Infrastructure
+
+Revocation enables consumers to block distribution of specific content after discovery of malware, legal takedown, or supply chain compromise. This is a crate-level concern (not application-specific) because the P2P engine must stop transferring revoked content at the protocol layer — application-level blocking is insufficient since the engine would still seed to and download from peers.
+
+The `RevocationPolicy` trait (§ 1.4) is the extension point. The crate provides a built-in implementation:
+
+```rust
+/// Built-in revocation policy backed by an in-memory block set.
+/// Applications populate it from their own revocation feeds (registry,
+/// federation, CRL, etc.).
+pub struct BlockListRevocationPolicy {
+    blocked: DashSet<InfoHash>,
+}
+
+impl BlockListRevocationPolicy {
+    pub fn new() -> Self;
+
+    /// Add a hash to the block list. Takes effect immediately —
+    /// any active torrent with this hash is stopped and de-announced.
+    pub fn block(&self, info_hash: InfoHash);
+
+    /// Remove a hash from the block list (reinstatement).
+    pub fn unblock(&self, info_hash: &InfoHash);
+
+    /// Load a block list from a file (one hex-encoded info hash per line).
+    pub fn load_from_file(&self, path: &Path) -> Result<usize, std::io::Error>;
+}
+```
+
+**What happens when a hash is revoked:**
+1. The engine stops all uploads for the hash (immediately — no grace period for malicious content).
+2. The engine sends `not_interested` to all peers for this hash and closes connections.
+3. The engine de-announces from all trackers and DHT for this hash.
+4. The `RevocationPolicy::on_revocation_applied` callback fires, allowing the application to delete cached data, log the event, or notify the user.
+5. Future announce requests for the hash are rejected by the embedded tracker (if running).
+
+**What the crate does NOT do:** The crate does not decide *what* to revoke. Revocation decisions are made by the application layer — a registry operator, a federation consensus, a legal takedown, a malware scanner. The crate provides the enforcement mechanism. IC's `workshop-core` populates the `RevocationPolicy` from Workshop federation revocation records; a package manager populates it from its advisory database; other consumers populate it from their own sources.
+
+---
+
+## 2.8 Bucket-Based Scheduling
+
+Several subsystems benefit from pre-partitioning entities into **buckets** — classified groups that replace flat linear scans with structured lookups. The crate uses bucket logic in three places: tracker-side peer selection, client-side connection pooling, and tracker-side content popularity classification. These are crate-level concerns — not application-specific — because they affect protocol-layer performance and fairness.
+
+### 2.8.1 Tracker-Side Peer Bucketing
+
+The embedded tracker (§ 6) pre-classifies announced peers into a hierarchical bucket tree. On each announce response, the tracker walks buckets from best-match outward until the peer handout limit is filled — O(k) where k = number of buckets, not O(n) over all peers in the swarm.
+
+```rust
+/// Peer bucket tree maintained by the embedded tracker.
+/// Peers are inserted on announce and removed on expiry/stop.
+/// The tree is indexed by (region, seed_status, transport) for fast
+/// locality-aware peer selection.
+pub struct PeerBucketTree {
+    /// Root: continent → country/region → city
+    /// Each leaf holds a `PeerBucketLeaf` partitioned by seed status and transport.
+    regions: BTreeMap<RegionKey, RegionBucket>,
+    /// Total peer count across all buckets (for stats).
+    total_peers: usize,
+}
+
+/// 4-level hierarchical region key: continent|country|region|city.
+/// Clients self-report via extension handshake (best-effort, not trusted
+/// for security — only for peer selection optimization). GeoIP lookup
+/// (feature-gated: `geoip`) provides server-side fallback.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct RegionKey {
+    pub continent: Option<String>,  // e.g. "EU", "NA", "AS"
+    pub country: Option<String>,    // e.g. "DE", "US", "JP"
+    pub region: Option<String>,     // e.g. "Bavaria", "California"
+    pub city: Option<String>,       // e.g. "Munich", "San Francisco"
+}
+
+struct RegionBucket {
+    /// Sub-partitioned by seed status and transport type.
+    leaves: BTreeMap<(SeedStatus, TransportType), Vec<PeerEntry>>,
+    /// Total peers in this region (for proportional sampling).
+    count: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum SeedStatus {
+    /// Dedicated seed infrastructure (seed box, server capability).
+    SeedBox,
+    /// Completed seeder (has all pieces).
+    Seeder,
+    /// Actively downloading leecher (has some pieces, uploading too).
+    Leecher,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum TransportType {
+    /// Standard TCP (highest throughput, most common).
+    Tcp,
+    /// uTP over UDP (background-friendly, lower throughput).
+    Utp,
+    /// WebRTC data channel (browser peers — higher overhead, essential for WASM).
+    WebRtc,
+}
+```
+
+**Announce response algorithm:**
+
+```
+FUNCTION select_peers_for_announce(tree, requester_region, requester_transport, limit) -> Vec<PeerEntry>:
+    result = []
+
+    // Phase 1: Same-city peers, matching transport, seeders first
+    walk_bucket(tree, requester_region.full_match(), [SeedBox, Seeder, Leecher],
+                [requester_transport, *other_transports], &mut result, limit)
+    IF result.len() >= limit: RETURN result[..limit]
+
+    // Phase 2: Same-country, widen city
+    walk_bucket(tree, requester_region.country_match(), ..., &mut result, limit)
+    IF result.len() >= limit: RETURN result[..limit]
+
+    // Phase 3: Same-continent
+    walk_bucket(tree, requester_region.continent_match(), ..., &mut result, limit)
+    IF result.len() >= limit: RETURN result[..limit]
+
+    // Phase 4: Global — any region
+    walk_bucket(tree, RegionKey::any(), ..., &mut result, limit)
+    RETURN result[..min(result.len(), limit)]
+```
+
+**Why this matters:** For popular Workshop content with thousands of peers, flat scoring (compute `PeerScore` for every peer on every announce) is O(n). Bucketing pre-sorts peers at announce time (O(1) insert into the right bucket) and serves responses by walking a small number of buckets (O(k), typically k < 20). Dragonfly uses the same pattern with its `country|province|city|zone|cluster` hierarchy. The bucket tree is the data structure; the weighted scoring formula (`PeerScore = Capacity(0.4) + Locality(0.3) + SeedStatus(0.2) + LobbyContext(0.1)`) is used *within* each bucket leaf to rank peers when a bucket has more candidates than needed.
+
+**Configuration:**
+
+```toml
+[tracker.buckets]
+# Enable hierarchical peer bucketing (disabling falls back to flat scoring).
+enabled = true                       # Default: true
+# Maximum peers per leaf bucket before eviction (oldest announcer evicted).
+max_peers_per_leaf = 500             # Range: 50–10000. Default: 500
+# Region key source: "self_report" (client extension), "geoip" (server lookup), "both" (prefer geoip).
+region_source = "both"               # Default: "both" (requires `geoip` feature for server lookup)
+# Proportional sampling: when filling announce response, sample proportionally
+# from each matching region bucket rather than exhausting the closest first.
+proportional_sampling = false        # Default: false (closest-first is better for latency)
+```
+
+### 2.8.2 Connection Pool Bucketing by Transport
+
+The client-side connection manager partitions connection slots by transport type. Each transport gets guaranteed minimum slots and a maximum cap. This prevents cross-transport starvation — a swarm heavy with browser peers cannot fill all slots with high-overhead WebRTC connections, starving high-quality desktop TCP connections.
+
+```rust
+/// Per-transport connection slot allocation.
+/// Guarantees each transport type baseline capacity.
+/// Unused minimum slots from one transport are NOT redistributed
+/// (this is intentional — the minimum is a guaranteed reservation).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConnectionBuckets {
+    pub tcp: TransportSlots,
+    pub utp: TransportSlots,
+    pub webrtc: TransportSlots,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransportSlots {
+    /// Minimum guaranteed slots for this transport.
+    /// The connection manager will not allocate these to other transports.
+    pub min_slots: u32,
+    /// Maximum slots for this transport (hard cap).
+    pub max_slots: u32,
+}
+
+impl Default for ConnectionBuckets {
+    fn default() -> Self {
+        Self {
+            tcp: TransportSlots { min_slots: 40, max_slots: 80 },
+            utp: TransportSlots { min_slots: 10, max_slots: 30 },
+            webrtc: TransportSlots { min_slots: 10, max_slots: 30 },
+        }
+    }
+}
+```
+
+**Slot allocation algorithm:**
+
+```
+FUNCTION try_connect(peer_addr, transport) -> Result<(), ConnectionError>:
+    bucket = connection_buckets[transport]
+    active = count_active_connections(transport)
+
+    // Hard cap: reject if transport bucket is full
+    IF active >= bucket.max_slots:
+        RETURN Err(TransportBucketFull)
+
+    // Global cap: reject if total connections exceed max_connections_global
+    IF total_active_connections() >= config.max_connections_global:
+        // Try to evict a connection from an over-minimum transport
+        IF NOT evict_over_minimum_connection(excluding = transport):
+            RETURN Err(GlobalConnectionLimitReached)
+
+    connect(peer_addr, transport)
+    RETURN Ok(())
+
+FUNCTION evict_over_minimum_connection(excluding) -> bool:
+    // Find a transport (other than `excluding`) with active > min_slots.
+    // Evict the lowest-scoring connection from that transport.
+    FOR transport IN [Utp, WebRtc, Tcp].except(excluding):
+        active = count_active_connections(transport)
+        IF active > connection_buckets[transport].min_slots:
+            evict_lowest_scoring(transport)
+            RETURN true
+    RETURN false
+```
+
+**Why this matters for IC:** Browser WASM clients use WebRTC, which has ~3x the connection overhead of TCP (DTLS handshake, SCTP negotiation, ICE candidate exchange). Without bucketing, a lobby with 80 browser clients and 20 desktop clients could saturate all connection slots with low-throughput WebRTC connections. Transport bucketing guarantees desktop peers retain capacity even when browser peers outnumber them. This is critical for IC's cross-platform multiplayer (D010) where desktop and browser clients interoperate in the same swarm.
+
+### 2.8.3 Content Popularity Bucketing (Tracker-Side)
+
+The embedded tracker automatically classifies content into popularity tiers based on recent announce frequency. This drives adaptive resource allocation — the seed box and tracker invest resources where they provide the most incremental value (the long tail), not where the swarm already self-serves (hot content).
+
+```rust
+/// Content popularity classification, maintained per-info-hash by the tracker.
+/// Updated on every announce. Drives seed box bandwidth allocation and
+/// tracker announce interval tuning.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PopularityTier {
+    /// >100 unique announcers/hour. The swarm is self-sustaining.
+    /// Seed box: minimal seeding (the crowd has coverage).
+    /// Tracker: standard announce interval.
+    Hot,
+    /// 10–100 unique announcers/hour. Moderate swarm activity.
+    /// Seed box: normal seeding bandwidth allocation.
+    /// Tracker: standard announce interval.
+    Warm,
+    /// 1–10 unique announcers/hour. Few active peers.
+    /// Seed box: elevated seeding priority (more bandwidth share).
+    /// Tracker: shorter announce interval to discover peers faster.
+    Cold,
+    /// <1 unique announcer/day. Dormant content.
+    /// Seed box: seed on-demand only (don't waste bandwidth pre-seeding).
+    /// Tracker: can be demoted to passive tracking (respond to announces,
+    /// but don't include in active scrape results).
+    Frozen,
+}
+
+/// Popularity tracking state per info hash.
+struct PopularityState {
+    /// Rolling window of unique announcer count (per hour).
+    announce_rate: ExponentialMovingAverage,
+    /// Current tier classification.
+    tier: PopularityTier,
+    /// Timestamp of last tier transition (for hysteresis).
+    last_transition: Instant,
+}
+```
+
+**Classification algorithm:**
+
+```
+FUNCTION update_popularity(info_hash, now):
+    state = popularity_states[info_hash]
+    state.announce_rate.update(now)
+    rate = state.announce_rate.per_hour()
+
+    new_tier = classify(rate)
+
+    // Hysteresis: require tier to be stable for 10 minutes before transitioning.
+    // Prevents oscillation at tier boundaries (e.g., 99-101 announces/hour
+    // flipping between Warm and Hot every minute).
+    IF new_tier != state.tier AND (now - state.last_transition) > Duration::minutes(10):
+        state.tier = new_tier
+        state.last_transition = now
+        emit_event(PopularityTierChanged { info_hash, old: state.tier, new: new_tier })
+
+FUNCTION classify(announces_per_hour) -> PopularityTier:
+    MATCH announces_per_hour:
+        > 100 => Hot
+        > 10  => Warm
+        > 0.04 => Cold    // ~1/day = 0.042/hour
+        _     => Frozen
+```
+
+**Seed box bandwidth allocation:**
+
+The seed box allocates upload bandwidth inversely to swarm self-sufficiency. Hot content has plenty of seeders — the seed box contribution is marginal. Cold content has few seeders — the seed box is often the only reliable source.
+
+```toml
+[tracker.popularity]
+enabled = true                       # Default: true
+# EWMA decay factor for announce rate (higher = more responsive, more noisy).
+ewma_alpha = 0.3                     # Range: 0.05–0.95. Default: 0.3
+# Hysteresis duration before tier transition.
+hysteresis_secs = 600                # Range: 60–3600. Default: 600 (10 min)
+
+# Tier thresholds (announces per hour).
+hot_threshold = 100                  # Default: 100
+warm_threshold = 10                  # Default: 10
+cold_threshold = 0.04                # Default: 0.04 (~1/day)
+
+# Seed box bandwidth share weights per tier.
+# Higher weight = more seed box bandwidth allocated to this tier.
+# The seed box distributes spare bandwidth proportionally to these weights.
+[tracker.popularity.seedbox_weights]
+hot = 1                              # Minimal — swarm self-serves
+warm = 4                             # Normal allocation
+cold = 16                            # Elevated — few peers, seed box is critical
+frozen = 8                           # On-demand — less than cold (only seed when requested)
+```
+
+**Why this matters:** Workshop content follows a power law — 5% of packages account for ~80% of downloads. Without popularity bucketing, the seed box seeds everything equally, wasting bandwidth on hot content that already has dozens of seeders while cold content (a long-tail map or niche voice pack) starves. With bucketing, the seed box focuses where it provides the most incremental value. The EWMA + hysteresis approach is adapted from Dragonfly's load-quality scoring — smooth, stable classification that avoids flapping at tier boundaries.
+
+**Interaction with `PopularityClassifier` trait:**
+
+Applications that need custom classification (e.g., IC's Workshop could weight recency or community ratings into tier decisions) can override the built-in EWMA classifier:
+
+```rust
+/// Pluggable content popularity classification. Default: EWMA-based announce rate.
+/// Custom: weighted by downloads, ratings, recency, or external signals.
+pub trait PopularityClassifier: Send + Sync + 'static {
+    /// Classify an info hash into a popularity tier.
+    fn classify(&self, info_hash: &InfoHash, stats: &TorrentTrackerStats) -> PopularityTier;
+}
+
+/// Stats available to the classifier for each tracked torrent.
+pub struct TorrentTrackerStats {
+    pub unique_announcers_last_hour: f64,
+    pub total_seeders: u32,
+    pub total_leechers: u32,
+    pub total_completed: u64,
+    pub first_seen: SystemTime,
+    pub last_announce: SystemTime,
+}
+```
+
+### 2.8.4 Interaction Summary
+
+| Bucket System                        | Where It Runs             | What It Replaces                              | Complexity                                  | Benefit                                                             |
+| ------------------------------------ | ------------------------- | --------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------- |
+| Peer bucketing (§ 2.8.1)             | Embedded tracker          | Flat O(n) peer scoring on every announce      | O(1) insert, O(k) lookup (k = bucket count) | Fast announce response for popular content; better locality         |
+| Connection pool buckets (§ 2.8.2)    | Client connection manager | Flat `max_connections_per_torrent` limit      | O(1) per-connect check                      | Prevents cross-transport starvation; guarantees transport diversity |
+| Content popularity buckets (§ 2.8.3) | Embedded tracker          | Equal bandwidth allocation across all content | O(1) tier lookup (EWMA pre-computed)        | Seed box focuses bandwidth on long-tail content                     |
+
+All three systems are **optional and backward-compatible**. Disabling peer bucketing falls back to flat scoring. Disabling connection pool bucketing uses the single `max_connections_per_torrent` limit. Disabling popularity bucketing uses equal bandwidth allocation. The bucket systems compose independently — they can be enabled in any combination.
 
 ---
 
@@ -713,6 +1306,17 @@ connection_timeout = 10              # Seconds before a pending connection is ab
 peer_timeout = 120                   # Seconds of inactivity before disconnecting a peer. Range: 30–600. Default: 120
 handshake_timeout = 10               # Seconds to complete the BT handshake. Range: 2–30. Default: 10
 
+# Transport-bucketed connection slots (§ 2.8.2)
+# Partitions max_connections_per_torrent into per-transport guaranteed minimums
+# and hard caps. Prevents cross-transport starvation (e.g., WebRTC flooding TCP).
+enable_connection_buckets = true     # Enable transport-bucketed connection slots. Default: true
+tcp_min_slots = 40                   # Minimum guaranteed TCP slots. Default: 40
+tcp_max_slots = 80                   # Maximum TCP slots. Default: 80
+utp_min_slots = 10                   # Minimum guaranteed uTP slots. Default: 10
+utp_max_slots = 30                   # Maximum uTP slots. Default: 30
+webrtc_min_slots = 10                # Minimum guaranteed WebRTC slots. Default: 10
+webrtc_max_slots = 30                # Maximum WebRTC slots. Default: 30
+
 # Connection retry
 connect_retry_delay = 300            # Seconds before retrying a failed peer. Range: 30–3600. Default: 300 (5 min)
 connect_retry_max_attempts = 3       # Max reconnect attempts before blacklisting. Range: 0–20. Default: 3
@@ -741,6 +1345,8 @@ keepalive_interval = 120             # Seconds between keep-alive messages. Rang
 - `half_open_connection_limit` is critical on Windows (which has limited half-open socket capacity). Values > 100 may cause OS-level socket exhaustion.
 - `proxy_peer_connections = true` with `utp_enabled = true` is incompatible (SOCKS proxies typically don't support UDP). Validation warns and disables uTP.
 - `port_randomization = true` with `upnp_enabled = true` may cause frequent NAT mapping churn. Consider using a fixed port with UPnP.
+- `enable_connection_buckets = true` requires `max_connections_per_torrent >= tcp_min_slots + utp_min_slots + webrtc_min_slots`. Validation rejects configurations where minimums exceed the per-torrent limit.
+- If a transport is compile-time disabled (e.g., `webrtc` feature off), its bucket slots are redistributed to enabled transports proportionally.
 
 #### Group 3: Peer Management
 
@@ -1103,6 +1709,11 @@ cli = ["dep:clap"]                  # Built-in CLI binary
 metrics = ["dep:metrics"]           # Prometheus / OpenTelemetry metric adapters
 tracing-integration = ["dep:tracing"]  # tracing crate span integration
 
+# ──── Content ────
+channels = []                       # Content Channels — mutable, append-only versioned data streams (§ 2.5)
+streaming = []                      # Streaming piece selection strategies (§ 2.6)
+revocation = []                     # Revocation infrastructure — block list enforcement at protocol layer (§ 2.7)
+
 # ──── Optional functionality ────
 geoip = ["dep:maxminddb"]           # GeoIP peer location lookup
 plugins = []                        # Dynamic plugin API (extensible peer filter, storage, etc.)
@@ -1112,7 +1723,7 @@ full = [
     "dht", "udp_tracker", "pex", "lsd", "utp", "encryption",
     "upnp_natpmp", "v2", "hybrid_v1_v2", "webrtc",
     "webapi", "rpc", "cli", "metrics", "tracing-integration",
-    "geoip", "plugins"
+    "geoip", "plugins", "channels", "streaming", "revocation"
 ]
 
 # Minimal — for deeply embedded use (just TCP BT wire protocol)
@@ -1123,11 +1734,12 @@ minimal = []
 
 **Binary size impact (estimated):**
 
-| Feature Set             | Approximate Added Size | Notes                                           |
-| ----------------------- | ---------------------- | ----------------------------------------------- |
-| `minimal` (no defaults) | ~2 MB                  | TCP only, tracker only, no extensions           |
-| `default`               | ~4 MB                  | Full desktop client capabilities                |
-| `full`                  | ~8 MB                  | Includes web server, CLI parser, GeoIP database |
+| Feature Set             | Approximate Added Size | Notes                                                        |
+| ----------------------- | ---------------------- | ------------------------------------------------------------ |
+| `minimal` (no defaults) | ~2 MB                  | TCP only, tracker only, no extensions                        |
+| `default`               | ~4 MB                  | Full desktop client capabilities                             |
+| `default` + `channels`  | ~4.5 MB                | Desktop + content channel support                            |
+| `full`                  | ~9 MB                  | Includes web server, CLI parser, GeoIP, channels, revocation |
 
 ---
 
@@ -1300,11 +1912,23 @@ max_active_seeds = -1                # Seed everything
 max_active_total = -1
 seeding_goals.target_ratio = 0       # No ratio goal — seed forever
 
+[network]
+# Connection pool bucketing — prevents WebRTC/uTP from crowding TCP
+enable_connection_buckets = true
+tcp_min_slots = 80
+tcp_max_slots = 160
+utp_min_slots = 20
+utp_max_slots = 60
+webrtc_min_slots = 5
+webrtc_max_slots = 20
+
 [observability]
 log_level = "info"
 log_format = "json"
 tracing_network_spans = false
 ```
+
+> **Seed box note:** When a `PopularityClassifier` is registered, the `server_seedbox` profile automatically applies per-tier bandwidth weighting (§ 2.8.3). Cold and warm torrents receive proportionally more upload bandwidth than hot torrents, since hot swarms are self-sustaining. This ensures the seed box's limited uplink has maximum swarm health impact.
 
 ### 4.4 `lan_party`
 
@@ -1388,6 +2012,10 @@ pub struct TrackerConfig {
     pub min_announce_interval: u32,
     /// Access control: open (anyone), whitelist, or auth callback.
     pub access_mode: TrackerAccessMode,
+    /// Hierarchical peer bucketing for fast announce responses (§ 2.8.1).
+    pub peer_buckets: PeerBucketConfig,
+    /// Content popularity classification for adaptive seed allocation (§ 2.8.3).
+    pub popularity: PopularityConfig,
 }
 
 pub enum TrackerAccessMode {
@@ -1400,31 +2028,36 @@ pub enum TrackerAccessMode {
 }
 ```
 
-The embedded tracker speaks standard BEP 3/15/23 protocols and is interoperable with any standard BitTorrent client. The tracker does not need to be used with the embedded client — it can operate standalone as a lightweight tracker.
+The embedded tracker speaks standard BEP 3/15/23 protocols and is interoperable with any standard BitTorrent client. The tracker does not need to be used with the embedded client — it can operate standalone as a lightweight tracker. When peer bucketing is enabled (§ 2.8.1), the tracker pre-classifies announced peers into a region × seed-status × transport hierarchy for O(k) announce responses instead of O(n) flat scoring. When popularity classification is enabled (§ 2.8.3), the tracker maintains per-torrent popularity tiers that drive adaptive seed box bandwidth allocation.
 
 ---
 
 ## 7. IC Integration — The Primary Consumer
 
-This crate exists because IC needs it. Every design decision — from the extensibility traits to the priority channel system to WebRTC support — traces back to a concrete IC requirement. The crate is standalone per D076 (Tier 3, Phase 5–6a) with **zero IC dependencies**, but IC is the reason it exists and the benchmark against which it is validated.
+This crate exists because IC needs it. But IC is not the only possible consumer — `p2p-distribute` is foundational infrastructure that IC validates first. The crate is standalone per D076 (Tier 3, Phase 5–6a) with **zero IC dependencies**.
 
-IC consumes it as follows:
+IC uses `p2p-distribute` across multiple subsystems, not just the Workshop:
 
-| IC Component                           | How It Uses `p2p-distribute`                                                                                                                                                                            |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `workshop-core` (D050)                 | Embeds `Session` for Workshop package download/upload. Implements `StorageBackend` with IC's CAS blob store. Implements `DiscoveryBackend` with Workshop-aware peer discovery (lobby peers, seed list). |
-| `ic-server` Workshop capability (D074) | Runs a `Session` + embedded tracker for permanent seeding. Implements `AuthPolicy` with IC's Ed25519 community authentication.                                                                          |
-| `ic-game`                              | Imports `workshop-core` which imports `p2p-distribute`. Never uses `p2p-distribute` directly.                                                                                                           |
+| IC Component                           | `p2p-distribute` Features Used                                                  | How It Uses `p2p-distribute`                                                                                                                                                              |
+| -------------------------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workshop-core` (D050)                 | `Session`, `StorageBackend`, `DiscoveryBackend`, `RevocationPolicy`, `channels` | Embeds `Session` for Workshop package download/upload. CAS blob storage. Workshop-aware peer discovery. Revocation enforcement from federation. Content channels for live metadata feeds. |
+| `ic-server` Workshop capability (D074) | `Session`, embedded tracker, `AuthPolicy`, `RevocationPolicy`                   | Permanent seeding + tracker for community server. Ed25519 community auth. Block list enforcement from moderation/DMCA decisions.                                                          |
+| `ic-server` relay capability (D074)    | `channels`                                                                      | Content channels for live server configuration distribution (balance patches, map rotation announcements) to connected players.                                                           |
+| `ic-game` lobby auto-download          | `Session` (via `workshop-core`), priority channels                              | Lobby-urgent priority scheduling for missing content when joining a game. Fast P2P download from lobby peers before match start.                                                          |
+| `ic-game` replay sharing               | `Session`, `StorageBackend`                                                     | P2P distribution of `.icrep` replay files. Players who watch a replay seed it. Community replay archives.                                                                                 |
+| `ic-game` update delivery              | `Session`, `streaming`                                                          | Game update distribution via P2P swarms, reducing CDN dependency. Streaming piece selection for progressive patching.                                                                     |
 
 **IC-specific extensions build on top of `p2p-distribute`'s traits:**
 
-| IC Extension           | Trait Used                   | What It Does                                                                                            |
-| ---------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Lobby-urgent priority  | `PriorityChannel::Custom(2)` | IC's lobby priority scheduling (D049 § piece picker) maps to `p2p-distribute`'s priority channel system |
-| Authenticated announce | `AuthPolicy`                 | IC's Ed25519 tokens (see `research/p2p-engine-protocol-design.md` § ic_auth)                            |
-| Community peer filter  | `PeerFilter`                 | IC's community membership verification                                                                  |
-| CAS blob storage       | `StorageBackend`             | IC's content-addressed local deduplication store (D049)                                                 |
-| Workshop metadata API  | External (not in crate)      | IC's manifest/search/dependency resolution sits above the P2P layer                                     |
+| IC Extension            | Trait Used                   | What It Does                                                                                            |
+| ----------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Lobby-urgent priority   | `PriorityChannel::Custom(2)` | IC's lobby priority scheduling (D049 § piece picker) maps to `p2p-distribute`'s priority channel system |
+| Authenticated announce  | `AuthPolicy`                 | IC's Ed25519 tokens (see `research/p2p-engine-protocol-design.md` § ic_auth)                            |
+| Community peer filter   | `PeerFilter`                 | IC's community membership verification                                                                  |
+| CAS blob storage        | `StorageBackend`             | IC's content-addressed local deduplication store (D049)                                                 |
+| Workshop revocation     | `RevocationPolicy`           | Workshop federation revocation records feed the block list. Moderation and DMCA takedowns propagate.    |
+| Balance/config channels | Content Channels (§ 2.5)     | Live balance patch distribution, server config updates, tournament rule pushes                          |
+| Workshop metadata API   | External (not in crate)      | IC's manifest/search/dependency resolution sits above the P2P layer                                     |
 
 **Wire protocol:** `p2p-distribute` implements standard BEP 3/5/9/10/11/14/15/23/29/52 wire protocol as described in `research/p2p-engine-protocol-design.md` §§ 1–7. IC-specific extensions (ic_auth, ic_priority) are negotiated via BEP 10 and implemented as `AuthPolicy` and `PriorityChannel` trait implementations, not as hardcoded protocol extensions in the crate.
 
@@ -1563,18 +2196,21 @@ automatically with warnings. To suppress: run `p2p-distribute migrate-config`.
 
 ### 9.4 Integration Tests
 
-| Test                       | What                                                                | How                                              |
-| -------------------------- | ------------------------------------------------------------------- | ------------------------------------------------ |
-| Two-peer transfer          | Client A seeds, Client B downloads, verify complete                 | Two `Session` instances in one process           |
-| Multi-peer swarm           | 10 peers, 1 initial seeder, verify all complete                     | 10 `Session` instances                           |
-| Tracker-mediated discovery | Client discovers peers only via tracker, verify transfer            | Embedded tracker + 2 clients                     |
-| DHT-only discovery         | No tracker, DHT bootstrap, verify peer discovery                    | DHT-enabled sessions with bootstrap nodes        |
-| Magnet link                | Client B joins via magnet URI, acquires metadata from A             | BEP 9 metadata exchange test                     |
-| Fast resume                | Seed, crash (kill), restart, verify no recheck needed               | Store fast resume, verify piece states restored  |
-| Config layering            | Profile + file + runtime override, verify final config              | Config resolution unit tests                     |
-| Profile switching          | Change profile at runtime, verify behavior changes                  | Session::set_config with new profile             |
-| Priority channels          | Three torrents at different priorities, verify bandwidth allocation | Multi-torrent transfer with priority measurement |
-| WebRTC transfer            | Desktop peer ↔ WebRTC peer via signaling                            | Feature-gated integration test                   |
+| Test                       | What                                                                | How                                               |
+| -------------------------- | ------------------------------------------------------------------- | ------------------------------------------------- |
+| Two-peer transfer          | Client A seeds, Client B downloads, verify complete                 | Two `Session` instances in one process            |
+| Multi-peer swarm           | 10 peers, 1 initial seeder, verify all complete                     | 10 `Session` instances                            |
+| Tracker-mediated discovery | Client discovers peers only via tracker, verify transfer            | Embedded tracker + 2 clients                      |
+| DHT-only discovery         | No tracker, DHT bootstrap, verify peer discovery                    | DHT-enabled sessions with bootstrap nodes         |
+| Magnet link                | Client B joins via magnet URI, acquires metadata from A             | BEP 9 metadata exchange test                      |
+| Fast resume                | Seed, crash (kill), restart, verify no recheck needed               | Store fast resume, verify piece states restored   |
+| Config layering            | Profile + file + runtime override, verify final config              | Config resolution unit tests                      |
+| Profile switching          | Change profile at runtime, verify behavior changes                  | Session::set_config with new profile              |
+| Priority channels          | Three torrents at different priorities, verify bandwidth allocation | Multi-torrent transfer with priority measurement  |
+| WebRTC transfer            | Desktop peer ↔ WebRTC peer via signaling                            | Feature-gated integration test                    |
+| Peer bucket locality       | Multi-region swarm, verify announce returns locality-sorted peers   | Embedded tracker + simulated GeoIP regions        |
+| Connection pool bucketing  | All transports active, verify guaranteed slot minimums under load   | Three-transport session with contention           |
+| Popularity tier stability  | Request rate oscillates near tier boundary, verify no flapping      | EWMA + hysteresis stability over 10-minute window |
 
 ### 9.5 Cross-Platform CI
 
@@ -1706,10 +2342,39 @@ automatically with warnings. To suppress: run `p2p-distribute migrate-config`.
 - External IP discovery (from tracker `yourip`, UPnP, STUN)
 - LSD (BEP 14 multicast local peer discovery)
 - Feature-gated: all behind `upnp_natpmp`, `utp`, `lsd` flags
+- **Connection pool bucketing by transport (§ 2.8.2):**
+  - `ConnectionBuckets` implementation with per-transport min/max slots
+  - Slot allocation algorithm (TCP, uTP, WebRTC guaranteed minimums)
+  - Dynamic redistribution when a transport is disabled
+  - Unit tests: transport starvation prevention under contention
 
-**Exit criteria:** Client behind a NAT can automatically map a port and be reachable. uTP transfers work and yield bandwidth to TCP traffic.
+**Exit criteria:** Client behind a NAT can automatically map a port and be reachable. uTP transfers work and yield bandwidth to TCP traffic. Connection pool bucketing enforces per-transport slot minimums under contention (no transport starved when all three active).
 
-### Milestone 8: v2/Hybrid Support
+### Milestone 8: Content Channels, Streaming & Revocation
+
+**Duration:** 4–5 weeks
+
+**Deliverables:**
+- **Content Channels** (`channels` feature):
+  - `ContentChannel` creation, `SnapshotInfo` management, retention policies
+  - `Session::create_channel()`, `Session::subscribe_channel()`, `Session::publish_snapshot()`
+  - Per-channel peer swarm management (announce per-channel, not per-snapshot)
+  - Offline catch-up: resume from last received sequence number
+  - Integration test: publisher → 3 subscribers, verify all receive snapshots
+- **Streaming piece selection** (`streaming` feature):
+  - `PieceStrategy::Sequential`, `PieceStrategy::StreamingHybrid`
+  - `TorrentHandle::set_playback_position()` for dynamic cursor repositioning
+  - Integration test: streaming download with position seeking
+- **Revocation infrastructure** (`revocation` feature):
+  - `RevocationPolicy` trait implementation
+  - `BlockListRevocationPolicy` built-in (in-memory + file-backed)
+  - Immediate torrent stop + de-announce on revocation
+  - Embedded tracker respects revocation (refuses announce for revoked hashes)
+  - Integration test: mid-transfer revocation stops download and de-announces
+
+**Exit criteria:** Content channels propagate snapshots to subscribers within 5 seconds. Streaming hybrid strategy maintains playback continuity while contributing to swarm health. Revocation of an active torrent stops all transfers within 1 second.
+
+### Milestone 9: v2/Hybrid Support
 
 **Duration:** 3–4 weeks (feature-gated, can be deferred)
 
@@ -1723,7 +2388,7 @@ automatically with warnings. To suppress: run `p2p-distribute migrate-config`.
 
 **Exit criteria:** Client can download and seed v2 and hybrid torrents. v1 and v2 peers interoperate on hybrid torrents.
 
-### Milestone 9: Control Surfaces
+### Milestone 10: Control Surfaces
 
 **Duration:** 3–4 weeks
 
@@ -1741,12 +2406,22 @@ automatically with warnings. To suppress: run `p2p-distribute migrate-config`.
 - **CLI** (`cli` feature): `p2p-distribute` binary with subcommands:
   - `download <magnet|torrent>`, `seed <dir>`, `status`, `config`, `profile`
 - **Embedded tracker** (in `webapi`): HTTP announce/scrape, optional UDP
+- **Tracker-side peer bucketing (§ 2.8.1):**
+  - `PeerBucketTree` implementation (region × seed_status × transport)
+  - Hierarchical `RegionKey` (continent|country|region|city) with GeoIP-sourced classification
+  - Closest-outward bucket walk on announce response
+  - Integration test: simulated multi-region swarm verifies locality-better peer lists
+- **Content popularity bucketing (§ 2.8.3):**
+  - `PopularityTier` classification (Hot/Warm/Cold/Frozen) with EWMA + hysteresis
+  - Seed box bandwidth weight allocation per tier
+  - `PopularityClassifier` trait with default EWMA implementation
+  - Integration test: tier stability under boundary-crossing request rates
 - **Metrics** (`metrics` feature): Prometheus-compatible `/metrics` endpoint
 - **GeoIP** (`geoip` feature): Peer country/city lookup, optional peer filtering by country
 
-**Exit criteria:** A headless daemon can be fully controlled via web API and CLI. Metrics endpoint produces valid Prometheus output.
+**Exit criteria:** A headless daemon can be fully controlled via web API and CLI. Metrics endpoint produces valid Prometheus output. Embedded tracker produces locality-optimized peer lists via bucket walk. Popularity tiers are stable at boundaries (no flapping within 10-minute hysteresis window).
 
-### Milestone 10: Hardening & Completion
+### Milestone 11: Hardening & Completion
 
 **Duration:** 4–6 weeks
 
@@ -1790,7 +2465,15 @@ The crate is considered **successful** when all of the following are true:
 
 9. **Cross-platform:** Builds and passes unit tests on x86_64 Linux/Windows/macOS. Builds on WASM (minimal feature set).
 
-10. **Extension points work:** At least one non-trivial custom implementation of `StorageBackend`, `PeerFilter`, and `AuthPolicy` exists (in tests or examples) demonstrating the trait API works for real use cases.
+10. **Extension points work:** At least one non-trivial custom implementation of `StorageBackend`, `PeerFilter`, `AuthPolicy`, and `RevocationPolicy` exists (in tests or examples) demonstrating the trait API works for real use cases.
+
+11. **Content channels work end-to-end:** A publisher can create a channel, publish snapshots, and subscribers receive them via P2P. Retention policies are enforced. Offline catch-up works.
+
+12. **Revocation is immediate:** Revoking an active torrent stops all transfers within 1 second. The embedded tracker refuses announce requests for revoked hashes. The `RevocationPolicy` trait is demonstrably composable (test: registry-backed policy + file-backed fallback).
+
+13. **Streaming selection works:** `StreamingHybrid` strategy delivers pieces sequentially near the cursor while maintaining rarest-first for the rest of the swarm. Dynamic cursor repositioning works without restarting the torrent.
+
+14. **Bucket-based scheduling works:** Tracker-side peer bucketing produces locality-better peer lists than flat scoring (measured via simulated multi-region swarm). Connection pool bucketing enforces transport-type minimum guarantees under contention. Content popularity classification correctly categorizes into tiers with EWMA + hysteresis stability (no flapping at tier boundaries in 10-minute test window).
 
 ---
 
@@ -1801,7 +2484,9 @@ The crate is considered **successful** when all of the following are true:
 | `research/p2p-engine-protocol-design.md`            | Wire-level protocol spec (BEP 3/5/9/10/15, IC extensions, WebRTC signaling, icpkg header). `p2p-distribute` implements the protocol-standard subset; IC-specific extensions are layered via traits. |
 | `research/bittorrent-p2p-libraries.md`              | Ecosystem study. Informed build-vs-adopt decisions. `librqbit` (Apache-2.0) is the primary Rust reference.                                                                                          |
 | `src/decisions/09a/D076-standalone-crates.md`       | `p2p-distribute` is Tier 3 (Phase 5–6a). MIT OR Apache-2.0. Separate repo.                                                                                                                          |
+| `src/decisions/09c/D050-workshop-library.md`        | Workshop as cross-project library. `workshop-core` is the middle layer between `p2p-distribute` (transport) and game integration. Three-layer model: `p2p-distribute` → `workshop-core` → IC.       |
 | `src/decisions/09e/D049-workshop-assets.md`         | Workshop P2P delivery strategy, `.icpkg` format, CAS storage, peer scoring. `p2p-distribute` is the engine; D049 is the IC integration layer.                                                       |
-| `src/decisions/09b/D074-community-server-bundle.md` | `ic-server` Workshop capability uses `p2p-distribute` for permanent seeding.                                                                                                                        |
-| `src/modding/workshop.md`                           | Workshop user experience, auto-download, modpacks. Sits above `p2p-distribute`.                                                                                                                     |
+| `src/decisions/09b/D074-community-server-bundle.md` | `ic-server` Workshop capability uses `p2p-distribute` for permanent seeding. Relay capability uses content channels for live config distribution.                                                   |
+| `src/modding/workshop.md`                           | Workshop user experience, auto-download, modpacks, revocation propagation. Sits above `p2p-distribute`.                                                                                             |
 | `research/p2p-federated-registry-analysis.md`       | Competitive landscape (Uber Kraken, Dragonfly, IPFS). Informed peer scoring, scheduling, and architecture.                                                                                          |
+| `src/decisions/09e/D052-community-servers.md`       | Ed25519 credential system. `AuthPolicy` implementations validate IC's signed credential records. Revocation policy cross-references community trust infrastructure.                                 |

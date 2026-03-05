@@ -175,7 +175,7 @@ cache_size_limit = "2 GB"             # LRU eviction when exceeded
 prefer_p2p = true                     # false = always use HTTP direct
 ```
 
-The P2P engine uses **rarest-first** piece selection, an **endgame mode** that sends duplicate requests for the last few pieces to prevent stalls, a **connection state machine** (pending → active → blacklisted) that avoids wasting time on dead or throttled peers, **statistical bad-peer detection** (demotes peers whose transfer times deviate beyond 3σ — adapted from Dragonfly's evaluator), and **3-tier download priority** (lobby-urgent / user-requested / background) for QoS differentiation. Full protocol design details — peer selection policy, weighted multi-dimensional scoring, piece request strategy, announce cycle, size-based piece lengths, health checks, preheat/prefetch, persistent replica count — are in `../decisions/09e/D049-workshop-assets.md` "P2P protocol design details."
+The P2P engine uses **rarest-first** piece selection, an **endgame mode** that sends duplicate requests for the last few pieces to prevent stalls, a **connection state machine** (pending → active → blacklisted) that avoids wasting time on dead or throttled peers, **statistical bad-peer detection** (demotes peers whose transfer times deviate beyond 3σ — adapted from Dragonfly's evaluator), and **3-tier download priority** (lobby-urgent / user-requested / background) for QoS differentiation. The underlying P2P infrastructure is the `p2p-distribute` crate (D076 Tier 3, MIT/Apache-2.0) — a foundational content distribution engine that IC uses across multiple subsystems, not just Workshop. `workshop-core` (D050) integrates `p2p-distribute` with Workshop-specific registry, federation, and revocation propagation. Full protocol design details — peer selection policy, weighted multi-dimensional scoring, piece request strategy, announce cycle, size-based piece lengths, health checks, preheat/prefetch, persistent replica count — are in `../decisions/09e/D049-workshop-assets.md` "P2P protocol design details."
 
 **Cost:** A BitTorrent tracker costs $5-20/month. Centralized CDN for a popular 500MB mod downloaded 10K times = 5TB = $50-450/month. P2P reduces marginal distribution cost to near-zero.
 
@@ -433,46 +433,9 @@ llm:
 
 #### Moderation & Publisher Trust (D030)
 
-Workshop moderation is **tooling-enabled, policy-configurable**. The engine provides moderation infrastructure; each deployment (official IC server, community servers) defines its own policies.
+> **Full section:** [Workshop Moderation & Publisher Trust](workshop-moderation.md)
 
-**Publisher trust tiers:**
-
-| Tier           | Requirements                                                                                  | Privileges                                                                 |
-| -------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| **Unverified** | Account created                                                                               | Can publish to `dev` channel only (local testing)                          |
-| **Verified**   | Email confirmed                                                                               | Can publish to `beta` and `release` channels. Subject to moderation queue. |
-| **Trusted**    | N successful publishes (configurable, default 5), no policy violations, account age > 30 days | Updates auto-approved. New resources still moderation-queued.              |
-| **Featured**   | Editor's pick / staff selection                                                               | Highlighted in browse UI, eligible for "Mod of the Week"                   |
-
-Trust tiers are tracked per-server. A publisher who is Trusted on the official server starts as Verified on a community server — trust doesn't federate automatically (a community decision, not an engine constraint).
-
-**Moderation rules engine (Phase 5+):**
-
-The Workshop server supports configurable moderation rules — YAML-defined automation that runs on every publish event. Inspired by mod.io's rules engine but exposed as user-configurable server policy, not proprietary SaaS logic.
-
-```yaml
-# workshop-server.yaml — moderation rules
-moderation:
-  rules:
-    - name: "hold-new-publishers"
-      condition: "publisher.trust_tier == 'verified' AND resource.is_new"
-      action: queue_for_review
-    - name: "auto-approve-trusted-updates"
-      condition: "publisher.trust_tier == 'trusted' AND resource.is_update"
-      action: auto_approve
-    - name: "flag-large-packages"
-      condition: "resource.size > 500_000_000"  # > 500MB
-      action: queue_for_review
-      reason: "Package exceeds 500MB — manual review required"
-    - name: "reject-missing-license"
-      condition: "resource.license == null"
-      action: reject
-      reason: "License field is required"
-```
-
-Community server operators define their own rules. The official IC server ships with sensible defaults. Rules are structural (file format, size, metadata completeness) — not content-based creative judgment.
-
-**Community reporting:** Report button on every resource in the Workshop browser. Report categories: license violation, malware, DMCA, policy violation. Reports go to a moderator queue. DMCA with due process per D030. Publisher notified and can appeal.
+Publisher trust tiers (Unverified→Verified→Trusted→Featured), asymmetric negative reputation federation, `RevocationRecord` propagation via `p2p-distribute` `RevocationPolicy` trait, three reconciliation loops (client content / federation trust / server health), YAML-configurable moderation rules engine, and community reporting workflow.
 
 #### CI/CD Publishing Integration
 
@@ -512,6 +475,6 @@ The Workshop browser filters resources by the player's current platform. Platfor
 
 ## Sub-Pages
 
-| Section | Topic | File |
-| --- | --- | --- |
+| Section           | Topic                                                                                                                                                                                                                    | File                                         |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
 | Workshop Features | LLM-driven resource discovery, Steam Workshop integration, in-game browser, modpacks, auto-download on lobby join, creator reputation, content moderation/DMCA, voluntary tipping, achievement integration, Workshop API | [workshop-features.md](workshop-features.md) |

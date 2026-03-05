@@ -2,6 +2,9 @@
 
 **Keywords:** architecture, crate boundaries, `ic-sim`, `ic-net`, `ic-protocol`, `GameLoop<N, I>`, `NetworkModel`, `InputSource`, deterministic simulation, Bevy, platform-agnostic design, game modules, async runtime, tokio, bevy_tasks, IoBridge, WASM portability, GUI-first binary design
 
+> **Architectural positioning — federated, not centralized.**
+> IC uses **federated servers** for trust and coordination (relay, ranking, matchmaking) with **P2P for content distribution** (Workshop delivery, replay sharing). There is no mandatory central server — anyone can run an `ic-server` instance — but servers exist and are the authority path for ranked play. Casual games can use a host-embedded listen server with zero external infrastructure. "Federated" means multiple independent operators, each sovereign; "P2P" refers to BitTorrent-style content transfer between players, not peer-to-peer game networking.
+
 ## Decision: Bevy
 
 **Rationale (revised — see D002 in `decisions/09a-foundation.md`):**
@@ -419,3 +422,4 @@ RA1 registers `StandardOrderValidator` (ownership, affordability, prerequisites,
 | Multi-Game Extensibility (Game Modules)                     | [multi-game.md](architecture/multi-game.md)                     |
 | Type-Safety Architectural Invariants                        | [type-safety.md](architecture/type-safety.md)                   |
 | API Misuse Analysis & Type-System Defenses                  | [api-misuse-defense.md](architecture/api-misuse-defense.md)     |
+| Data-Sharing Flows Overview                                 | [data-flows-overview.md](architecture/data-flows-overview.md)   |

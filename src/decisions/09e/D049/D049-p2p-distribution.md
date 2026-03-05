@@ -146,6 +146,8 @@ PeerScore = Capacity(0.4) + Locality(0.3) + SeedStatus(0.2) + LobbyContext(0.1)
 
 The initial 5-tier priority system (above) ships first and is adequate for community scale. Weighted scoring is additive — the same pluggable policy interface supports both approaches. Community servers can configure their own weights or contribute custom scoring policies.
 
+> **Bucket-based scheduling (Phase 5+):** The weighted scoring formula above is applied *within* pre-sorted bucket leaves, not flat across all peers. The embedded tracker organizes its peer table into a `PeerBucketTree` indexed by `RegionKey × SeedStatus × TransportType`. On each announce response, the tracker walks buckets from closest-matching outward, applying weighted scoring within each leaf to produce the final peer list. This reduces per-announce work from O(n) to O(k) where k is the bucket size, and naturally produces locality-optimized peer sets without requiring the scoring formula to carry the full locality signal. Connection pool bucketing (per-transport guaranteed slot minimums) prevents cross-transport starvation when TCP, uTP, and WebRTC peers coexist. Content popularity bucketing (Hot/Warm/Cold/Frozen tiers via EWMA) steers seed box bandwidth toward under-served swarms. Full design: `research/p2p-distribute-crate-design.md` § 2.8.
+
 *Piece request strategy (client-side):* The engine uses **rarest-first** piece selection by default — a priority queue sorted by fewest peers having each piece. This is standard BitTorrent behavior, well-validated for internet conditions. Kraken also implements this as `rarestFirstPolicy`.
 
 - **Pipeline limit:** 3 concurrent piece requests per peer (matches Kraken's default). Prevents overwhelming slow peers.

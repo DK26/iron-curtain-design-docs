@@ -21,6 +21,22 @@ prefer_p2p = true                     # false = always use HTTP direct
 
 *Content lifecycle:* Downloaded packages stay in the seeding pool for 30 minutes after the game exits (configurable via `seed_duration_after_exit`). This is longer than Kraken's 5-minute `seeder_tti` because IC has fewer peers per package — each seeder is more valuable. Disk cache uses LRU eviction when over `cache_size_limit`. Packages currently in use or being seeded are never evicted.
 
+*Seeding UX:* Background seeding is intentionally invisible during gameplay — no popups, no interruptions. Player awareness is provided through:
+
+- **System tray icon (desktop):** While seeding after game exit, a tray icon shows upload speed and peer count. Tray menu: **[Stop Seeding]** / **[Open IC]** / **[Quit]**. The icon disappears when `seed_duration_after_exit` expires or the user clicks Stop.
+- **Settings UI (Settings → Workshop → P2P):**
+
+| Setting            | Control                       | Default |
+| ------------------ | ----------------------------- | ------- |
+| Seed while playing | Toggle                        | On      |
+| Seed after exit    | Toggle + duration picker      | 30 min  |
+| Max upload speed   | Slider (0 = pause, unlimited) | 1 MB/s  |
+| Max cache size     | Slider                        | 2 GB    |
+| Prefer P2P         | Toggle                        | On      |
+
+- **In-game indicator (optional):** A subtle network icon in the status bar shows "↑ 340 KB/s to 3 peers" when seeding is active. Disabled by default — enabled via Settings → Workshop → P2P → Show seeding status.
+- **Disabling seeding entirely:** Setting `max_upload_speed = "0 B/s"` or `seed_after_download = false` disables all seeding. The Settings toggle is the primary control; the `settings.toml` entry is for automation / headless setups.
+
 *Download priority tiers:* Inspired by Dragonfly's 7-level priority system (Level0–Level6), IC uses 3 priority tiers to enable QoS differentiation. Higher-priority downloads preempt lower-priority ones (pause background downloads, reallocate bandwidth and connection slots):
 
 | Priority | Name             | When Used                                                | Behavior                                                   |
@@ -32,7 +48,15 @@ prefer_p2p = true                     # false = always use HTTP direct
 *Preheat / prefetch:* Adapted from Dragonfly's preheat jobs (which pre-warm content on seed peers before demand). IC uses two prefetch patterns:
 
 - **Lobby prefetch:** When a lobby host sets required mods, the Workshop server (Phase 5+) can pre-seed those mods to seed boxes before players join. The lobby creation event is the prefetch signal. This ensures seed infrastructure is warm when players start downloading.
-- **Subscription prefetch:** Players can subscribe to Workshop publishers or resources. Subscribed content auto-downloads in the background at `background` priority. When a subscribed mod updates, the new version downloads automatically before the player next launches the game.
+- **Subscription prefetch:** Players can subscribe to Workshop publishers or resources. Subscribed content auto-downloads in the background at `background` priority. When a subscribed mod updates, the new version downloads automatically before the player next launches the game. The check cycle runs every `workshop.subscription_check_interval` (default: 24 hours). On update detection:
+  1. Download at `background` priority (bandwidth-limited, paused during `lobby-urgent` or `user-requested` downloads)
+  2. Verify SHA-256 and stage the new version alongside the current one (no immediate swap)
+  3. Toast notification: "[mod name] updated to v2.1. [View Changes] [Dismiss]"
+  4. The new version activates on next game launch or when the player explicitly switches profiles (D062)
+
+  **Subscribe workflow (Workshop browser):** Each Workshop resource page and publisher page includes a **[Subscribe]** toggle (bell icon). Subscribing is free and instant — no account required beyond the local identity (D052 credentials). Subscription state is stored in the local Workshop SQLite database. Subscription management: Settings → Workshop → Subscriptions, showing a list view with download status, last-updated date, and **[Unsubscribe]** per item.
+
+  **Workshop browser indicators:** Subscribed resources show 🔔 in listing tiles. Resources with pending (not-yet-downloaded) updates show a numbered badge. The Workshop browser sidebar includes a "Subscriptions" filter that shows only subscribed content.
 
 *Persistent replica count (Phase 5+):* Inspired by Dragonfly's `PersistentReplicaCount`, the Workshop server tracks how many seed boxes hold each resource. If the count drops below a configurable threshold (default: 2 for popular resources, 1 for all others), the server triggers automatic re-seeding from HTTP origin. This ensures the "always available" guarantee — even if all player peers are offline, seed infrastructure maintains minimum replica coverage.
 

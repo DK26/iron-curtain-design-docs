@@ -63,19 +63,19 @@ A keep-alive is a message with `length_prefix = 0` and no message_id or payload 
 
 #### Message Table
 
-| Message ID | Name            | Length Prefix | Payload                                | Total Wire Bytes     |
-|------------|-----------------|---------------|----------------------------------------|----------------------|
-| —          | keep-alive      | 0             | (none)                                 | 4                    |
-| 0          | choke           | 1             | (none)                                 | 5                    |
-| 1          | unchoke         | 1             | (none)                                 | 5                    |
-| 2          | interested      | 1             | (none)                                 | 5                    |
-| 3          | not interested  | 1             | (none)                                 | 5                    |
-| 4          | have            | 5             | piece_index: u32 BE                    | 9                    |
-| 5          | bitfield        | 1+ceil(N/8)   | bitfield: ceil(N/8) bytes             | 5+ceil(N/8)          |
-| 6          | request         | 13            | index: u32, begin: u32, length: u32   | 17                   |
-| 7          | piece           | 9+block_len   | index: u32, begin: u32, block: [u8]   | 13+block_len         |
-| 8          | cancel          | 13            | index: u32, begin: u32, length: u32   | 17                   |
-| 20         | extended        | varies        | ext_msg_id: u8, payload: bencoded     | varies               |
+| Message ID | Name           | Length Prefix | Payload                             | Total Wire Bytes |
+| ---------- | -------------- | ------------- | ----------------------------------- | ---------------- |
+| —          | keep-alive     | 0             | (none)                              | 4                |
+| 0          | choke          | 1             | (none)                              | 5                |
+| 1          | unchoke        | 1             | (none)                              | 5                |
+| 2          | interested     | 1             | (none)                              | 5                |
+| 3          | not interested | 1             | (none)                              | 5                |
+| 4          | have           | 5             | piece_index: u32 BE                 | 9                |
+| 5          | bitfield       | 1+ceil(N/8)   | bitfield: ceil(N/8) bytes           | 5+ceil(N/8)      |
+| 6          | request        | 13            | index: u32, begin: u32, length: u32 | 17               |
+| 7          | piece          | 9+block_len   | index: u32, begin: u32, block: [u8] | 13+block_len     |
+| 8          | cancel         | 13            | index: u32, begin: u32, length: u32 | 17               |
+| 20         | extended       | varies        | ext_msg_id: u8, payload: bencoded   | varies           |
 
 #### Byte Layouts
 
@@ -142,17 +142,17 @@ e
 
 Field descriptions:
 
-| Key              | Type    | Description                                                                 |
-|------------------|---------|-----------------------------------------------------------------------------|
-| `m`              | dict    | Extension message ID mapping. Peers agree on IDs for each extension.        |
-| `m.ic_auth`      | int     | Extension ID for IC authenticated announce token exchange.                  |
-| `m.ic_priority`  | int     | Extension ID for IC piece priority hints.                                   |
-| `m.ut_metadata`  | int     | Extension ID for BEP 9 metadata exchange.                                   |
-| `v`              | string  | Client version string.                                                      |
-| `yourip`         | bytes   | Remote peer's IP as seen by this peer.                                      |
-| `ic_version`     | int     | IC extension protocol version (currently 1).                                |
-| `ic_capabilities`| int     | Bitmask: bit 0 = desktop, bit 1 = browser/WASM, bit 2 = server/seed.       |
-| `reqq`           | int     | Max outstanding request count this peer supports (IC default: 128).         |
+| Key               | Type   | Description                                                          |
+| ----------------- | ------ | -------------------------------------------------------------------- |
+| `m`               | dict   | Extension message ID mapping. Peers agree on IDs for each extension. |
+| `m.ic_auth`       | int    | Extension ID for IC authenticated announce token exchange.           |
+| `m.ic_priority`   | int    | Extension ID for IC piece priority hints.                            |
+| `m.ut_metadata`   | int    | Extension ID for BEP 9 metadata exchange.                            |
+| `v`               | string | Client version string.                                               |
+| `yourip`          | bytes  | Remote peer's IP as seen by this peer.                               |
+| `ic_version`      | int    | IC extension protocol version (currently 1).                         |
+| `ic_capabilities` | int    | Bitmask: bit 0 = desktop, bit 1 = browser/WASM, bit 2 = server/seed. |
+| `reqq`            | int    | Max outstanding request count this peer supports (IC default: 128).  |
 
 ### 1.4 IC Extension Messages (via BEP 10, message_id=20)
 
@@ -200,10 +200,10 @@ d
 e
 ```
 
-| Field      | Type      | Description                                                     |
-|------------|-----------|-----------------------------------------------------------------|
-| `pieces`   | list[int] | Piece indices this hint applies to.                             |
-| `priority` | int       | 0 = background, 1 = user-requested, 2 = lobby-urgent.          |
+| Field      | Type      | Description                                                                               |
+| ---------- | --------- | ----------------------------------------------------------------------------------------- |
+| `pieces`   | list[int] | Piece indices this hint applies to.                                                       |
+| `priority` | int       | 0 = background, 1 = user-requested, 2 = lobby-urgent.                                     |
 | `reason`   | string    | Human-readable reason: `"lobby-urgent"`, `"user-requested"`, `"background"`, `"endgame"`. |
 
 ---
@@ -214,11 +214,11 @@ IC's piece picker extends standard rarest-first with three priority tiers and pa
 
 ### 2.1 Priority Tiers
 
-| Tier | Value | Preemption | Use Case |
-|------|-------|------------|----------|
-| `LobbyUrgent` | 2 | Cancels in-flight background requests, reassigns bandwidth | Player joined lobby, needs mod NOW |
-| `UserRequested` | 1 | Queues normally, does not preempt | Player clicked "Download" in Workshop browser |
-| `Background` | 0 | Lowest priority, can be cancelled by higher tiers | Pre-fetch trending content, seed completion |
+| Tier            | Value | Preemption                                                 | Use Case                                      |
+| --------------- | ----- | ---------------------------------------------------------- | --------------------------------------------- |
+| `LobbyUrgent`   | 2     | Cancels in-flight background requests, reassigns bandwidth | Player joined lobby, needs mod NOW            |
+| `UserRequested` | 1     | Queues normally, does not preempt                          | Player clicked "Download" in Workshop browser |
+| `Background`    | 0     | Lowest priority, can be cancelled by higher tiers          | Pre-fetch trending content, seed completion   |
 
 ### 2.2 Data Structures
 
@@ -366,14 +366,14 @@ FUNCTION select_peer_for_piece(piece_index, available_peers) -> Option<PeerId>:
 
 ### 2.4 Pipeline Limits
 
-| Parameter | Value | Rationale |
-|-----------|-------|-----------|
-| `MAX_REQUESTS_PER_PEER` | 3 | Prevents single-peer saturation; allows parallel utilization |
-| `MAX_REQUESTS_PER_SWARM` | 5 | Limits total outstanding requests to prevent memory bloat |
-| `ENDGAME_THRESHOLD` | 5 | Pieces remaining before endgame activates |
-| `BLOCK_SIZE` | 16384 (16 KiB) | Standard BT block size, universally supported |
-| `PIECE_SIZE` | 262144 (256 KiB) | IC default for Workshop packages; adjustable per torrent |
-| `REQUEST_TIMEOUT` | 30 seconds | Time before an in-flight request is considered stalled and re-requested |
+| Parameter                | Value            | Rationale                                                               |
+| ------------------------ | ---------------- | ----------------------------------------------------------------------- |
+| `MAX_REQUESTS_PER_PEER`  | 3                | Prevents single-peer saturation; allows parallel utilization            |
+| `MAX_REQUESTS_PER_SWARM` | 5                | Limits total outstanding requests to prevent memory bloat               |
+| `ENDGAME_THRESHOLD`      | 5                | Pieces remaining before endgame activates                               |
+| `BLOCK_SIZE`             | 16384 (16 KiB)   | Standard BT block size, universally supported                           |
+| `PIECE_SIZE`             | 262144 (256 KiB) | IC default for Workshop packages; adjustable per torrent                |
+| `REQUEST_TIMEOUT`        | 30 seconds       | Time before an in-flight request is considered stalled and re-requested |
 
 ### 2.5 Rarity Updates
 
@@ -395,12 +395,12 @@ IC's choking algorithm is based on the standard BT tit-for-tat with IC-specific 
 
 ### 3.1 Parameters
 
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| `REGULAR_UNCHOKE_INTERVAL` | 10 seconds | How often to recalculate regular unchoke set |
-| `OPTIMISTIC_UNCHOKE_INTERVAL` | 30 seconds | How often to rotate the optimistic unchoke slot |
-| `MAX_UNCHOKED_PEERS` | 4 | Maximum regularly unchoked peers (excluding optimistic + lobby) |
-| `OPTIMISTIC_UNCHOKE_SLOTS` | 1 | Number of optimistic unchoke slots |
+| Parameter                     | Value      | Description                                                     |
+| ----------------------------- | ---------- | --------------------------------------------------------------- |
+| `REGULAR_UNCHOKE_INTERVAL`    | 10 seconds | How often to recalculate regular unchoke set                    |
+| `OPTIMISTIC_UNCHOKE_INTERVAL` | 30 seconds | How often to rotate the optimistic unchoke slot                 |
+| `MAX_UNCHOKED_PEERS`          | 4          | Maximum regularly unchoked peers (excluding optimistic + lobby) |
+| `OPTIMISTIC_UNCHOKE_SLOTS`    | 1          | Number of optimistic unchoke slots                              |
 
 ### 3.2 Choking Round Pseudocode
 
@@ -493,6 +493,8 @@ When IC is seeding (has all pieces), the upload strategy changes:
 - **Regular unchoke:** Unchoke the 4 interested peers with the **lowest** completion percentage. This helps newcomers complete faster, which in turn creates more seeders.
 - **Optimistic unchoke:** Same as leech mode — random choked interested peer every 30 seconds.
 - **Lobby exemption:** Still applies. Lobby peers are never choked.
+
+> **Interaction with bucket-based scheduling:** When connection pool bucketing (§ 2.8.2 in `research/p2p-distribute-crate-design.md`) is enabled, the set of connected peers is pre-filtered by transport type — guaranteed minimum slots for TCP, uTP, and WebRTC prevent any single transport from monopolizing the connection table. The choking algorithm operates on the *connected* peer set without modification; bucketing shapes *which* peers are connected, choking shapes *which* connected peers receive data. Tracker-side peer bucketing (§ 2.8.1) similarly shapes the *candidate* peer set by locality before connections are established.
 
 ---
 
@@ -605,11 +607,11 @@ Offset  Size   Field               Description
 
 ### 4.5 Swarm Access Control
 
-| Content Type | Anonymous Peers | Authenticated Peers | Quarantined Content |
-|-------------|----------------|--------------------|--------------------|
-| Public packages | Allowed | Allowed | Not accessible |
-| Community-only packages | Rejected (no peers returned) | Allowed | Not accessible |
-| Quarantined packages | Rejected | Moderator-only | Moderators get peers |
+| Content Type            | Anonymous Peers              | Authenticated Peers | Quarantined Content  |
+| ----------------------- | ---------------------------- | ------------------- | -------------------- |
+| Public packages         | Allowed                      | Allowed             | Not accessible       |
+| Community-only packages | Rejected (no peers returned) | Allowed             | Not accessible       |
+| Quarantined packages    | Rejected                     | Moderator-only      | Moderators get peers |
 
 The tracker uses the `ic_token` to determine access. Anonymous peers (no `ic_token` or `ic_version` = 0) receive peers only for public content. The tracker returns an empty peer list (not an error) for content the peer cannot access — this prevents information leakage about the existence of restricted swarms.
 
@@ -904,11 +906,11 @@ Each IC client generates a 160-bit (20-byte) DHT node ID on first startup, store
 
 All DHT messages are bencoded dictionaries sent over UDP.
 
-| Query | Purpose | Key Fields |
-|-------|---------|------------|
-| `ping` | Liveness check | `{t: txn_id, y: "q", q: "ping", a: {id: node_id}}` |
-| `find_node` | Find nodes close to a target | `{..., q: "find_node", a: {id: node_id, target: target_id}}` |
-| `get_peers` | Find peers for an info_hash | `{..., q: "get_peers", a: {id: node_id, info_hash: hash}}` |
+| Query           | Purpose                      | Key Fields                                                                              |
+| --------------- | ---------------------------- | --------------------------------------------------------------------------------------- |
+| `ping`          | Liveness check               | `{t: txn_id, y: "q", q: "ping", a: {id: node_id}}`                                      |
+| `find_node`     | Find nodes close to a target | `{..., q: "find_node", a: {id: node_id, target: target_id}}`                            |
+| `get_peers`     | Find peers for an info_hash  | `{..., q: "get_peers", a: {id: node_id, info_hash: hash}}`                              |
 | `announce_peer` | Announce presence in a swarm | `{..., q: "announce_peer", a: {id: node_id, info_hash: hash, port: u16, token: token}}` |
 
 ### 7.3 IC DHT Extension: `ic_capabilities` in Announce
@@ -932,13 +934,13 @@ IC extends the `announce_peer` message with an optional `ic_cap` field:
 
 `ic_cap` bitmask:
 
-| Bit | Meaning |
-|-----|---------|
-| 0   | Desktop client (TCP + uTP available) |
-| 1   | Browser client (WebRTC only) |
-| 2   | Workshop server / permanent seed |
+| Bit | Meaning                                  |
+| --- | ---------------------------------------- |
+| 0   | Desktop client (TCP + uTP available)     |
+| 1   | Browser client (WebRTC only)             |
+| 2   | Workshop server / permanent seed         |
 | 3   | Supports ic_auth (authenticated peering) |
-| 4   | Has WebRTC bridge capability |
+| 4   | Has WebRTC bridge capability             |
 
 Non-IC DHT nodes ignore the unknown `ic_cap` field (bencoding is extensible). IC nodes use `ic_cap` to prefer connecting to compatible peers — e.g., a browser client will prefer peers with bit 4 (WebRTC bridge) set.
 
@@ -960,11 +962,11 @@ Standard Kademlia k-bucket structure:
 
 ### 7.6 Rationale
 
-| Alternative | Why Not |
-|-------------|---------|
-| Tracker-only | Single point of failure. If the tracker is down, no peer discovery. DHT is the safety net. |
-| Skip DHT, rely on seed list | Seed list is for community discovery, not per-torrent peer discovery. Different layer. |
-| Custom DHT protocol | No benefit. BEP 5 is well-specified, battle-tested, and interoperable with the public BT network. IC's extensions are additive. |
+| Alternative                 | Why Not                                                                                                                         |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Tracker-only                | Single point of failure. If the tracker is down, no peer discovery. DHT is the safety net.                                      |
+| Skip DHT, rely on seed list | Seed list is for community discovery, not per-torrent peer discovery. Different layer.                                          |
+| Custom DHT protocol         | No benefit. BEP 5 is well-specified, battle-tested, and interoperable with the public BT network. IC's extensions are additive. |
 
 ---
 
@@ -974,13 +976,13 @@ Browser builds run as WASM in a web page. This environment imposes fundamental c
 
 ### 8.1 Transport Limitations
 
-| Capability | Browser | Desktop |
-|------------|---------|---------|
-| TCP sockets | Not available | Available |
-| UDP sockets | Not available | Available |
-| WebRTC data channels | Available (primary transport) | Available (for browser interop) |
-| WebSocket | Available (for signaling only) | Available |
-| HTTP fetch | Available (for metadata + fallback) | Available |
+| Capability           | Browser                             | Desktop                         |
+| -------------------- | ----------------------------------- | ------------------------------- |
+| TCP sockets          | Not available                       | Available                       |
+| UDP sockets          | Not available                       | Available                       |
+| WebRTC data channels | Available (primary transport)       | Available (for browser interop) |
+| WebSocket            | Available (for signaling only)      | Available                       |
+| HTTP fetch           | Available (for metadata + fallback) | Available                       |
 
 **Consequence:** Browser peers participate in the BT swarm exclusively through WebRTC data channels. They discover peers via the WebSocket signaling endpoint (§ 5) and establish direct WebRTC connections.
 
@@ -1040,18 +1042,18 @@ The HTTP fallback is intentionally simple — it is a degraded mode, not the pri
 
 ### 8.5 Feature Matrix by Platform
 
-| Feature | Desktop (Native) | Browser (WASM) |
-|---------|-----------------|----------------|
-| TCP BT wire protocol | Yes | No |
-| uTP transport | Yes | No |
-| WebRTC data channel | Yes (bridge mode) | Yes (primary) |
-| DHT participation | Yes (full) | No (no UDP) |
-| Persistent seeding | Yes (background process) | No (page lifetime only) |
-| Piece cache | Disk (content-addressed store) | IndexedDB |
-| HTTP fallback | Yes | Yes |
-| Bandwidth control | Full (upload/download limits) | Limited (no OS-level socket control) |
-| Authenticated announce (UDP tracker) | Yes | No (uses WS announce) |
-| Authenticated announce (WS tracker) | Yes | Yes |
+| Feature                              | Desktop (Native)               | Browser (WASM)                       |
+| ------------------------------------ | ------------------------------ | ------------------------------------ |
+| TCP BT wire protocol                 | Yes                            | No                                   |
+| uTP transport                        | Yes                            | No                                   |
+| WebRTC data channel                  | Yes (bridge mode)              | Yes (primary)                        |
+| DHT participation                    | Yes (full)                     | No (no UDP)                          |
+| Persistent seeding                   | Yes (background process)       | No (page lifetime only)              |
+| Piece cache                          | Disk (content-addressed store) | IndexedDB                            |
+| HTTP fallback                        | Yes                            | Yes                                  |
+| Bandwidth control                    | Full (upload/download limits)  | Limited (no OS-level socket control) |
+| Authenticated announce (UDP tracker) | Yes                            | No (uses WS announce)                |
+| Authenticated announce (WS tracker)  | Yes                            | Yes                                  |
 
 ---
 
@@ -1440,12 +1442,12 @@ pub enum IcpkgError {
 
 ## Cross-References
 
-| Document | Relationship |
-|----------|-------------|
-| **D049** (Workshop Asset Formats & Distribution) | Defines P2P distribution strategy, peer scoring formula, seeding config, `.icpkg` format concepts. This document specifies the wire-level implementation. |
-| **D052** (Community Servers with Portable Signed Credentials) | Defines Ed25519 identity system, SCR format. IC auth tokens (§ 4) use the same Ed25519 key infrastructure. |
-| **D074** (Community Server Bundle) | Defines `ic-server` as unified binary, Workshop-as-BT-seeder philosophy, capability flags, Content Advisory Records. This document provides the protocol internals. |
-| **research/bittorrent-p2p-libraries.md** | Design study of existing P2P implementations. Architectural decisions referenced here are grounded in that study. |
+| Document                                                      | Relationship                                                                                                                                                        |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **D049** (Workshop Asset Formats & Distribution)              | Defines P2P distribution strategy, peer scoring formula, seeding config, `.icpkg` format concepts. This document specifies the wire-level implementation.           |
+| **D052** (Community Servers with Portable Signed Credentials) | Defines Ed25519 identity system, SCR format. IC auth tokens (§ 4) use the same Ed25519 key infrastructure.                                                          |
+| **D074** (Community Server Bundle)                            | Defines `ic-server` as unified binary, Workshop-as-BT-seeder philosophy, capability flags, Content Advisory Records. This document provides the protocol internals. |
+| **research/bittorrent-p2p-libraries.md**                      | Design study of existing P2P implementations. Architectural decisions referenced here are grounded in that study.                                                   |
 
 ---
 
@@ -1538,10 +1540,10 @@ The info hash announced to the tracker (§ 4) and exchanged in the handshake (§
 
 ### 10.7 Cross-References
 
-| Reference | Relationship |
-|-----------|-------------|
+| Reference                                        | Relationship                                                                                                                                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **D049** (Workshop Asset Formats & Distribution) | Defines `.icpkg` binary layout (4,096-byte header + ZIP), CAS blob store, manifest schema, size-based delivery strategy. This section specifies the BT piece mapping for that format. |
-| **D030** (Workshop Registry & Dependency System) | Defines package identities, versioning, dependency resolution. Package naming in § 10.6 follows D030 conventions. |
-| **§ 6** (Piece Picker & Priority Channels) | `lobby-urgent` priority channel used for piece 0 manifest-only fetch (§ 10.3). |
-| **§ 5** (Choking Algorithm) | Upload slot allocation applies unchanged — small packages bypass BT entirely (§ 10.5), large packages use standard choking. |
-| **§ 4** (Tracker Protocol) | Announce/scrape for `.icpkg` torrents uses the IC-extended UDP tracker protocol with auth tokens. |
+| **D030** (Workshop Registry & Dependency System) | Defines package identities, versioning, dependency resolution. Package naming in § 10.6 follows D030 conventions.                                                                     |
+| **§ 6** (Piece Picker & Priority Channels)       | `lobby-urgent` priority channel used for piece 0 manifest-only fetch (§ 10.3).                                                                                                        |
+| **§ 5** (Choking Algorithm)                      | Upload slot allocation applies unchanged — small packages bypass BT entirely (§ 10.5), large packages use standard choking.                                                           |
+| **§ 4** (Tracker Protocol)                       | Announce/scrape for `.icpkg` torrents uses the IC-extended UDP tracker protocol with auth tokens.                                                                                     |

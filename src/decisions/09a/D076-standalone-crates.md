@@ -55,11 +55,11 @@ IC consumes these crates as normal Cargo dependencies. The extracted crates are 
 
 These crates are the first things built. They have zero IC-specific dependencies by definition because IC doesn't exist yet when they're created. **Separate repos from the start.**
 
-| Crate Name | Purpose | Why Standalone | IC Consumer |
-|---|---|---|---|
-| `cnc-formats` | Parse all C&C binary formats: `.mix`, `.shp`, `.tmp`, `.pal`, `.aud`, `.vqa`, `.fnt`, `.ini`, MiniYAML | Every C&C tool, viewer, converter, and modding project needs format parsing. Currently scattered across C/C#/Python community tools with no canonical Rust implementation. | `ra-formats` (IC's game-specific layer wraps `cnc-formats` with IC asset pipeline integration) |
-| `fixed-game-math` | Deterministic fixed-point arithmetic: `Fixed<N>`, trig tables, CORDIC atan2, Newton sqrt, modifier chains | Any deterministic game (lockstep RTS, fighting game, physics sim) needs platform-identical math. No good Rust crate exists with game-focused API. | `ic-sim`, `ic-protocol` |
-| `deterministic-rng` | Seedable, platform-identical PRNG with game-oriented API: range sampling, weighted selection, shuffle, damage spread | Same audience as `fixed-game-math`. Must produce identical sequences on all platforms (x86/ARM/WASM). | `ic-sim` |
+| Crate Name          | Purpose                                                                                                              | Why Standalone                                                                                                                                                             | IC Consumer                                                                                    |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `cnc-formats`       | Parse all C&C binary formats: `.mix`, `.shp`, `.tmp`, `.pal`, `.aud`, `.vqa`, `.fnt`, `.ini`, MiniYAML               | Every C&C tool, viewer, converter, and modding project needs format parsing. Currently scattered across C/C#/Python community tools with no canonical Rust implementation. | `ra-formats` (IC's game-specific layer wraps `cnc-formats` with IC asset pipeline integration) |
+| `fixed-game-math`   | Deterministic fixed-point arithmetic: `Fixed<N>`, trig tables, CORDIC atan2, Newton sqrt, modifier chains            | Any deterministic game (lockstep RTS, fighting game, physics sim) needs platform-identical math. No good Rust crate exists with game-focused API.                          | `ic-sim`, `ic-protocol`                                                                        |
+| `deterministic-rng` | Seedable, platform-identical PRNG with game-oriented API: range sampling, weighted selection, shuffle, damage spread | Same audience as `fixed-game-math`. Must produce identical sequences on all platforms (x86/ARM/WASM).                                                                      | `ic-sim`                                                                                       |
 
 **Naming note:** The IC crate currently called `ra-formats` stays in the IC monorepo as GPL code because it references EA's GPL-licensed C&C source for struct definitions and lookup tables (D051 rationale #2). `cnc-formats` is the *new* permissive crate containing only clean-room format parsing with no EA-derived code. `ra-formats` becomes a thin wrapper that adds EA-specific details (compression tables, game-specific constants) on top of `cnc-formats`.
 
@@ -67,23 +67,23 @@ These crates are the first things built. They have zero IC-specific dependencies
 
 These crates emerge naturally during simulation development. Extract when the API stabilizes.
 
-| Crate Name | Purpose | Why Standalone | IC Consumer |
-|---|---|---|---|
+| Crate Name    | Purpose                                                                                                                                                     | Why Standalone                                                                                                                                                                                                            | IC Consumer                  |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
 | `glicko2-rts` | Glicko-2 rating system with RTS-specific adaptations: match duration weighting, team game support, faction-specific ratings, inactivity decay, season reset | Every competitive game needs rating. The Glicko-2 algorithm is public but existing Rust crates lack game-specific features. D055's adaptations (RD floor=45, per-match updates, 91-day season tuning) are broadly useful. | `ic-net` (ranking subsystem) |
 
 ### Tier 2b — Phase 5 (Multiplayer)
 
-| Crate Name | Purpose | Why Standalone | IC Consumer |
-|---|---|---|---|
+| Crate Name       | Purpose                                                                                                                                                                                                      | Why Standalone                                                                                                                                            | IC Consumer                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
 | `lockstep-relay` | Generic lockstep relay server core: `RelayCore<T>` with connection management, tick synchronization, order aggregation, stall detection, adaptive timing. Game-agnostic — parameterized over order type `T`. | Any lockstep game needs relay infrastructure. IC's relay design (D007) is already generic over `NetworkModel` — `RelayCore` is the network-agnostic half. | `ic-net` (relay server binary) |
 
 ### Tier 3 — Phase 5–6a (Workshop & Scripting)
 
-| Crate Name | Purpose | Why Standalone | IC Consumer |
-|---|---|---|---|
-| `workshop-core` | Engine-agnostic mod registry, distribution, federation, P2P delivery, integrity verification, dependency resolution. D050's "Workshop Core Library" layer. | Designed from day one for cross-project reuse (D050). Zero Bevy dependency. Any game with mod/content distribution can use it. | `ic-editor`, `ic-game` (via Bevy plugin wrapper) |
-| `lua-sandbox` | Sandboxed Lua 5.4 runtime with instruction-counted execution, memory limits, allowlisted stdlib, and game-oriented host API patterns. | Lua sandboxing is needed by any moddable game. IC's tiered approach (D004) produces a well-designed sandbox that others can reuse. | `ic-script` |
-| `p2p-distribute` | BitTorrent-compatible piece-based P2P distribution engine with WebTorrent support for browser clients. IC's own BT-compatible implementation (D074). | Large-file distribution is a universal problem. A pure-Rust BT-compatible engine with WebTorrent support has broad utility. | `workshop-core`, `ic-net` |
+| Crate Name       | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Why Standalone                                                                                                                                                                                        | IC Consumer                                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `workshop-core`  | Engine-agnostic mod registry, distribution, federation, P2P delivery, integrity verification, dependency resolution. D050's "Workshop Core Library" layer.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Designed from day one for cross-project reuse (D050). Zero Bevy dependency. Any game with mod/content distribution can use it.                                                                        | `ic-editor`, `ic-game` (via Bevy plugin wrapper)                                                      |
+| `lua-sandbox`    | Sandboxed Lua 5.4 runtime with instruction-counted execution, memory limits, allowlisted stdlib, and game-oriented host API patterns.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Lua sandboxing is needed by any moddable game. IC's tiered approach (D004) produces a well-designed sandbox that others can reuse.                                                                    | `ic-script`                                                                                           |
+| `p2p-distribute` | Foundational P2P content distribution engine: BitTorrent/WebTorrent wire protocol, content channels (mutable versioned data streams), protocol-layer revocation enforcement, streaming piece selection, extensibility traits (`StorageBackend`, `PeerFilter`, `AuthPolicy`, `RevocationPolicy`, `DiscoveryBackend`), embedded tracker, DHT, 10-group config system with built-in profiles. IC's primary P2P primitive — used by Workshop, lobby auto-download, replay sharing, update delivery, and live config channels. Also useful to any application needing P2P content distribution: package managers, media tools, IoT fleets. See `research/p2p-distribute-crate-design.md`. | P2P content distribution is a universal infrastructure problem. A pure-Rust BT-compatible engine with content channels, revocation, and WebTorrent support has broad utility far beyond game modding. | `workshop-core`, `ic-server`, `ic-game` (via `workshop-core` and directly for replay/update/channels) |
 
 ---
 
@@ -163,13 +163,13 @@ Each extracted crate follows these design principles:
 
 ## Relationship to Existing Decisions
 
-| Decision | Relationship |
-|---|---|
-| D009 (Fixed-Point Math) | `fixed-game-math` implements D009's type library. IC's `ic-sim` depends on it. |
-| D039 (Engine Scope) | Extraction reinforces D039's "general-purpose" identity — reusable crates are the engine's contribution to the broader ecosystem. |
-| D050 (Workshop Cross-Project) | `workshop-core` is D050's "Workshop Core Library" extracted as a standalone permissive crate. D050's two-layer architecture is the extraction boundary. |
-| D051 (GPL v3 License) | D076 operates within D051's framework. The engine stays GPL. Extracted crates contain no GPL-encumbered code and live in separate repos. D051's `cargo-deny` enforcement verifies the boundary. |
-| D074 (Unified Server Binary) | `p2p-distribute` extracts the BT-compatible P2P engine that D074's Workshop seeder capability uses. |
+| Decision                      | Relationship                                                                                                                                                                                                      |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D009 (Fixed-Point Math)       | `fixed-game-math` implements D009's type library. IC's `ic-sim` depends on it.                                                                                                                                    |
+| D039 (Engine Scope)           | Extraction reinforces D039's "general-purpose" identity — reusable crates are the engine's contribution to the broader ecosystem.                                                                                 |
+| D050 (Workshop Cross-Project) | `workshop-core` is D050's "Workshop Core Library" extracted as a standalone permissive crate. D050's three-layer architecture (`p2p-distribute` → `workshop-core` → game integration) is the extraction boundary. |
+| D051 (GPL v3 License)         | D076 operates within D051's framework. The engine stays GPL. Extracted crates contain no GPL-encumbered code and live in separate repos. D051's `cargo-deny` enforcement verifies the boundary.                   |
+| D074 (Unified Server Binary)  | `p2p-distribute` extracts the BT-compatible P2P engine that D074's Workshop seeder capability uses.                                                                                                               |
 
 ---
 
@@ -189,12 +189,12 @@ Each extracted crate follows these design principles:
 
 ## Phase Placement
 
-| Tier | Phase | Milestone | What Happens |
-|---|---|---|---|
-| Tier 1 | Phase 0 (Months 1–3) | `M0`/`M1` | Create repos for `cnc-formats`, `fixed-game-math`, `deterministic-rng`. Implement core APIs. Publish to crates.io. IC monorepo's `ra-formats` and `ic-sim` depend on them from first commit. |
-| Tier 2a | Phase 2 (Months 6–12) | `M2` | Extract `glicko2-rts` when D055 ranking implementation stabilizes. |
-| Tier 2b | Phase 5 (Months 20–26) | `M5` | Extract `lockstep-relay` when D007 relay implementation stabilizes. |
-| Tier 3 | Phase 5–6a (Months 20–30) | `M8`/`M9` | Extract `workshop-core`, `lua-sandbox`, `p2p-distribute` per D050's timeline. |
+| Tier    | Phase                     | Milestone | What Happens                                                                                                                                                                                 |
+| ------- | ------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tier 1  | Phase 0 (Months 1–3)      | `M0`/`M1` | Create repos for `cnc-formats`, `fixed-game-math`, `deterministic-rng`. Implement core APIs. Publish to crates.io. IC monorepo's `ra-formats` and `ic-sim` depend on them from first commit. |
+| Tier 2a | Phase 2 (Months 6–12)     | `M2`      | Extract `glicko2-rts` when D055 ranking implementation stabilizes.                                                                                                                           |
+| Tier 2b | Phase 5 (Months 20–26)    | `M5`      | Extract `lockstep-relay` when D007 relay implementation stabilizes.                                                                                                                          |
+| Tier 3  | Phase 5–6a (Months 20–30) | `M8`/`M9` | Extract `workshop-core`, `lua-sandbox`, `p2p-distribute` per D050's timeline.                                                                                                                |
 
 ---
 

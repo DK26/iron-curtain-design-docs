@@ -140,6 +140,52 @@ pub enum ResolutionReason {
 }
 ```
 
+### Namespace Resolution Algorithm (Overlay Composition)
+
+The namespace is built by recursively composing sources as overlay layers — a pattern formalized by AnyFS's generic `Overlay<Base, Upper>` struct. Each source in the profile's priority order is an overlay layer: reads check the upper (higher-priority) source first, then fall through to the base (lower-priority). The recursive type enforces resolution order at compile time:
+
+```
+Overlay<Overlay<Overlay<EngineDefaults, BaseGame>, TournamentBalance>, HdSprites>
+                                                    ↑ checked last       ↑ checked first
+```
+
+In practice, IC builds this as a flat vector walk (not nested generics) because the source count is dynamic and determined at profile activation time:
+
+```rust
+impl VirtualNamespace {
+    /// Build namespace from profile sources in priority order.
+    /// Last source wins for file assets; YAML rules use three-phase merge.
+    fn build(sources: &[ResolvedSource], conflicts: &ConflictPolicy) -> Self {
+        let mut entries = HashMap::new();
+        // Walk sources from lowest to highest priority (engine defaults first)
+        for source in sources {
+            for (path, blob_hash) in &source.file_manifest {
+                let resolution = if entries.contains_key(path) {
+                    conflicts.resolve(path, &source.id, &entries[path].source_id)
+                } else {
+                    ResolutionReason::Unique
+                };
+                if matches!(resolution, ResolutionReason::Unique
+                    | ResolutionReason::LastWins { .. }
+                    | ResolutionReason::ExplicitOverride { .. })
+                {
+                    entries.insert(path.clone(), NamespaceEntry {
+                        blob_hash: *blob_hash,
+                        source_id: source.id.clone(),
+                        source_version: source.version.clone(),
+                        resolution,
+                    });
+                }
+            }
+        }
+        let fingerprint = Self::compute_fingerprint(&entries);
+        Self { entries, fingerprint }
+    }
+}
+```
+
+The key insight from AnyFS's overlay model: writes go to the upper layer, never modifying the base. In IC's context, this means **mods never mutate engine defaults or lower-priority sources** — the namespace entry records the override as provenance, preserving the full composition history for inspection and diffing.
+
 ### Namespace for YAML Rules (Not Just File Assets)
 
 The virtual namespace covers two distinct layers:
@@ -161,6 +207,8 @@ The YAML rule merge runs during profile activation (not per-load). The merged re
 This replaces the current per-mod version list comparison with a single hash comparison (fast path) and falls back to detailed diff only on mismatch. The diff view is more informative than the current "incompatible mods" rejection.
 
 **Replay recording:** Replays record the profile fingerprint alongside the existing `(mod_id, version)` list. Playback verifies the fingerprint. A fingerprint mismatch warns but doesn't block playback — the existing mod list provides degraded compatibility checking.
+
+**Content channel integration:** When a player subscribes to a balance channel (D049 § "Content Channels Integration"), the active balance snapshot ID is incorporated into the fingerprint. This ensures lobby verification captures not just which mods are installed, but which live balance state is active. The snapshot acts as an additional overlay source in namespace resolution — highest priority, applied after all mod sources and conflict resolutions. See [D049 § Content Channels Integration](../09e/D049/D049-content-channels-integration.md) for the full lifecycle and [architecture/data-flows-overview.md](../architecture/data-flows-overview.md) § Flow 5.
 
 ### Editor Integration (D038)
 

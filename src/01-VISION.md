@@ -21,7 +21,7 @@ That is the foundation, and it ships complete.
 On top of that foundation, IC explores ideas and features that push the genre forward — not as replacements for the classical experience, but as additions alongside it:
 
 - Deterministic desync diagnosis that pinpoints the exact tick and entity that diverged
-- A P2P Workshop with federated community servers and cross-community trust signals
+- A Workshop with P2P content delivery, federated community servers, and cross-community trust signals
 - Three-tier modding (YAML → Lua → WASM) where total conversions are hot-loadable modules
 - A unified community server binary where a $5 VPS hosts an entire community
 - Fog-authoritative server mode for maphack-proof competitive play

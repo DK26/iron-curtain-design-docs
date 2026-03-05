@@ -85,8 +85,10 @@ The engine loads both format families at runtime. `ra-formats` decoders handle l
 
 ## Sub-Pages
 
-| Section | Topic | File |
-| --- | --- | --- |
-| Package & Profiles | Workshop package format (.icpkg) + player configuration profiles | [D049-package-profiles.md](D049/D049-package-profiles.md) |
-| P2P Distribution | BitTorrent/WebTorrent distribution engine, config, health checks, content lifecycle, Phase 0-3 bootstrap | [D049-p2p-distribution.md](D049/D049-p2p-distribution.md) |
-| P2P Policy & Admin | P2P continued + freeware/legacy content policy + media language metadata + Workshop operator/admin panel + Rust impl + rationale + alternatives + phase | [D049-p2p-policy-admin.md](D049/D049-p2p-policy-admin.md) |
+| Section                      | Topic                                                                                                                                                   | File                                                                              |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Package & Profiles           | Workshop package format (.icpkg) + player configuration profiles                                                                                        | [D049-package-profiles.md](D049/D049-package-profiles.md)                         |
+| P2P Distribution             | BitTorrent/WebTorrent distribution engine, config, health checks, content lifecycle, Phase 0-3 bootstrap                                                | [D049-p2p-distribution.md](D049/D049-p2p-distribution.md)                         |
+| P2P Policy & Admin           | P2P continued + freeware/legacy content policy + media language metadata + Workshop operator/admin panel + Rust impl + rationale + alternatives + phase | [D049-p2p-policy-admin.md](D049/D049-p2p-policy-admin.md)                         |
+| Content Channels Integration | IC-specific content channel usage: balance patches, server config, lobby content pinning, D062 fingerprint integration                                  | [D049-content-channels-integration.md](D049/D049-content-channels-integration.md) |
+| Replay Sharing via P2P       | Match ID sharing, Workshop replay collections, .icrep piece alignment, privacy, relay retention                                                         | [D049-replay-sharing.md](D049/D049-replay-sharing.md)                             |

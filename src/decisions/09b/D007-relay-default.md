@@ -4,6 +4,12 @@
 
 **Decision:** Default multiplayer uses relay server with time authority, not pure P2P. The relay logic (`RelayCore`) is a library component in `ic-net` — it can be deployed as a standalone binary (dedicated server for hosting, server rooms, Raspberry Pi) or embedded inside a game client (listen server — "Host Game" button, zero external infrastructure). Clients connecting to either deployment use the same protocol and cannot distinguish between them.
 
+> | Mode | Server needed? | Use case |
+> |------|---------------|----------|
+> | **Ranked / Competitive** | Yes — dedicated relay required (community-verified or official) | Ladder, tournaments, signed replays |
+> | **Casual / Custom / LAN** | No — host-embedded listen server, zero external infrastructure | Friends, LAN parties, testing |
+> | **Workshop content** | Federated servers coordinate; files transfer P2P between players | Mod/map download |
+
 **Rationale:**
 - Blocks lag switches (server owns the clock)
 - Enables sub-tick chronological ordering (CS2 insight)

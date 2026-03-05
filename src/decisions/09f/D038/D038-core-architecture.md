@@ -87,20 +87,20 @@ The scenario editor lives in the `ic-editor` crate and ships as part of the **IC
 
 ### Editing Modes
 
-| Mode            | Purpose                                                               | OFP Equivalent                         |
-| --------------- | --------------------------------------------------------------------- | -------------------------------------- |
-| **Terrain**     | Paint tiles, place resources (ore/gems), sculpt cliffs, water         | N/A (OFP had fixed terrains)           |
-| **Entities**    | Place units, buildings, props, markers                                | F1 (Units) + F6 (Markers)              |
-| **Groups**      | Organize units into squads/formations, set group behavior             | F2 (Groups)                            |
-| **Triggers**    | Place area-based conditional logic (win/lose, events, spawns)         | F3 (Triggers)                          |
-| **Waypoints**   | Assign movement/behavior orders to groups                             | F4 (Waypoints)                         |
-| **Connections** | Link triggers ↔ waypoints ↔ modules visually                          | F5 (Synchronization)                   |
-| **Modules**     | Pre-packaged game logic nodes                                         | F7 (Modules)                           |
-| **Regions**     | Draw named spatial zones reusable across triggers and scripts         | N/A (AoE2/StarCraft concept)           |
-| **Layers**      | (Advanced) Create/manage named map layers for dynamic expansion. Draw layer bounds, assign entities to layers, configure shroud reveal and camera transitions. Preview layer activation. | N/A (new — see `04-MODDING.md` § Dynamic Mission Flow) |
-| **Portals**     | (Advanced) Place sub-map portal entities on buildings. Link to interior sub-map files (opens in new tab). Configure entry/exit points, allowed units, transition effects, outcome wiring. | N/A (new — see `04-MODDING.md` § Sub-Map Transitions) |
-| **Scripts**     | Browse and edit external `.lua` files referenced by inline scripts    | OFP mission folder `.sqs`/`.sqf` files |
-| **Campaign**    | Visual campaign graph — mission ordering, branching, persistent state | N/A (no RTS editor has this)           |
+| Mode            | Purpose                                                                                                                                                                                   | OFP Equivalent                                         |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| **Terrain**     | Paint tiles, place resources (ore/gems), sculpt cliffs, water                                                                                                                             | N/A (OFP had fixed terrains)                           |
+| **Entities**    | Place units, buildings, props, markers                                                                                                                                                    | F1 (Units) + F6 (Markers)                              |
+| **Groups**      | Organize units into squads/formations, set group behavior                                                                                                                                 | F2 (Groups)                                            |
+| **Triggers**    | Place area-based conditional logic (win/lose, events, spawns)                                                                                                                             | F3 (Triggers)                                          |
+| **Waypoints**   | Assign movement/behavior orders to groups                                                                                                                                                 | F4 (Waypoints)                                         |
+| **Connections** | Link triggers ↔ waypoints ↔ modules visually                                                                                                                                              | F5 (Synchronization)                                   |
+| **Modules**     | Pre-packaged game logic nodes                                                                                                                                                             | F7 (Modules)                                           |
+| **Regions**     | Draw named spatial zones reusable across triggers and scripts                                                                                                                             | N/A (AoE2/StarCraft concept)                           |
+| **Layers**      | (Advanced) Create/manage named map layers for dynamic expansion. Draw layer bounds, assign entities to layers, configure shroud reveal and camera transitions. Preview layer activation.  | N/A (new — see `04-MODDING.md` § Dynamic Mission Flow) |
+| **Portals**     | (Advanced) Place sub-map portal entities on buildings. Link to interior sub-map files (opens in new tab). Configure entry/exit points, allowed units, transition effects, outcome wiring. | N/A (new — see `04-MODDING.md` § Sub-Map Transitions)  |
+| **Scripts**     | Browse and edit external `.lua` files referenced by inline scripts                                                                                                                        | OFP mission folder `.sqs`/`.sqf` files                 |
+| **Campaign**    | Visual campaign graph — mission ordering, branching, persistent state                                                                                                                     | N/A (no RTS editor has this)                           |
 
 ### Entity Palette UX
 
@@ -279,6 +279,33 @@ OFP's editor shipped without undo. Eden added it 15 years later. IC ships with f
 - **Redo** restores undone actions until a new action branches the history
 - Undo history survives save/load within a session
 - **Ctrl+Z / Ctrl+Y** (desktop), equivalent bindings on controller
+
+### Workspace as Overlay Composition
+
+The scenario editor's project workspace is modeled as a layered overlay — a pattern formalized by AnyFS's `Overlay<Base, Upper>` middleware (and already used in IC's mod namespace resolution, D062). Each workspace is a composition of read-only base layers with a single writable edit layer:
+
+```
+┌──────────────────────────────────────────┐
+│  Writable Edit Layer (user changes)      │  ← writes go here
+├──────────────────────────────────────────┤
+│  Imported Assets (Workshop / local)      │  ← read-only overlay
+├──────────────────────────────────────────┤
+│  Active Mod Profile (D062 namespace)     │  ← read-only overlay
+├──────────────────────────────────────────┤
+│  Base Game (engine defaults)             │  ← read-only base
+└──────────────────────────────────────────┘
+    Reads: walk top → down (first hit wins)
+    Writes: always to the top edit layer
+```
+
+This composition gives the editor several capabilities naturally:
+
+- **Non-destructive editing:** The base game and mod sources are never modified. All editor changes land in the writable edit layer. Reverting means discarding the edit layer — the underlying data is untouched.
+- **Per-source visibility:** The layer list UI (already designed for entity layers) extends to source layers. Designers can toggle visibility per source to see "what does this mod contribute?" or "what did I change?" independently.
+- **Undo as layer snapshot:** Because the edit layer is a self-contained set of changes, the entire undo history is scoped to that layer. An undo checkpoint is a snapshot of just the edit layer — lighter than snapshotting the full workspace.
+- **Hot-swap sources:** When editing a mod's YAML rules, only the changed source's layer is rebuilt (per D062 § Editor Integration). Other layers remain cached. This enables sub-second iteration during rule authoring without re-resolving the full namespace.
+
+> **Prior art:** AnyFS's `Overlay<Base, Upper>` (read from upper → base, write to upper), Docker's image layers (read-only base + writable container layer), IC's own `VirtualNamespace` (D062). The editor workspace applies the same principle at a different scope: D062 composes mods for gameplay; the editor composes sources for authoring.
 
 ### Autosave & Crash Recovery
 

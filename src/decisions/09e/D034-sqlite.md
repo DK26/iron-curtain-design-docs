@@ -373,14 +373,14 @@ CREATE VIEW v_apm_per_match AS
 
 **Access policy by database:**
 
-| Database | Read | Write | Optimize | Notes |
-|----------|------|-------|----------|-------|
-| `gameplay.db` | Full SQL access | External tools only (user's file) | Yes | Main analytics surface — stats, events, match history |
-| `profile.db` | Full SQL access | External tools only | Yes | Friends, settings, avatar, privacy |
-| `communities/*.db` | Full SQL access | **Tamper-evident** — SCRs are signed, modifying them invalidates Ed25519 signatures | Yes | Ratings, match results, achievements |
-| `achievements.db` | Full SQL access | **Tamper-evident** — SCR-backed | Yes | Achievement proofs |
-| `telemetry.db` | Full SQL access | External tools only | Yes | Frame times, tick durations, I/O latency — self-diagnosis |
-| `workshop/cache.db` | Full SQL access | External tools only | Yes | Mod metadata, dependency trees, download history |
+| Database            | Read            | Write                                                                               | Optimize | Notes                                                     |
+| ------------------- | --------------- | ----------------------------------------------------------------------------------- | -------- | --------------------------------------------------------- |
+| `gameplay.db`       | Full SQL access | External tools only (user's file)                                                   | Yes      | Main analytics surface — stats, events, match history     |
+| `profile.db`        | Full SQL access | External tools only                                                                 | Yes      | Friends, settings, avatar, privacy                        |
+| `communities/*.db`  | Full SQL access | **Tamper-evident** — SCRs are signed, modifying them invalidates Ed25519 signatures | Yes      | Ratings, match results, achievements                      |
+| `achievements.db`   | Full SQL access | **Tamper-evident** — SCR-backed                                                     | Yes      | Achievement proofs                                        |
+| `telemetry.db`      | Full SQL access | External tools only                                                                 | Yes      | Frame times, tick durations, I/O latency — self-diagnosis |
+| `workshop/cache.db` | Full SQL access | External tools only                                                                 | Yes      | Mod metadata, dependency trees, download history          |
 
 **Community tool use cases enabled by this access:**
 
@@ -394,13 +394,68 @@ CREATE VIEW v_apm_per_match AS
 
 ### Schema Migration
 
-Each service manages its own schema using embedded SQL migrations (numbered, applied on startup). The `rusqlite` `user_version` pragma tracks the current schema version. Forward-only migrations — the binary upgrades the database file automatically on first launch after an update.
+Each service manages its own schema using embedded SQL migrations (numbered, applied on startup). Forward-only migrations — the binary upgrades the database file automatically on first launch after an update.
+
+**Schema version tracking:** Every IC database includes a `_schema_meta` table alongside the `user_version` PRAGMA:
+
+```sql
+CREATE TABLE IF NOT EXISTS _schema_meta (
+    version     INTEGER NOT NULL,
+    applied_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    description TEXT
+);
+INSERT INTO _schema_meta (version, description) VALUES (1, 'Initial schema');
+```
+
+The `user_version` PRAGMA provides the fast integer check (O(1) read, no SQL parse). The `_schema_meta` table provides an audit trail — what was applied, when, and why. On startup, the server reads `PRAGMA user_version`, applies any pending migrations in sequence, records each in `_schema_meta`, and updates `user_version` to the final version. This pattern applies to every database: `gameplay.db`, `relay.db`, `ranking.db`, `telemetry.db`, `workshop.db`, `profile.db`, `achievements.db`, `communities/*.db`.
+
+**Migrations are embedded in the binary** (not external SQL files) — this preserves the "single binary, zero deps" philosophy (D072). The shipped `.sql` files under `<install_dir>/sql/migrations/` are human-readable copies for operator transparency, not runtime dependencies.
+
+**Phase:** Schema versioning is established in Phase 2 when SQLite schemas are first created. Designing it early avoids retrofitting migration infrastructure in Phase 5 when community servers have production databases.
+
+### Disk Budgets and Growth Limits
+
+Every SQLite database has an explicit disk budget and a defined behavior when the budget is exceeded. Unbounded storage growth is a common operational failure — the budget makes growth deterministic and the server's behavior predictable.
+
+**Server-side disk budgets** (configurable in `server_config.toml`):
+
+```toml
+[db.relay]
+max_size_mb = 500               # relay.db — match metadata, player stats
+on_limit = "prune_oldest"       # delete oldest completed match records
+
+[db.ranking]
+max_size_mb = 200               # ranking.db — Glicko-2 state
+on_limit = "archive_old_seasons"  # move completed seasons to archive.db
+
+[db.telemetry]
+max_size_mb = 100               # already has pruning — this makes the budget explicit
+on_limit = "prune_oldest"
+
+[db.workshop]
+max_size_mb = 1000              # workshop.db — content metadata
+on_limit = "alert_only"         # metadata is small; if this fills, something is wrong
+```
+
+**Client-side disk budgets** (configurable in `settings.toml`):
+
+| Database            | Default Budget | `on_limit` Behavior     | Rationale                                                  |
+| ------------------- | -------------- | ----------------------- | ---------------------------------------------------------- |
+| `gameplay.db`       | 500 MB         | `prune_oldest_sessions` | Keep recent history; old sessions can be exported first    |
+| `telemetry.db`      | 100 MB         | `prune_oldest`          | Low-value, recreatable                                     |
+| `profile.db`        | 10 MB          | `alert_only`            | Should never approach this; if it does, something is wrong |
+| `achievements.db`   | 10 MB          | `alert_only`            | Tiny dataset                                               |
+| `workshop/cache.db` | 50 MB          | `lru_evict`             | Metadata cache, fully rebuildable                          |
+
+The `on_limit` behavior is the critical design element: don't just define the limit — define what the system *does* when the limit is hit. The server periodically checks database sizes against budgets and takes the configured action. `ic db size` reports current usage vs. budget for operator visibility.
+
+**Phase:** Disk budgets are a Phase 2 concern (when SQLite schemas are first created). See `research/cloud-native-lessons-for-ic-platform.md` § 5 for the rationale.
 
 
 ---
 
 ## Sub-Pages
 
-| Section | Topic | File |
-| --- | --- | --- |
+| Section             | Topic                                                                                                                                           | File                                                        |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | PRAGMA & Operations | Per-database PRAGMA configuration, migration strategy, backup operations, WASM platform adjustments, monitoring, rationale, alternatives, phase | [D034-pragma-operations.md](D034/D034-pragma-operations.md) |
