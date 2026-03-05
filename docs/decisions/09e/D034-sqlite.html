@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-ee0d544b.js";
+            window.path_to_searchindex_js = "../../searchindex-7885430e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-2281c970.js"></script>
+        <script src="../../toc-ac1642ae.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -577,7 +577,54 @@ CREATE VIEW v_apm_per_match AS
 <li><strong>Spreadsheet analysis</strong> via CSV export (<code>ic db export gameplay v_win_rate_by_faction --format csv</code>)</li>
 </ul>
 <h3 id="schema-migration"><a class="header" href="#schema-migration">Schema Migration</a></h3>
-<p>Each service manages its own schema using embedded SQL migrations (numbered, applied on startup). The <code>rusqlite</code> <code>user_version</code> pragma tracks the current schema version. Forward-only migrations — the binary upgrades the database file automatically on first launch after an update.</p>
+<p>Each service manages its own schema using embedded SQL migrations (numbered, applied on startup). Forward-only migrations — the binary upgrades the database file automatically on first launch after an update.</p>
+<p><strong>Schema version tracking:</strong> Every IC database includes a <code>_schema_meta</code> table alongside the <code>user_version</code> PRAGMA:</p>
+<pre><code class="language-sql">CREATE TABLE IF NOT EXISTS _schema_meta (
+    version     INTEGER NOT NULL,
+    applied_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    description TEXT
+);
+INSERT INTO _schema_meta (version, description) VALUES (1, 'Initial schema');
+</code></pre>
+<p>The <code>user_version</code> PRAGMA provides the fast integer check (O(1) read, no SQL parse). The <code>_schema_meta</code> table provides an audit trail — what was applied, when, and why. On startup, the server reads <code>PRAGMA user_version</code>, applies any pending migrations in sequence, records each in <code>_schema_meta</code>, and updates <code>user_version</code> to the final version. This pattern applies to every database: <code>gameplay.db</code>, <code>relay.db</code>, <code>ranking.db</code>, <code>telemetry.db</code>, <code>workshop.db</code>, <code>profile.db</code>, <code>achievements.db</code>, <code>communities/*.db</code>.</p>
+<p><strong>Migrations are embedded in the binary</strong> (not external SQL files) — this preserves the “single binary, zero deps” philosophy (D072). The shipped <code>.sql</code> files under <code>&lt;install_dir&gt;/sql/migrations/</code> are human-readable copies for operator transparency, not runtime dependencies.</p>
+<p><strong>Phase:</strong> Schema versioning is established in Phase 2 when SQLite schemas are first created. Designing it early avoids retrofitting migration infrastructure in Phase 5 when community servers have production databases.</p>
+<h3 id="disk-budgets-and-growth-limits"><a class="header" href="#disk-budgets-and-growth-limits">Disk Budgets and Growth Limits</a></h3>
+<p>Every SQLite database has an explicit disk budget and a defined behavior when the budget is exceeded. Unbounded storage growth is a common operational failure — the budget makes growth deterministic and the server’s behavior predictable.</p>
+<p><strong>Server-side disk budgets</strong> (configurable in <code>server_config.toml</code>):</p>
+<pre><code class="language-toml">[db.relay]
+max_size_mb = 500               # relay.db — match metadata, player stats
+on_limit = "prune_oldest"       # delete oldest completed match records
+
+[db.ranking]
+max_size_mb = 200               # ranking.db — Glicko-2 state
+on_limit = "archive_old_seasons"  # move completed seasons to archive.db
+
+[db.telemetry]
+max_size_mb = 100               # already has pruning — this makes the budget explicit
+on_limit = "prune_oldest"
+
+[db.workshop]
+max_size_mb = 1000              # workshop.db — content metadata
+on_limit = "alert_only"         # metadata is small; if this fills, something is wrong
+</code></pre>
+<p><strong>Client-side disk budgets</strong> (configurable in <code>settings.toml</code>):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Database</th><th>Default Budget</th><th><code>on_limit</code> Behavior</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td><code>gameplay.db</code></td><td>500 MB</td><td><code>prune_oldest_sessions</code></td><td>Keep recent history; old sessions can be exported first</td></tr>
+<tr><td><code>telemetry.db</code></td><td>100 MB</td><td><code>prune_oldest</code></td><td>Low-value, recreatable</td></tr>
+<tr><td><code>profile.db</code></td><td>10 MB</td><td><code>alert_only</code></td><td>Should never approach this; if it does, something is wrong</td></tr>
+<tr><td><code>achievements.db</code></td><td>10 MB</td><td><code>alert_only</code></td><td>Tiny dataset</td></tr>
+<tr><td><code>workshop/cache.db</code></td><td>50 MB</td><td><code>lru_evict</code></td><td>Metadata cache, fully rebuildable</td></tr>
+</tbody>
+</table>
+</div>
+<p>The <code>on_limit</code> behavior is the critical design element: don’t just define the limit — define what the system <em>does</em> when the limit is hit. The server periodically checks database sizes against budgets and takes the configured action. <code>ic db size</code> reports current usage vs. budget for operator visibility.</p>
+<p><strong>Phase:</strong> Disk budgets are a Phase 2 concern (when SQLite schemas are first created). See <code>research/cloud-native-lessons-for-ic-platform.md</code> § 5 for the rationale.</p>
 <hr>
 <h2 id="sub-pages"><a class="header" href="#sub-pages">Sub-Pages</a></h2>
 <div class="table-wrapper">

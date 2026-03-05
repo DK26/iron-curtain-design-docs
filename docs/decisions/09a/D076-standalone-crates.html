@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-ee0d544b.js";
+            window.path_to_searchindex_js = "../../searchindex-7885430e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-2281c970.js"></script>
+        <script src="../../toc-ac1642ae.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -279,7 +279,7 @@
 <tbody>
 <tr><td><code>workshop-core</code></td><td>Engine-agnostic mod registry, distribution, federation, P2P delivery, integrity verification, dependency resolution. D050’s “Workshop Core Library” layer.</td><td>Designed from day one for cross-project reuse (D050). Zero Bevy dependency. Any game with mod/content distribution can use it.</td><td><code>ic-editor</code>, <code>ic-game</code> (via Bevy plugin wrapper)</td></tr>
 <tr><td><code>lua-sandbox</code></td><td>Sandboxed Lua 5.4 runtime with instruction-counted execution, memory limits, allowlisted stdlib, and game-oriented host API patterns.</td><td>Lua sandboxing is needed by any moddable game. IC’s tiered approach (D004) produces a well-designed sandbox that others can reuse.</td><td><code>ic-script</code></td></tr>
-<tr><td><code>p2p-distribute</code></td><td>BitTorrent-compatible piece-based P2P distribution engine with WebTorrent support for browser clients. IC’s own BT-compatible implementation (D074).</td><td>Large-file distribution is a universal problem. A pure-Rust BT-compatible engine with WebTorrent support has broad utility.</td><td><code>workshop-core</code>, <code>ic-net</code></td></tr>
+<tr><td><code>p2p-distribute</code></td><td>Foundational P2P content distribution engine: BitTorrent/WebTorrent wire protocol, content channels (mutable versioned data streams), protocol-layer revocation enforcement, streaming piece selection, extensibility traits (<code>StorageBackend</code>, <code>PeerFilter</code>, <code>AuthPolicy</code>, <code>RevocationPolicy</code>, <code>DiscoveryBackend</code>), embedded tracker, DHT, 10-group config system with built-in profiles. IC’s primary P2P primitive — used by Workshop, lobby auto-download, replay sharing, update delivery, and live config channels. Also useful to any application needing P2P content distribution: package managers, media tools, IoT fleets. See <code>research/p2p-distribute-crate-design.md</code>.</td><td>P2P content distribution is a universal infrastructure problem. A pure-Rust BT-compatible engine with content channels, revocation, and WebTorrent support has broad utility far beyond game modding.</td><td><code>workshop-core</code>, <code>ic-server</code>, <code>ic-game</code> (via <code>workshop-core</code> and directly for replay/update/channels)</td></tr>
 </tbody>
 </table>
 </div>
@@ -364,7 +364,7 @@ bevy = ["dep:bevy_reflect"]
 <tbody>
 <tr><td>D009 (Fixed-Point Math)</td><td><code>fixed-game-math</code> implements D009’s type library. IC’s <code>ic-sim</code> depends on it.</td></tr>
 <tr><td>D039 (Engine Scope)</td><td>Extraction reinforces D039’s “general-purpose” identity — reusable crates are the engine’s contribution to the broader ecosystem.</td></tr>
-<tr><td>D050 (Workshop Cross-Project)</td><td><code>workshop-core</code> is D050’s “Workshop Core Library” extracted as a standalone permissive crate. D050’s two-layer architecture is the extraction boundary.</td></tr>
+<tr><td>D050 (Workshop Cross-Project)</td><td><code>workshop-core</code> is D050’s “Workshop Core Library” extracted as a standalone permissive crate. D050’s three-layer architecture (<code>p2p-distribute</code> → <code>workshop-core</code> → game integration) is the extraction boundary.</td></tr>
 <tr><td>D051 (GPL v3 License)</td><td>D076 operates within D051’s framework. The engine stays GPL. Extracted crates contain no GPL-encumbered code and live in separate repos. D051’s <code>cargo-deny</code> enforcement verifies the boundary.</td></tr>
 <tr><td>D074 (Unified Server Binary)</td><td><code>p2p-distribute</code> extracts the BT-compatible P2P engine that D074’s Workshop seeder capability uses.</td></tr>
 </tbody>

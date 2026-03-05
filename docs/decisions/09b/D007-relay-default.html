@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-ee0d544b.js";
+            window.path_to_searchindex_js = "../../searchindex-7885430e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-2281c970.js"></script>
+        <script src="../../toc-ac1642ae.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -183,6 +183,20 @@
                         <h2 id="d007-networking--relay-server-as-default"><a class="header" href="#d007-networking--relay-server-as-default">D007: Networking — Relay Server as Default</a></h2>
 <p><strong>Revision note (2026-02-22):</strong> Revised to clarify failure-policy expectations: relay remains the default and ranked authority path, but relay failure handling is mode-specific. Ranked follows degraded-certification / void policy (see <code>06-SECURITY.md</code> V32) rather than automatic P2P failover; casual/custom games may offer unranked continuation or fallback paths.</p>
 <p><strong>Decision:</strong> Default multiplayer uses relay server with time authority, not pure P2P. The relay logic (<code>RelayCore</code>) is a library component in <code>ic-net</code> — it can be deployed as a standalone binary (dedicated server for hosting, server rooms, Raspberry Pi) or embedded inside a game client (listen server — “Host Game” button, zero external infrastructure). Clients connecting to either deployment use the same protocol and cannot distinguish between them.</p>
+<blockquote>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mode</th><th>Server needed?</th><th>Use case</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Ranked / Competitive</strong></td><td>Yes — dedicated relay required (community-verified or official)</td><td>Ladder, tournaments, signed replays</td></tr>
+<tr><td><strong>Casual / Custom / LAN</strong></td><td>No — host-embedded listen server, zero external infrastructure</td><td>Friends, LAN parties, testing</td></tr>
+<tr><td><strong>Workshop content</strong></td><td>Federated servers coordinate; files transfer P2P between players</td><td>Mod/map download</td></tr>
+</tbody>
+</table>
+</div>
+</blockquote>
 <p><strong>Rationale:</strong></p>
 <ul>
 <li>Blocks lag switches (server owns the clock)</li>

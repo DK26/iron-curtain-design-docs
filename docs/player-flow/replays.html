@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-ee0d544b.js";
+            window.path_to_searchindex_js = "../searchindex-7885430e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-2281c970.js"></script>
+        <script src="../toc-ac1642ae.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -564,295 +564,11 @@ Spoiler-Free OFF (default):
 <li>Voice playback automatically syncs with replay speed (pitch-corrected at 2x; muted above 4x)</li>
 </ul>
 <hr>
-<h3 id="post-game-summary-screen"><a class="header" href="#post-game-summary-screen">Post-Game Summary Screen</a></h3>
-<p>Accessible from:</p>
-<ul>
-<li>Post-Game → [Summary] (after a live match)</li>
-<li>Replay Viewer → [Summary] button (during or after replay playback)</li>
-<li>Replay Browser → right-click → [View Summary]</li>
-</ul>
-<p>The summary screen does <strong>not</strong> require replaying the match — it reads from the analysis event stream embedded in the <code>.icrep</code> file.</p>
-<pre><code>┌──────────────────────────────────────────────────────────────────┐
-│  MATCH SUMMARY — Coastal Fortress                     [← Back]   │
-│                                                                  │
-│  P1: You (Allied) — VICTORY     P2: PlayerX (Soviet) — DEFEAT   │
-│  Duration: 12:34   Balance: IC Default   Speed: Normal           │
-│                                                                  │
-│  [Overview] [Economy] [Military] [Build Order] [Heatmaps]        │
-│  ─────────────────────────────────────────────────────────────── │
-│                                                                  │
-│  OVERVIEW                                                        │
-│  ┌────────────────────────────────────────────────────────────┐ │
-│  │  Army Value Graph (over time)                              │ │
-│  │  ┌─────────────────────────────────────────────────────┐  │ │
-│  │  │     ╱\   P1                    ╱\                   │  │ │
-│  │  │    ╱  \  ──── P2          ╱\  ╱  \                  │  │ │
-│  │  │   ╱    ╲╱   ╲           ╱  ╲╱    ╲                 │  │ │
-│  │  │  ╱           ╲     ╱───╱         ╲                 │  │ │
-│  │  │ ╱             ╲───╱               ╲___             │  │ │
-│  │  └─────────────────────────────────────────────────────┘  │ │
-│  │  (click graph to jump to that moment in replay)           │ │
-│  └────────────────────────────────────────────────────────────┘ │
-│                                                                  │
-│  SCORE SUMMARY                                                   │
-│  ┌──────────────┬──────────┬──────────┐                         │
-│  │              │ You      │ PlayerX  │                         │
-│  ├──────────────┼──────────┼──────────┤                         │
-│  │ Units Killed │ 47       │ 23       │                         │
-│  │ Units Lost   │ 31       │ 52       │                         │
-│  │ Structures   │ 3 / 1    │ 1 / 5    │  (destroyed / lost)    │
-│  │ Income Total │ $14,200  │ $11,800  │                         │
-│  │ APM (avg)    │ 86       │ 62       │                         │
-│  └──────────────┴──────────┴──────────┘                         │
-│                                                                  │
-│  [Watch Replay]  [Share]  [Export Summary]                        │
-└──────────────────────────────────────────────────────────────────┘
-</code></pre>
-<p><strong>Tabs:</strong></p>
-<ul>
-<li><strong>Overview:</strong> Army value graph, score summary, key moments timeline</li>
-<li><strong>Economy:</strong> Income graph, unspent resources graph, harvester count graph, total earned/spent</li>
-<li><strong>Military:</strong> Per-unit-type kill/death/efficiency table, army composition pie charts at key moments</li>
-<li><strong>Build Order:</strong> Side-by-side production timelines per player (adapted from SC2 Game Summary)</li>
-<li><strong>Heatmaps:</strong> Unit death, combat, camera attention, economy heatmaps on minimap view</li>
-</ul>
-<p>All graphs are clickable — click a point to open the Replay Viewer at that timestamp.</p>
-<hr>
-<h3 id="replay-sharing"><a class="header" href="#replay-sharing">Replay Sharing</a></h3>
-<h4 id="match-id-system-dota-2-pattern"><a class="header" href="#match-id-system-dota-2-pattern">Match ID System (Dota 2 Pattern)</a></h4>
-<p>Relay-hosted matches generate a unique <strong>Match ID</strong> (short alphanumeric hash, e.g., <code>IC-7K3M9X</code>). Any player can enter this ID in the replay browser to download the replay.</p>
-<ul>
-<li><strong>Copy Match ID:</strong> Available in post-game screen, replay browser detail panel, and profile match history</li>
-<li><strong>[Enter Match ID…]</strong> in replay browser: text field → download from relay → add to local library</li>
-<li><strong>URL format:</strong> <code>ic://replay/IC-7K3M9X</code> — opens IC directly to the replay (OS URL scheme handler)</li>
-<li><strong>Availability:</strong> Relay-hosted replays persist for a configurable period (default: 90 days, server-operator configurable via D072). After expiry, only locally-saved copies remain.</li>
-<li><strong>Privacy:</strong> Match IDs for ranked games are public by default. Custom/private games generate IDs only if the host enables sharing.</li>
-</ul>
-<h4 id="file-based-sharing"><a class="header" href="#file-based-sharing">File-Based Sharing</a></h4>
-<ul>
-<li><code>.icrep</code> files are portable and self-describing</li>
-<li><strong>Embedded resources mode</strong> (see <code>formats/save-replay-formats.md</code> § “Embedded Resources”): Self-contained replays that include the map and rule snapshots, so the recipient does not need matching content installed</li>
-<li><strong>File association:</strong> <code>.icrep</code> registered with the OS; double-click opens IC’s replay viewer</li>
-<li><strong>Drag-and-drop:</strong> Drop an <code>.icrep</code> file onto the IC window to open it</li>
-</ul>
-<h4 id="workshop-integration"><a class="header" href="#workshop-integration">Workshop Integration</a></h4>
-<ul>
-<li>Community replays can be published to the Workshop as curated collections (e.g., “Best Games of Season 3”, “Teaching Replays: Soviet Openings”)</li>
-<li>Workshop replay packs include metadata for browsing without downloading every replay file</li>
-<li>Creators can attach commentary notes to published replays</li>
-</ul>
-<hr>
-<h3 id="video--clip-export"><a class="header" href="#video--clip-export">Video / Clip Export</a></h3>
-<p><strong>IC ships with built-in <code>.webm</code> video export</strong> — ahead of every RTS surveyed except LoL’s basic clip system.</p>
-<h4 id="quick-clip"><a class="header" href="#quick-clip">Quick Clip</a></h4>
-<p>During replay playback:</p>
-<ol>
-<li>Press <code>Ctrl+Shift+R</code> or click [Clip] to start recording</li>
-<li>The transport bar shows a red recording indicator and elapsed clip time</li>
-<li>Press <code>Ctrl+Shift+R</code> again to stop</li>
-<li>Clip saved to <code>Replays/Clips/</code> as <code>.webm</code> (VP9 video + Opus audio)</li>
-<li>Toast notification: <code>Clip saved (12s) — [Open Folder] [Copy to Clipboard]</code></li>
-</ol>
-<h4 id="full-replay-export"><a class="header" href="#full-replay-export">Full Replay Export</a></h4>
-<p>From replay browser or viewer menu: [Export Video…]</p>
-<pre><code>┌─────────────────────────────────────────────────────────────────┐
-│  EXPORT REPLAY VIDEO                                             │
-│                                                                 │
-│  Range: [Full Replay ▾]  or  Start: [00:00] End: [12:34]        │
-│                                                                 │
-│  Resolution: [1920×1080 ▾]   Framerate: [60 fps ▾]              │
-│  Quality:    [High ▾]        Format: [.webm (VP9) ▾]            │
-│                                                                 │
-│  Camera:  [Current camera settings ▾]                            │
-│           (Free Camera / Player 1 / Player 2 / Directed)         │
-│                                                                 │
-│  Include:  ☑ Observer overlays   ☑ Transport bar (off for clean) │
-│            ☑ Voice audio         ☑ Game audio                    │
-│                                                                 │
-│  Estimated size: ~180 MB   Estimated time: ~3 min                │
-│                                                                 │
-│  [Export]  [Cancel]                                               │
-└─────────────────────────────────────────────────────────────────┘
-</code></pre>
-<p><strong>Render pipeline:</strong> The export runs the replay at accelerated speed off-screen, capturing frames to the encoder. This allows higher-quality output than screen capture and works headless.</p>
-<hr>
-<h3 id="cinematic-camera-tools"><a class="header" href="#cinematic-camera-tools">Cinematic Camera Tools</a></h3>
-<p>For content creators and community filmmakers. Accessible via replay viewer menu → [Cinematic Mode] or <code>Ctrl+Shift+C</code>.</p>
-<h4 id="camera-path-editor"><a class="header" href="#camera-path-editor">Camera Path Editor</a></h4>
-<p>Define a camera path with keyframes:</p>
-<ul>
-<li>Place keyframes at positions along the timeline (<code>Ctrl+K</code> to add keyframe at current camera position and tick)</li>
-<li>Each keyframe stores: camera position, zoom, rotation (for 3D render mode), playback speed at that point</li>
-<li>Camera interpolates smoothly between keyframes (Catmull-Rom spline)</li>
-<li>Preview the path before recording</li>
-<li>Export the camera path as a reusable <code>.iccam</code> file</li>
-</ul>
-<h4 id="lens-controls-3d-render-mode-d048"><a class="header" href="#lens-controls-3d-render-mode-d048">Lens Controls (3D Render Mode, D048)</a></h4>
-<p>When using 3D render mode:</p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Control</th><th>Effect</th></tr>
-</thead>
-<tbody>
-<tr><td><strong>Focal Length</strong></td><td>Wide-angle to telephoto (adjustable slider)</td></tr>
-<tr><td><strong>Aperture</strong></td><td>Depth-of-field blur amount (lower = more bokeh)</td></tr>
-<tr><td><strong>Auto Focus</strong></td><td>Toggle; when off, manual focus distance slider</td></tr>
-</tbody>
-</table>
-</div>
-<h4 id="cinematic-toggles"><a class="header" href="#cinematic-toggles">Cinematic Toggles</a></h4>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Toggle</th><th>Key</th><th>Effect</th></tr>
-</thead>
-<tbody>
-<tr><td><strong>Hide all UI</strong></td><td><code>Ctrl+Shift+H</code></td><td>Remove all overlays, transport bar, panels — clean game viewport only</td></tr>
-<tr><td><strong>Hide player names</strong></td><td></td><td>Remove floating player/unit names</td></tr>
-<tr><td><strong>Hide health bars</strong></td><td></td><td>Remove health/selection indicators</td></tr>
-<tr><td><strong>Letterbox</strong></td><td></td><td>Add cinematic black bars (21:9 crop on 16:9 display)</td></tr>
-</tbody>
-</table>
-</div>
-<hr>
-<h3 id="moddable-observer-ui"><a class="header" href="#moddable-observer-ui">Moddable Observer UI</a></h3>
-<p>The observer overlay system is <strong>data-driven and moddable</strong> (SC2 custom observer UI pattern). Community creators can publish custom observer layouts via the Workshop.</p>
-<ul>
-<li>Observer panel layouts are defined in YAML (position, size, data bindings, conditional visibility)</li>
-<li>The game provides a standardized data API that observer panels read from (player stats, army composition, economy, production, APM)</li>
-<li>Built-in layouts: <code>Default</code>, <code>Compact</code>, <code>Caster Broadcast</code></li>
-<li>Workshop layouts installable and selectable from replay viewer settings</li>
-<li>Layout switching is instant (no reload required)</li>
-</ul>
-<p>This enables community-created broadcast overlays (equivalent to SC2’s WCS Observer and AhliObs) without engine modifications.</p>
-<hr>
-<h3 id="live-spectator-mode"><a class="header" href="#live-spectator-mode">Live Spectator Mode</a></h3>
-<p>Live spectating shares the same viewer infrastructure as replay playback, with these differences:</p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Feature</th><th>Replay Viewer</th><th>Live Spectator</th></tr>
-</thead>
-<tbody>
-<tr><td>Transport controls</td><td>Full (seek, rewind, speed)</td><td>Play only; no rewind/seek (live stream)</td></tr>
-<tr><td>Speed</td><td>0.25x–8x + Max</td><td>Real-time only</td></tr>
-<tr><td>Broadcast delay</td><td>N/A</td><td>Configurable (default 120s for ranked/tournament)</td></tr>
-<tr><td>Observer panels</td><td>All available</td><td>All available</td></tr>
-<tr><td>Camera modes</td><td>All six</td><td>All six</td></tr>
-<tr><td>Voice</td><td>Recorded tracks</td><td>Live voice (if spectator permitted)</td></tr>
-<tr><td>Join timing</td><td>Any time (file is complete)</td><td>Must join before match or during (mid-game join supported via relay snapshot)</td></tr>
-<tr><td>Chat</td><td>N/A (replay has no live chat)</td><td>Observer chat channel (separate from player chat — anti-coaching per D059)</td></tr>
-</tbody>
-</table>
-</div>
-<h4 id="mid-game-spectator-join"><a class="header" href="#mid-game-spectator-join">Mid-Game Spectator Join</a></h4>
-<p>Unlike OpenRA (which cannot do this), IC’s relay architecture supports spectators joining a match in progress:</p>
-<ol>
-<li>Spectator requests join via relay</li>
-<li>Relay sends current state snapshot + recent order backlog</li>
-<li>Client re-simulates from snapshot to catch up</li>
-<li>Spectator enters live stream with &lt;5 second catch-up delay</li>
-</ol>
-<h4 id="spectator-slots"><a class="header" href="#spectator-slots">Spectator Slots</a></h4>
-<ul>
-<li>Visible in lobby with spectator count / max slots</li>
-<li>Separate from player slots</li>
-<li>Lobby host configures: max spectators, fog-of-war policy, broadcast delay</li>
-<li>Tournament mode: spectator slots may require organizer approval</li>
-</ul>
-<hr>
-<h3 id="foreign-replay-playback-d056"><a class="header" href="#foreign-replay-playback-d056">Foreign Replay Playback (D056)</a></h3>
-<p>Imported replays (OpenRA <code>.orarep</code>, Remastered Collection) play through the same viewer with additional UX:</p>
-<h4 id="divergence-confidence-indicator"><a class="header" href="#divergence-confidence-indicator">Divergence Confidence Indicator</a></h4>
-<p>A small badge in the transport bar shows the current divergence confidence level:</p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Level</th><th>Badge</th><th>Meaning</th></tr>
-</thead>
-<tbody>
-<tr><td><strong>Plausible</strong></td><td>Green ✓</td><td>Replay is tracking well; no detectable divergence</td></tr>
-<tr><td><strong>Minor Drift</strong></td><td>Yellow ⚠</td><td>Small state differences detected; visuals may differ slightly from the original</td></tr>
-<tr><td><strong>Diverged</strong></td><td>Red ✗</td><td>Significant divergence; replay may not accurately represent the original match</td></tr>
-</tbody>
-</table>
-</div>
-<p>The badge is clickable to show a detail panel with divergence metrics and explanation.</p>
-<h4 id="limitations-banner"><a class="header" href="#limitations-banner">Limitations Banner</a></h4>
-<p>Foreign replays show a subtle top banner on first load:</p>
-<pre><code>This replay was imported from {OpenRA / Remastered}. Playback uses translated
-orders and may differ from the original. [Learn More] [Dismiss]
-</code></pre>
-<hr>
-<h3 id="replay-anonymization"><a class="header" href="#replay-anonymization">Replay Anonymization</a></h3>
-<p><code>ic replay anonymize &lt;file&gt;</code> (CLI) or Replay Browser → right-click → [Anonymize…]:</p>
-<ul>
-<li>Replace player names with generic labels (<code>Player 1</code>, <code>Player 2</code>, etc.)</li>
-<li>Strip voice tracks</li>
-<li>Strip chat messages</li>
-<li>Preserve all gameplay data (orders, events, state hashes)</li>
-<li>Useful for educational content sharing, tournament review, and privacy</li>
-</ul>
-<hr>
-<h3 id="replay-settings"><a class="header" href="#replay-settings">Replay Settings</a></h3>
-<p>Accessible via [Settings] gear icon in the transport bar:</p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Setting</th><th>Options</th><th>Default</th></tr>
-</thead>
-<tbody>
-<tr><td><strong>Spoiler-free mode</strong></td><td>On / Off</td><td>Off</td></tr>
-<tr><td><strong>Rewind jump duration</strong></td><td>5s / 10s / 15s / 30s</td><td>15s</td></tr>
-<tr><td><strong>Auto-record all games</strong></td><td>On / Off</td><td>On</td></tr>
-<tr><td><strong>Default camera mode</strong></td><td>Free / Directed / Player 1</td><td>Free</td></tr>
-<tr><td><strong>Default observer panel</strong></td><td>None / Army / Economy / Score</td><td>None</td></tr>
-<tr><td><strong>Panel display density</strong></td><td>Expanded / Compact / Caster</td><td>Expanded</td></tr>
-<tr><td><strong>Event marker density</strong></td><td>All / Significant Only / Off</td><td>Significant Only</td></tr>
-<tr><td><strong>Voice playback default</strong></td><td>All On / All Off / Per-Player</td><td>All On</td></tr>
-<tr><td><strong>Observer UI layout</strong></td><td>Default / Compact / Caster / Custom</td><td>Default</td></tr>
-</tbody>
-</table>
-</div>
-<hr>
-<h3 id="platform-adaptations"><a class="header" href="#platform-adaptations">Platform Adaptations</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Platform</th><th>Adaptation</th></tr>
-</thead>
-<tbody>
-<tr><td><strong>Desktop (KBM)</strong></td><td>Full hotkey set; all features accessible</td></tr>
-<tr><td><strong>Gamepad / Steam Deck</strong></td><td>Transport controls on D-pad; camera on sticks; panels on shoulder buttons; radial menu for camera modes</td></tr>
-<tr><td><strong>Touch (Tablet)</strong></td><td>Swipe timeline to scrub; pinch to zoom; tap event markers to jump; floating transport buttons; panels in collapsible drawer</td></tr>
-<tr><td><strong>Phone</strong></td><td>Simplified overlay with one panel at a time; timeline at bottom with large touch targets; speed control via tap zones</td></tr>
-</tbody>
-</table>
-</div>
-<hr>
-<h3 id="cross-references"><a class="header" href="#cross-references">Cross-References</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Topic</th><th>Document</th></tr>
-</thead>
-<tbody>
-<tr><td>Replay file format (<code>.icrep</code>)</td><td><code>formats/save-replay-formats.md</code> § Replay File Format</td></tr>
-<tr><td>State recording and keyframes</td><td><code>architecture/state-recording.md</code></td></tr>
-<tr><td>Analysis event stream</td><td><code>formats/save-replay-formats.md</code> § Analysis Event Stream</td></tr>
-<tr><td>Foreign replay import (D056)</td><td><code>decisions/09f/D056-replay-import.md</code></td></tr>
-<tr><td>Voice recording consent (D059)</td><td><code>decisions/09g/D059-communication.md</code></td></tr>
-<tr><td>Replay signatures and trust (D052)</td><td><code>decisions/09b/D052-community-servers.md</code></td></tr>
-<tr><td>Observer/spectator mode (live)</td><td><code>player-flow/in-game.md</code> § Observer Overlays</td></tr>
-<tr><td>Post-game flow</td><td><code>player-flow/post-game.md</code></td></tr>
-<tr><td>Netcode and replay architecture</td><td><code>03-NETCODE.md</code></td></tr>
-<tr><td>Cross-game replay UX survey</td><td><code>research/replay-playback-ux-survey.md</code></td></tr>
-<tr><td>LLM replay overlays (D073)</td><td><code>decisions/09d/D073-llm-exhibition-modes.md</code> § Spectator Overlays</td></tr>
-<tr><td>Moddable UI system</td><td><code>02-ARCHITECTURE.md</code> § UI Theme System</td></tr>
-</tbody>
-</table>
-</div>
+<h3 id="post-game-summary-sharing--creator-tools"><a class="header" href="#post-game-summary-sharing--creator-tools">Post-Game Summary, Sharing &amp; Creator Tools</a></h3>
+<blockquote>
+<p><strong>Full section:</strong> <a href="replays-analysis-sharing.html">Replay Analysis, Sharing &amp; Tools</a></p>
+</blockquote>
+<p>Post-game summary screen (tabbed: overview/economy/military/build order/heatmaps), replay sharing (Match ID system, file-based, Workshop collections, P2P distribution via <code>p2p-distribute</code>), video/clip export (<code>.webm</code> VP9+Opus), cinematic camera tools (keyframe paths, lens controls, letterbox), moddable observer UI (YAML layouts, Workshop-distributable), live spectator mode (mid-game join, broadcast delay), foreign replay playback (D056 divergence indicator), replay anonymization, replay settings, platform adaptations, and cross-references.</p>
 
                     </main>
 
@@ -862,7 +578,7 @@ orders and may differ from the original. [Learn More] [Dismiss]
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../player-flow/workshop.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../player-flow/replays-analysis-sharing.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -876,7 +592,7 @@ orders and may differ from the original. [Learn More] [Dismiss]
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../player-flow/workshop.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../player-flow/replays-analysis-sharing.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

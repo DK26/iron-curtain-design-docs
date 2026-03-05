@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-ee0d544b.js";
+            window.path_to_searchindex_js = "../../searchindex-7885430e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-2281c970.js"></script>
+        <script src="../../toc-ac1642ae.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -309,6 +309,46 @@ pub enum ResolutionReason {
     EngineDefault,
 }
 <span class="boring">}</span></code></pre>
+<h3 id="namespace-resolution-algorithm-overlay-composition"><a class="header" href="#namespace-resolution-algorithm-overlay-composition">Namespace Resolution Algorithm (Overlay Composition)</a></h3>
+<p>The namespace is built by recursively composing sources as overlay layers — a pattern formalized by AnyFS’s generic <code>Overlay&lt;Base, Upper&gt;</code> struct. Each source in the profile’s priority order is an overlay layer: reads check the upper (higher-priority) source first, then fall through to the base (lower-priority). The recursive type enforces resolution order at compile time:</p>
+<pre><code>Overlay&lt;Overlay&lt;Overlay&lt;EngineDefaults, BaseGame&gt;, TournamentBalance&gt;, HdSprites&gt;
+                                                    ↑ checked last       ↑ checked first
+</code></pre>
+<p>In practice, IC builds this as a flat vector walk (not nested generics) because the source count is dynamic and determined at profile activation time:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>impl VirtualNamespace {
+    /// Build namespace from profile sources in priority order.
+    /// Last source wins for file assets; YAML rules use three-phase merge.
+    fn build(sources: &amp;[ResolvedSource], conflicts: &amp;ConflictPolicy) -&gt; Self {
+        let mut entries = HashMap::new();
+        // Walk sources from lowest to highest priority (engine defaults first)
+        for source in sources {
+            for (path, blob_hash) in &amp;source.file_manifest {
+                let resolution = if entries.contains_key(path) {
+                    conflicts.resolve(path, &amp;source.id, &amp;entries[path].source_id)
+                } else {
+                    ResolutionReason::Unique
+                };
+                if matches!(resolution, ResolutionReason::Unique
+                    | ResolutionReason::LastWins { .. }
+                    | ResolutionReason::ExplicitOverride { .. })
+                {
+                    entries.insert(path.clone(), NamespaceEntry {
+                        blob_hash: *blob_hash,
+                        source_id: source.id.clone(),
+                        source_version: source.version.clone(),
+                        resolution,
+                    });
+                }
+            }
+        }
+        let fingerprint = Self::compute_fingerprint(&amp;entries);
+        Self { entries, fingerprint }
+    }
+}
+<span class="boring">}</span></code></pre>
+<p>The key insight from AnyFS’s overlay model: writes go to the upper layer, never modifying the base. In IC’s context, this means <strong>mods never mutate engine defaults or lower-priority sources</strong> — the namespace entry records the override as provenance, preserving the full composition history for inspection and diffing.</p>
 <h3 id="namespace-for-yaml-rules-not-just-file-assets"><a class="header" href="#namespace-for-yaml-rules-not-just-file-assets">Namespace for YAML Rules (Not Just File Assets)</a></h3>
 <p>The virtual namespace covers two distinct layers:</p>
 <ol>
@@ -329,6 +369,7 @@ pub enum ResolutionReason {
 </ul>
 <p>This replaces the current per-mod version list comparison with a single hash comparison (fast path) and falls back to detailed diff only on mismatch. The diff view is more informative than the current “incompatible mods” rejection.</p>
 <p><strong>Replay recording:</strong> Replays record the profile fingerprint alongside the existing <code>(mod_id, version)</code> list. Playback verifies the fingerprint. A fingerprint mismatch warns but doesn’t block playback — the existing mod list provides degraded compatibility checking.</p>
+<p><strong>Content channel integration:</strong> When a player subscribes to a balance channel (D049 § “Content Channels Integration”), the active balance snapshot ID is incorporated into the fingerprint. This ensures lobby verification captures not just which mods are installed, but which live balance state is active. The snapshot acts as an additional overlay source in namespace resolution — highest priority, applied after all mod sources and conflict resolutions. See <a href="../09e/D049/D049-content-channels-integration.html">D049 § Content Channels Integration</a> for the full lifecycle and <a href="../architecture/data-flows-overview.html">architecture/data-flows-overview.md</a> § Flow 5.</p>
 <h3 id="editor-integration-d038"><a class="header" href="#editor-integration-d038">Editor Integration (D038)</a></h3>
 <p>The scenario editor benefits from profile-aware asset resolution:</p>
 <ul>

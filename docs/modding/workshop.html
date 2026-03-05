@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-ee0d544b.js";
+            window.path_to_searchindex_js = "../searchindex-7885430e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-2281c970.js"></script>
+        <script src="../toc-ac1642ae.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -354,7 +354,7 @@ seed_duration_after_exit = "30m"      # Background seeding after game closes
 cache_size_limit = "2 GB"             # LRU eviction when exceeded
 prefer_p2p = true                     # false = always use HTTP direct
 </code></pre>
-<p>The P2P engine uses <strong>rarest-first</strong> piece selection, an <strong>endgame mode</strong> that sends duplicate requests for the last few pieces to prevent stalls, a <strong>connection state machine</strong> (pending → active → blacklisted) that avoids wasting time on dead or throttled peers, <strong>statistical bad-peer detection</strong> (demotes peers whose transfer times deviate beyond 3σ — adapted from Dragonfly’s evaluator), and <strong>3-tier download priority</strong> (lobby-urgent / user-requested / background) for QoS differentiation. Full protocol design details — peer selection policy, weighted multi-dimensional scoring, piece request strategy, announce cycle, size-based piece lengths, health checks, preheat/prefetch, persistent replica count — are in <code>../decisions/09e/D049-workshop-assets.md</code> “P2P protocol design details.”</p>
+<p>The P2P engine uses <strong>rarest-first</strong> piece selection, an <strong>endgame mode</strong> that sends duplicate requests for the last few pieces to prevent stalls, a <strong>connection state machine</strong> (pending → active → blacklisted) that avoids wasting time on dead or throttled peers, <strong>statistical bad-peer detection</strong> (demotes peers whose transfer times deviate beyond 3σ — adapted from Dragonfly’s evaluator), and <strong>3-tier download priority</strong> (lobby-urgent / user-requested / background) for QoS differentiation. The underlying P2P infrastructure is the <code>p2p-distribute</code> crate (D076 Tier 3, MIT/Apache-2.0) — a foundational content distribution engine that IC uses across multiple subsystems, not just Workshop. <code>workshop-core</code> (D050) integrates <code>p2p-distribute</code> with Workshop-specific registry, federation, and revocation propagation. Full protocol design details — peer selection policy, weighted multi-dimensional scoring, piece request strategy, announce cycle, size-based piece lengths, health checks, preheat/prefetch, persistent replica count — are in <code>../decisions/09e/D049-workshop-assets.md</code> “P2P protocol design details.”</p>
 <p><strong>Cost:</strong> A BitTorrent tracker costs $5-20/month. Centralized CDN for a popular 500MB mod downloaded 10K times = 5TB = $50-450/month. P2P reduces marginal distribution cost to near-zero.</p>
 <p>See <code>../decisions/09e/D049-workshop-assets.md</code> for full design including security analysis, Rust implementation options, gaming industry precedent, and phased bootstrap strategy.</p>
 <h3 id="workshop-resource-registry--dependency-system-d030"><a class="header" href="#workshop-resource-registry--dependency-system-d030">Workshop Resource Registry &amp; Dependency System (D030)</a></h3>
@@ -581,44 +581,10 @@ llm:
   composition_hints: "Pairs well with Soviet faction voice lines for immersive briefings"
 </code></pre>
 <h4 id="moderation--publisher-trust-d030"><a class="header" href="#moderation--publisher-trust-d030">Moderation &amp; Publisher Trust (D030)</a></h4>
-<p>Workshop moderation is <strong>tooling-enabled, policy-configurable</strong>. The engine provides moderation infrastructure; each deployment (official IC server, community servers) defines its own policies.</p>
-<p><strong>Publisher trust tiers:</strong></p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Tier</th><th>Requirements</th><th>Privileges</th></tr>
-</thead>
-<tbody>
-<tr><td><strong>Unverified</strong></td><td>Account created</td><td>Can publish to <code>dev</code> channel only (local testing)</td></tr>
-<tr><td><strong>Verified</strong></td><td>Email confirmed</td><td>Can publish to <code>beta</code> and <code>release</code> channels. Subject to moderation queue.</td></tr>
-<tr><td><strong>Trusted</strong></td><td>N successful publishes (configurable, default 5), no policy violations, account age &gt; 30 days</td><td>Updates auto-approved. New resources still moderation-queued.</td></tr>
-<tr><td><strong>Featured</strong></td><td>Editor’s pick / staff selection</td><td>Highlighted in browse UI, eligible for “Mod of the Week”</td></tr>
-</tbody>
-</table>
-</div>
-<p>Trust tiers are tracked per-server. A publisher who is Trusted on the official server starts as Verified on a community server — trust doesn’t federate automatically (a community decision, not an engine constraint).</p>
-<p><strong>Moderation rules engine (Phase 5+):</strong></p>
-<p>The Workshop server supports configurable moderation rules — YAML-defined automation that runs on every publish event. Inspired by mod.io’s rules engine but exposed as user-configurable server policy, not proprietary SaaS logic.</p>
-<pre><code class="language-yaml"># workshop-server.yaml — moderation rules
-moderation:
-  rules:
-    - name: "hold-new-publishers"
-      condition: "publisher.trust_tier == 'verified' AND resource.is_new"
-      action: queue_for_review
-    - name: "auto-approve-trusted-updates"
-      condition: "publisher.trust_tier == 'trusted' AND resource.is_update"
-      action: auto_approve
-    - name: "flag-large-packages"
-      condition: "resource.size &gt; 500_000_000"  # &gt; 500MB
-      action: queue_for_review
-      reason: "Package exceeds 500MB — manual review required"
-    - name: "reject-missing-license"
-      condition: "resource.license == null"
-      action: reject
-      reason: "License field is required"
-</code></pre>
-<p>Community server operators define their own rules. The official IC server ships with sensible defaults. Rules are structural (file format, size, metadata completeness) — not content-based creative judgment.</p>
-<p><strong>Community reporting:</strong> Report button on every resource in the Workshop browser. Report categories: license violation, malware, DMCA, policy violation. Reports go to a moderator queue. DMCA with due process per D030. Publisher notified and can appeal.</p>
+<blockquote>
+<p><strong>Full section:</strong> <a href="workshop-moderation.html">Workshop Moderation &amp; Publisher Trust</a></p>
+</blockquote>
+<p>Publisher trust tiers (Unverified→Verified→Trusted→Featured), asymmetric negative reputation federation, <code>RevocationRecord</code> propagation via <code>p2p-distribute</code> <code>RevocationPolicy</code> trait, three reconciliation loops (client content / federation trust / server health), YAML-configurable moderation rules engine, and community reporting workflow.</p>
 <h4 id="cicd-publishing-integration"><a class="header" href="#cicd-publishing-integration">CI/CD Publishing Integration</a></h4>
 <p><code>ic mod publish</code> is designed to work in CI/CD pipelines — not just interactive terminals. Inspired by Artifactory’s CI integration and npm’s automation tokens.</p>
 <pre><code class="language-yaml"># GitHub Actions example

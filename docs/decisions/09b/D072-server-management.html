@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-ee0d544b.js";
+            window.path_to_searchindex_js = "../../searchindex-7885430e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-2281c970.js"></script>
+        <script src="../../toc-ac1642ae.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -408,6 +408,62 @@ moderators = [
 }
 </code></pre>
 <p>Enables: Uptime Kuma, Prometheus blackbox exporter, Kubernetes liveness probes, Discord bot status, Grafana dashboards, custom monitoring scripts — all without ICRP authentication.</p>
+<p><strong>Distinction from <code>/ready</code>:</strong> The <code>/health</code> endpoint answers “is the process alive?” — it returns HTTP 200 as soon as the binary starts. The <code>/ready</code> endpoint (below) answers “can this server accept new traffic?” — it returns 503 during startup, drain, or subsystem failure. External monitoring tools should check <code>/health</code> for liveness and <code>/ready</code> for routing decisions.</p>
+<h3 id="readiness-endpoint-ready"><a class="header" href="#readiness-endpoint-ready">Readiness Endpoint (<code>/ready</code>)</a></h3>
+<p>A separate HTTP GET endpoint, zero-auth, rate-limited (1 req/sec). Reports whether the server is ready to accept new traffic — distinct from the <code>/health</code> liveness check.</p>
+<pre><code class="language-json">GET http://localhost:19710/ready
+
+{
+  "ready": true,
+  "checks": {
+    "relay":      { "ok": true },
+    "database":   { "ok": true, "writable": true },
+    "tracker":    { "ok": true },
+    "workshop":   { "ok": true, "seeding": true },
+    "disk_space": { "ok": true, "free_gb": 12.4 }
+  }
+}
+</code></pre>
+<p>HTTP 200 if all critical checks pass. HTTP 503 if any critical check fails.</p>
+<p><strong>Per-capability health:</strong> Each enabled capability (D074) reports its own readiness. If <code>[capabilities] workshop = true</code> but the Workshop seeder failed to initialize, the server reports itself as not ready for Workshop traffic — but still ready for relay traffic. Federation routing (see § Server Labels in D074) and load balancers use this to direct traffic only to nodes capable of serving it.</p>
+<p><strong>Startup grace period:</strong> After process start, <code>/ready</code> returns 503 until all enabled capabilities have completed initialization (database opened, P2P engine listening, tracker announced). The <code>/health</code> endpoint returns 200 immediately (the process is alive). This prevents federation peers from routing traffic to a server that hasn’t finished starting up.</p>
+<p><strong>Drain status:</strong> When the server enters drain mode (see § Graceful Shutdown below), <code>/ready</code> returns 503 with <code>"draining": true</code>. Federation peers and matchmaking services stop routing new players to this server. Active matches continue unaffected.</p>
+<p><strong>Why separate from <code>/health</code>?</strong> A server can be alive but not ready. A relay that is running but whose database is locked, or that is mid-migration, or that is draining for restart — it’s alive (don’t kill it) but not ready (don’t send it new traffic). Conflating liveness and readiness is one of the most common operational mistakes in distributed systems (lesson from K8s probe design — see <code>research/cloud-native-lessons-for-ic-platform.md</code> § 1).</p>
+<h3 id="graceful-shutdown--match-aware-drain-protocol"><a class="header" href="#graceful-shutdown--match-aware-drain-protocol">Graceful Shutdown — Match-Aware Drain Protocol</a></h3>
+<p>Server shutdown follows a four-phase drain protocol that ensures in-flight matches complete without disruption. This replaces the simple “finish current tick, save state, flush DB” model.</p>
+<p><strong>Phase 1 — DRAIN ANNOUNCED:</strong></p>
+<ul>
+<li>Server stops accepting new match creation requests</li>
+<li><code>/ready</code> returns 503 with <code>"draining": true</code></li>
+<li>Server announces “draining” status to federation peers (protocol message)</li>
+<li>Matchmaking service stops routing players to this server</li>
+<li>Active matches continue unaffected</li>
+</ul>
+<p><strong>Phase 2 — DRAIN ACTIVE</strong> (configurable duration, default 30 minutes):</p>
+<ul>
+<li>In-flight matches run to completion or timeout</li>
+<li>Players in lobby are notified: “This server is restarting. Your match will not be affected, but no new matches will be created.”</li>
+<li>Idle connections time out normally</li>
+</ul>
+<p><strong>Phase 3 — FORCE DRAIN</strong> (after grace period expires):</p>
+<ul>
+<li>Remaining matches are saved (snapshot) and players are disconnected with reason <code>server_restart</code></li>
+<li>Disconnected players receive a suggested alternative server (from federation, if <code>shutdown_suggest_alternative = true</code>)</li>
+</ul>
+<p><strong>Phase 4 — SHUTDOWN:</strong></p>
+<ul>
+<li>Flush all SQLite databases (<code>PRAGMA wal_checkpoint(TRUNCATE)</code>)</li>
+<li>Close P2P connections cleanly (BT disconnect messages)</li>
+<li>Log final status and exit</li>
+</ul>
+<p><strong>Configuration:</strong></p>
+<pre><code class="language-toml">[server]
+shutdown_grace_period_secs = 1800       # 30 minutes — enough for most RA matches
+shutdown_force_disconnect_reason = "server_restart"
+shutdown_suggest_alternative = true     # tell disconnected players about federated alternatives
+</code></pre>
+<p><strong>CLI integration:</strong> <code>ic server stop</code> initiates the drain protocol. <code>ic server stop --force</code> skips to Phase 4 (immediate shutdown). <code>ic server stop --drain-timeout 3600</code> overrides the configured grace period for this shutdown.</p>
+<p><strong>Federation drain notification:</strong> The drain announcement is a federation protocol message. Other servers in the trust network learn that this server is draining and stop including it in server listings and matchmaking routing. When the server restarts and <code>/ready</code> returns 200, it re-enters federation rotation automatically.</p>
 <h3 id="structured-logging"><a class="header" href="#structured-logging">Structured Logging</a></h3>
 <p>Using Rust’s <code>tracing</code> crate with <code>tracing-subscriber</code> and <code>tracing-appender</code>:</p>
 <pre><code>2026-02-25T14:32:01.123Z INFO  [relay] Server started on 0.0.0.0:19710 (profile: competitive)
@@ -738,6 +794,7 @@ helm install my-community ironcurtain/relay-cluster \
 <li><strong>D064 (Server Config):</strong> <code>server_config.toml</code> schema and deployment profiles are D064. D072 adds hot-reload, CLI, and web editing.</li>
 <li><strong>D071 (ICRP):</strong> The web dashboard, CLI, and remote admin all communicate via ICRP. D072 is the UX layer on top of D071.</li>
 <li><strong>15-SERVER-GUIDE.md:</strong> Operational best practices, deployment examples, and troubleshooting reference D072’s management interfaces.</li>
+<li><strong>Cloud-native lessons:</strong> <code>/ready</code> endpoint, drain protocol, and operational patterns derived from <code>research/cloud-native-lessons-for-ic-platform.md</code>.</li>
 </ul>
 <h3 id="execution-overlay-mapping"><a class="header" href="#execution-overlay-mapping">Execution Overlay Mapping</a></h3>
 <ul>
@@ -767,7 +824,7 @@ helm install my-community ironcurtain/relay-cluster \
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../../decisions/09c-modding.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../decisions/09b/D074-community-server-bundle.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -781,7 +838,7 @@ helm install my-community ironcurtain/relay-cluster \
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../../decisions/09c-modding.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../decisions/09b/D074-community-server-bundle.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

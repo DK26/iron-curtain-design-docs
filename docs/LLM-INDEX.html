@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ee0d544b.js";
+            window.path_to_searchindex_js = "searchindex-7885430e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-2281c970.js"></script>
+        <script src="toc-ac1642ae.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -243,6 +243,7 @@
 <tr><td>Netcode model / relay / sub-tick / reconnection</td><td><code>src/03-NETCODE.md</code>, <code>src/decisions/09b/D052-community-servers.md</code>, <code>src/decisions/09b/D006-pluggable-net.md</code>, <code>src/decisions/09b/D008-sub-tick.md</code></td><td><code>src/06-SECURITY.md</code></td><td>Use <code>06-SECURITY.md</code> to resolve ranked/trust/security policy questions. Index page: <code>09b-networking.md</code></td></tr>
 <tr><td>Modding tiers (YAML/Lua/WASM) / export / compatibility</td><td><code>src/04-MODDING.md</code>, <code>src/decisions/09c-modding.md</code>, <code>src/decisions/09c/D023–D027</code></td><td><code>src/07-CROSS-ENGINE.md</code></td><td><code>09c</code> is canonical for accepted decisions; D023–D027 cover OpenRA compat (vocabulary aliases, Lua API, MiniYAML, mod manifest, enums)</td></tr>
 <tr><td>Workshop / packages / CAS / profiles / selective install</td><td><code>src/decisions/09e/D049-workshop-assets.md</code>, <code>src/decisions/09e/D030-workshop-registry.md</code>, <code>src/decisions/09c-modding.md</code></td><td><code>src/player-flow/workshop.md</code></td><td>D068 (selective install) is in <code>09c</code>; D049 CAS in <code>09e/D049-workshop-assets.md</code></td></tr>
+<tr><td>Data-sharing flows / P2P replay / content channels / seeding / prefetch</td><td><code>src/architecture/data-flows-overview.md</code></td><td><code>src/decisions/09e/D049/D049-content-channels-integration.md</code>, <code>src/decisions/09e/D049/D049-replay-sharing.md</code>, <code>src/decisions/09b/D052/D052-transparency-matchmaking-lobby.md</code></td><td>Overview page catalogs all 8 data flows; sub-files have per-flow detail</td></tr>
 <tr><td>Scenario editor / asset studio / SDK UX</td><td><code>src/decisions/09f/D020-mod-sdk.md</code>, <code>src/decisions/09f/D038-scenario-editor.md</code>, <code>src/decisions/09f/D040-asset-studio.md</code></td><td><code>src/player-flow/sdk.md</code>, <code>src/04-MODDING.md</code></td><td>D020 covers SDK architecture and creative workflow; D038/D040 are normative for individual editors; player-flow has mock screens</td></tr>
 <tr><td>In-game controls / mobile UX / chat / voice / tutorial</td><td><code>src/decisions/09g/D058-command-console.md</code>, <code>src/decisions/09g/D059-communication.md</code>, <code>src/decisions/09g/D065-tutorial.md</code></td><td><code>src/player-flow/in-game.md</code>, <code>src/02-ARCHITECTURE.md</code>, <code>research/open-source-rts-communication-markers-study.md</code>, <code>research/rtl-bidi-open-source-implementation-study.md</code></td><td>Player-flow shows surfaces; <code>09g/D058-D065</code> define interaction rules; use the research notes for prior-art communication/beacon/marker UX and RTL/BiDi implementation rationale only</td></tr>
 <tr><td>Localization / RTL / BiDi / font fallback</td><td><code>src/02-ARCHITECTURE.md</code>, <code>src/decisions/09f/D038-scenario-editor.md</code>, <code>src/decisions/09g/D059-communication.md</code></td><td><code>src/player-flow/settings.md</code>, <code>src/tracking/rtl-bidi-qa-corpus.md</code>, <code>research/rtl-bidi-open-source-implementation-study.md</code></td><td>Use architecture for shared text/layout contracts, <code>09f/D038</code> for authoring preview/validation, <code>09g/D059</code> for chat/marker safety split, the QA corpus for concrete test strings, and the research note for implementation-pattern rationale</td></tr>
@@ -360,13 +361,14 @@
 <tr><td><code>D031-observability.md</code></td><td>1 sub-file</td><td><code>decisions/09e/D031/</code></td></tr>
 <tr><td><code>D034-sqlite.md</code></td><td>1 sub-file</td><td><code>decisions/09e/D034/</code></td></tr>
 <tr><td><code>D038-scenario-editor.md</code></td><td>6 sub-files</td><td><code>decisions/09f/D038/</code></td></tr>
-<tr><td><code>D049-workshop-assets.md</code></td><td>3 sub-files</td><td><code>decisions/09e/D049/</code></td></tr>
-<tr><td><code>D052-community-servers.md</code></td><td>4 sub-files</td><td><code>decisions/09b/D052/</code></td></tr>
+<tr><td><code>D049-workshop-assets.md</code></td><td>5 sub-files</td><td><code>decisions/09e/D049/</code></td></tr>
+<tr><td><code>D052-community-servers.md</code></td><td>5 sub-files</td><td><code>decisions/09b/D052/</code></td></tr>
 <tr><td><code>D055-ranked-matchmaking.md</code></td><td>1 sub-file</td><td><code>decisions/09b/D055/</code></td></tr>
 <tr><td><code>D058-command-console.md</code></td><td>3 sub-files</td><td><code>decisions/09g/D058/</code></td></tr>
 <tr><td><code>D059-communication.md</code></td><td>5 sub-files</td><td><code>decisions/09g/D059/</code></td></tr>
 <tr><td><code>D061-data-backup.md</code></td><td>2 sub-files</td><td><code>decisions/09e/D061/</code></td></tr>
 <tr><td><code>D065-tutorial.md</code></td><td>5 sub-files</td><td><code>decisions/09g/D065/</code></td></tr>
+<tr><td><code>D074-community-server-bundle.md</code></td><td>1 sub-file</td><td><code>decisions/09b/D074/</code></td></tr>
 </tbody>
 </table>
 </div>
@@ -393,7 +395,8 @@
 <tbody>
 <tr><td><code>architecture/api-misuse-defense.md</code></td><td><code>api-misuse-patterns.md</code></td><td><code>architecture/</code></td></tr>
 <tr><td><code>modding/tera-templating.md</code></td><td><code>tera-templating-advanced.md</code></td><td><code>modding/</code></td></tr>
-<tr><td><code>modding/workshop.md</code></td><td><code>workshop-features.md</code></td><td><code>modding/</code></td></tr>
+<tr><td><code>modding/workshop.md</code></td><td><code>workshop-features.md</code>, <code>workshop-moderation.md</code></td><td><code>modding/</code></td></tr>
+<tr><td><code>player-flow/replays.md</code></td><td><code>replays-analysis-sharing.md</code></td><td><code>player-flow/</code></td></tr>
 </tbody>
 </table>
 </div>

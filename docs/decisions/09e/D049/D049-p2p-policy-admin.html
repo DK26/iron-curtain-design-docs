@@ -35,10 +35,10 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-ee0d544b.js";
+            window.path_to_searchindex_js = "../../../searchindex-7885430e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../../toc-2281c970.js"></script>
+        <script src="../../../toc-ac1642ae.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -197,6 +197,29 @@ prefer_p2p = true                     # false = always use HTTP direct
 </code></pre>
 <p><em>Health checks:</em> Seed boxes implement heartbeat health checks (30s interval, 3 failures → unhealthy, 2 passes → healthy again — matching Kraken’s active health check parameters). The tracker marks peers as offline after 2× announce interval without contact. Unhealthy seed boxes are removed from the announce response until they recover.</p>
 <p><em>Content lifecycle:</em> Downloaded packages stay in the seeding pool for 30 minutes after the game exits (configurable via <code>seed_duration_after_exit</code>). This is longer than Kraken’s 5-minute <code>seeder_tti</code> because IC has fewer peers per package — each seeder is more valuable. Disk cache uses LRU eviction when over <code>cache_size_limit</code>. Packages currently in use or being seeded are never evicted.</p>
+<p><em>Seeding UX:</em> Background seeding is intentionally invisible during gameplay — no popups, no interruptions. Player awareness is provided through:</p>
+<ul>
+<li><strong>System tray icon (desktop):</strong> While seeding after game exit, a tray icon shows upload speed and peer count. Tray menu: <strong>[Stop Seeding]</strong> / <strong>[Open IC]</strong> / <strong>[Quit]</strong>. The icon disappears when <code>seed_duration_after_exit</code> expires or the user clicks Stop.</li>
+<li><strong>Settings UI (Settings → Workshop → P2P):</strong></li>
+</ul>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Setting</th><th>Control</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td>Seed while playing</td><td>Toggle</td><td>On</td></tr>
+<tr><td>Seed after exit</td><td>Toggle + duration picker</td><td>30 min</td></tr>
+<tr><td>Max upload speed</td><td>Slider (0 = pause, unlimited)</td><td>1 MB/s</td></tr>
+<tr><td>Max cache size</td><td>Slider</td><td>2 GB</td></tr>
+<tr><td>Prefer P2P</td><td>Toggle</td><td>On</td></tr>
+</tbody>
+</table>
+</div>
+<ul>
+<li><strong>In-game indicator (optional):</strong> A subtle network icon in the status bar shows “↑ 340 KB/s to 3 peers” when seeding is active. Disabled by default — enabled via Settings → Workshop → P2P → Show seeding status.</li>
+<li><strong>Disabling seeding entirely:</strong> Setting <code>max_upload_speed = "0 B/s"</code> or <code>seed_after_download = false</code> disables all seeding. The Settings toggle is the primary control; the <code>settings.toml</code> entry is for automation / headless setups.</li>
+</ul>
 <p><em>Download priority tiers:</em> Inspired by Dragonfly’s 7-level priority system (Level0–Level6), IC uses 3 priority tiers to enable QoS differentiation. Higher-priority downloads preempt lower-priority ones (pause background downloads, reallocate bandwidth and connection slots):</p>
 <div class="table-wrapper">
 <table>
@@ -212,8 +235,20 @@ prefer_p2p = true                     # false = always use HTTP direct
 </div>
 <p><em>Preheat / prefetch:</em> Adapted from Dragonfly’s preheat jobs (which pre-warm content on seed peers before demand). IC uses two prefetch patterns:</p>
 <ul>
-<li><strong>Lobby prefetch:</strong> When a lobby host sets required mods, the Workshop server (Phase 5+) can pre-seed those mods to seed boxes before players join. The lobby creation event is the prefetch signal. This ensures seed infrastructure is warm when players start downloading.</li>
-<li><strong>Subscription prefetch:</strong> Players can subscribe to Workshop publishers or resources. Subscribed content auto-downloads in the background at <code>background</code> priority. When a subscribed mod updates, the new version downloads automatically before the player next launches the game.</li>
+<li>
+<p><strong>Lobby prefetch:</strong> When a lobby host sets required mods, the Workshop server (Phase 5+) can pre-seed those mods to seed boxes before players join. The lobby creation event is the prefetch signal. This ensures seed infrastructure is warm when players start downloading.</p>
+</li>
+<li>
+<p><strong>Subscription prefetch:</strong> Players can subscribe to Workshop publishers or resources. Subscribed content auto-downloads in the background at <code>background</code> priority. When a subscribed mod updates, the new version downloads automatically before the player next launches the game. The check cycle runs every <code>workshop.subscription_check_interval</code> (default: 24 hours). On update detection:</p>
+<ol>
+<li>Download at <code>background</code> priority (bandwidth-limited, paused during <code>lobby-urgent</code> or <code>user-requested</code> downloads)</li>
+<li>Verify SHA-256 and stage the new version alongside the current one (no immediate swap)</li>
+<li>Toast notification: “[mod name] updated to v2.1. [View Changes] [Dismiss]”</li>
+<li>The new version activates on next game launch or when the player explicitly switches profiles (D062)</li>
+</ol>
+<p><strong>Subscribe workflow (Workshop browser):</strong> Each Workshop resource page and publisher page includes a <strong>[Subscribe]</strong> toggle (bell icon). Subscribing is free and instant — no account required beyond the local identity (D052 credentials). Subscription state is stored in the local Workshop SQLite database. Subscription management: Settings → Workshop → Subscriptions, showing a list view with download status, last-updated date, and <strong>[Unsubscribe]</strong> per item.</p>
+<p><strong>Workshop browser indicators:</strong> Subscribed resources show 🔔 in listing tiles. Resources with pending (not-yet-downloaded) updates show a numbered badge. The Workshop browser sidebar includes a “Subscriptions” filter that shows only subscribed content.</p>
+</li>
 </ul>
 <p><em>Persistent replica count (Phase 5+):</em> Inspired by Dragonfly’s <code>PersistentReplicaCount</code>, the Workshop server tracks how many seed boxes hold each resource. If the count drops below a configurable threshold (default: 2 for popular resources, 1 for all others), the server triggers automatic re-seeding from HTTP origin. This ensures the “always available” guarantee — even if all player peers are offline, seed infrastructure maintains minimum replica coverage.</p>
 <p><strong>Early-phase bootstrap — Git-hosted package index:</strong></p>
@@ -504,7 +539,7 @@ priority = 2
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../../../decisions/09e/D053-player-profile.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../../decisions/09e/D049/D049-content-channels-integration.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -518,7 +553,7 @@ priority = 2
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../../../decisions/09e/D053-player-profile.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../../decisions/09e/D049/D049-content-channels-integration.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

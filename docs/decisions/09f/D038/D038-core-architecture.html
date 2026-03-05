@@ -35,10 +35,10 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-ee0d544b.js";
+            window.path_to_searchindex_js = "../../../searchindex-7885430e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../../toc-2281c970.js"></script>
+        <script src="../../../toc-ac1642ae.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -443,6 +443,30 @@ Mission init script    — special file that runs once at mission start
 <li>Undo history survives save/load within a session</li>
 <li><strong>Ctrl+Z / Ctrl+Y</strong> (desktop), equivalent bindings on controller</li>
 </ul>
+<h3 id="workspace-as-overlay-composition"><a class="header" href="#workspace-as-overlay-composition">Workspace as Overlay Composition</a></h3>
+<p>The scenario editor’s project workspace is modeled as a layered overlay — a pattern formalized by AnyFS’s <code>Overlay&lt;Base, Upper&gt;</code> middleware (and already used in IC’s mod namespace resolution, D062). Each workspace is a composition of read-only base layers with a single writable edit layer:</p>
+<pre><code>┌──────────────────────────────────────────┐
+│  Writable Edit Layer (user changes)      │  ← writes go here
+├──────────────────────────────────────────┤
+│  Imported Assets (Workshop / local)      │  ← read-only overlay
+├──────────────────────────────────────────┤
+│  Active Mod Profile (D062 namespace)     │  ← read-only overlay
+├──────────────────────────────────────────┤
+│  Base Game (engine defaults)             │  ← read-only base
+└──────────────────────────────────────────┘
+    Reads: walk top → down (first hit wins)
+    Writes: always to the top edit layer
+</code></pre>
+<p>This composition gives the editor several capabilities naturally:</p>
+<ul>
+<li><strong>Non-destructive editing:</strong> The base game and mod sources are never modified. All editor changes land in the writable edit layer. Reverting means discarding the edit layer — the underlying data is untouched.</li>
+<li><strong>Per-source visibility:</strong> The layer list UI (already designed for entity layers) extends to source layers. Designers can toggle visibility per source to see “what does this mod contribute?” or “what did I change?” independently.</li>
+<li><strong>Undo as layer snapshot:</strong> Because the edit layer is a self-contained set of changes, the entire undo history is scoped to that layer. An undo checkpoint is a snapshot of just the edit layer — lighter than snapshotting the full workspace.</li>
+<li><strong>Hot-swap sources:</strong> When editing a mod’s YAML rules, only the changed source’s layer is rebuilt (per D062 § Editor Integration). Other layers remain cached. This enables sub-second iteration during rule authoring without re-resolving the full namespace.</li>
+</ul>
+<blockquote>
+<p><strong>Prior art:</strong> AnyFS’s <code>Overlay&lt;Base, Upper&gt;</code> (read from upper → base, write to upper), Docker’s image layers (read-only base + writable container layer), IC’s own <code>VirtualNamespace</code> (D062). The editor workspace applies the same principle at a different scope: D062 composes mods for gameplay; the editor composes sources for authoring.</p>
+</blockquote>
 <h3 id="autosave--crash-recovery"><a class="header" href="#autosave--crash-recovery">Autosave &amp; Crash Recovery</a></h3>
 <p>OFP’s editor had no undo and no autosave — one misclick or crash could destroy hours of work. IC ships with both from day one.</p>
 <ul>

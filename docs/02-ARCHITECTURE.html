@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ee0d544b.js";
+            window.path_to_searchindex_js = "searchindex-7885430e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-2281c970.js"></script>
+        <script src="toc-ac1642ae.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -182,6 +182,10 @@
                     <main>
                         <h1 id="02--core-architecture"><a class="header" href="#02--core-architecture">02 — Core Architecture</a></h1>
 <p><strong>Keywords:</strong> architecture, crate boundaries, <code>ic-sim</code>, <code>ic-net</code>, <code>ic-protocol</code>, <code>GameLoop&lt;N, I&gt;</code>, <code>NetworkModel</code>, <code>InputSource</code>, deterministic simulation, Bevy, platform-agnostic design, game modules, async runtime, tokio, bevy_tasks, IoBridge, WASM portability, GUI-first binary design</p>
+<blockquote>
+<p><strong>Architectural positioning — federated, not centralized.</strong>
+IC uses <strong>federated servers</strong> for trust and coordination (relay, ranking, matchmaking) with <strong>P2P for content distribution</strong> (Workshop delivery, replay sharing). There is no mandatory central server — anyone can run an <code>ic-server</code> instance — but servers exist and are the authority path for ranked play. Casual games can use a host-embedded listen server with zero external infrastructure. “Federated” means multiple independent operators, each sovereign; “P2P” refers to BitTorrent-style content transfer between players, not peer-to-peer game networking.</p>
+</blockquote>
 <h2 id="decision-bevy"><a class="header" href="#decision-bevy">Decision: Bevy</a></h2>
 <p><strong>Rationale (revised — see D002 in <code>decisions/09a-foundation.md</code>):</strong></p>
 <ul>
@@ -574,6 +578,7 @@ pub trait OrderValidator: Send + Sync {
 <tr><td>Multi-Game Extensibility (Game Modules)</td><td><a href="architecture/multi-game.html">multi-game.md</a></td></tr>
 <tr><td>Type-Safety Architectural Invariants</td><td><a href="architecture/type-safety.html">type-safety.md</a></td></tr>
 <tr><td>API Misuse Analysis &amp; Type-System Defenses</td><td><a href="architecture/api-misuse-defense.html">api-misuse-defense.md</a></td></tr>
+<tr><td>Data-Sharing Flows Overview</td><td><a href="architecture/data-flows-overview.html">data-flows-overview.md</a></td></tr>
 </tbody>
 </table>
 </div>

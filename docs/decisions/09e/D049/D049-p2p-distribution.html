@@ -35,10 +35,10 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-ee0d544b.js";
+            window.path_to_searchindex_js = "../../../searchindex-7885430e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../../toc-2281c970.js"></script>
+        <script src="../../../toc-ac1642ae.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -327,6 +327,9 @@
 <li><strong>LobbyContext (weight 0.1):</strong> Same lobby = 1.0, same game session = 0.5, no context = 0. IC-specific — Dragonfly has no equivalent (no lobby concept).</li>
 </ul>
 <p>The initial 5-tier priority system (above) ships first and is adequate for community scale. Weighted scoring is additive — the same pluggable policy interface supports both approaches. Community servers can configure their own weights or contribute custom scoring policies.</p>
+<blockquote>
+<p><strong>Bucket-based scheduling (Phase 5+):</strong> The weighted scoring formula above is applied <em>within</em> pre-sorted bucket leaves, not flat across all peers. The embedded tracker organizes its peer table into a <code>PeerBucketTree</code> indexed by <code>RegionKey × SeedStatus × TransportType</code>. On each announce response, the tracker walks buckets from closest-matching outward, applying weighted scoring within each leaf to produce the final peer list. This reduces per-announce work from O(n) to O(k) where k is the bucket size, and naturally produces locality-optimized peer sets without requiring the scoring formula to carry the full locality signal. Connection pool bucketing (per-transport guaranteed slot minimums) prevents cross-transport starvation when TCP, uTP, and WebRTC peers coexist. Content popularity bucketing (Hot/Warm/Cold/Frozen tiers via EWMA) steers seed box bandwidth toward under-served swarms. Full design: <code>research/p2p-distribute-crate-design.md</code> § 2.8.</p>
+</blockquote>
 <p><em>Piece request strategy (client-side):</em> The engine uses <strong>rarest-first</strong> piece selection by default — a priority queue sorted by fewest peers having each piece. This is standard BitTorrent behavior, well-validated for internet conditions. Kraken also implements this as <code>rarestFirstPolicy</code>.</p>
 <ul>
 <li><strong>Pipeline limit:</strong> 3 concurrent piece requests per peer (matches Kraken’s default). Prevents overwhelming slow peers.</li>

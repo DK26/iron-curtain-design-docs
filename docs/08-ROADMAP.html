@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ee0d544b.js";
+            window.path_to_searchindex_js = "searchindex-7885430e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-2281c970.js"></script>
+        <script src="toc-ac1642ae.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -225,6 +225,13 @@
 <li><code>deny.toml</code> + <code>cargo deny check licenses</code> in CI pipeline</li>
 <li>DCO signed-off-by enforcement in CI</li>
 </ul>
+<h3 id="implementation-repo-template-engine-repos-only"><a class="header" href="#implementation-repo-template-engine-repos-only">Implementation Repo Template (Engine Repos Only)</a></h3>
+<ul>
+<li>Publish a <strong>GitHub template repository</strong> (<code>iron-curtain/ic-template</code>) that <strong>engine implementation repos</strong> are instantiated from. Non-engine repos (relay, tools, prototypes) use generic templates.</li>
+<li>Template contains: pre-filled <code>AGENTS.md</code> (referencing this design-docs repo as canonical design authority), <code>CODE-INDEX.md</code> skeleton, <code>deny.toml</code>, CI workflows (clippy, fmt, <code>cargo deny</code>, DCO check), SPDX headers, <code>.github/copilot-instructions.md</code>, Cargo workspace scaffold matching AGENTS.md crate structure</li>
+<li>The template <code>AGENTS.md</code> pins a design-doc revision (tag or commit hash) and encodes the no-silent-divergence rule, design-change escalation workflow, and milestone/<code>G*</code> alignment requirements — all derived from <code>tracking/external-project-agents-template.md</code> and <code>tracking/ic-engine-agents.md</code></li>
+<li>See <code>tracking/external-code-project-bootstrap.md</code> for the full bootstrap process</li>
+</ul>
 <h3 id="player-data-foundation-d061"><a class="header" href="#player-data-foundation-d061">Player Data Foundation (D061)</a></h3>
 <ul>
 <li>Define and document the <code>&lt;data_dir&gt;</code> directory layout (stable structure for saves, replays, screenshots, profiles, keys, communities, workshop, backups)</li>
@@ -243,6 +250,7 @@
 <li>Can convert MiniYAML to standard YAML losslessly</li>
 <li>Code of conduct and RFC process published (D037)</li>
 <li>SPDX headers present on all source files; <code>cargo deny check licenses</code> passes</li>
+<li>GitHub template repo published; new repo instantiated from template has passing CI and a working <code>AGENTS.md</code> pointing to the design docs</li>
 </ul>
 <h2 id="phase-1-rendering-slice-months-36"><a class="header" href="#phase-1-rendering-slice-months-36">Phase 1: Rendering Slice (Months 3–6)</a></h2>
 <p><strong>Goal:</strong> Render a Red Alert map faithfully with units standing on it. No gameplay. Classic isometric aesthetic.</p>

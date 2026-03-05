@@ -35,10 +35,10 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-ee0d544b.js";
+            window.path_to_searchindex_js = "../../../searchindex-7885430e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../../toc-2281c970.js"></script>
+        <script src="../../../toc-ac1642ae.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -396,133 +396,10 @@ fn matchmaking_tick(pool: &amp;mut Vec&lt;MatchmakingEntry&gt;, provider: &amp;d
 </div>
 <p>Tiers 0–2 work with a single self-hosted relay (a $5 VPS or even localhost). No official infrastructure required. Tiers 3–4 require community servers. Tier 5 requires URI scheme registration (desktop) or an HTTPS redirect service (browser).</p>
 <h3 id="lobby-communication"><a class="header" href="#lobby-communication">Lobby Communication</a></h3>
-<p>Once players are in a room, they need to communicate — coordinate strategy before the game, socialize, discuss map picks, or just talk. IC provides text chat, voice chat, and visible player identity in every lobby.</p>
-<p><strong>Text Chat</strong></p>
-<p>All lobby text messages are routed through the relay server (or host in P2P mode) — the same path as game orders. This keeps the trust model consistent: the relay timestamps and sequences messages, making chat moderation actions deterministic and auditable.</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>/// Lobby chat message — part of the room protocol, not the sim protocol.
-/// Routed through the relay alongside PlayerOrders but on a separate
-/// logical channel (not processed by ic-sim).
-pub struct LobbyMessage {
-    pub sender: PlayerId,
-    pub channel: ChatChannel,
-    pub content: String,         // UTF-8, max 500 bytes
-    pub timestamp: u64,          // relay-assigned, not client-claimed
-}
-
-pub enum ChatChannel {
-    All,                         // Everyone in the room sees it
-    Team(TeamId),                // Team-only (pre-game team selection)
-    Whisper(PlayerId),           // Private message to one player
-    System,                      // Join/leave/kick notifications (server-generated)
-}
-<span class="boring">}</span></code></pre>
-<p><strong>Chat features:</strong></p>
-<ul>
-<li><strong>Rate limiting:</strong> Max 5 messages per 3 seconds per player. Prevents spam flooding.</li>
-<li><strong>Message length:</strong> Max 500 bytes UTF-8. Long enough for tactical callouts, short enough to prevent wall-of-text abuse.</li>
-<li><strong>Host moderation:</strong> Room host can mute individual players (host sends a <code>MutePlayer</code> command; relay enforces). Muted players’ messages are silently dropped by the relay — other clients never receive them.</li>
-<li><strong>Persistent for room lifetime:</strong> Chat history is available to newly joining players (last 50 messages). When the room closes, chat is discarded — no server-side chat logging.</li>
-<li><strong>In-game chat:</strong> During gameplay, the same chat system operates. <code>All</code> channel becomes <code>Spectator</code> for observers. <code>Team</code> channel carries strategic communication. A configurable <code>AllChat</code> toggle (default: disabled in ranked) controls whether opponents can see your messages during a match.</li>
-<li><strong>Links and formatting:</strong> URLs are clickable (opens external browser). No rich text — plain text only. This prevents injection attacks and keeps the UI simple.</li>
-<li><strong>Emoji:</strong> Standard Unicode emoji are rendered natively. No custom emoji system — keep it simple.</li>
-<li><strong>Block list:</strong> Players can block others locally. Blocked players’ messages are filtered client-side (not server-enforced — the relay doesn’t need to know your block list). Block persists across sessions in local SQLite (D034).</li>
-</ul>
-<p><strong>In-game chat UI:</strong></p>
-<pre><code>┌──────────────────────────────────────────────┐
-│ [All] [Team]                          [Hide] │
-├──────────────────────────────────────────────┤
-│ [SYS] alice joined the room                  │
-│ [cmdr] gg ready when you are                 │
-│ [alice] let's go desert map?                 │
-│ [bob] 👍                                      │
-│                                              │
-├──────────────────────────────────────────────┤
-│ [Type message...]                    [Send]  │
-└──────────────────────────────────────────────┘
-</code></pre>
-<p>The chat panel is collapsible (hotkey: Enter to open, Escape to close — standard RTS convention). During gameplay, it overlays transparently so it doesn’t obscure the battlefield.</p>
-<p><strong>Voice Chat</strong></p>
-<p>IC includes built-in voice communication using relay-forwarded Opus audio. Voice data never touches the sim — it’s a purely transport-layer feature with zero determinism impact.</p>
-<p><strong>Architecture:</strong></p>
-<pre><code>┌────────┐              ┌─────────────┐              ┌────────┐
-│Player A│─── Opus ────►│ Room Server │─── Opus ────►│Player B│
-│        │◄── Opus ─────│  (D052)     │◄── Opus ─────│        │
-└────────┘              │             │              └────────┘
-                        │  Stateless  │
-┌────────┐              │  forwarding │
-│Player C│─── Opus ────►│             │
-│        │◄── Opus ─────│             │
-└────────┘              └─────────────┘
-</code></pre>
-<ul>
-<li><strong>Relay-forwarded audio:</strong> Voice data flows through the room server (D052), maintaining IP privacy — the same principle as D059’s in-game voice design. The room server performs stateless Opus packet forwarding (copies bytes without decoding). This prevents IP exposure, which is a known harassment vector even in the pre-game lobby phase.</li>
-<li><strong>Lobby → game transition:</strong> When the match starts and clients connect to the game relay, voice seamlessly transitions from the room server to the game relay. No reconnection is needed — the relay assumes voice forwarding from the room server’s role. If the room server and game relay are the same process (common for community servers), the transition is a no-op.</li>
-<li><strong>Push-to-talk (default):</strong> RTS players need both hands on mouse/keyboard during games. Push-to-talk avoids accidental transmission of keyboard clatter, breathing, and background noise. Default keybind: <code>V</code>. Voice activation mode available in settings for players who prefer it.</li>
-<li><strong>Per-player volume:</strong> Each player’s voice volume is adjustable independently (right-click their name in the player list → volume slider). Mute individual players with one click.</li>
-<li><strong>Voice channels:</strong> Mirror text chat channels — All, Team. During gameplay, voice defaults to Team-only to prevent leaking strategy to opponents. Spectators have their own voice channel.</li>
-<li><strong>Codec:</strong> Opus (standard WebRTC codec). 32 kbps mono is sufficient for clear voice in a game context. Total bandwidth for a full 8-player lobby: ~224 kbps (7 incoming streams × 32 kbps) — negligible compared to game traffic.</li>
-<li><strong>Browser (WASM) support:</strong> Browser builds use WebRTC via <code>str0m</code> for voice (see D059 § VoiceTransport). Desktop builds send Opus packets directly on the <code>Transport</code> connection’s <code>MessageLane::Voice</code>.</li>
-</ul>
-<p><strong>Voice UI indicators:</strong></p>
-<pre><code>┌────────────────────────┐
-│ Players:               │
-│  🔊 cmdr (host)   1800 │  ← speaking indicator
-│  🔇 alice         1650 │  ← muted by self
-│  🎤 bob           1520 │  ← has mic, not speaking
-│  📵 carol         ---- │  ← voice disabled
-└────────────────────────┘
-</code></pre>
-<p>Speaking indicators appear next to player names in the lobby and during gameplay (small icon on the player’s color bar in the sidebar). This lets players see who’s talking at a glance.</p>
-<p><strong>Privacy and safety:</strong></p>
-<ul>
-<li>Voice is opt-in. Players can disable voice entirely in settings. The client never activates the microphone without explicit user action (push-to-talk press or voice activation toggle).</li>
-<li>No voice recording by the relay or community server during normal operation. Voice streams are ephemeral in the relay pipeline. (Note: D059 adds opt-in voice-in-replay where consenting players’ voice is captured client-side during gameplay — this is client-local recording with consent, not relay-side recording.)</li>
-<li>Abusive voice users can be muted by any player (locally) or by the host (server-enforced kick from voice channel).</li>
-<li>Ranked/competitive rooms can enforce “no voice” or “team-voice-only” policies.</li>
-</ul>
-<p><strong>When external voice is better:</strong> IC’s built-in voice is designed for casual lobbies, LAN parties, and pickup games where players don’t have a pre-existing Discord/TeamSpeak. Competitive teams will continue using external voice (lower latency, better quality, persistent channels). IC doesn’t try to replace Discord — it provides a frictionless default for when Discord isn’t set up.</p>
-<p><strong>Player Identity in Lobby</strong></p>
-<p>Every player in a lobby is visible with their profile identity — not just a text name. The lobby player list shows:</p>
-<ul>
-<li><strong>Avatar:</strong> Small profile image (32×32 in list, 64×64 on hover/click). Sourced from the player’s profile (see D053).</li>
-<li><strong>Display name:</strong> The player’s chosen name. If the player has a community-verified identity (D052 SCR), a small badge appears next to the name indicating which community verified them.</li>
-<li><strong>Rating badge:</strong> If the room is on a community server, the player’s verified rating for the relevant game module is shown (from their presented SCR). Unranked players show “—”.</li>
-<li><strong>Presence indicators:</strong> Microphone status, ready state, download progress (if syncing resources).</li>
-</ul>
-<p>Clicking a player’s name in the lobby opens a <strong>profile card</strong> — a compact view of their player profile (D053) showing avatar, bio, recent achievements, win rate, and community memberships. This lets players gauge each other before a match without leaving the lobby.</p>
-<p>The profile card also exposes scoped quick actions:</p>
-<ul>
-<li><strong>Mute</strong> (D059, local communication control)</li>
-<li><strong>Block</strong> (local social preference)</li>
-<li><strong>Report</strong> (community moderation signal with evidence handoff to D052 review pipeline)</li>
-<li><strong>Avoid Player</strong> (D055 matchmaking preference, best-effort only — clearly labeled as non-guaranteed in ranked)</li>
-</ul>
-<p><strong>Updated lobby UI with communication:</strong></p>
-<pre><code>┌──────────────────────────────────────────────────────────────────────┐
-│  Room: TKR-4N7  —  Map: Desert Arena  —  RA1 Classic Balance       │
-├──────────────────────────────────┬───────────────────────────────────┤
-│  Players                         │  Chat [All ▾]                    │
-│  ┌──┐ 🔊 cmdr (host)   ⭐ 1800  │  [SYS] Room created              │
-│  │🎖│ Ready                      │  [cmdr] hey all, gg              │
-│  └──┘                            │  [alice] glhf!                   │
-│  ┌──┐ 🎤 alice         ⭐ 1650  │  [SYS] bob joined                │
-│  │👤│ Ready                      │  [bob] yo what map?              │
-│  └──┘                            │  [cmdr] desert arena, classic    │
-│  ┌──┐ 🎤 bob           ⭐ 1520  │  [bob] 👍                         │
-│  │👤│ ⬇️ Syncing 67%             │                                  │
-│  └──┘                            │                                  │
-│  ┌──┐ 📵 carol          ----    │                                  │
-│  │👤│ Connecting...              ├───────────────────────────────────┤
-│  └──┘                            │ [Type message...]        [Send]  │
-├──────────────────────────────────┴───────────────────────────────────┤
-│  Mods: alice/hd-sprites@2.0, bob/desert-map@1.1                     │
-│  [Settings]  [Invite]  [Start Game] (waiting for all players)       │
-└──────────────────────────────────────────────────────────────────────┘
-</code></pre>
-<p>The left panel shows players with avatars (small square icons), voice status, community rating badges, and ready state. The right panel is the chat. The layout adapts to screen size (D032 responsive UI) — on narrow screens, chat slides below the player list.</p>
-<p><strong>Phase:</strong> Text chat ships with lobby implementation (Phase 5). Voice chat Phase 5–6a. Profile images in lobby require D053 (Player Profile, Phase 3–5).</p>
+<blockquote>
+<p><strong>Full section:</strong> <a href="D052-lobby-communication.html">D052 — Lobby Communication</a></p>
+</blockquote>
+<p>Text chat (relay-routed <code>LobbyMessage</code>, rate limiting, moderation, block list), relay-forwarded Opus voice chat (push-to-talk default, per-player volume, privacy-first), player identity in lobby (avatars, rating badges, profile cards with quick actions), and updated lobby UI mockup with communication panels.</p>
 <h3 id="in-lobby-p2p-resource-sharing"><a class="header" href="#in-lobby-p2p-resource-sharing">In-Lobby P2P Resource Sharing</a></h3>
 <p>When a player joins a room that requires resources (mods, maps, resource packs) they don’t have locally, the lobby becomes a P2P swarm for those resources. The relay server (or host in P2P mode) acts as the tracker. This is the existing D049 P2P protocol scoped to a single lobby’s resource list.</p>
 <p><strong>Flow:</strong></p>
@@ -600,6 +477,17 @@ All players ready → countdown → game starts
 <p>The lobby applies D049’s <code>lobby-urgent</code> priority tier — auto-downloads preempt background Workshop activity and get full available bandwidth. Combined with the lobby swarm (host + ready players all seeding), typical resource downloads complete in seconds for common mods (&lt;50MB). The download timer can be configured per-community: tournament servers might set a 60-second download window, casual rooms wait indefinitely.</p>
 <p>If a player’s download is too slow (configurable threshold, e.g., 5 minutes), the lobby UI offers: “Download taking too long. [Keep waiting] [Download in background and spectate] [Leave lobby]”.</p>
 <p><strong>Local resource lifecycle:</strong> Resources downloaded via lobby P2P are tagged as <strong>transient</strong> (not pinned). They remain fully functional but auto-clean after <code>transient_ttl_days</code> (default 30 days) of non-use. After the session, a post-match toast offers: “[Pin] [Auto-clean in 30 days] [Remove now]”. Frequently-used lobby resources (3+ sessions) are automatically promoted to pinned. See D030 § “Local Resource Management” for the full lifecycle.</p>
+<h3 id="match-creation--content-pinning"><a class="header" href="#match-creation--content-pinning">Match Creation &amp; Content Pinning</a></h3>
+<p>When a host creates a room, the room’s content state is <strong>pinned</strong> — capturing the exact set of mods, conflict resolutions, and balance channel snapshots in a single fingerprint (D062). This fingerprint is the authoritative “what content does this match use?” identifier for the room’s lifetime.</p>
+<p><strong>What the fingerprint includes:</strong></p>
+<ul>
+<li>Active mod set with exact versions (<code>publisher/package@version</code>)</li>
+<li>Conflict resolution choices (when multiple mods modify the same value)</li>
+<li>Balance channel snapshot ID (if the host subscribes to a content channel — see <a href="../../09e/D049/D049-content-channels-integration.html">D049 § Content Channels Integration</a>)</li>
+</ul>
+<p><strong>Joining player verification:</strong> A joining player’s client computes its own fingerprint from its active mod profile. If it matches the room’s pinned fingerprint → immediate ready state (single SHA-256 comparison, no per-mod enumeration). On mismatch, the lobby presents the namespace diff (D062): missing mods, version differences, and balance channel state.</p>
+<p><strong>Balance channel updates during a lobby session:</strong> If a balance channel publishes a new snapshot while a lobby is open, the room’s pinned fingerprint does NOT change — the room uses the snapshot that was current at creation time. This prevents mid-lobby content drift. Players joining later are asked to match the room’s snapshot, not the channel’s latest.</p>
+<p><strong>Cross-references:</strong> <a href="../../09c/D062-mod-profiles.html">D062 § Multiplayer Integration</a>, <a href="../../09e/D049/D049-content-channels-integration.html">D049 § Content Channels Integration</a>, <a href="../../architecture/data-flows-overview.html">architecture/data-flows-overview.md</a> § Flow 5.</p>
 <p>Default: <strong>Glicko-2</strong> (already specified in D041 as <code>Glicko2Provider</code>).</p>
 <p>Why Glicko-2 over alternatives:</p>
 <ul>
@@ -635,7 +523,7 @@ All players ready → countdown → game starts
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../../../decisions/09b/D052/D052-keys-operations-integration.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../../decisions/09b/D052/D052-lobby-communication.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -649,7 +537,7 @@ All players ready → countdown → game starts
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../../../decisions/09b/D052/D052-keys-operations-integration.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../../decisions/09b/D052/D052-lobby-communication.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>
