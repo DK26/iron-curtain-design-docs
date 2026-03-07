@@ -275,7 +275,7 @@ pub struct TrustFactors {
 
 **Trust score recovery:** Trust score recovers passively through clean play — completing rated games without reports, earning commendations, and not triggering anti-cheat flags. Recovery is slow and intentional: it takes longer to rebuild trust than to lose it (asymmetric by design, matching Dota 2's model).
 
-**Federated trust:** In IC's federated community server model (D052), trust scores are community-scoped. A player's trust score on Community Server A is independent of their score on Community Server B (matching the cross-community reputation design in D052). The official IC ranking authority maintains the canonical trust score; community servers can maintain their own or defer to the canonical one.
+**Federated trust:** In IC's federated community server model (D052), trust scores are community-scoped. A player's trust score on Community Server A is independent of their score on Community Server B (matching the cross-community reputation design in D052). Each community server — including the official IC community — computes and maintains its own trust scores. No single community's score is privileged or canonical (D052: "not a privileged singleton"). Players who move between communities start from the default score on each; SCR-portable trust factors (D052) allow communities to consider imported evidence, but the final score is always locally computed.
 
 **Default weighting algorithm (F11 closure):** The weighting formula converting `TrustFactors` to `TrustScore.score` must be specified to prevent divergent community server implementations from undermining trust score's purpose. The default algorithm:
 
@@ -303,7 +303,7 @@ Key design choices:
 - `rated_games_played` has a dead zone: the first 20 games contribute nothing (prevents idle account trust inflation)
 - `anti_cheat_points` can drive the score to zero alone — no combination of positive factors overrides an active anti-cheat flag (5+ points = maximum penalty regardless of age/games/commends)
 - All factors apply NaN guards (F1 pipeline-wide NaN protection) before weighting
-- Community servers may adjust weights via `server_config.toml` (D064) but the default is canonical
+- Community servers may adjust weights via `server_config.toml` (D064) but the default algorithm above is the reference implementation shipped with `ic-server`
 
 **Phase:** Trust score system ships with ranked matchmaking (Phase 5). Trust score factors are computed from the same match database as population baselines. Integration with D055's matchmaking queue is a Phase 5 exit criterion.
 

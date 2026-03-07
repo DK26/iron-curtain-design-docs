@@ -44,10 +44,27 @@ pub enum Frame {
     /// system messages (player joined/left, server announcements).
     /// Carried on MessageLane::Chat. NOT used for in-match gameplay chat
     /// (those flow as PlayerOrder::ChatMessage within TickOrders).
+    /// Direction: relay → client (broadcast).
     ChatNotification(ChatNotification),
+    /// Client → relay chat message. The relay validates, stamps sender,
+    /// and broadcasts as ChatNotification::PlayerChat.
+    /// Direction: client → relay only.
+    Chat(ChatMessage),
     /// Sync hash report for desync detection.
     /// Client → relay, sent after each sim tick.
     SyncHash { tick: SimTick, hash: SyncHash },
+    /// Client reports that its local sim transitioned to GameEnded.
+    /// Client → relay, sent once when the sim determines a winner.
+    /// The relay collects reports from all players (excluding observers)
+    /// and verifies consensus (deterministic sim guarantees agreement).
+    /// If all players agree, the relay uses the consensus outcome for
+    /// CertifiedMatchResult. Observers are receive-only (multiplayer-
+    /// scaling.md) and never submit GameEndedReport frames.
+    /// If clients disagree, the relay treats it as a desync condition.
+    /// Only used for sim-determined outcomes (elimination, objective completion).
+    /// Protocol-level outcomes (surrender, abandon, desync, remake) are
+    /// determined directly by the relay from order/connection state.
+    GameEndedReport { tick: SimTick, outcome: MatchOutcome },
     /// Full SHA-256 state hash at signing cadence.
     /// Client → relay, sent every N ticks (default: 30).
     /// Used for replay `TickSignature` chain and periodic strong verification.
@@ -203,16 +220,35 @@ pub enum MessageLane {
     Bulk = 4,
 }
 
-/// Out-of-band chat and system notifications carried on MessageLane::Chat.
+/// Client → relay chat message. This is what a client sends when typing
+/// in lobby or post-game chat. The relay validates, stamps the sender
+/// field, and broadcasts as ChatNotification::PlayerChat.
+/// Separate from ChatNotification to prevent clients from forging
+/// System or PlayerStatus variants (those are relay-originated only).
+///
+/// Layering: this is the unbranded wire type. Inside `ic-ui`/`ic-game`,
+/// chat uses scope-branded `ChatMessage<TeamScope>` / `ChatMessage<AllScope>`
+/// (type-safety.md § Chat Scope Branding) for compile-time routing safety.
+/// The branded type is lowered to this wire type at the network boundary —
+/// scope maps to `channel`, sender is stripped (relay stamps it).
+pub struct ChatMessage {
+    pub channel: ChatChannel,
+    pub text: String,
+}
+
+/// Relay → client chat and system notifications carried on MessageLane::Chat.
 /// These exist outside the tick-ordered stream — used for lobby chat,
 /// post-game chat, and system messages. In-match gameplay chat flows as
 /// PlayerOrder::ChatMessage within TickOrders (on the Orders lane).
+/// Clients receive these but only construct ChatMessage (above) for sending.
 pub enum ChatNotification {
-    /// Player chat message (lobby or post-game).
+    /// Player chat message (lobby or post-game). Sender stamped by relay.
     PlayerChat { sender: PlayerId, channel: ChatChannel, text: String },
     /// System announcement (server message, player joined/left, vote result).
+    /// Relay-originated only — clients never send this variant.
     System { text: String },
     /// Player connection status change.
+    /// Relay-originated only — clients never send this variant.
     PlayerStatus { player: PlayerId, status: ConnectionStatus },
 }
 

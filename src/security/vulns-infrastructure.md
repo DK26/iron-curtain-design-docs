@@ -256,7 +256,7 @@ This is a privacy concern, not a direct exploit — but combined with other info
 **Opt-in per tracking server:**
 
 - Third-party tracking servers are listed in `settings.toml` but OFF by default. The first-run setup asks: "Show games from CnCNet and OpenRA browsers?" with an explanation of what data is shared (IP address, query frequency). The user must explicitly enable each third-party source.
-- The official IC tracking server is always enabled (same privacy policy as the rest of IC infrastructure).
+- The official IC tracking server is enabled by default as a bootstrapping source — the client needs at least one discovery endpoint to find games on first launch (same pattern as default DNS root servers or Matrix clients defaulting to matrix.org). This gives the official service a privileged default role in client behavior and privacy exposure, but it does not make the architecture centralized: users can add community tracking servers, remove the official one, or run entirely on LAN/direct-connect with no tracking server at all. The default is a convenience, not a dependency (same privacy policy as the rest of IC infrastructure).
 
 **Proxy option:**
 

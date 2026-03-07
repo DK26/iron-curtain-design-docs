@@ -28,7 +28,7 @@
 
 ### 10. Chat & Communication System (D059)
 
-**Surface:** `ChatMessage<S>` scope-branded messages, ping system, chat wheel, minimap drawing.
+**Surface:** `ChatMessage<S>` scope-branded messages (domain/UI layer — lowered to unbranded `ChatMessage { channel, text }` at the wire boundary; see type-safety.md § Layering note), ping system, chat wheel, minimap drawing.
 
 | #   | Misuse Vector                                                                  | Origin    | Type-System Defense                                                                                                                                                                                                                                                           | Test Requirement                                                   |
 | --- | ------------------------------------------------------------------------------ | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |

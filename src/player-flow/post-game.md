@@ -24,7 +24,7 @@ InGame → Victory/Defeat → Post-Game
 │  Rating: Captain II → Captain I (+32)  🎖                    │
 │                                                              │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │ CHAT (30-second post-game lobby, still active)       │   │
+│  │ CHAT (5-minute post-game lobby, still active)        │   │
 │  │ Opponent: gg wp                                      │   │
 │  │ You: gg                                              │   │
 │  └──────────────────────────────────────────────────────┘   │
@@ -43,10 +43,10 @@ InGame → Victory/Defeat → Post-Game
 - **Stats comparison** — Economy, production, combat, activity (APM/EPM). Graphs available on hover/click.
 - **MVP Awards** — Stat-based recognition cards highlighting top performers (see MVP Awards section below).
 - **Rating update** — Tier badge animation if promoted/demoted. Delta shown.
-- **Chat** — 30-second active period, auto-closes after 5 minutes.
+- **Chat** — Active for the full 5-minute post-game lobby duration. Both teams can talk.
 - **Post-game learning** (D065) — Rule-based tip analyzing the match (e.g., idle harvesters, low APM, no control groups used). Links to tutorial or replay annotation.
-- **Watch Replay** → Replay Viewer (immediate, file already recorded)
-- **Save Replay** → Save `.icrep` file with metadata
+- **Watch Replay** → Replay Viewer (immediate — the `.icrep` file is incrementally valid during recording, so the viewer can open it before the writer finalizes the archival header)
+- **Save Replay** → Save finalized `.icrep` file with complete header (`total_ticks`, `final_state_hash`) and metadata (available after the background writer flushes on match end)
 - **Re-Queue** → Back to matchmaking queue (ranked)
 - **Main Menu** → Return to main menu
 - **Report Player** → Report dialog (reason dropdown, optional text)
@@ -73,35 +73,35 @@ After every multiplayer match (skirmish, ranked, co-op, team), the post-game scr
 
 **Award categories** — the engine selects 2–4 awards per match from the following categories, based on which stats are most exceptional relative to the match context. Not all awards appear every game — only standout performances are highlighted.
 
-| Category | Award Name | Criteria |
-|----------|-----------|----------|
-| **Overall** | MVP | Highest composite score (weighted: economy + combat + production + map control) |
-| **Economy** | Tycoon | Highest total resources harvested |
-| | Efficient Commander | Best resource-to-army conversion ratio (least waste) |
-| | Expansion Master | Fastest or most ore/refinery expansions |
-| **Combat** | Warlord | Most enemy units destroyed |
-| | Iron Wall | Best unit preservation (lowest units lost relative to army size) |
-| | Tank Buster | Most enemy vehicles/armor destroyed |
-| | Air Superiority | Most enemy aircraft destroyed or air-to-ground kills |
-| | First Strike | First player to destroy an enemy unit |
-| | Decimator | Largest single engagement (most units destroyed in one battle) |
-| **Production** | War Machine | Most units produced |
-| | Tech Rush | Fastest time to highest tech tier |
-| | Builder | Most structures built |
-| **Strategic** | Blitzkrieg | Fastest victory (shortest match duration, only in decisive wins) |
-| | Map Control | Highest average map vision / territory control |
-| | Spy Master | Most intelligence gathered (scout actions, radar coverage) |
-| | Saboteur | Most enemy structures destroyed |
-| **Team** (team games) | Best Wingman | Most assist actions (shared vision, resource transfers, combined attacks) |
-| | Team Backbone | Highest resource sharing / support to allies |
-| | Last Stand | Survived longest after allies were eliminated |
-| **Co-op** (D070) | Mission Critical | Highest objective completion contribution |
-| | Guardian Angel | Most successful support/extraction actions (Commander role) |
-| | Shadow Operative | Most field objectives completed (SpecOps role) |
-| **Fun / Flavor** | Overkill | Used superweapon when conventional forces would have sufficed |
-| | Comeback King | Won after being behind by >50% army value |
-| | Untouchable | Won without losing a single structure |
-| | Turtle | Longest time before first attack |
+| Category              | Award Name          | Criteria                                                                        |
+| --------------------- | ------------------- | ------------------------------------------------------------------------------- |
+| **Overall**           | MVP                 | Highest composite score (weighted: economy + combat + production + map control) |
+| **Economy**           | Tycoon              | Highest total resources harvested                                               |
+|                       | Efficient Commander | Best resource-to-army conversion ratio (least waste)                            |
+|                       | Expansion Master    | Fastest or most ore/refinery expansions                                         |
+| **Combat**            | Warlord             | Most enemy units destroyed                                                      |
+|                       | Iron Wall           | Best unit preservation (lowest units lost relative to army size)                |
+|                       | Tank Buster         | Most enemy vehicles/armor destroyed                                             |
+|                       | Air Superiority     | Most enemy aircraft destroyed or air-to-ground kills                            |
+|                       | First Strike        | First player to destroy an enemy unit                                           |
+|                       | Decimator           | Largest single engagement (most units destroyed in one battle)                  |
+| **Production**        | War Machine         | Most units produced                                                             |
+|                       | Tech Rush           | Fastest time to highest tech tier                                               |
+|                       | Builder             | Most structures built                                                           |
+| **Strategic**         | Blitzkrieg          | Fastest victory (shortest match duration, only in decisive wins)                |
+|                       | Map Control         | Highest average map vision / territory control                                  |
+|                       | Spy Master          | Most intelligence gathered (scout actions, radar coverage)                      |
+|                       | Saboteur            | Most enemy structures destroyed                                                 |
+| **Team** (team games) | Best Wingman        | Most assist actions (shared vision, resource transfers, combined attacks)       |
+|                       | Team Backbone       | Highest resource sharing / support to allies                                    |
+|                       | Last Stand          | Survived longest after allies were eliminated                                   |
+| **Co-op** (D070)      | Mission Critical    | Highest objective completion contribution                                       |
+|                       | Guardian Angel      | Most successful support/extraction actions (Commander role)                     |
+|                       | Shadow Operative    | Most field objectives completed (SpecOps role)                                  |
+| **Fun / Flavor**      | Overkill            | Used superweapon when conventional forces would have sufficed                   |
+|                       | Comeback King       | Won after being behind by >50% army value                                       |
+|                       | Untouchable         | Won without losing a single structure                                           |
+|                       | Turtle              | Longest time before first attack                                                |
 
 **Award selection algorithm:**
 

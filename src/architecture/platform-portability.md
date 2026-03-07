@@ -83,6 +83,8 @@ Post-milestone toasts (same system as D030's Workshop cleanup prompts) nudge pla
 
 ```rust
 /// Platform-agnostic input source. Each platform implements this.
+/// Covers simulation orders (hot path, every tick) and UI-level input
+/// (chat, navigation — used in lobby and post-game loops).
 pub trait InputSource {
     /// Drain pending player orders from whatever input device is active.
     fn drain_orders(&mut self, buf: &mut Vec<TimestampedOrder>);
@@ -90,6 +92,17 @@ pub trait InputSource {
 
     /// Optional: hint about input capabilities for UI adaptation.
     fn capabilities(&self) -> InputCapabilities;
+
+    /// Drain a pending chat message typed by the user (lobby/post-game).
+    /// Returns None if no chat input is pending. Platform implementations
+    /// source this from text fields, on-screen keyboards, etc.
+    /// Default: no-op (platforms without chat input).
+    fn drain_chat_input(&mut self) -> Option<ChatMessage> { None }
+
+    /// Whether the user has signaled intent to leave the current screen
+    /// (e.g., pressed Escape, tapped Back, clicked Leave button).
+    /// Used by post-game and lobby loops. Default: false.
+    fn wants_leave(&self) -> bool { false }
 }
 
 pub struct InputCapabilities {

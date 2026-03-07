@@ -387,12 +387,12 @@ pub struct DamageResult {
 
 #### 4. `RankingProvider` — Pluggable Rating and Matchmaking
 
-**Problem:** The competitive infrastructure (AGENTS.md) specifies Glicko-2 ratings, but the ranking algorithm is implemented directly in the relay/tracking server with no abstraction boundary. Tournament organizers and community servers may want Elo (simpler, well-understood), TrueSkill (better for team games), or custom rating systems (handicap-adjusted, seasonal decay variants, faction-specific ratings). Since tracking servers are community-hostable and federated (D030/D037), locking the rating algorithm to Glicko-2 limits what community operators can offer.
+**Problem:** The competitive infrastructure (AGENTS.md) specifies Glicko-2 ratings, but the ranking algorithm is implemented directly in the community server with no abstraction boundary. Tournament organizers and community servers may want Elo (simpler, well-understood), TrueSkill (better for team games), or custom rating systems (handicap-adjusted, seasonal decay variants, faction-specific ratings). Since community servers are self-hostable and federated (D052/D037), locking the rating algorithm to Glicko-2 limits what community operators can offer.
 
 **Solution:**
 
 ```rust
-/// Tracking servers implement this to provide rating calculations.
+/// Community servers (D052) implement this to provide rating calculations.
 /// The default implementation uses Glicko-2.
 pub trait RankingProvider: Send + Sync {
     /// Calculate updated ratings after a match result.
@@ -431,8 +431,8 @@ pub struct MatchQuality {
 - Community operators provide alternatives: `EloProvider` (simpler), `TrueSkillProvider` (better team rating), or custom implementations.
 - `algorithm_id()` prevents mixing ratings from different algorithms — a Glicko-2 "1800" is not an Elo "1800".
 - `CertifiedMatchResult` (from relay server, D007) is the input — no self-reported results.
-- Ratings stored in SQLite (D034) on the tracking server.
-- The official tracking server uses Glicko-2. Community tracking servers choose their own.
+- Ratings stored in SQLite (D034) on the community server (D052 ranking authority).
+- The official IC community server uses Glicko-2. Community servers choose their own algorithm via the `RankingProvider` trait.
 - Fixed-point ratings (matching sim math conventions) — no floating-point in the ranking pipeline.
 
 **Information content weighting (from Valve CS Regional Standings):** The `match_quality()` method returns a `MatchQuality` struct that includes an `information_content` field (0–1000, fixed-point). This parameter scales how much a match affects rating changes — low-information matches (casual, heavily mismatched, very short duration) contribute less to rating updates, while high-information matches (ranked, well-matched, full-length) contribute more. This prevents rating inflation/deflation from low-quality matches. For IC, information content is derived from: (1) game mode (ranked vs. casual), (2) player count balance (1v1 is higher information than 3v1), (3) game duration (very short games may indicate disconnection, not skill), (4) map symmetry rating (if available). See `research/valve-github-analysis.md` § 4.2.
@@ -543,7 +543,7 @@ pub enum RejectionReason {
 | `AiStrategy`      | One trait + `PersonalityDrivenAi` wrapper | Community AI cannot plug in without forking ic-ai                                                          |
 | `FogProvider`     | One trait + `RadiusFogProvider`           | RA2 elevation fog requires rewriting fog_system(); fog-authoritative server requires separate fog codebase |
 | `DamageResolver`  | One trait + `StandardDamageResolver`      | Shield/sub-object games require rewriting projectile_system()                                              |
-| `RankingProvider` | One trait + `Glicko2Provider`             | Community tracking servers stuck with one rating algorithm                                                 |
+| `RankingProvider` | One trait + `Glicko2Provider`             | Community servers stuck with one rating algorithm                                                          |
 | `OrderValidator`  | One trait + explicit validate() call      | Game modules can silently skip validation; anti-cheat guarantee is informal                                |
 
 All five follow the established pattern: **one trait definition + one default implementation with near-zero architectural cost**. Dispatch strategy is subsystem-dependent (profiling decides, not dogma). The architectural cost is 5 trait definitions (~50 lines total) and 5 wrapper implementations (~200 lines total). The benefit is that none of these subsystems becomes a rewrite-required bottleneck when game modules, mods, or community servers need different behavior.

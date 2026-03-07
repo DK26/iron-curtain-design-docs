@@ -39,6 +39,16 @@ pub trait NetworkModel: Send + Sync {
     /// not every tick). The relay uses this for replay `TickSignature`
     /// entries. See `type-safety.md` § Hash Type Distinction.
     fn report_state_hash(&mut self, tick: SimTick, hash: StateHash);
+    /// Report that the local sim has transitioned to GameEnded.
+    /// The network layer sends a Frame::GameEndedReport to the relay.
+    /// For sim-determined outcomes (elimination, objective completion),
+    /// the relay collects reports from all players (excluding observers)
+    /// and verifies consensus (deterministic sim guarantees agreement).
+    /// Observers are receive-only and do not participate. Protocol-level outcomes
+    /// (surrender, abandon, desync, remake) are determined by the relay
+    /// directly from order/connection state. See wire-format.md §
+    /// Frame::GameEndedReport and match-lifecycle.md § Post-Game Flow.
+    fn report_game_ended(&mut self, tick: SimTick, outcome: MatchOutcome);
     /// Connection/sync status
     fn status(&self) -> NetworkStatus;
     /// Diagnostic info (latency, packet loss, etc.)

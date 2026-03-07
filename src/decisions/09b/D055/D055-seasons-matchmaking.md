@@ -244,7 +244,7 @@ D055 defines the rating system and matchmaking queue. The full competitive match
 - Draw: Treated as Glicko-2 draw (0.5 result). Both players' deviations decrease.
 - Disconnect: Full loss + escalating queue cooldown (5min → 30min → 2hr). Reconnection within 60s = no penalty. Grace period voiding for early abandons (<2 min, <5% game progress).
 - Spectator delay: 120 seconds wall-time floor (2,400 ticks at Normal ~20 tps; relay computes ticks from speed preset, V59). Players cannot disable spectating in ranked (needed for anti-cheat review).
-- Post-game: 30-second lobby with stats, rating change display, report button, instant re-queue option.
+- Post-game: 5-minute lobby with stats, rating change display, report button, instant re-queue option.
 
 See `03-NETCODE.md` § "Match Lifecycle" for the full protocol, data structures, rationale, and the In-Match Vote Framework that generalizes surrender/kick/remake/draw into a unified callvote system.
 

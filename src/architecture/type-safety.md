@@ -142,6 +142,7 @@ pub struct Disconnected;
 pub struct Handshaking;
 pub struct Authenticated;
 pub struct InGame;
+pub struct PostGame;
 
 impl Connection<Disconnected> {
     pub fn begin_handshake(self) -> Connection<Handshaking> { ... }
@@ -152,9 +153,12 @@ impl Connection<Handshaking> {
 impl Connection<Authenticated> {
     pub fn join_game(self, lobby: LobbyId) -> Connection<InGame> { ... }
 }
+impl Connection<InGame> {
+    pub fn end_game(self) -> Connection<PostGame> { ... }
+}
 
 // WRONG — runtime enum allows invalid transitions
-pub enum ConnectionState { Disconnected, Handshaking, Authenticated, InGame }
+pub enum ConnectionState { Disconnected, Handshaking, Authenticated, InGame, PostGame }
 impl Connection {
     pub fn transition(&mut self, to: ConnectionState) { self.state = to; } // any transition allowed!
 }
@@ -414,6 +418,8 @@ fn handle_all_chat(msg: ChatMessage<AllScope>) { ... }
 ```
 
 **Rationale:** Branding the message type with its scope makes routing errors a compile-time type mismatch. Conversion between scopes requires an explicit, auditable function call. This extends the direction-branded messages pattern (see `FromClient<T>` / `FromServer<T>` above) to chat delivery scope.
+
+**Layering note:** The scope-branded `ChatMessage<S>` is the **domain/UI layer** type used inside `ic-ui` and `ic-game` for routing enforcement. When a branded message crosses the network boundary, it is **lowered** to the unbranded wire type `ChatMessage { channel, text }` (wire-format.md § ChatMessage) — the scope is carried in the `channel: ChatChannel` enum field, and the `sender` is stripped (the relay stamps it from the authenticated connection). On the receiving side, the network layer delivers `ChatNotification::PlayerChat { sender, channel, text }`, which the UI layer can **lift** back into a branded `ChatMessage<S>` based on `channel`. The two types serve different layers: branded for compile-time routing safety, unbranded for wire efficiency.
 
 ### Validated Construction Policy: Invariant-Checked Types
 

@@ -167,12 +167,22 @@ Player claims nothing about their rating. The flow is:
 
 1. Two players connect to the relay for a match.
 2. The relay (D007) forwards all orders between players (lockstep).
-3. The match ends. The relay determines the outcome internally via
-   its own `check_match_end()` logic (system-wiring.md § relay tick
-   loop, step f). Because the relay receives all orders and the sim
-   is deterministic (Invariant #1), the relay's outcome is authoritative.
-   Clients do not report outcomes — there is no client outcome-report
-   frame in the wire protocol (wire-format.md § Frame enum).
+3. The match ends. The relay determines the outcome via two sources:
+   a. Protocol-level outcomes (surrender, abandon, desync, remake):
+      The relay determines these directly from order state and
+      connection state — no sim required. A surrender is a
+      PlayerOrder::Vote that the relay forwarded; an abandon is a
+      connection drop; a desync is a sync hash mismatch.
+   b. Sim-determined outcomes (elimination, objective completion):
+      Each player's deterministic sim detects the game-ending
+      condition and sends a Frame::GameEndedReport to the relay.
+      The relay collects reports from all players (excluding
+      observers, who are receive-only) and verifies consensus —
+      the deterministic sim (Invariant #1) guarantees all players
+      reach the same outcome. If players disagree, the relay
+      treats it as a desync condition.
+   The relay's check_match_end() combines both sources
+   (system-wiring.md § relay tick loop, steps f–g).
 4. The relay produces a CertifiedMatchResult:
    - Signed by the relay's own key
    - Contains: player keys, game module, map, duration,
@@ -192,6 +202,8 @@ Player claims nothing about their rating. The flow is:
 
 At no point does the player provide rating data to the server.
 The server computed the rating. The server signs its own computation.
+The relay never runs the sim — it routes orders and verifies client
+consensus on the outcome.
 ```
 
 **Match SCRs — the relay certifies the match happened:**
@@ -205,7 +217,7 @@ Achievements are more nuanced because they can be earned in different contexts:
 | Context                     | How the server validates                                                                                                                                                                                                                                                                    | Trust level                                                      |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | **Multiplayer match**       | Achievement condition cross-referenced with `CertifiedMatchResult` data. E.g., "Win 50 matches" — server counts its own signed match SCRs for this player. "Win under 5 minutes" — server checks match duration from the relay's certified result.                                          | **High** — server validates against its own records              |
-| **Multiplayer in-game**     | Relay attests that the achievement trigger fired during a live match (the trigger is part of the deterministic sim, so the relay can verify by running headless). Alternatively, both clients attest the trigger fired (same as match outcome consensus).                                   | **High** — relay-attested or consensus-verified                  |
+| **Multiplayer in-game**     | Both clients attest the trigger fired (same client consensus mechanism as match outcome — deterministic sim guarantees agreement). The relay includes the consensus attestation in the match record.                                                                                        | **High** — consensus-verified                                    |
 | **Single-player (online)**  | Player submits a replay file. Community server can fast-forward the replay (deterministic sim) to verify the achievement condition was met. Expensive but possible.                                                                                                                         | **Medium** — replay-verified, but replay submission is voluntary |
 | **Single-player (offline)** | Player claims the achievement with no server involvement. When reconnecting, the claim can be submitted with the replay for retroactive verification. Community policy decides whether to accept: casual communities may accept on trust, competitive communities may require replay proof. | **Low** — self-reported unless replay-backed                     |
 

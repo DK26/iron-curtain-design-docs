@@ -347,10 +347,10 @@ pub enum CrossEngineAuthorityMode {
 ```
 
 **IC-as-authority flow:**
-1. IC relay runs `ic-sim` headlessly (or one IC client's sim is designated reference)
-2. Every `hash_interval_ticks`, IC broadcasts a state hash to all clients
+1. One IC client's sim is designated the **reference sim** (default). Alternatively, operators can deploy relay-headless mode where `ic-server` runs `ic-sim` headlessly — this is a special deployment similar to FogAuth (see D074 deployment table).
+2. Every `hash_interval_ticks`, the reference sim broadcasts a state hash to all clients
 3. Foreign clients compare against their own sim state
-4. On divergence: IC sends `EntityCorrection` packets to foreign clients (bounded by `max_correction_magnitude`)
+4. On divergence: the reference sim sends `EntityCorrection` packets to foreign clients (bounded by `max_correction_magnitude`)
 5. Foreign clients apply corrections to converge toward IC's state
 6. **IC never accepts inbound corrections** — `SimReconciler` is not instantiated on the authority side
 

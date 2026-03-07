@@ -39,6 +39,18 @@ impl<N: NetworkModel, I: InputSource> GameLoop<N, I> {
                     self.sim.full_state_hash(),
                 );
             }
+            // If the sim transitioned to GameEnded this tick, report
+            // the outcome to the network layer for relay consensus.
+            // Also emit a final state hash for the terminal tick
+            // regardless of signing cadence (see match-end signing below).
+            if let Some(outcome) = self.sim.match_outcome() {
+                self.network.report_state_hash(
+                    self.sim.tick(),
+                    self.sim.full_state_hash(),
+                );
+                self.network.report_game_ended(self.sim.tick(), outcome);
+                break; // No more ticks — match is over
+            }
             ticks_this_frame += 1;
             if ticks_this_frame >= MAX_TICKS_PER_FRAME {
                 break; // Remaining ticks processed next frame
@@ -51,7 +63,7 @@ impl<N: NetworkModel, I: InputSource> GameLoop<N, I> {
 }
 ```
 
-**Match-end signing:** When a match ends (surrender, victory, disconnect — see `netcode/match-lifecycle.md`), the game loop emits a final `report_state_hash()` for the terminal tick regardless of whether it falls on a signing cadence boundary. This ensures the relay's `TickSignature` chain covers the complete match with no unsigned tail (see `formats/save-replay-formats.md` § Signature Chain).
+**Match-end signing and outcome reporting:** When a match ends (surrender vote, elimination, disconnect — see `netcode/match-lifecycle.md`), the game loop detects the sim's `GameEnded` state via `sim.match_outcome()`, emits a final `report_state_hash()` for the terminal tick regardless of signing cadence, and calls `report_game_ended()` to send the outcome to the relay for consensus verification. This ensures the relay's `TickSignature` chain covers the complete match with no unsigned tail (see `formats/save-replay-formats.md` § Signature Chain), and enables the relay to produce a `CertifiedMatchResult` from client consensus on sim-determined outcomes (see `netcode/wire-format.md` § `Frame::GameEndedReport`).
 
 **Key property:** `GameLoop` is generic over `N: NetworkModel` and `I: InputSource`. It has zero knowledge of whether it's running single-player or multiplayer, or whether input comes from a mouse, touchscreen, or gamepad. This is the central architectural guarantee.
 
@@ -84,9 +96,9 @@ The game application transitions through a fixed set of states. Design informed 
 - **Launched → InMenus:** Engine initialization, asset loading, mod registration, and (when required) entry into the first-run setup wizard / setup assistant flow (D069). This remains menu/UI-only — no sim world exists yet.
 - **InMenus → Loading:** Player starts a game or joins a lobby; map and rules are loaded
 - **Loading → InGame:** All assets loaded, `NetworkModel` connected, sim initialized. See `03-NETCODE.md` § "Match Lifecycle" for the ready-check and countdown protocol that governs this transition in multiplayer.
-- **InGame → GameEnded:** Victory/defeat condition met, player surrenders (`PlayerOrder::Surrender`), vote-driven resolution (kick, remake, draw via the In-Match Vote Framework), or match void. See `03-NETCODE.md` § "Match Lifecycle" for the surrender mechanic, team vote thresholds, and the generic callvote system.
-- **GameEnded → InMenus:** Return to main menu (post-game stats shown during transition). See `03-NETCODE.md` § "Post-Game Flow" for the 30-second post-game lobby with stats, rating display, and re-queue.
-- **GameEnded → InReplay:** Watch the just-finished game (replay file already recorded)
+- **InGame → GameEnded:** Victory/defeat condition met, player surrenders (via the In-Match Vote Framework — `PlayerOrder::Vote(VoteOrder::Propose { vote_type: Surrender })`), vote-driven resolution (kick, remake, draw), or match void. See `03-NETCODE.md` § "Match Lifecycle" for the surrender mechanic, team vote thresholds, and the generic callvote system.
+- **GameEnded → InMenus:** Return to main menu. `GameEnded` IS the post-game screen: the 5-minute post-game lobby with stats display, chat, rating update, re-queue option, and replay save runs during this state (see `03-NETCODE.md` § "Post-Game Flow"). Maps to `NetworkStatus::PostGame(CertifiedMatchResult)`. The transition to `InMenus` occurs on user action (leave/re-queue) or lobby timeout.
+- **GameEnded → InReplay:** Watch the just-finished game (`.icrep` is incrementally valid during recording — the viewer opens it immediately; the finalized archival header is written when the background writer flushes)
 - **InMenus → InReplay:** Load a saved replay file
 - **InReplay → InMenus:** Exit replay viewer
 - **InGame → Shutdown:** Application exit (snapshot saved for resume on platforms that require it)

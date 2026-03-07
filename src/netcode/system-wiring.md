@@ -263,10 +263,13 @@ impl<T: Transport> RelayLockstepNetwork<T> {
         let encoded = self.codec.encode_frame(&Frame::DesyncDebugReport(report));
         self.transport.send(&encoded).ok();
     }
-    /// Send out-of-band chat (post-game/lobby). In-match chat flows as
+    /// Send out-of-band chat (post-game/lobby). Accepts ChatMessage
+    /// (client → relay type), not ChatNotification (relay → client type).
+    /// The relay stamps the sender field and broadcasts as
+    /// ChatNotification::PlayerChat. In-match chat flows as
     /// PlayerOrder::ChatMessage through submit_order() — see D059.
-    pub fn send_chat(&mut self, msg: ChatNotification) {
-        let encoded = self.codec.encode_frame(&Frame::ChatNotification(msg));
+    pub fn send_chat(&mut self, msg: ChatMessage) {
+        let encoded = self.codec.encode_frame(&Frame::Chat(msg));
         self.transport.send(&encoded).ok();
     }
 }
@@ -546,11 +549,28 @@ pub fn run_relay_session(relay: &mut RelayCore, transport: &mut RelayTransportLa
             }
         }
 
-        // f. Check termination (MatchOutcome from match-lifecycle.md)
+        // f. Check termination (MatchOutcome from match-lifecycle.md).
+        //    The relay determines outcomes from two sources:
+        //    - Protocol-level: surrender votes, disconnects, desync hashes,
+        //      remake votes — the relay observes these directly from orders
+        //      and connection state without running the sim.
+        //    - Sim-determined: elimination, objective completion — the relay
+        //      collects GameEndedReport frames from all players (observers
+        //      excluded) and verifies consensus (deterministic sim guarantees
+        //      agreement). If players disagree, relay treats it as a desync.
         if let Some(outcome) = relay.check_match_end() {
             transport.broadcast(&codec.encode_frame(&Frame::MatchEnd(outcome.clone())));
             match_outcome = Some(outcome);
             break;
+        }
+
+        // g. Collect client GameEndedReport frames (sim-determined outcomes).
+        //    When all players (excluding observers) report the same MatchOutcome,
+        //    the relay accepts the consensus. See wire-format.md § Frame::GameEndedReport.
+        for player in relay.players() {
+            if let Some(report) = transport.recv_game_ended_report(player) {
+                relay.record_game_ended_report(player, report);
+            }
         }
 
         relay.tick += 1;

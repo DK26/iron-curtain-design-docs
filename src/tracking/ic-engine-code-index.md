@@ -170,7 +170,7 @@
 - **Path:** `crates/ic-net/`
 - **Primary responsibility:** `NetworkModel` implementations, `RelayCore` library, `ic-server` binary, timing normalization, delta compression, sub-tick fairness (D008), order rate control (D060)
 - **Does not own:** sim state mutation, order validation logic (that's `ic-sim`), rendering
-- **Public interfaces / trait seams:** `NetworkModel` trait, `RelayCore`, `Connection<S>` (typestate: `Disconnected` → `Handshaking` → `Authenticated` → `InGame`), `ClientMetrics`, `TimingFeedback`, `OrderBudget`, `AckVector`
+- **Public interfaces / trait seams:** `NetworkModel` trait, `RelayCore`, `Connection<S>` (typestate: `Disconnected` → `Handshaking` → `Authenticated` → `InGame` → `PostGame`), `ClientMetrics`, `TimingFeedback`, `OrderBudget`, `AckVector`
 - **Key files to read first:** `src/lib.rs`, `src/relay_core.rs`, `src/network_model.rs`
 - **Hot paths / perf-sensitive files:** order serialization/delta compression (TLV wire format), relay tick broadcast, timing normalization
 - **Generated files:** none

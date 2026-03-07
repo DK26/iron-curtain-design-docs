@@ -185,9 +185,9 @@ pub struct SpectatorConfig {
 
 ### Post-Game Flow
 
-After the sim transitions to `GameEnded`, the network layer manages the post-game sequence:
+After the sim transitions to `GameEnded`, each player's client sends a `Frame::GameEndedReport` to the relay (wire-format.md § Frame enum). The relay verifies player consensus on the outcome — the deterministic sim guarantees agreement. Observers are receive-only and do not participate in the consensus set (see multiplayer-scaling.md § Observer Model). For protocol-level outcomes (surrender, abandon, desync, remake), the relay already determined the outcome directly from order/connection state. The relay then manages the post-game sequence:
 
-1. **Match result broadcast.** The relay computes the `CertifiedMatchResult` and broadcasts it to all participants and spectators.
+1. **Match result broadcast.** The relay produces the `CertifiedMatchResult` (from the consensus outcome or protocol-level determination) and broadcasts it to all participants and spectators.
 2. **Post-game lobby.** Players remain connected. Chat stays active (both teams can talk). Statistics screen displays (see `02-ARCHITECTURE.md` § GameScore). Players can:
    - View detailed stats (economy graph, production timeline, combat events)
    - Watch the game-ending moment in instant replay (last 30 seconds, auto-saved)

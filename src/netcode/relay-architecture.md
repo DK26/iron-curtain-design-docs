@@ -59,6 +59,8 @@ pub struct RelayCore {
     filter_chain: Vec<Box<dyn RelayFilter>>,
     liveness_tokens: HashMap<PlayerId, LivenessToken>,
     clock_calibration: HashMap<PlayerId, ClockCalibration>,
+    game_ended_reports: HashMap<PlayerId, GameEndedReport>,  // client outcome consensus
+    match_outcome: Option<MatchOutcome>,  // set when protocol-level or consensus outcome resolved
     // ... anti-lag-switch state, replay signer, etc.
 }
 
@@ -79,6 +81,31 @@ impl RelayCore {
     /// See wire-format.md § Frame::StateHash and save-replay-formats.md
     /// § Signature Chain.
     pub fn receive_state_hash(&mut self, player: PlayerId, tick: SimTick, hash: StateHash) { ... }
+
+    /// Record a GameEndedReport from a player. The relay collects these
+    /// and checks for consensus — if all players (excluding observers)
+    /// report the same MatchOutcome, the relay accepts it as the
+    /// sim-determined outcome. If players disagree, the relay treats it
+    /// as a desync. Observers are receive-only and never submit reports.
+    /// Protocol-level outcomes (surrender, abandon, desync, remake)
+    /// are determined directly by check_match_end() from order/connection
+    /// state and do not require client reports.
+    pub fn record_game_ended_report(&mut self, player: PlayerId, report: GameEndedReport) { ... }
+
+    /// Check whether the match has ended. Returns Some(MatchOutcome) when:
+    /// - A protocol-level termination occurred (surrender vote passed,
+    ///   player disconnected past timeout, desync detected, remake voted), OR
+    /// - All players (excluding observers) reached consensus via
+    ///   GameEndedReport (sim-determined outcomes: elimination,
+    ///   objective completion).
+    /// Returns None if the match is still in progress.
+    pub fn check_match_end(&self) -> Option<MatchOutcome> { ... }
+
+    /// Produce a relay-signed CertifiedMatchResult from a MatchOutcome.
+    /// Contains: player keys, game module, map, duration, outcome,
+    /// order hashes, desync status, Ed25519 signature.
+    /// Called once after check_match_end() returns Some.
+    pub fn certify_match_result(&self, outcome: &MatchOutcome) -> CertifiedMatchResult { ... }
 
     /// Produce the canonical TickOrders for this tick.
     /// Sub-tick sorts, runs filter chain, advances tick counter.
@@ -106,7 +133,7 @@ This creates three relay deployment modes:
 
 ### Connection Lifecycle Type State
 
-Network connections transition through a fixed lifecycle: `Connecting → Authenticated → InLobby → InGame → Disconnecting`. Calling the wrong method in the wrong state is a security risk — processing game orders from an unauthenticated connection, or sending lobby messages during gameplay, shouldn't be possible to write accidentally.
+Network connections transition through a fixed lifecycle: `Connecting → Authenticated → InLobby → InGame → PostGame → InLobby → Disconnecting`. Calling the wrong method in the wrong state is a security risk — processing game orders from an unauthenticated connection, or sending lobby messages during gameplay, shouldn't be possible to write accidentally.
 
 IC uses Rust's **type state pattern** to make invalid state transitions a compile error instead of a runtime bug:
 
@@ -118,6 +145,7 @@ pub struct Connecting;
 pub struct Authenticated;
 pub struct InLobby;
 pub struct InGame;
+pub struct PostGame;
 
 /// A network connection whose valid operations are determined by its state `S`.
 /// Generic over `Transport` (D054) — works with UdpTransport, WebSocketTransport,
@@ -162,9 +190,30 @@ impl<T: Transport> Connection<InGame, T> {
     /// In-match chat is a PlayerOrder::ChatMessage — use this method.
     pub fn send_order(&self, order: &TimestampedOrder) { /* ... */ }
 
-    /// Return to lobby after match ends.
-    pub fn end_game(self) -> Connection<InLobby, T> {
-        // ... cleanup per-connection game state
+    /// Transition to post-game when the match ends.
+    /// The relay has broadcast MatchEnd and CertifiedMatchResult.
+    pub fn end_game(self) -> Connection<PostGame, T> {
+        // ... transition to post-game phase
+    }
+}
+
+impl<T: Transport> Connection<PostGame, T> {
+    /// Send post-game chat (out-of-band, on MessageLane::Chat).
+    /// Accepts ChatMessage (client → relay type, not ChatNotification).
+    pub fn send_chat(&self, msg: &ChatMessage) { /* ... */ }
+
+    /// Receive CertifiedMatchResult if not yet consumed.
+    pub fn take_certified_result(&mut self) -> Option<CertifiedMatchResult> { /* ... */ }
+
+    /// Receive rating update SCRs (ranked matches only).
+    pub fn take_rating_update(&mut self) -> Option<Vec<SignedCredentialRecord>> { /* ... */ }
+
+    /// Drain post-game chat/system notifications.
+    pub fn drain_chat(&mut self) -> impl Iterator<Item = ChatNotification> + '_ { /* ... */ }
+
+    /// Leave post-game and return to lobby (user action or 5-minute timeout).
+    pub fn leave_post_game(self) -> Connection<InLobby, T> {
+        // ... cleanup post-game state, return to lobby
     }
 }
 ```
