@@ -56,18 +56,22 @@ The performance targets in `10-PERFORMANCE.md` already account for this. The eff
 
 ### Team Games (2v2, 3v3, 4v4)
 
-Team games work identically to FFA. Each player submits orders for their own units. The sim processes all orders from all players in sub-tick chronological order. Alliances, shared vision, and team chat are sim-layer and UI-layer concerns — the network model doesn't distinguish between ally and enemy.
+Team games work identically to FFA. Each player submits orders for their own units. The sim processes all orders from all players in sub-tick chronological order. Alliances and shared vision are sim-layer concerns — the network model's lockstep ordering does not distinguish between ally and enemy. Team chat routing, however, is a relay concern: the relay inspects `ChatChannel::Team` to forward messages only to same-team recipients (see D059 and `system-wiring.md` § tick loop). This team-awareness is limited to chat filtering and does not affect the deterministic order stream.
 
 ### Observers / Spectators
 
-Observers receive `TickOrders` but never submit any. They run the sim locally (full state, all players' perspective). In a relay server setup, the relay can optionally delay the observer feed by N ticks to prevent live coaching.
+Observers receive `TickOrders` but never submit any. In **casual** mode (default), observers run the sim with full state — all players' perspective. In **ranked team games**, observers are assigned to one team's perspective (`delayed_perspective: true`): the relay withholds the opposing team's orders until the spectator delay expires — all orders are eventually delivered; the restriction is temporal, not permanent — preventing real-time intel relay (see `match-lifecycle.md` § Live Spectator Delay). In both modes, the relay enforces a per-observer delay on the TickOrders feed to prevent live coaching via spectator collusion.
 
 ```rust
 pub struct ObserverConnection {
-    pub delay_ticks: u64,        // e.g., 30 ticks (~2 seconds) for anti-coaching
+    /// Relay-enforced delay. Ranked minimum: 120 seconds (V59).
+    /// Unranked: configurable by host (can be 0). Tournament: ≥180s.
+    pub delay_ticks: u64,
     pub receive_only: bool,      // true — observer never submits orders
 }
 ```
+
+The delay buffer is **per-observer** — each observer's view is independently delayed at the relay. The client cannot bypass the delay; it is a relay-side enforcement point recorded in `CertifiedMatchResult` metadata. See `security/vulns-edge-cases-infra.md` § Vulnerability 59 for the full tiered delay policy and ranked floor rationale.
 
 ### Player Limits
 

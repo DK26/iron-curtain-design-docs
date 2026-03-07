@@ -134,35 +134,55 @@ pub struct RelayLockstepNetwork<T: Transport> {
     transport: T,
     codec: NativeCodec,                          // OrderCodec impl (§ "Wire Format")
     batcher: OrderBatcher,                       // § "Order Batching"
-    reliability: AckVector,                      // § "Selective Acknowledgment"
+    reliability: AckVector,                      // processed at packet header level (wire-format.md), not as Frame
+    session_auth: ClientSessionAuth,                   // per-session Ed25519 signing (vulns-protocol.md V16)
     inbound_ticks: VecDeque<TickOrders>,         // confirmed ticks from relay
     submit_offset_us: i32,                       // adjusted by TimingFeedback
     status: NetworkStatus,
     diagnostics: NetworkDiagnostics,
+    // Desync debug: if the relay requests a debug report, store the request
+    // so the game loop can collect sim state and respond.
+    pending_desync_request: Option<(SimTick, DesyncDebugLevel)>,
+    // Post-game frame storage (consumed by run_post_game, not by poll_tick caller):
+    pending_credentials: Vec<SignedCredentialRecord>,
+    chat_inbox: VecDeque<ChatNotification>,
 }
 
 impl<T: Transport> NetworkModel for RelayLockstepNetwork<T> {
     fn submit_order(&mut self, order: TimestampedOrder) {
-        // Adjust submission time by timing feedback offset
+        // Apply timing feedback offset to submission time.
+        // submit_offset_us is adjusted by apply_timing_feedback() based on
+        // relay-reported arrival timing. A negative offset shifts submission
+        // earlier (orders were arriving late); a positive offset relaxes it.
+        let adjusted_sub_tick = (order.sub_tick_time as i32 + self.submit_offset_us)
+            .max(0) as u32;
         let adjusted = TimestampedOrder {
-            sub_tick_time: order.sub_tick_time,  // hint only — relay normalizes
+            sub_tick_time: adjusted_sub_tick,  // hint only — relay normalizes
             ..order
         };
-        self.batcher.push(adjusted);
+        // Sign with per-session ephemeral Ed25519 key (V16 defense-in-depth).
+        // AuthenticatedOrder wraps TimestampedOrder + signature at the
+        // transport layer (ic-net), not in ic-protocol.
+        let authenticated = self.session_auth.sign_order(&adjusted);
+        self.batcher.push(authenticated);
     }
 
     fn poll_tick(&mut self) -> Option<TickOrders> {
         // 1. Flush batched outbound orders
         if self.batcher.should_flush() {
             let batch = self.batcher.drain();
-            let encoded = self.codec.encode_batch(&batch);
+            let encoded = self.codec.encode_frame(&Frame::OrderBatch(batch));
             self.transport.send(&encoded).ok();
         }
 
         // 2. Receive from transport (non-blocking)
         let mut buf = [0u8; MAX_PACKET_SIZE];
         while let Ok(Some(len)) = self.transport.recv(&mut buf) {
-            match self.codec.decode_frame(&buf[..len]) {
+            let frame = match self.codec.decode_frame(&buf[..len]) {
+                Ok(f) => f,
+                Err(_) => continue, // skip malformed frames (vulns-protocol.md)
+            };
+            match frame {
                 Frame::TickOrders(tick_orders) => {
                     self.inbound_ticks.push_back(tick_orders);
                 }
@@ -172,8 +192,31 @@ impl<T: Transport> NetworkModel for RelayLockstepNetwork<T> {
                 Frame::DesyncDetected { tick } => {
                     self.status = NetworkStatus::DesyncDetected(tick);
                 }
-                Frame::Ack(ack) => {
-                    self.reliability.process_ack(ack);
+                Frame::DesyncDebugRequest { tick, level } => {
+                    // Relay requests desync debug data (desync-recovery.md §
+                    // Desync Log Transfer Protocol). Store the request; the
+                    // game loop collects sim state via take_desync_request()
+                    // and responds with send_desync_report().
+                    self.pending_desync_request = Some((tick, level));
+                }
+                Frame::MatchEnd(outcome) => {
+                    self.status = NetworkStatus::MatchCompleted(outcome);
+                }
+                Frame::CertifiedMatchResult(result) => {
+                    // Relay sends this after MatchEnd with Ed25519-signed certificate.
+                    // Transitions MatchCompleted → PostGame, preserving the full
+                    // certificate (hashes, players, duration, signature) for stats
+                    // display and ranked result submission.
+                    self.status = NetworkStatus::PostGame(result);
+                }
+                Frame::RatingUpdate(scrs) => {
+                    // Community-server-signed SCRs delivered during post-game.
+                    // Typically: rating SCR + match record SCR (D052).
+                    self.pending_credentials.extend(scrs);
+                }
+                Frame::ChatNotification(msg) => {
+                    // Post-game / lobby chat, system messages, player status.
+                    self.chat_inbox.push_back(msg);
                 }
                 _ => {}
             }
@@ -183,13 +226,49 @@ impl<T: Transport> NetworkModel for RelayLockstepNetwork<T> {
         self.inbound_ticks.pop_front()
     }
 
-    fn report_sync_hash(&mut self, tick: u64, hash: u64) {
+    fn report_sync_hash(&mut self, tick: SimTick, hash: SyncHash) {
         let encoded = self.codec.encode_frame(&Frame::SyncHash { tick, hash });
+        self.transport.send(&encoded).ok();
+    }
+
+    fn report_state_hash(&mut self, tick: SimTick, hash: StateHash) {
+        let encoded = self.codec.encode_frame(&Frame::StateHash { tick, hash });
         self.transport.send(&encoded).ok();
     }
 
     fn status(&self) -> NetworkStatus { self.status.clone() }
     fn diagnostics(&self) -> NetworkDiagnostics { self.diagnostics.clone() }
+}
+
+/// Relay-specific accessors — not part of the NetworkModel trait.
+/// LocalNetwork and ReplayPlayback never produce these frames.
+impl<T: Transport> RelayLockstepNetwork<T> {
+    /// Take all pending credential records (rating SCR + match record SCR).
+    pub fn take_credentials(&mut self) -> Vec<SignedCredentialRecord> {
+        std::mem::take(&mut self.pending_credentials)
+    }
+    /// Drain all pending chat/system notifications since last call.
+    pub fn drain_chat(&mut self) -> impl Iterator<Item = ChatNotification> + '_ {
+        self.chat_inbox.drain(..)
+    }
+    /// Take a pending desync debug request, if the relay sent one.
+    /// The game loop calls this after poll_tick(), collects the requested
+    /// sim state (desync-recovery.md § DesyncDebugReport), and responds
+    /// via send_desync_report().
+    pub fn take_desync_request(&mut self) -> Option<(SimTick, DesyncDebugLevel)> {
+        self.pending_desync_request.take()
+    }
+    /// Send a desync debug report back to the relay.
+    pub fn send_desync_report(&mut self, report: DesyncDebugReport) {
+        let encoded = self.codec.encode_frame(&Frame::DesyncDebugReport(report));
+        self.transport.send(&encoded).ok();
+    }
+    /// Send out-of-band chat (post-game/lobby). In-match chat flows as
+    /// PlayerOrder::ChatMessage through submit_order() — see D059.
+    pub fn send_chat(&mut self, msg: ChatNotification) {
+        let encoded = self.codec.encode_frame(&Frame::ChatNotification(msg));
+        self.transport.send(&encoded).ok();
+    }
 }
 
 impl<T: Transport> RelayLockstepNetwork<T> {
@@ -403,6 +482,11 @@ The capstone: relay-side session lifecycle and client-side match lifecycle showi
 /// Top-level relay match session — shows how all relay-side components
 /// connect through the full lobby → gameplay → post-game lifecycle.
 pub fn run_relay_session(relay: &mut RelayCore, transport: &mut RelayTransportLayer) {
+    // The embedding layer (standalone binary or game client) owns the codec.
+    // RelayCore is pure logic — no I/O, no serialization.
+    let codec = NativeCodec::new();
+    let mut match_outcome: Option<MatchOutcome> = None;
+
     // ── Phase 1: Lobby ──
     // Accept connections (Connection<Connecting> → Authenticated → InLobby).
     // Ready-check state machine: WaitingForAccept → MapVeto → Loading.
@@ -417,7 +501,7 @@ pub fn run_relay_session(relay: &mut RelayCore, transport: &mut RelayTransportLa
     // ── Phase 3: Commit-reveal game seed ──
     // Collect SeedCommitment → broadcast → collect SeedReveal → compute_game_seed()
     let seed = relay.run_seed_exchange(transport);
-    relay.broadcast(Frame::GameSeed(seed));
+    transport.broadcast(&codec.encode_frame(&Frame::GameSeed(seed)));
 
     // ── Phase 4: Countdown → tick 0 ──
 
@@ -430,8 +514,24 @@ pub fn run_relay_session(relay: &mut RelayCore, transport: &mut RelayTransportLa
         // b. Sub-tick sort + filter chain → canonical TickOrders
         let tick_orders = relay.finalize_tick();
 
-        // c. Broadcast canonical TickOrders to all clients + observers
-        transport.broadcast(&tick_orders);
+        // b2. Hash the full pre-filtering order stream for certification (V13).
+        //     order_stream_hash covers ALL orders including all ChatMessage channels.
+        //     Per-recipient chat filtering (step c) happens AFTER hashing.
+        relay.order_stream_hasher.update(&tick_orders);
+
+        // c. Send per-recipient TickOrders to each client + observers.
+        //    Gameplay orders are identical for all recipients (lockstep invariant).
+        //    ChatMessage orders are per-recipient filtered by ChatChannel (D059):
+        //    Team → same-team only, Whisper → target only, Observer → observers only.
+        //    Chat filtering is safe because ChatMessage does not affect game state.
+        //    RelayCore produces the data; the embedding layer frames and sends it.
+        //    All relay→client messages use Frame::* envelopes so the client's
+        //    codec.decode_frame() receives a uniform stream.
+        for player in relay.players_and_observers() {
+            let filtered = relay.build_recipient_tick_orders(player, &tick_orders);
+            let frame = Frame::TickOrders(filtered);
+            transport.send_to(player, &codec.encode_frame(&frame));
+        }
 
         // d. Sync hashes arrive asynchronously — relay.receive_sync_hash() handles comparison
 
@@ -442,13 +542,14 @@ pub fn run_relay_session(relay: &mut RelayCore, transport: &mut RelayTransportLa
             }
             for player in relay.players() {
                 let fb = relay.compute_timing_feedback(player);
-                transport.send_to(player, &Frame::TimingFeedback(fb));
+                transport.send_to(player, &codec.encode_frame(&Frame::TimingFeedback(fb)));
             }
         }
 
         // f. Check termination (MatchOutcome from match-lifecycle.md)
         if let Some(outcome) = relay.check_match_end() {
-            relay.broadcast(Frame::MatchEnd(outcome));
+            transport.broadcast(&codec.encode_frame(&Frame::MatchEnd(outcome.clone())));
+            match_outcome = Some(outcome);
             break;
         }
 
@@ -456,8 +557,13 @@ pub fn run_relay_session(relay: &mut RelayCore, transport: &mut RelayTransportLa
     }
 
     // ── Phase 6: Post-game ──
-    // Broadcast CertifiedMatchResult (Ed25519-signed).
-    // 30-second post-game lobby for stats/chat.
+    // Broadcast CertifiedMatchResult (Ed25519-signed by relay).
+    // Clients' poll_tick() receives this frame and transitions
+    // NetworkStatus from MatchCompleted → PostGame(CertifiedMatchResult).
+    let outcome = match_outcome.expect("loop exits only via check_match_end");
+    let certified = relay.certify_match_result(&outcome);
+    transport.broadcast(&codec.encode_frame(&Frame::CertifiedMatchResult(certified)));
+    // 5-minute post-game lobby for stats/chat.
     // BackgroundReplayWriter finalizes and flushes .icrep file.
     // Connections close.
 }
@@ -480,7 +586,11 @@ pub fn run_client_match<T: Transport>(
     // 2. Respond to CalibrationPing → CalibrationPong during loading
     //    (handled by the pre-game connection layer)
 
-    // 3. Participate in seed commit-reveal
+    // 3. Participate in seed commit-reveal.
+    //    Reads directly from transport (pre-NetworkModel). The relay sends
+    //    Frame::GameSeed after collecting all SeedReveal messages.
+    //    This function decodes Frame::GameSeed via codec.decode_frame()
+    //    on the raw transport — the same codec the NetworkModel will use later.
     let seed = participate_in_seed_exchange(&mut transport, local_player);
 
     // 4. Construct NetworkModel over encrypted transport
@@ -500,12 +610,74 @@ pub fn run_client_match<T: Transport>(
 
     // 6. Frame loop — GameLoop::frame() handles the core cycle:
     //    drain input → submit_order() → poll_tick() → sim.apply_tick()
-    //    → report_sync_hash() → renderer.draw()
+    //    → report_sync_hash() → report_state_hash() (at signing cadence)
+    //    → renderer.draw()
     while game_loop.network.status() == NetworkStatus::Active {
         game_loop.frame();
     }
 
-    // 7. Post-game: display CertifiedMatchResult, save replay, return to menu
+    // 7. Post-game phase (match-lifecycle.md § Post-Game Flow).
+    //    MatchCompleted status breaks the frame loop above.
+    //    run_post_game() runs its own event loop that continues calling
+    //    network.poll_tick() to drain transport — this is how the
+    //    Frame::CertifiedMatchResult arrives and transitions the status
+    //    from MatchCompleted → PostGame(CertifiedMatchResult).
+    //    The post-game loop also renders the stats screen, processes
+    //    lobby chat (MessageLane::Chat), and handles user input
+    //    (leave / re-queue / view stats). Connection stays open for
+    //    up to 5 minutes (match-lifecycle.md § Post-Game Timeout).
+    if let NetworkStatus::MatchCompleted(_) | NetworkStatus::PostGame(_) = game_loop.network.status() {
+        run_post_game(&mut game_loop);  // blocks until user leaves or 5min timeout
+    }
+
+    // 8. Return to menu, save replay
+}
+
+/// Post-game event loop. Keeps pumping the network so late frames
+/// (CertifiedMatchResult, RatingUpdate, ChatNotification) arrive.
+/// Renders the stats screen, displays rating changes, shows chat.
+/// Exits on user action (leave / re-queue) or 5-minute timeout.
+///
+/// Takes the concrete RelayLockstepNetwork (not trait-generic) because
+/// post-game accessors (take_credentials, drain_chat, send_chat) are
+/// relay-specific — LocalNetwork and ReplayPlayback never produce these
+/// frames. The caller (run_client_match) already holds the concrete type.
+fn run_post_game<T: Transport, I: InputSource>(
+    game_loop: &mut GameLoop<RelayLockstepNetwork<T>, I>,
+) {
+    let deadline = Instant::now() + Duration::from_secs(300);
+    loop {
+        // Keep draining transport — CertifiedMatchResult, RatingUpdate,
+        // and ChatNotification arrive here. poll_tick() stores them in
+        // their respective fields and transitions status accordingly.
+        game_loop.network.poll_tick();
+
+        // Consume post-game credentials (rating SCR + match record SCR).
+        let credentials = game_loop.network.take_credentials();
+        // Consume post-game chat/system notifications.
+        let chat: Vec<_> = game_loop.network.drain_chat().collect();
+
+        // Render stats screen with concrete post-game data.
+        game_loop.renderer.draw_post_game(
+            &game_loop.network.status(),
+            &credentials,
+            &chat,
+        );
+
+        // Send outbound post-game chat if the user typed a message.
+        if let Some(msg) = game_loop.input.drain_chat_input() {
+            game_loop.network.send_chat(msg);
+        }
+
+        match game_loop.network.status() {
+            NetworkStatus::PostGame(_) | NetworkStatus::MatchCompleted(_) => {
+                if game_loop.input.wants_leave() || Instant::now() > deadline {
+                    break;
+                }
+            }
+            _ => break, // Disconnected or unexpected — exit immediately
+        }
+    }
 }
 ```
 
@@ -526,7 +698,7 @@ input.drain_orders()
                                   → sub-tick sort
                                   → filter chain
                                   → canonical TickOrders
-                              broadcast(TickOrders)
+                              send_to(per-recipient filtered)
         ◀── encrypted UDP ──  ─── encrypted UDP ──▶
       Transport.recv()                               Transport.recv()
     codec.decode_frame()                             codec.decode_frame()
@@ -537,5 +709,11 @@ sim.state_hash()                                     sim.state_hash()
         ─── encrypted UDP ──▶  receive_sync_hash()   ◀── encrypted UDP ───
                                 compare hashes
                                 (if mismatch → DesyncDetected)
+  (every N ticks: signing cadence)                   (every N ticks: signing cadence)
+  sim.full_state_hash()                              sim.full_state_hash()
+  → report_state_hash()                                → report_state_hash()
+        ─── encrypted UDP ──▶  receive_state_hash()  ◀── encrypted UDP ───
+                                store for TickSignature chain
+                                (replay signing + strong verification)
 renderer.draw()                                      renderer.draw()
 ```

@@ -85,13 +85,14 @@ The relay server periodically reports order arrival timing **back to each client
 /// Sent by the relay to each client after every N ticks (default: 30).
 /// Tells the client how its orders are arriving relative to the tick deadline.
 pub struct TimingFeedback {
-    pub avg_arrival_delta_us: i32,  // +N = arrived N μs before deadline, -N = late
-    pub late_count: u16,            // orders missed deadline in this window
-    pub jitter_us: u32,             // arrival time variance
+    pub early_us: i32,               // avg μs before deadline (0 if not early)
+    pub late_us: i32,                // avg μs after deadline (0 if not late)
+    pub recommended_offset_us: i32,  // relay's suggested adjustment
+    pub late_count: u16,             // orders missed deadline in this window
 }
 ```
 
-The client uses this feedback to adjust when it submits orders — if orders are consistently arriving just barely before the deadline, the client shifts submission earlier. If orders are arriving far too early (wasting buffer), the client can relax. This is a feedback loop that converges toward optimal submission timing without the relay needing to adjust global tick deadlines, reducing the number of late drops for marginal connections.
+The client uses this feedback to adjust when it submits orders — if `late_count > 0`, the client shifts submission earlier by up to `recommended_offset_us`. If `early_us` is large (orders arriving very early, wasting buffer), the client relaxes. This is a feedback loop that converges toward optimal submission timing without the relay needing to adjust global tick deadlines, reducing the number of late drops for marginal connections. See `system-wiring.md` § `RelayLockstepNetwork::apply_timing_feedback()` for the client-side consumption and `system-wiring.md` § `RelayCore::compute_timing_feedback()` for the relay-side computation.
 
 #### Match-Start Calibration
 

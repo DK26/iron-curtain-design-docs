@@ -37,11 +37,11 @@ Netcode parameters are **not** like graphics settings. Graphics preferences are 
 
 IC follows a three-tier exposure model:
 
-| Tier                         | Player-Facing Examples                                                                                                                     | Exposure                                                                    |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
-| **Tier 1: Lobby GUI**        | Game speed (Slowest–Fastest)                                                                                                               | One setting. The only parameter where player preference is legitimate.      |
-| **Tier 2: Console**          | `net.sync_frequency`, `net.show_diagnostics`, `net.desync_debug_level`, `net.simulate_latency/loss/jitter`                                 | Power users only. Flagged `DEV_ONLY` or `SERVER` in the cvar system (D058). |
-| **Tier 3: Engine constants** | Tick rate (30 tps), sub-tick ordering, adaptive run-ahead, timing feedback, stall policy (never stall), anti-lag-switch, visual prediction | Fixed. These are correct engineering solutions, not preferences.            |
+| Tier                         | Player-Facing Examples                                                                                                                                                               | Exposure                                                                    |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| **Tier 1: Lobby GUI**        | Game speed (Slowest–Fastest)                                                                                                                                                         | One setting. The only parameter where player preference is legitimate.      |
+| **Tier 2: Console**          | `net.sync_frequency`, `net.show_diagnostics`, `net.desync_debug_level`, `net.simulate_latency/loss/jitter`                                                                           | Power users only. Flagged `DEV_ONLY` or `SERVER` in the cvar system (D058). |
+| **Tier 3: Engine constants** | Tick rate (set by game speed preset; default Slower ≈15 tps), sub-tick ordering, adaptive run-ahead, timing feedback, stall policy (never stall), anti-lag-switch, visual prediction | Fixed. These are correct engineering solutions, not preferences.            |
 
 **Sub-tick ordering (D008) is always-on.** Cost: ~4 bytes per order + one sort of typically ≤5 items per tick. The mechanism is automatic, but the outcome is player-facing — who wins the engineer race, who grabs the contested crate, whose attack resolves first. These moments define close games. Making it optional would require two sim code paths, a deterministic fallback that's inherently unfair (player ID tiebreak), and a lobby setting nobody understands.
 

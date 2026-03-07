@@ -40,6 +40,7 @@
   - [Connection Establishment](netcode/connection-establishment.md)
   - [Tracking Servers & Backend](netcode/tracking-backend.md)
   - [Match Lifecycle](netcode/match-lifecycle.md)
+    - [Vote Framework](netcode/vote-framework.md)
   - [Multi-Player Scaling](netcode/multiplayer-scaling.md)
   - [System Wiring](netcode/system-wiring.md)
 - [Modding System](04-MODDING.md)

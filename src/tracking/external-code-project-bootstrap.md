@@ -252,7 +252,7 @@ The GitHub template repository (`iron-curtain/ic-template`) is considered comple
 - a new engine repo created via "Use this template" has passing CI on first push
 - the template `AGENTS.md` pins a design-doc revision and references the design-docs repo as canonical authority
 - `cargo deny check licenses` **permits** GPL dependencies in the template scaffold (IC engine is GPL v3)
-- non-engine repos follow the appropriate generic template and fill in repo-specific placeholders
+- generic non-engine templates (`external-project-agents-template.md`, `source-code-index-template.md`) exist, have complete placeholder instructions, and can produce a valid `AGENTS.md` + `CODE-INDEX.md` when filled in
 - `.github/copilot-instructions.md` chains to `AGENTS.md` for agent alignment
 
 ## Execution Overlay Mapping

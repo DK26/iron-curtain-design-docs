@@ -33,15 +33,16 @@
 The simulation and renderer are completely decoupled from day one.
 
 ```
-┌─────────────────────────────────────────────┐
-│             GameLoop<N, I>                  │
-│                                             │
-│  Input(I) → Network(N) → Sim (tick) → Render│
-│                                             │
-│  Sim runs at fixed 30 tps (D060)            │
-│  Renderer interpolates between sim states   │
-│  Renderer can run at any FPS independently  │
-└─────────────────────────────────────────────┘
+┌───────────────────────────────────────────────┐
+│               GameLoop<N, I>                  │
+│                                               │
+│  Input(I) → Network(N) → Sim (tick) → Render  │
+│                                               │
+│  Tick rate set by game speed preset (D060)    │
+│  Default: Slower ≈15 tps, Normal ≈20 tps      │
+│  Renderer interpolates between sim states     │
+│  Renderer can run at any FPS independently    │
+└───────────────────────────────────────────────┘
 ```
 
 ### Simulation Properties
@@ -66,7 +67,7 @@ use ic_sim::{Simulation, SimConfig};
 use ic_protocol::{PlayerOrder, TimestampedOrder};
 
 // Create a headless game
-let config = SimConfig::from_yaml("rules.yaml")?;
+let config = SimConfig::from_yaml_bytes(&yaml_bytes)?;
 let mut sim = Simulation::new(config, map, players, seed);
 
 // Game loop: inject orders, step, read state
@@ -120,25 +121,32 @@ pub struct CellPos {
 /// The sim is a pure function: state + orders → new state
 pub struct Simulation {
     world: World,          // ECS world (all entities + components)
-    tick: u64,             // Current tick number
+    tick: SimTick,         // Current tick number (newtype over u64 — see type-safety.md)
     rng: DeterministicRng, // Seeded, reproducible RNG
 }
 
 impl Simulation {
     /// THE critical function. Pure, deterministic, no I/O.
     pub fn apply_tick(&mut self, orders: &TickOrders) {
-        // 1. Apply orders (sorted by sub-tick timestamp)
-        for (player, order, timestamp) in orders.chronological() {
-            self.execute_order(player, order);
-        }
-        // 2. Run systems: movement, combat, harvesting, AI, production
-        self.run_systems();
+        // 0. Swap double buffers (fog, influence maps — see Double Buffering below)
+        self.swap_double_buffers();
+        // 1. Validate all orders via OrderValidator (D041/D012 — anti-cheat)
+        let validated = self.validate_orders(orders);
+        // 2. Run the game module's system pipeline (step 1 = apply_orders,
+        //    step 2+ = movement, combat, harvesting, etc.)
+        //    Orders are sorted by sub-tick timestamp within apply_orders().
+        self.run_systems(&validated);
         // 3. Advance tick
         self.tick += 1;
     }
 
     /// Snapshot for rollback / desync debugging / save games.
-    /// Returns a SimSnapshot (in-memory serialized state). Pure — no I/O.
+    /// Returns the sim-internal portion of a SimSnapshot (ECS entities,
+    /// player states, map, RNG, intern table). Pure — no I/O.
+    /// The full SimSnapshot (including script_state and campaign_state)
+    /// is composed by `ic-game`, which collects script state from
+    /// `ic-script` and attaches it before persisting. This preserves
+    /// the crate boundary: `ic-sim` never imports `ic-script`.
     /// Callers (in ic-game) persist snapshots using crash-safe I/O:
     /// payload written first, header updated atomically after fsync
     /// (Fossilize pattern — see D010 and state-recording.md).
@@ -156,8 +164,14 @@ impl Simulation {
         /* merge delta into current state */
     }
 
-    /// Hash for desync detection
-    pub fn state_hash(&self) -> u64 { /* hash critical state */ }
+    /// Fast hash for per-tick desync detection (SyncHash newtype — see type-safety.md)
+    pub fn state_hash(&self) -> SyncHash { /* hash critical state */ }
+
+    /// Full SHA-256 state hash for replay signing and snapshot verification
+    /// (StateHash newtype — see type-safety.md). Cold path — called at signing
+    /// cadence (every N ticks), not every tick. Returns the full Merkle root
+    /// before u64 truncation.
+    pub fn full_state_hash(&self) -> StateHash { /* SHA-256 Merkle root */ }
 
     /// Surgical correction for cross-engine reconciliation
     pub fn apply_correction(&mut self, correction: &EntityCorrection) {

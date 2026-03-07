@@ -157,7 +157,7 @@ iron-curtain/                       # Cargo workspace root
 │   │       ├── local.rs            #   LocalNetwork (testing, single-player)
 │   │       ├── relay_core.rs       #   RelayCore library (D007)
 │   │       └── bin/
-│   │           └── relay.rs        #   relay-server binary entry point
+│   │           └── server.rs       #   ic-server binary entry point
 │   ├── ic-render/                  # Isometric rendering (Bevy plugin)
 │   ├── ic-ui/                      # Game chrome, sidebar, minimap
 │   ├── ic-audio/                   # Sound, music, EVA, VoIP
@@ -309,12 +309,12 @@ IC needs original art for editor chrome, UI menus, and visual tooling. These are
 
 **Fonts (for UI text, editor panels, console):**
 
-| Font                                                 | License | Notes                                                           |
-| ---------------------------------------------------- | ------- | --------------------------------------------------------------- |
-| [Inter](https://rsms.me/inter/)                      | OFL 1.1 | Optimized for screens. Excellent for UI text at all sizes       |
-| [JetBrains Mono](https://www.jetbrains.com/lp/mono/) | OFL 1.1 | Monospace. Ideal for console, YAML editor, debug overlays       |
+| Font                                                 | License | Notes                                                                                        |
+| ---------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------- |
+| [Inter](https://rsms.me/inter/)                      | OFL 1.1 | Optimized for screens. Excellent for UI text at all sizes                                    |
+| [JetBrains Mono](https://www.jetbrains.com/lp/mono/) | OFL 1.1 | Monospace. Ideal for console, YAML editor, debug overlays                                    |
 | [Noto Sans](https://fonts.google.com/noto)           | OFL 1.1 | Broad Unicode coverage. Strong fallback-family backbone for localization (including RTL/CJK) |
-| [Fira Code](https://github.com/tonsky/FiraCode)      | OFL 1.1 | Monospace with ligatures. Alternative to JetBrains Mono         |
+| [Fira Code](https://github.com/tonsky/FiraCode)      | OFL 1.1 | Monospace with ligatures. Alternative to JetBrains Mono                                      |
 
 **Smart font support note (localization/RTL):**
 
@@ -324,8 +324,8 @@ IC needs original art for editor chrome, UI menus, and visual tooling. These are
 
 **UI framework:**
 
-- **egui** (MIT) — the editor's panel/widget framework. Ships with Bevy via `bevy_egui`. Provides buttons, sliders, text inputs, dropdown menus, tree views, docking, color pickers — all rendered procedurally with no external art needed. Handles 95% of SDK chrome requirements.
-- **Bevy UI** — the game client's UI framework. Used for in-game chrome (sidebar, minimap, build queue) with IC-original sprite sheets styled per theme (D032).
+- **egui** (MIT) — the editor's panel/widget framework, and the game client's developer overlays (D058 console, D031 debug overlay — gated behind `dev-tools` feature flag, absent from release builds). Ships with Bevy via `bevy_egui`. Provides buttons, sliders, text inputs, dropdown menus, tree views, docking, color pickers — all rendered procedurally with no external art needed. Handles 95% of SDK chrome requirements.
+- **Bevy UI** — the game client's player-facing UI framework. Used for in-game chrome (sidebar, minimap, build queue) with IC-original sprite sheets styled per theme (D032). Player-facing game UI uses `bevy_ui` exclusively.
 
 **Game content (sprites, terrain, audio, cutscenes):**
 

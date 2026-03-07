@@ -126,7 +126,7 @@ pub enum SkillConfidence {
 
 #### Storage: SQLite (D034)
 
-Skills are stored in SQLite — same embedded database as all other IC persistent state. No external vector database required.
+Skills are stored in `gameplay.db` (D034) — co-located with gameplay events and player profiles to keep all AI/LLM-consumed data queryable in one file. No external vector database required.
 
 ```sql
 CREATE TABLE skills (

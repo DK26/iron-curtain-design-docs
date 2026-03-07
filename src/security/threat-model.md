@@ -14,8 +14,8 @@ In deterministic lockstep, every client runs the full simulation. Every player h
 | Order injection       | Server rejects          | Server rejects           |
 | Order forgery         | Server stamps + sigs    | Server stamps + sigs     |
 | Lag switch            | **BLOCKED** ✓           | **BLOCKED** ✓            |
-| Eavesdropping         | TLS encrypted           | TLS encrypted            |
-| Packet forgery        | TLS rejects             | TLS rejects              |
+| Eavesdropping         | AEAD encrypted          | AEAD encrypted           |
+| Packet forgery        | AEAD rejects            | AEAD rejects             |
 | Protocol DoS          | Relay absorbs + limits  | Server absorbs + limits  |
 | State saturation      | Rate caps ✓             | Rate caps ✓              |
 | Desync exploit        | Server-only analysis    | N/A                      |
@@ -65,15 +65,20 @@ pub struct PartitionedWorld {
 
 Server runs full sim, sends each client only entities they can see. Breaks pure lockstep. Requires server compute per game.
 
+**Client architecture change:** FogAuth clients do not run the full deterministic sim — they maintain a partial world and consume server-sent entity state deltas via a reconciler. This requires a client-side game loop variant beyond the lockstep `GameLoop<N, I>` (see `architecture/game-loop.md`). The `NetworkModel` trait boundary is preserved, but the client loop that drives it differs. See `research/fog-authoritative-server-design.md` § 7 (client reconciler) and § 9 (trait implementation) for the full design. Implementation milestone: `M11` (`P-Optional`).
+
 ```rust
-pub struct FogAuthoritativeNetwork {
-    known_entities: HashSet<EntityId>,
+// Simplified sketch — full implementation in research/fog-authoritative-server-design.md § 9
+pub struct FogAuthClientNetwork {
+    outgoing_orders: VecDeque<TimestampedOrder>,
+    incoming_updates: VecDeque<FogAuthTickData>,
 }
-impl NetworkModel for FogAuthoritativeNetwork {
+impl NetworkModel for FogAuthClientNetwork {
     fn poll_tick(&mut self) -> Option<TickOrders> {
-        // Returns orders AND visibility deltas:
-        // "Entity 47 entered your vision at (30, 8)"
-        // "Entity 23 left your vision"
+        // Returns mostly-empty TickOrders; entity state deltas are
+        // side-channeled to the reconciler (not through TickOrders).
+        // The lockstep GameLoop's sim.apply_tick() is NOT called —
+        // a FogAuthGameLoop variant drives the reconciler instead.
     }
 }
 ```

@@ -61,14 +61,14 @@ All player data lives under a single, stable, documented directory. The layout i
 
 **Platform-specific `<data_dir>` resolution:**
 
-| Platform       | Default Location                                                         |
-| -------------- | ------------------------------------------------------------------------ |
-| Windows        | `%APPDATA%\IronCurtain\`                                                 |
-| macOS          | `~/Library/Application Support/IronCurtain/`                             |
-| Linux          | `$XDG_DATA_HOME/iron-curtain/` (default: `~/.local/share/iron-curtain/`) |
-| Steam Deck     | Same as Linux                                                            |
-| Browser (WASM) | OPFS virtual filesystem (see `05-FORMATS.md` § Browser Storage)          |
-| Mobile         | App sandbox (platform-managed)                                           |
+| Platform       | Default Location                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------------------ |
+| Windows        | `%APPDATA%\IronCurtain\`                                                                         |
+| macOS          | `~/Library/Application Support/IronCurtain/`                                                     |
+| Linux          | `$XDG_DATA_HOME/iron-curtain/` (default: `~/.local/share/iron-curtain/`)                         |
+| Steam Deck     | Same as Linux                                                                                    |
+| Browser (WASM) | OPFS virtual filesystem (see `05-FORMATS.md` § Browser Storage)                                  |
+| Mobile         | App sandbox (platform-managed)                                                                   |
 | Portable mode  | `<exe_dir>/data/` (activated by `IC_PORTABLE=1`, `--portable`, or `portable.marker` next to exe) |
 
 **Override:** `IC_DATA_DIR` environment variable or `--data-dir` CLI flag overrides the default. Portable mode (`IC_PORTABLE=1`, `--portable` flag, or `portable.marker` file next to the executable) resolves all paths relative to the executable via the [`app-path`](https://github.com/DK26/app-path-rs) crate — useful for USB-stick deployments, Steam Deck SD cards, and self-contained distributions. All path resolution is centralized in the `ic-paths` crate (see `02-ARCHITECTURE.md` § Crate Design Notes).
@@ -99,20 +99,20 @@ ic backup verify ic-backup-2027-03-15.zip     # Verify archive integrity without
 
 **Backup categories for `--exclude` and `--only`:**
 
-| Category       | Contents                       | Typical Size   | Critical?                                      |
-| -------------- | ------------------------------ | -------------- | ---------------------------------------------- |
-| `keys`         | `keys/identity.key`            | < 1 KB         | **Yes** — recoverable via mnemonic seed phrase |
-| `profile`      | `profile.db`                   | < 1 MB         | **Yes** — friends, settings, avatar            |
-| `communities`  | `communities/*.db`             | 1–10 MB        | **Yes** — ratings, match history (SCRs)        |
-| `achievements` | `achievements.db`              | < 1 MB         | **Yes** — SCR-backed achievement proofs        |
-| `config`       | `config.toml`                  | < 100 KB       | Medium — preferences, easily recreated         |
-| `saves`        | `saves/*.icsave`               | 10–100 MB      | High — campaign progress, in-progress games    |
-| `replays`      | `replays/*.icrep`              | 100 MB – 10 GB | Low — sentimental, not functional              |
-| `screenshots`  | `screenshots/*.png`            | 10 MB – 5 GB   | Low — sentimental, not functional              |
-| `workshop`     | `workshop/` (cache + packages) | 100 MB – 50 GB | None — re-downloadable                         |
-| `gameplay`     | `gameplay.db`                  | 10–100 MB      | Medium — event log, catalogs (rebuildable)     |
-| `mods`         | `mods/`                        | Variable       | Low — re-downloadable or re-installable        |
-| `maps`         | `maps/`                        | Variable       | Low — re-downloadable                          |
+| Category       | Contents                       | Typical Size   | Critical?                                                    |
+| -------------- | ------------------------------ | -------------- | ------------------------------------------------------------ |
+| `keys`         | `keys/identity.key`            | < 1 KB         | **Yes** — recoverable via mnemonic seed phrase               |
+| `profile`      | `profile.db`                   | < 1 MB         | **Yes** — friends, settings, avatar                          |
+| `communities`  | `communities/*.db`             | 1–10 MB        | **Yes** — ratings, match history (SCRs)                      |
+| `achievements` | `achievements.db`              | < 1 MB         | **Yes** — local achievement progress and unlock state (D036) |
+| `config`       | `config.toml`                  | < 100 KB       | Medium — preferences, easily recreated                       |
+| `saves`        | `saves/*.icsave`               | 10–100 MB      | High — campaign progress, in-progress games                  |
+| `replays`      | `replays/*.icrep`              | 100 MB – 10 GB | Low — sentimental, not functional                            |
+| `screenshots`  | `screenshots/*.png`            | 10 MB – 5 GB   | Low — sentimental, not functional                            |
+| `workshop`     | `workshop/` (cache + packages) | 100 MB – 50 GB | None — re-downloadable                                       |
+| `gameplay`     | `gameplay.db`                  | 10–100 MB      | Medium — event log, catalogs (rebuildable)                   |
+| `mods`         | `mods/`                        | Variable       | Low — re-downloadable or re-installable                      |
+| `maps`         | `maps/`                        | Variable       | Low — re-downloadable                                        |
 
 **Default `ic backup create`** includes: `keys`, `profile`, `communities`, `achievements`, `config`, `saves`, `replays`, `screenshots`, `gameplay`. Excludes `workshop`, `mods`, `maps` (re-downloadable). Total size for a typical player: 200 MB – 2 GB.
 
@@ -334,7 +334,7 @@ The BIP-39 mnemonic pattern has been used since 2013 by Bitcoin, Ethereum, and e
 
 ## Sub-Pages
 
-| Section | Topic | File |
-| --- | --- | --- |
-| Player Experience | First launch (new/existing player), automatic behaviors, Settings data panel, screenshot gallery, identity recovery, console commands | [D061-player-experience.md](D061/D061-player-experience.md) |
-| Resilience & Integration | Resilience philosophy (hackable but unbreakable), alternatives considered, integration with existing decisions, phase | [D061-resilience.md](D061/D061-resilience.md) |
+| Section                  | Topic                                                                                                                                 | File                                                        |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Player Experience        | First launch (new/existing player), automatic behaviors, Settings data panel, screenshot gallery, identity recovery, console commands | [D061-player-experience.md](D061/D061-player-experience.md) |
+| Resilience & Integration | Resilience philosophy (hackable but unbreakable), alternatives considered, integration with existing decisions, phase                 | [D061-resilience.md](D061/D061-resilience.md)               |

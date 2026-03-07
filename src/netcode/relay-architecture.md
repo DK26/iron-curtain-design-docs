@@ -16,8 +16,12 @@ Every tick:
 1. The relay receives timestamped orders from all players
 2. Validates/normalizes client timestamp hints into canonical sub-tick timestamps (relay-owned timing calibration + skew bounds)
 3. Orders them chronologically within the tick (CS2 insight — see below)
-4. Broadcasts the canonical `TickOrders` to all clients
+4. Builds per-recipient `TickOrders` and sends to each client
 5. All clients run the identical deterministic sim on those orders
+
+**Per-recipient TickOrders:** All gameplay orders (Move, Attack, Build, etc.) are identical in every client's `TickOrders` — this is required for deterministic lockstep. However, `ChatMessage` orders are per-recipient filtered based on `ChatChannel` (D059): Team chat goes only to same-team clients, Whisper goes only to the target, Observer chat goes only to observers. This is safe because `ChatMessage` orders do not affect game state — the sim records them for replay but makes no state-changing decisions based on chat. Sync hashes cover game state only, so per-recipient chat filtering never causes desync.
+
+**Certification hash ordering:** The relay computes `order_stream_hash` (V13) over the full *pre-filtering* canonical order stream — including all ChatMessage orders for all channels. Per-recipient filtering happens *after* hashing. This gives a single deterministic hash that the relay signs. Clients cannot independently recompute this hash (they only see their filtered subset), but they can verify the relay's signature. See `decisions/09g/D059/D059-overview-text-chat-voip-core.md` § Channel Routing for the full forwarding table.
 
 The relay also:
 - Detects lag switches and cheating attempts (see anti-lag-switch below)
@@ -60,8 +64,22 @@ pub struct RelayCore {
 
 impl RelayCore {
     /// Feed an incoming order packet. Called by the network layer.
+    /// The caller (relay binary or embedded relay) verifies the Ed25519
+    /// session signature (AuthenticatedOrder) before calling this method.
+    /// Signature-invalid orders are dropped and logged. See
+    /// vulns-protocol.md § Vulnerability 16 for the signing scheme.
     pub fn receive_order(&mut self, player: PlayerId, order: TimestampedOrder) { ... }
     
+    /// Receive a per-tick SyncHash from a client. Compared against other
+    /// clients' hashes — mismatch triggers DesyncDetected.
+    pub fn receive_sync_hash(&mut self, player: PlayerId, tick: SimTick, hash: SyncHash) { ... }
+
+    /// Receive a full StateHash at signing cadence (every N ticks).
+    /// Stored for the replay TickSignature chain and strong verification.
+    /// See wire-format.md § Frame::StateHash and save-replay-formats.md
+    /// § Signature Chain.
+    pub fn receive_state_hash(&mut self, player: PlayerId, tick: SimTick, hash: StateHash) { ... }
+
     /// Produce the canonical TickOrders for this tick.
     /// Sub-tick sorts, runs filter chain, advances tick counter.
     pub fn finalize_tick(&mut self) -> TickOrders { ... }
@@ -102,45 +120,50 @@ pub struct InLobby;
 pub struct InGame;
 
 /// A network connection whose valid operations are determined by its state `S`.
-/// `PhantomData<S>` is zero-sized — no runtime cost.
-pub struct Connection<S> {
-    stream: TcpStream,
+/// Generic over `Transport` (D054) — works with UdpTransport, WebSocketTransport,
+/// MemoryTransport, etc. `PhantomData<S>` is zero-sized — no runtime cost.
+pub struct Connection<S, T: Transport> {
+    transport: T,
     player_id: Option<PlayerId>,
     _state: PhantomData<S>,
 }
 
-impl Connection<Connecting> {
+impl<T: Transport> Connection<Connecting, T> {
     /// Verify credentials. Consumes the Connecting connection,
     /// returns an Authenticated one. Can't be called twice.
-    pub fn authenticate(self, cred: &Credential) -> Result<Connection<Authenticated>, AuthError> {
+    pub fn authenticate(self, cred: &Credential) -> Result<Connection<Authenticated, T>, AuthError> {
         // ... verify Ed25519 signature (D052), assign PlayerId
     }
     // send_order() doesn't exist here — won't compile.
 }
 
-impl Connection<Authenticated> {
+impl<T: Transport> Connection<Authenticated, T> {
     /// Join a game lobby. Consumes Authenticated, returns InLobby.
-    pub fn join_lobby(self, room: RoomId) -> Result<Connection<InLobby>, LobbyError> {
+    pub fn join_lobby(self, room: RoomId) -> Result<Connection<InLobby, T>, LobbyError> {
         // ... register with lobby, send player list
     }
 }
 
-impl Connection<InLobby> {
+impl<T: Transport> Connection<InLobby, T> {
     /// Transition to in-game when the lobby starts.
-    pub fn start_game(self, game_id: GameId) -> Connection<InGame> {
+    pub fn start_game(self, game_id: GameId) -> Connection<InGame, T> {
         // ... initialize per-connection game state
     }
 
+    /// Send lobby chat (out-of-band, on MessageLane::Chat).
+    /// In-match chat flows as PlayerOrder::ChatMessage through send_order()
+    /// on Connection<InGame> — see D059.
     pub fn send_chat(&self, msg: &ChatMessage) { /* ... */ }
     // send_order() doesn't exist here — won't compile.
 }
 
-impl Connection<InGame> {
+impl<T: Transport> Connection<InGame, T> {
     /// Submit a game order. Only available during gameplay.
+    /// In-match chat is a PlayerOrder::ChatMessage — use this method.
     pub fn send_order(&self, order: &TimestampedOrder) { /* ... */ }
 
     /// Return to lobby after match ends.
-    pub fn end_game(self) -> Connection<InLobby> {
+    pub fn end_game(self) -> Connection<InLobby, T> {
         // ... cleanup per-connection game state
     }
 }

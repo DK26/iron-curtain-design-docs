@@ -64,7 +64,7 @@ This check runs on every request, not just at capability review time.
 
 If the background writer thread falls behind (disk I/O spike, system memory pressure, antivirus scan), frames are silently lost. The consequences:
 
-1. **Broken signature chain:** The Ed25519 per-order signing (V4) creates a hash chain where each frame's signature depends on the previous frame's hash. A gap in the frame sequence invalidates the chain — the replay appears complete but fails cryptographic verification.
+1. **Broken signature chain:** The relay-signed tick hash chain (`TickSignature` in `formats/save-replay-formats.md`) links each tick's signature to the previous tick's hash. A gap in the frame sequence breaks the chain — the replay appears complete but fails cryptographic verification.
 
 2. **Silent data loss:** No log message, no metric, no metadata flag indicates frames were lost. The replay file looks valid but is missing data.
 
@@ -76,7 +76,7 @@ If the background writer thread falls behind (disk I/O spike, system memory pres
 
 **`send_timeout` instead of `try_send`:** Replace `try_send` with `send_timeout(frame, Duration::from_millis(5))`. This gives the writer a brief window to drain the channel during I/O spikes without blocking the sim thread for perceptible time. 5 ms is well within a 33 ms tick budget.
 
-**Incomplete replay marking:** If any frames are lost, the replay header's `INCOMPLETE` flag (bit 4) is set and `lost_frame_count` records the total. Incomplete replays are playable (the sim handles frame gaps by using the last known state) but cannot be submitted for ranked verification or used as evidence in anti-cheat disputes.
+**Incomplete replay marking:** If any frames are lost, the replay header's `INCOMPLETE` flag (bit 4) is set and `lost_frame_count` records the total. Incomplete replays are playable up to the last recorded frame — playback simply ends early when the order stream is exhausted. They cannot be submitted for ranked verification or used as evidence in anti-cheat disputes.
 
 **Signature chain gap handling:** The hash chain must account for frame gaps explicitly. Each `TickSignature` carries a `skipped_ticks: u32` field (0 when contiguous). When frames are lost, the next signature includes the gap count: `hash(prev_sig_hash, skipped_ticks, tick, state_hash)`. The relay co-signs `(skipped_ticks, tick, state_hash, prev_sig_hash)`. Verifiers reconstruct the chain by incorporating `skipped_ticks` into the hash — gaps are accounted for rather than treated as tampering. See `formats/save-replay-formats.md` § TickSignature for the schema.
 

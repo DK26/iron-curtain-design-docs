@@ -1,8 +1,8 @@
-﻿# Tera Templating (Phase 6a)
+﻿# Tera Templating
 
 ### Tera as the Template Engine
 
-Tera is a Rust-native Jinja2-compatible template engine. **All first-party IC content uses it** — the default Red Alert campaign, built-in resource packs, and balance presets are all Tera-templated. This means the system is proven by the content that ships with the engine, not just an abstract capability.
+Tera is a Rust-native Jinja2-compatible template engine. **All first-party IC content uses it** — the default Red Alert campaign, built-in resource packs, and balance presets are all Tera-templated. This means the system is proven by the content that ships with the engine, not just an abstract capability. Core Tera integration (load-time `.yaml.tera` processing) ships in Phase 2–3 alongside the first-party content that depends on it. Advanced templating features (Workshop template distribution, in-game parameter editing UI, migration tooling) ship in Phase 6a.
 
 For **third-party content creators, Tera is entirely optional.** Plain YAML is always valid and is the recommended starting point. Most community mods, resource packs, and maps work fine without any templating at all. Tera is there when you need it — not forced on you.
 

@@ -11,10 +11,13 @@ Every domain identifier uses a newtype wrapper. Bare `u32`, `u64`, or `usize` va
 pub struct PlayerId(u32);
 pub struct SlotIndex(u8);
 pub struct AccountId(u64);
-pub struct UnitId(Entity);     // wraps Bevy Entity
-pub struct BuildingId(Entity);
-pub struct ProjectileId(Entity);
+pub struct UnitId(Entity);     // wraps Bevy Entity — ECS-INTERNAL ONLY
+pub struct BuildingId(Entity); // wraps Bevy Entity — ECS-INTERNAL ONLY
+pub struct ProjectileId(Entity); // wraps Bevy Entity — ECS-INTERNAL ONLY
 pub struct SimTick(u64);
+// NOTE: UnitId/BuildingId/ProjectileId are for ECS queries within ic-sim.
+// For serialized contexts (orders, replays, Lua, network), use UnitTag —
+// the stable generational identity. See 02-ARCHITECTURE.md § External Entity Identity.
 
 // WRONG — bare integers allow passing a PlayerId where a SlotIndex is expected
 fn apply_order(player: u32, slot: u32, tick: u64) { ... }

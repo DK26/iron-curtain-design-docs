@@ -8,8 +8,8 @@ Desyncs are the hardest problem in lockstep netcode. OpenRA has 135+ desync issu
 
 Every tick, each client hashes their sim state. But a full `state_hash()` over the entire ECS world is expensive. We use a two-tier approach (validated by both OpenTTD and 0 A.D.):
 
-- **Primary: RNG state comparison.** Every sync frame, clients exchange their deterministic RNG seed. If the RNG diverges, the sim has diverged — this catches ~99% of desyncs at near-zero cost. The RNG is advanced by every stochastic sim operation (combat rolls, scatter patterns, AI decisions), so any state divergence quickly contaminates it.
-- **Fallback: Full state hash.** Periodically (every N ticks, configurable — default 120, ~4 seconds at 30 tps) or when RNG drift is detected, compute and compare a full `state_hash()`. This catches the rare case where a desync affects only deterministic state that doesn't touch the RNG.
+- **Primary: Fast sync hash (`SyncHash`, per tick).** Every sync frame, clients submit a `SyncHash(u64)` — the Merkle root truncated to 64 bits (see `type-safety.md`). Because the deterministic RNG state is included in the Merkle tree, any RNG divergence contaminates the root — this catches ~99% of desyncs at near-zero cost per tick. The RNG is advanced by every stochastic sim operation (combat rolls, scatter patterns, AI decisions), so state divergence quickly propagates.
+- **Fallback: Full state hash (`StateHash`, periodic).** Every N ticks (configurable — default 30, ~1 second at 30 tps), clients also submit a `StateHash([u8; 32])` — the full SHA-256 Merkle root. This provides collision-resistant verification and doubles as the input for the relay's replay `TickSignature` chain (see `formats/save-replay-formats.md`). The higher cadence versus the old 120-tick default reflects the dual use: desync fallback AND replay signing.
 
 The relay authority compares hashes. On mismatch → desync detected at a specific tick. Because the sim is snapshottable (D010), dump full state and diff to pinpoint exact divergence — entity by entity, component by component.
 

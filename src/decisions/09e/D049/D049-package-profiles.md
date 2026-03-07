@@ -75,7 +75,7 @@ workshop/
         └── manifest.yaml
 ```
 
-The local CAS store is an optimization that ships alongside the full Workshop in Phase 6a. The initial Workshop (Phase 4–5) can use simpler `.icpkg`-on-disk storage and upgrade to CAS when the full Workshop matures — the manifest.yaml already contains per-file SHA-256 hashes, so the data model is forward-compatible.
+The local CAS blob store (deduplicating `workshop/blobs/` directory, `cache.db`, garbage collection) is an optimization that ships alongside the full Workshop in Phase 6a. The initial Workshop (Phase 4–5) can use simpler `.icpkg`-on-disk storage and upgrade to CAS when the full Workshop matures — the manifest.yaml already contains per-file SHA-256 hashes, so the data model is forward-compatible. Note: content-addressed *identification* (SHA-256 hashing for file identity) is used earlier — D062's `VirtualNamespace` maps logical paths to content-addressed files from Phase 2, but these are resolved from source mod directories on disk, not from a deduplicating blob store. The CAS blob store is the storage optimization; content addressing as a concept is foundational.
 
 ### Workshop Player Configuration Profiles (Controls / Accessibility / HUD Presets)
 

@@ -10,13 +10,35 @@ The netcode described above is expressed as a trait because it gives us testabil
 The product still ships one recommended/default multiplayer path; the trait exists so changing the path under a deferred milestone does not require touching `ic-sim` or the game loop.
 
 ```rust
+/// Connection/sync status reported by NetworkModel implementations.
+/// MatchOutcome is defined in match-lifecycle.md.
+pub enum NetworkStatus {
+    Active,
+    DesyncDetected(SimTick),
+    /// Relay sent MatchEnd — match is over, entering post-game phase.
+    /// Transitions to PostGame after the client receives CertifiedMatchResult.
+    MatchCompleted(MatchOutcome),
+    /// Post-game lobby: stats screen, chat active, replay saving.
+    /// Carries the full relay-signed certificate (match ID, hashes, players,
+    /// duration, signature) for stats display and ranked submission.
+    /// The network remains connected for up to 5 minutes (match-lifecycle.md).
+    /// Client exits this state on user action (leave/re-queue) or timeout.
+    PostGame(CertifiedMatchResult),
+    Disconnected,
+}
+
 pub trait NetworkModel: Send + Sync {
     /// Local player submits an order
     fn submit_order(&mut self, order: TimestampedOrder);
     /// Poll for the next tick's confirmed orders (None = not ready yet)
     fn poll_tick(&mut self) -> Option<TickOrders>;
-    /// Report local fast sync hash (`u64`) for desync detection
-    fn report_sync_hash(&mut self, tick: u64, hash: u64);
+    /// Report local fast sync hash for desync detection.
+    /// `SimTick` and `SyncHash` are newtypes (see `type-safety.md`).
+    fn report_sync_hash(&mut self, tick: SimTick, hash: SyncHash);
+    /// Report full SHA-256 state hash at signing cadence (every N ticks,
+    /// not every tick). The relay uses this for replay `TickSignature`
+    /// entries. See `type-safety.md` § Hash Type Distinction.
+    fn report_state_hash(&mut self, tick: SimTick, hash: StateHash);
     /// Connection/sync status
     fn status(&self) -> NetworkStatus;
     /// Diagnostic info (latency, packet loss, etc.)
@@ -79,7 +101,7 @@ impl<B: ProtocolBridge> NetworkModel for NetcodeBridgeModel<B> {
         self.inbound_ticks.pop_front()
     }
 
-    fn report_sync_hash(&mut self, tick: u64, hash: u64) {
+    fn report_sync_hash(&mut self, tick: SimTick, hash: SyncHash) {
         self.bridge.report_ic_sync_hash(tick, hash);
     }
 
@@ -120,10 +142,12 @@ impl NetworkModel for LocalNetwork {
     
     fn poll_tick(&mut self) -> Option<TickOrders> {
         // Accumulator-based: tracks how much real time has elapsed and
-        // emits one tick per TICK_DURATION of accumulated time. This
-        // preserves the fixed 30 tps rate independent of frame rate —
-        // if a frame arrives late, multiple ticks are available on the
-        // next calls (bounded by GameLoop's MAX_TICKS_PER_FRAME cap).
+        // emits one tick per TICK_DURATION of accumulated time. TICK_DURATION
+        // is set by the game speed preset (67ms at Slower default, 33ms at
+        // Normal, 20ms at Fastest). This preserves a stable scheduling rate
+        // independent of frame rate — if a frame arrives late, multiple
+        // ticks are available on the next calls (bounded by GameLoop's
+        // MAX_TICKS_PER_FRAME cap).
         let now = Instant::now();
         let elapsed = now - self.last_poll_time;
         if elapsed < TICK_DURATION {
@@ -141,7 +165,7 @@ impl NetworkModel for LocalNetwork {
 }
 ```
 
-At 30 tps, a click-to-move in single player is confirmed within ~33 ms — imperceptible to humans (reaction time is ~200 ms). The accumulator pattern (`last_poll_time += TICK_DURATION` instead of `= now + TICK_DURATION`) ensures the sim maintains exactly 30 tps regardless of frame rate — missed time is caught up via multiple ticks per frame, bounded by `GameLoop`'s `MAX_TICKS_PER_FRAME` cap. Combined with visual prediction, the game feels **instant**.
+At Normal speed (~20 tps, 50ms interval), a click-to-move in single player is confirmed within ~50 ms — imperceptible to humans (reaction time is ~200 ms). At the Slower default (~15 tps, 67ms), it's still under 70 ms. The accumulator pattern (`last_poll_time += TICK_DURATION` instead of `= now + TICK_DURATION`) ensures the sim maintains the target tick rate regardless of frame rate — missed time is caught up via multiple ticks per frame, bounded by `GameLoop`'s `MAX_TICKS_PER_FRAME` cap. Combined with visual prediction, the game feels **instant**.
 
 ### Replay Playback
 
@@ -176,7 +200,8 @@ impl BackgroundReplayWriter {
     /// (send_timeout) — bounded latency, not lock-free.
     pub fn record_tick(&self, frame: ReplayTickFrame) {
         // crossbeam bounded channel sized for ~10 seconds of ticks
-        // (300 frames at 30 tps). Use send_timeout to avoid blocking
+        // (e.g. ~150 at Slower default, up to ~500 at Fastest).
+        // Use send_timeout to avoid blocking
         // the sim thread while giving the writer a chance to drain.
         // If the timeout expires, the frame is lost — tracked in the
         // replay header (see V45 mitigations below).
@@ -198,7 +223,9 @@ The `NetworkModel` trait enables fundamentally different networking approaches b
 
 ### Fog-Authoritative Server (anti-maphack)
 
-Server runs full sim, sends each client only visible entities. Eliminates maphack architecturally. Requires server compute per game. An operator enables it per-room or per-match-type via `ic-server` capability flags (D074) — it is not a separate product. See `06-SECURITY.md` § Vulnerability 1, `decisions/09b/D074-community-server-bundle.md`, and `research/fog-authoritative-server-design.md` for the full design. Implementation milestone: `M11` (`P-Optional`), but the `NetworkModel` trait abstraction and `ic-server` capability infrastructure are designed to support it from day one.
+Server runs full sim, sends each client only visible entities. Eliminates maphack architecturally. Requires server compute per game. An operator enables it per-room or per-match-type via `ic-server` capability flags (D074) — it is not a separate product. See `06-SECURITY.md` § Vulnerability 1, `decisions/09b/D074-community-server-bundle.md`, and `research/fog-authoritative-server-design.md` for the full design. Implementation milestone: `M11` (`P-Optional`).
+
+**Trait fit caveat:** FogAuth does not drop-in under the current `GameLoop` / `NetworkModel` contract. The lockstep game loop owns a full `Simulation` and calls `sim.apply_tick()` — but FogAuth clients do not run the full sim. They maintain a partial world and consume server-sent entity state deltas via a reconciler (see `research/fog-authoritative-server-design.md` § 7). The research design maps `FogAuthClientNetwork` onto the `NetworkModel` trait by side-channeling state deltas and returning mostly-empty `TickOrders` from `poll_tick()`, but this means the game loop's `sim.apply_tick()` call does no useful work. In practice, FogAuth requires either a separate client loop variant (`FogAuthGameLoop` that drives a partial-world reconciler instead of a `Simulation`) or trait extension (e.g., `poll_tick()` returning an enum of `TickOrders | StateDeltas`). The `NetworkModel` trait boundary and `ic-server` capability infrastructure are designed to support FogAuth from day one; the client-side game loop extension is the `M11` design work.
 
 ### Rollback / GGPO-Style (`P-Optional` / `M11`)
 
@@ -214,15 +241,46 @@ For cross-engine play and protocol versioning, the wire format is abstracted beh
 
 ```rust
 pub trait OrderCodec: Send + Sync {
+    /// Encode a single order (used by cross-engine adapters and tests).
     fn encode(&self, order: &TimestampedOrder) -> Result<Vec<u8>>;
+    /// Decode a single order.
     fn decode(&self, bytes: &[u8]) -> Result<TimestampedOrder>;
+
+    /// Encode a batch of authenticated orders for transmission to the relay.
+    /// Client calls this in submit_order() flush path.
+    /// Equivalent to `encode_frame(&Frame::OrderBatch(orders.to_vec()))` —
+    /// the relay decodes the result with `decode_frame()` as a `Frame::OrderBatch`.
+    /// Exists as a convenience; implementations may delegate to `encode_frame`.
+    fn encode_batch(&self, orders: &[AuthenticatedOrder]) -> Vec<u8>;
+
+    /// Encode a Frame for transmission. Handles all Frame variants
+    /// (TickOrders, TimingFeedback, DesyncDetected, DesyncDebugRequest,
+    /// DesyncDebugReport, MatchEnd, SyncHash, GameSeed, CertifiedMatchResult,
+    /// RatingUpdate, ChatNotification, OrderBatch).
+    /// Used by both relay (outbound) and client (outbound SyncHash, OrderBatch).
+    fn encode_frame(&self, frame: &Frame) -> Vec<u8>;
+
+    /// Decode an incoming frame from raw bytes.
+    /// Returns Err on malformed, truncated, or unknown frame types
+    /// (satisfies vulns-protocol.md § Defense-in-Depth Protocol Parsing).
+    /// Client uses this in poll_tick() receive loop; relay uses it to
+    /// decode client submissions.
+    fn decode_frame(&self, bytes: &[u8]) -> Result<Frame, ProtocolError>;
+
     fn protocol_id(&self) -> ProtocolId;
 }
 
-/// Native format — fast, compact, versioned (delta-compressed TLV)
+/// Native format — fast, compact, versioned (delta-compressed TLV).
+/// Implements all six trait methods: single-order encode/decode for
+/// cross-engine adapters, batch encoding for client→relay submission,
+/// frame encode/decode for the full relay protocol, and protocol_id.
 pub struct NativeCodec { version: u32 }
 
-/// Translates to/from OpenRA's wire format
+/// Translates to/from OpenRA's wire format.
+/// Implements single-order encode/decode for ProtocolAdapter.
+/// encode_batch/encode_frame/decode_frame delegate to NativeCodec
+/// after translating individual orders — the batch/frame envelope
+/// is always IC-native.
 pub struct OpenRACodec {
     order_map: OrderTranslationTable,
     coord_transform: CoordTransform,

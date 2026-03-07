@@ -134,7 +134,7 @@ All previously identified high-cost files (>40KB) have been split into individua
 | Hub Page                 | Sub-Files                     | Directory           |
 | ------------------------ | ----------------------------- | ------------------- |
 | `02-ARCHITECTURE.md`     | 13 subsystem files            | `architecture/`     |
-| `03-NETCODE.md`          | 13 subsystem files            | `netcode/`          |
+| `03-NETCODE.md`          | 14 subsystem files            | `netcode/`          |
 | `04-MODDING.md`          | 10 topic files                | `modding/`          |
 | `05-FORMATS.md`          | 3 topic files                 | `formats/`          |
 | `06-SECURITY.md`         | 9 vulnerability-group files   | `security/`         |

@@ -129,7 +129,7 @@ Chat routing is a relay server concern, not a sim concern. The relay inspects `C
 | `Whisper { target }` | Target player only + sender echo            | Sender only       | Private — not in shared replay                   |
 | `Observer`           | All observers only                          | Full              | Players never see observer chat during live game |
 
-**Anti-coaching:** During a live game, observer messages are never forwarded to players. This prevents spectator coaching in competitive matches. In replay playback, all channels are visible (the information is historical).
+**Anti-coaching:** During a live game, observer messages are never forwarded to players. This prevents spectator coaching in competitive matches. In replay playback, Team and Observer channels become visible to all viewers (the information is historical and no longer competitively sensitive). Whisper messages remain private — they are only stored in the sender's local replay and are never included in shared/published replays (see routing table above: "Sender only" replay visibility).
 
 **Chat cooldown:** Rate-limited at the relay: max 5 messages per 3 seconds per player (configurable via server cvar). Exceeding the limit queues messages with a "slow mode" indicator. This prevents chat spam without blocking legitimate rapid communication during intense moments.
 
@@ -265,7 +265,7 @@ Voice traffic uses a new `MessageLane::Voice` lane, positioned between `Chat` an
 pub enum MessageLane {
     Orders = 0,
     Control = 1,
-    Chat = 2,
+    Chat = 2,     // Lobby/post-game chat only; in-match chat flows as PlayerOrder in Orders lane
     Voice = 3,    // NEW — voice frames
     Bulk = 4,     // was 3, renumbered
 }
@@ -275,7 +275,7 @@ pub enum MessageLane {
 | --------- | -------- | ------ | ------ | ----------- | ------------------------------------------------------------- |
 | `Orders`  | 0        | 1      | 4 KB   | Reliable    | Orders must arrive; missed = Idle (deadline is the cap)       |
 | `Control` | 0        | 1      | 2 KB   | Unreliable  | Latest sync hash wins; stale hashes are useless               |
-| `Chat`    | 1        | 1      | 8 KB   | Reliable    | Chat messages should arrive but can wait                      |
+| `Chat`    | 1        | 1      | 8 KB   | Reliable    | Lobby/post-game chat; in-match chat is in Orders lane         |
 | `Voice`   | 1        | 2      | 16 KB  | Unreliable  | Real-time voice; dropped frames use Opus PLC (not retransmit) |
 | `Bulk`    | 2        | 1      | 64 KB  | Unreliable  | Telemetry/observer data uses spare bandwidth                  |
 

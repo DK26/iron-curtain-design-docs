@@ -20,43 +20,43 @@
 
 ## Task Routing (Start Here For X)
 
-| If you need to... | Start here | Then read | Avoid touching first |
-| --- | --- | --- | --- |
-| Parse RA1 assets (.mix, .shp, .pal, .aud) | `crates/ra-formats/` | format tests, `src/05-FORMATS.md` | sim/net/render paths |
-| Implement deterministic sim behavior | `crates/ic-sim/` | `ic-protocol/`, conformance tests | render/UI/net paths |
-| Work on netcode / relay timing | `crates/ic-net/` | `ic-protocol/`, `src/03-NETCODE.md` | `ic-sim` internals |
-| Add UI/HUD feature | `crates/ic-ui/` | `ic-render/`, `src/17-PLAYER-FLOW.md` | core sim/net paths |
-| Add renderer feature (sprites, map, fog) | `crates/ic-render/` | `ic-sim/` read-only state, Bevy docs | sim mutation, net internals |
-| Add audio/music/EVA | `crates/ic-audio/` | `ra-formats/` for .aud parsing, Kira docs | sim/net/render internals |
-| Add Lua/WASM mod feature | `crates/ic-script/` | `ic-sim/` trait surface, `src/04-MODDING.md` | sim internals beyond trait API |
-| Add AI behavior | `crates/ic-ai/` | `ic-sim/` read view, `ic-protocol/` orders | net/render/UI paths |
-| Add LLM integration feature | `crates/ic-llm/` | `ic-sim/`, `ic-script/`, `src/decisions/09f/D016-llm-missions.md` | core sim/net hot paths |
-| Fix pathfinding bug | `crates/ic-sim/src/pathfinding/` | conformance tests, map fixtures | unrelated gameplay systems |
-| Add editor/SDK feature | `crates/ic-editor/` | `ic-render/`, `ic-sim/`, design docs D038/D040 | `ic-game` binary integration |
-| Resolve platform paths | `crates/ic-paths/` | `src/architecture/install-layout.md` | everything else |
-| Add/modify shared wire types | `crates/ic-protocol/` | `ic-sim/` + `ic-net/` consumers | — (changes propagate widely) |
-| Set up game binary / orchestration | `crates/ic-game/` | all dependent crates, `src/architecture/game-loop.md` | — |
+| If you need to...                         | Start here                       | Then read                                                         | Avoid touching first           |
+| ----------------------------------------- | -------------------------------- | ----------------------------------------------------------------- | ------------------------------ |
+| Parse RA1 assets (.mix, .shp, .pal, .aud) | `crates/ra-formats/`             | format tests, `src/05-FORMATS.md`                                 | sim/net/render paths           |
+| Implement deterministic sim behavior      | `crates/ic-sim/`                 | `ic-protocol/`, conformance tests                                 | render/UI/net paths            |
+| Work on netcode / relay timing            | `crates/ic-net/`                 | `ic-protocol/`, `src/03-NETCODE.md`                               | `ic-sim` internals             |
+| Add UI/HUD feature                        | `crates/ic-ui/`                  | `ic-render/`, `src/17-PLAYER-FLOW.md`                             | core sim/net paths             |
+| Add renderer feature (sprites, map, fog)  | `crates/ic-render/`              | `ic-sim/` read-only state, Bevy docs                              | sim mutation, net internals    |
+| Add audio/music/EVA                       | `crates/ic-audio/`               | `ra-formats/` for .aud parsing, Kira docs                         | sim/net/render internals       |
+| Add Lua/WASM mod feature                  | `crates/ic-script/`              | `ic-sim/` trait surface, `src/04-MODDING.md`                      | sim internals beyond trait API |
+| Add AI behavior                           | `crates/ic-ai/`                  | `ic-sim/` read view, `ic-protocol/` orders                        | net/render/UI paths            |
+| Add LLM integration feature               | `crates/ic-llm/`                 | `ic-sim/`, `ic-script/`, `src/decisions/09f/D016-llm-missions.md` | core sim/net hot paths         |
+| Fix pathfinding bug                       | `crates/ic-sim/src/pathfinding/` | conformance tests, map fixtures                                   | unrelated gameplay systems     |
+| Add editor/SDK feature                    | `crates/ic-editor/`              | `ic-render/`, `ic-sim/`, design docs D038/D040                    | `ic-game` binary integration   |
+| Resolve platform paths                    | `crates/ic-paths/`               | `src/architecture/install-layout.md`                              | everything else                |
+| Add/modify shared wire types              | `crates/ic-protocol/`            | `ic-sim/` + `ic-net/` consumers                                   | — (changes propagate widely)   |
+| Set up game binary / orchestration        | `crates/ic-game/`                | all dependent crates, `src/architecture/game-loop.md`             | —                              |
 
 ## Repository Map (Top-Level)
 
-| Path | Role | Notes |
-| --- | --- | --- |
-| `crates/ic-protocol/` | Shared wire types | Boundary crate between sim and net |
-| `crates/ra-formats/` | RA1 asset parsers | Standalone, no game dependencies |
-| `crates/ic-paths/` | Platform path resolution | Standalone, wraps `app-path` |
-| `crates/ic-sim/` | Deterministic simulation | Pure, no I/O, no floats |
-| `crates/ic-render/` | Bevy isometric renderer | Reads sim state (read-only) |
-| `crates/ic-ui/` | Game UI chrome (egui) | Reads sim + render state |
-| `crates/ic-audio/` | Sound/music/EVA (Kira) | Reads ra-formats for .aud |
-| `crates/ic-net/` | Networking + relay server | RelayCore lib + relay binary |
-| `crates/ic-script/` | Lua + WASM mod runtimes | Sandboxed, capability-gated |
-| `crates/ic-ai/` | Skirmish AI | Reads sim state via fog-filtered view |
-| `crates/ic-llm/` | LLM integration | Adaptive missions, coaching |
-| `crates/ic-editor/` | SDK editor tools | Separate binary from ic-game |
-| `crates/ic-game/` | Main game binary | Orchestrates all systems |
-| `tests/` | Integration test suites | Conformance, replay, determinism |
-| `assets/` | Test fixtures and sample maps | Not shipped — test corpus only |
-| `docs/` | Implementation notes | Local docs, design-gap requests |
+| Path                  | Role                          | Notes                                 |
+| --------------------- | ----------------------------- | ------------------------------------- |
+| `crates/ic-protocol/` | Shared wire types             | Boundary crate between sim and net    |
+| `crates/ra-formats/`  | RA1 asset parsers             | Standalone, no game dependencies      |
+| `crates/ic-paths/`    | Platform path resolution      | Standalone, wraps `app-path`          |
+| `crates/ic-sim/`      | Deterministic simulation      | Pure, no I/O, no floats               |
+| `crates/ic-render/`   | Bevy isometric renderer       | Reads sim state (read-only)           |
+| `crates/ic-ui/`       | Game UI chrome (Bevy UI)      | Reads sim + render state              |
+| `crates/ic-audio/`    | Sound/music/EVA (Kira)        | Reads ra-formats for .aud             |
+| `crates/ic-net/`      | Networking + relay server     | RelayCore lib + relay binary          |
+| `crates/ic-script/`   | Lua + WASM mod runtimes       | Sandboxed, capability-gated           |
+| `crates/ic-ai/`       | Skirmish AI                   | Reads sim state via fog-filtered view |
+| `crates/ic-llm/`      | LLM integration               | Adaptive missions, coaching           |
+| `crates/ic-editor/`   | SDK editor tools              | Separate binary from ic-game          |
+| `crates/ic-game/`     | Main game binary              | Orchestrates all systems              |
+| `tests/`              | Integration test suites       | Conformance, replay, determinism      |
+| `assets/`             | Test fixtures and sample maps | Not shipped — test corpus only        |
+| `docs/`               | Implementation notes          | Local docs, design-gap requests       |
 
 ## Subsystem Index (Canonical Entries)
 
@@ -112,7 +112,7 @@
 - **Does not own:** rendering, networking, audio, UI, file I/O, system clock
 - **Public interfaces / trait seams:** `Simulation`, `SimReadView`, `SimSnapshot`, `DeltaSnapshot`, `GameModule` trait, `FogProvider` trait, `OrderValidator` trait, `AiStrategy` trait, `WorldPos`, `CellPos`, `SimCoord`, `UnitTag`, `Health`, `Mobile`, `Armament`, `Building`, `Selectable`
 - **Key files to read first:** `src/lib.rs` (public API), `src/simulation.rs`, `src/types.rs` (newtypes)
-- **Hot paths / perf-sensitive files:** `src/simulation.rs` (tick loop — runs 15x/sec), `src/pathfinding/` (hundreds of queries/tick), `src/combat.rs` (weapon fire, hit detection), `src/movement.rs` (unit movement), `src/spatial/` (spatial indexing queries)
+- **Hot paths / perf-sensitive files:** `src/simulation.rs` (tick loop — runs ~15x/sec at default Slower speed, up to 50x/sec at Fastest), `src/pathfinding/` (hundreds of queries/tick), `src/combat.rs` (weapon fire, hit detection), `src/movement.rs` (unit movement), `src/spatial/` (spatial indexing queries)
 - **Generated files:** none
 - **Tests / verification entry points:** determinism conformance tests (same input → same output across platforms), unit tests per system, replay-based regression tests
 - **Related design decisions (`Dxxx`):** D009, D010, D012, D013, D015, D018, D022, D028, D029, D041, D045
@@ -168,7 +168,7 @@
 ### `ic-net`
 
 - **Path:** `crates/ic-net/`
-- **Primary responsibility:** `NetworkModel` implementations, `RelayCore` library, relay-server binary, timing normalization, delta compression, sub-tick fairness (D008), order rate control (D060)
+- **Primary responsibility:** `NetworkModel` implementations, `RelayCore` library, `ic-server` binary, timing normalization, delta compression, sub-tick fairness (D008), order rate control (D060)
 - **Does not own:** sim state mutation, order validation logic (that's `ic-sim`), rendering
 - **Public interfaces / trait seams:** `NetworkModel` trait, `RelayCore`, `Connection<S>` (typestate: `Disconnected` → `Handshaking` → `Authenticated` → `InGame`), `ClientMetrics`, `TimingFeedback`, `OrderBudget`, `AckVector`
 - **Key files to read first:** `src/lib.rs`, `src/relay_core.rs`, `src/network_model.rs`
@@ -271,9 +271,9 @@ These rules prevent accidental architecture violations. Breaking them is a block
 
 ## Generated / Vendored / Third-Party Areas
 
-| Path | Type | Edit policy |
-| --- | --- | --- |
-| `target/` | Build output | Do not commit, gitignored |
+| Path                  | Type              | Edit policy                                              |
+| --------------------- | ----------------- | -------------------------------------------------------- |
+| `target/`             | Build output      | Do not commit, gitignored                                |
 | `assets/test-corpus/` | RA1 test fixtures | Replace via test scripts, do not hand-edit binary assets |
 
 ## Implementation Evidence Paths
@@ -312,4 +312,4 @@ If implementation reveals a conflict with canonical design docs:
 - **Milestone:** `M0`
 - **Priority:** `P-Core`
 - **Feature Cluster:** `M0.OPS.EXTERNAL_CODE_REPO_BOOTSTRAP_AND_NAVIGATION_TEMPLATES`
-- **Depends on:** `M0.CORE.TRACKER_FOUNDATION`, `M0.CORE.DEP_GRAPH_SCHEMA`
+- **Depends on:** `M0.CORE.TRACKER_FOUNDATION`, `M0.CORE.DEP_GRAPH_SCHEMA`, `M0.OPS.MAINTENANCE_RULES`, `M0.QA.CI_PIPELINE_FOUNDATION`

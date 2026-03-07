@@ -14,21 +14,28 @@ This is not a theoretical concern. Game traffic on public WiFi, tournament LANs,
 ///
 /// Cipher selection validated by Valve's GameNetworkingSockets (GNS) production deployment:
 /// AES-256-GCM + X25519 key exchange, with Ed25519 identity binding.
-pub enum TransportSecurity {
-    /// Relay mode: clients connect via TLS 1.3 to the relay server.
-    /// The relay terminates TLS and re-encrypts for each recipient.
-    /// Simplest model — clients authenticate to the relay, relay handles forwarding.
-    RelayTls {
-        server_cert: Certificate,
-        client_session_token: SessionToken,
+/// See `connection-establishment.md` § "Transport Encryption" for the canonical
+/// `TransportCrypto` struct and `system-wiring.md` for the `EncryptedTransport<T>` wrapper.
+///
+/// All modes use the same crypto primitives — X25519 key exchange, AES-256-GCM
+/// authenticated encryption, Ed25519 identity binding. The encryption layer
+/// (`EncryptedTransport<T>`) wraps any `Transport` implementation, sitting between
+/// Transport and NetworkModel. There is no TLS termination model — the relay
+/// forwards encrypted datagrams; clients and relay share session keys established
+/// during connection handshake.
+pub struct TransportCrypto {
+    cipher: Aes256Gcm,       // derived from X25519 shared secret
+    send_nonce: u32,         // incremented per packet
+    recv_nonce: u32,
+    session_salt: [u8; 8],   // ensures cross-session nonce uniqueness
 }
 ```
 
 **Key design choices:**
-- **Never roll custom crypto.** Generals' XOR is the cautionary example. Use established libraries (`rustls`, `snow` for noise protocol, `ring` for primitives).
-- **Relay mode makes this simple.** Clients open a TLS connection to the relay (dedicated or embedded) — standard web-grade encryption. The relay is the trust anchor.
-- **Authenticated encryption.** Every packet is both encrypted AND authenticated (ChaCha20-Poly1305 or AES-256-GCM). Tampering is detected and the packet is dropped. This eliminates the entire class of packet-modification attacks that Generals' XOR+CRC allowed.
-- **No encrypted passwords on the wire.** Lobby authentication uses session tokens issued during TLS handshake. Generals transmitted "encrypted" passwords using trivially reversible bit manipulation (see `encrypt.cpp` — passwords truncated to 8 characters, then XOR'd). We use SRP or OAuth2 — passwords never leave the client.
+- **Never roll custom crypto.** Generals' XOR is the cautionary example. Use established libraries (`ring` for AES-256-GCM and X25519, `ed25519-dalek` for identity binding).
+- **Relay mode uses the same crypto as all modes.** Clients establish an X25519 key exchange with the relay during connection handshake, then all traffic is AES-256-GCM encrypted with sequence-bound nonces. The relay is the trust anchor — it decrypts inbound orders, validates them, and re-encrypts outbound TickOrders per recipient.
+- **Authenticated encryption.** Every packet is both encrypted AND authenticated (AES-256-GCM). Tampering is detected and the packet is dropped. This eliminates the entire class of packet-modification attacks that Generals' XOR+CRC allowed.
+- **No encrypted passwords on the wire.** Lobby authentication uses Ed25519 identity keys and SHA-256 challenge-response (see `connection-establishment.md`). Generals transmitted "encrypted" passwords using trivially reversible bit manipulation (see `encrypt.cpp` — passwords truncated to 8 characters, then XOR'd). We use cryptographic identity binding — passwords never leave the client.
 
 **GNS-validated encryption model (see `research/valve-github-analysis.md` § 1):** Valve's GameNetworkingSockets uses AES-256-GCM + X25519 for transport encryption across all game traffic — the same primitive selection IC targets. Key properties validated by GNS's production deployment:
 
@@ -125,8 +132,10 @@ fn parse_command(reader: &mut BoundedReader, cmd_type: u8) -> Result<NetCommand,
         CMD_FRAME => parse_frame_command(reader),
         CMD_ORDER => parse_order_command(reader),
         CMD_CHAT  => parse_chat_command(reader),
-        CMD_ACK   => parse_ack_command(reader),
         CMD_FILE  => parse_file_command(reader),
+        // Note: ACKs are header-level ack vectors (wire-format.md), not
+        // standalone commands. They are parsed by the transport/reliability
+        // layer before command dispatch reaches this point.
         _         => Err(ProtocolError::UnknownCommandType(cmd_type)),
     }
 }
@@ -155,29 +164,51 @@ The relay server stamps each order with the authenticated sender's player slot �
 
 ### Mitigation: Ed25519 Per-Order Signing
 
+`AuthenticatedOrder`, `ClientSessionAuth`, and `RelaySessionAuth` live in `ic-net` (transport layer), NOT in `ic-protocol`. The sim-level type is bare `TimestampedOrder` (defined in `protocol.md`). The signing/verification happens at the transport boundary: the client signs in `RelayLockstepNetwork::submit_order()` (using `ClientSessionAuth`) and the relay verifies before calling `RelayCore::receive_order()` (using `RelaySessionAuth`). The sim never sees signatures.
+
 ```rust
+/// Transport-layer wrapper (ic-net). NOT an ic-protocol type.
 pub struct AuthenticatedOrder {
     pub order: TimestampedOrder,
     pub signature: Ed25519Signature,  // Signed by sender's session keypair
 }
 
 /// Each player generates an ephemeral Ed25519 keypair at game start.
-/// Public keys are exchanged during lobby setup (over TLS — see Vulnerability 14).
-/// The relay server also holds all public keys and validates signatures before forwarding.
-pub struct SessionAuth {
+/// These are NOT the long-lived D052 identity keys (used for community
+/// credentials, SCRs, and account recovery via BIP-39 mnemonic).
+/// Session keys are distinct: generated fresh per match for forward
+/// secrecy and compromise isolation. If a session key is extracted
+/// mid-game, only that match's orders are forgeable — the player's
+/// D052 identity and community reputation are unaffected.
+/// Public keys are exchanged during lobby setup over the encrypted
+/// channel (Vulnerability 14).
+
+/// Client-side auth: signs outgoing orders before transmission.
+/// The signing key never leaves the client process.
+pub struct ClientSessionAuth {
     pub player_id: PlayerId,
     pub signing_key: Ed25519SigningKey,   // Private — never leaves client
-    pub peer_keys: HashMap<PlayerId, Ed25519VerifyingKey>,  // All players' public keys
 }
 
-impl SessionAuth {
+impl ClientSessionAuth {
     /// Sign an outgoing order
     pub fn sign_order(&self, order: &TimestampedOrder) -> AuthenticatedOrder {
         let bytes = order.to_canonical_bytes();
         let signature = self.signing_key.sign(&bytes);
         AuthenticatedOrder { order: order.clone(), signature }
     }
+}
 
+/// Relay-side auth: verifies incoming order signatures from all players.
+/// The relay holds all players' public keys (exchanged during lobby setup)
+/// and validates every order before forwarding into the tick stream.
+/// In embedded relay (listen server) mode, the host's RelayCore instance
+/// performs verification using this same struct.
+pub struct RelaySessionAuth {
+    pub peer_keys: HashMap<PlayerId, Ed25519VerifyingKey>,  // All players' public keys
+}
+
+impl RelaySessionAuth {
     /// Verify an incoming order came from the claimed player
     pub fn verify_order(&self, auth_order: &AuthenticatedOrder) -> Result<(), AuthError> {
         let expected_key = self.peer_keys.get(&auth_order.order.player)
@@ -190,10 +221,10 @@ impl SessionAuth {
 ```
 
 **Key design choices:**
-- **Ephemeral session keys.** Generated fresh for each game. No long-lived keys to steal. Key exchange happens during lobby setup over the encrypted channel (Vulnerability 14).
+- **Ephemeral session keys.** Generated fresh for each game. Distinct from D052 long-lived identity keys (see `decisions/09b/D052/D052-keys-operations-integration.md`). No long-lived keys to steal. Key exchange happens during lobby setup over the encrypted channel (Vulnerability 14).
 - **Defense in depth.** Relay validates signatures AND stamps orders. Sim validates order legality (D012).
 - **Overhead is minimal.** Ed25519 signing is ~15,000 ops/second on a single core. At peak RTS APM (~300 orders/minute = 5/second), signature overhead is negligible.
-- **Replays include signatures.** The signed order chain in replays allows post-hoc verification that no orders were tampered with — useful for tournament dispute resolution.
+- **Replays include the relay-signed tick hash chain.** Each tick's `state_hash` is signed by the relay via `TickSignature` (see `formats/save-replay-formats.md` § Signature Chain). This chain allows post-hoc verification that no tick outcomes were tampered with — useful for tournament dispute resolution. Per-order session signatures are NOT stored in replays; the replay verification model is tick-level, not order-level.
 
 ## Vulnerability 17: State Saturation (Order Flooding)
 

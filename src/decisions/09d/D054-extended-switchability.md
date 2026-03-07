@@ -58,12 +58,12 @@ But connection establishment hardcodes UDP. A `Transport` trait makes this expli
 pub trait Transport: Send + Sync {
     /// Send a datagram/message to the connected peer. Non-blocking or
     /// returns WouldBlock. Data is a complete message (not a byte stream).
-    fn send(&self, data: &[u8]) -> Result<(), TransportError>;
+    fn send(&mut self, data: &[u8]) -> Result<(), TransportError>;
 
     /// Receive the next available message, if any. Non-blocking.
     /// Returns the number of bytes written to `buf`, or None if no
     /// message is available.
-    fn recv(&self, buf: &mut [u8]) -> Result<Option<usize>, TransportError>;
+    fn recv(&mut self, buf: &mut [u8]) -> Result<Option<usize>, TransportError>;
 
     /// Maximum payload size for a single send() call.
     /// UdpTransport returns ~476 (MTU-safe). WebSocketTransport returns ~64KB.

@@ -63,7 +63,7 @@ Post-milestone toasts (same system as D030's Workshop cleanup prompts) nudge pla
 
 5. **No raw filesystem I/O.** All asset loading goes through Bevy's asset system, never `std::fs` directly. Mobile and browser have sandboxed filesystems; WASM targets use browser storage APIs (OPFS primary, IndexedDB fallback, localStorage for settings only — see `05-FORMATS.md` § Browser Asset Storage). Save games use platform-appropriate storage (OPFS/IndexedDB on web, app sandbox on mobile).
 
-6. **App lifecycle is handled.** Mobile and consoles require suspend/resume/save-on-background. The snapshottable sim makes this trivial — `snapshot()` on suspend, `restore()` on resume. This must be an engine-level lifecycle hook, not an afterthought.
+6. **App lifecycle is handled.** Mobile and consoles require suspend/resume/save-on-background. The snapshottable sim makes this trivial for **single-player and local scenarios** — `snapshot()` on suspend, `restore()` on resume. For **live multiplayer**, the local snapshot preserves state for crash recovery, but full recovery follows the reconnection protocol (relay-coordinated donor snapshot, verification, catch-up — see `desync-recovery.md` § Reconnection). The `NetworkModel` handles reconnection; the engine's lifecycle hook handles the local snapshot. These are complementary, not interchangeable.
 
 7. **Audio backend is abstracted.** Bevy handles this, but no code should assume a specific audio API. Platform-specific audio routing (e.g., phone speaker vs headphones, console audio mixing policies) is Bevy's concern.
 

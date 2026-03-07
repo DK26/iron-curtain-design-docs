@@ -153,7 +153,7 @@ Scrollable list of recent matches, each showing:
 | Rating change (+/- delta) | Computed from consecutive rating SCRs |
 | Replay link               | Local replay file if available        |
 
-Match history is stored locally (from the player's credential SQLite file). Community servers do not host full match histories — they only issue rating/match SCRs. This is consistent with the local-first principle.
+Match history is stored locally in `communities/*.db` (from the player's community-issued match SCRs). Community servers do not host full match histories — they only issue rating/match SCRs. This is consistent with the local-first principle. Broader career analytics (including unranked and offline matches) are available in `gameplay.db` (D034) — the profile's Match History panel shows specifically the SCR-backed verified match records with cryptographic provenance.
 
 **5. Friends & Social**
 
@@ -353,22 +353,22 @@ Every profile section has a visibility setting:
 
 Defaults:
 
-| Section                   | Default Visibility                      |
-| ------------------------- | --------------------------------------- |
-| Display Name              | Public                                  |
-| Avatar                    | Public                                  |
-| Bio                       | Public                                  |
-| Player Title              | Public                                  |
-| Faction Crest             | Public                                  |
-| Achievement Showcase      | Public                                  |
-| Statistics Card           | Public                                  |
-| Match History             | Friends                                 |
-| Friends List              | Friends                                 |
-| Community Memberships     | Public                                  |
-| Workshop Creator          | Public                                  |
-| Community Feedback Contributions | Public                           |
-| Custom Elements           | Friends                                 |
-| Behavioral Profile (D042) | **Private (immutable — never exposed)** |
+| Section                          | Default Visibility                      |
+| -------------------------------- | --------------------------------------- |
+| Display Name                     | Public                                  |
+| Avatar                           | Public                                  |
+| Bio                              | Public                                  |
+| Player Title                     | Public                                  |
+| Faction Crest                    | Public                                  |
+| Achievement Showcase             | Public                                  |
+| Statistics Card                  | Public                                  |
+| Match History                    | Friends                                 |
+| Friends List                     | Friends                                 |
+| Community Memberships            | Public                                  |
+| Workshop Creator                 | Public                                  |
+| Community Feedback Contributions | Public                                  |
+| Custom Elements                  | Friends                                 |
+| Behavioral Profile (D042)        | **Private (immutable — never exposed)** |
 
 The behavioral profile from D042 (`PlayerStyleProfile`) is **categorically excluded** from the player profile. It's local analytics data for AI training and self-improvement — not social data. This is a hard privacy boundary.
 

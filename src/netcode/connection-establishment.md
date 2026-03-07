@@ -55,13 +55,19 @@ fn compute_game_seed(reveals: &[SeedReveal]) -> u64 {
 
 **Single-player:** Skip commit-reveal. The client generates the seed directly.
 
+```rust
+/// The final game seed used to initialize the simulation RNG.
+/// Computed via commit-reveal XOR of all player contributions.
+pub type GameSeed = u64;
+```
+
 ### Transport Encryption
 
 All multiplayer connections are encrypted. The encryption layer sits between `Transport` and `NetworkModel` — transparent to both:
 
 - **Key exchange:** Curve25519 (X25519) for ephemeral key agreement. Each connection generates a fresh keypair; the shared secret is never reused across sessions.
 - **Symmetric encryption:** AES-256-GCM for authenticated encryption of all payload data. The GCM authentication tag detects tampering; no separate integrity check needed.
-- **Sequence binding:** The AES-GCM nonce incorporates the packet sequence number, binding encryption to the reliability layer's sequence space. Replay attacks (resending a captured packet) fail because the nonce won't match.
+- **Sequence binding:** The AES-GCM nonce incorporates the packet sequence number, binding encryption to the reliability layer's sequence space. Replay attacks (resending a captured packet) fail because the nonce won't match. Retransmitted packets receive a new sequence number (and thus a new nonce) — the payload is re-encrypted. See `wire-format.md` § Retransmission.
 - **Identity binding:** After key exchange, the connection is upgraded by signing the handshake transcript with the player's Ed25519 identity key (D052). This binds the encrypted channel to a verified identity — a MITM cannot complete the handshake without the player's private key.
 
 ```rust
@@ -97,12 +103,14 @@ IC adopts this pattern. Signaling is abstracted behind a trait in `ic-net`:
 /// - Relay mode: relay server brokers the introduction
 /// - Browser (WASM): WebRTC signaling server
 ///
-/// The trait is async — signaling involves network I/O and may take
-/// multiple round-trips (ICE candidate gathering, STUN/TURN).
+/// The trait uses non-blocking polling — `recv_signal` returns `Ok(None)`
+/// when no message is available. Signaling involves network I/O and may
+/// take multiple round-trips (ICE candidate gathering, STUN/TURN), but
+/// callers drive progress by polling rather than awaiting futures.
 pub trait Signaling: Send + Sync {
     /// Send a signaling message to the target peer.
     fn send_signal(&mut self, peer: &PeerId, msg: &SignalingMessage) -> Result<(), SignalingError>;
-    /// Receive the next incoming signaling message, if any.
+    /// Poll for the next incoming signaling message (non-blocking).
     fn recv_signal(&mut self) -> Result<Option<(PeerId, SignalingMessage)>, SignalingError>;
 }
 
@@ -135,7 +143,7 @@ This decoupling means adding a new connection method (e.g., Steam Networking Soc
 
 Classic approach. Host shares `IP:port`, other player connects.
 
-- Simplest to implement (TCP connect, done)
+- Simplest to implement (UDP connect to the host's relay endpoint, done)
 - Requires host to have a reachable IP (port forwarding or same LAN)
 - Good for LAN parties, dedicated server setups, and power users
 

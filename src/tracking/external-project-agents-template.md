@@ -57,6 +57,7 @@ Required in implementation issues/PRs:
 - `Execution Step:` `G*`
 - `Priority:` `P-*`
 - `Dependencies:` relevant `Dxxx`, cluster IDs, `Pxxx` blockers
+- `Evidence planned:` tests/demo/replay/profile/ops notes
 
 Do not implement features out of sequence unless the dependency map says they can run in parallel.
 
@@ -88,8 +89,12 @@ When you need a design change:
    - affected canonical docs / `Dxxx`
    - why the current design is insufficient
    - proposed options and tradeoffs
-3. Link the request in the implementation PR/issue
-4. Keep local workaround scope narrow until the design is resolved
+3. **Document the divergence locally in this repo:**
+   - a note in `docs/design-gap-requests/` (or equivalent local tracking path)
+   - inline code comments at the divergence point referencing the issue and rationale
+   - the full reasoning for why the original design was not followed
+4. Link the request in the implementation PR/issue
+5. Keep local workaround scope narrow until the design is resolved
 
 ## Local Repo-Specific Rules (Fill These In)
 
@@ -134,5 +139,5 @@ Do not claim a feature is complete without evidence:
 - **Milestone:** `M0`
 - **Priority:** `P-Core`
 - **Feature Cluster:** `M0.OPS.EXTERNAL_CODE_REPO_BOOTSTRAP_AND_NAVIGATION_TEMPLATES`
-- **Depends on:** `M0.CORE.TRACKER_FOUNDATION`, `M0.CORE.DEP_GRAPH_SCHEMA`
+- **Depends on:** `M0.CORE.TRACKER_FOUNDATION`, `M0.CORE.DEP_GRAPH_SCHEMA`, `M0.OPS.MAINTENANCE_RULES`, `M0.QA.CI_PIPELINE_FOUNDATION`
 

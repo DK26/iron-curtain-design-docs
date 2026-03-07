@@ -90,21 +90,21 @@ Related decisions: D012, D041
 
 ## Crate Workspace
 
-| Crate | Responsibility | Phase |
-|-------|---------------|-------|
-| `ic-protocol` | Shared serializable types (`PlayerOrder`, `TimestampedOrder`, `TickOrders`, `MessageLane`) | 0 |
-| `ra-formats` | RA1 asset parsing (`.mix`, `.shp`, `.pal`, `.aud`, `.vqa`, MiniYAML) | 0–1 |
-| `ic-paths` | Platform path resolution (XDG/APPDATA/portable mode) | 1 |
-| `ic-sim` | Pure deterministic simulation (fixed-point, no I/O, no floats) | 2 |
-| `ic-render` | Bevy isometric map/sprite renderer, camera, fog rendering | 1 |
-| `ic-ui` | Game UI and chrome (egui), sidebar, power bar, selection, menus | 3–4 |
-| `ic-audio` | Sound, music, EVA via Kira backend | 3 |
-| `ic-net` | `NetworkModel` implementations, `RelayCore` library, relay-server binary | 5 |
-| `ic-script` | Lua (`mlua`) and WASM (`wasmtime`) mod runtimes, deterministic sandbox | 4–5 |
-| `ic-ai` | Skirmish AI (`PersonalityDrivenAi`), adaptive difficulty, economy/production/military managers | 4–6 |
-| `ic-llm` | LLM integration for adaptive missions, briefings, coaching (D016, D044, D073) | 6+ |
-| `ic-editor` | SDK: scenario editor, asset studio, campaign editor (D038, D040) | 6a–6b |
-| `ic-game` | Main game client binary — Bevy ECS orchestration, ties all systems together | 2+ |
+| Crate         | Responsibility                                                                                 | Phase |
+| ------------- | ---------------------------------------------------------------------------------------------- | ----- |
+| `ic-protocol` | Shared serializable types (`PlayerOrder`, `TimestampedOrder`, `TickOrders`, `MessageLane`)     | 0     |
+| `ra-formats`  | RA1 asset parsing (`.mix`, `.shp`, `.pal`, `.aud`, `.vqa`, MiniYAML)                           | 0–1   |
+| `ic-paths`    | Platform path resolution (XDG/APPDATA/portable mode)                                           | 1     |
+| `ic-sim`      | Pure deterministic simulation (fixed-point, no I/O, no floats)                                 | 2     |
+| `ic-render`   | Bevy isometric map/sprite renderer, camera, fog rendering                                      | 1     |
+| `ic-ui`       | Game UI and chrome (Bevy UI), sidebar, power bar, selection, menus                             | 3–4   |
+| `ic-audio`    | Sound, music, EVA via Kira backend                                                             | 3     |
+| `ic-net`      | `NetworkModel` implementations, `RelayCore` library, `ic-server` binary                        | 5     |
+| `ic-script`   | Lua (`mlua`) and WASM (`wasmtime`) mod runtimes, deterministic sandbox                         | 4–5   |
+| `ic-ai`       | Skirmish AI (`PersonalityDrivenAi`), adaptive difficulty, economy/production/military managers | 4–6   |
+| `ic-llm`      | LLM integration for adaptive missions, briefings, coaching (D016, D044, D073)                  | 6+    |
+| `ic-editor`   | SDK: scenario editor, asset studio, campaign editor (D038, D040)                               | 6a–6b |
+| `ic-game`     | Main game client binary — Bevy ECS orchestration, ties all systems together                    | 2+    |
 
 **Critical crate boundaries:**
 
@@ -124,25 +124,26 @@ Required in implementation issues/PRs:
 - `Execution Step:` `G*`
 - `Priority:` `P-Core` / `P-Differentiator` / `P-Creator` / `P-Scale` / `P-Optional`
 - `Dependencies:` relevant `Dxxx`, cluster IDs, `Pxxx` blockers
+- `Evidence planned:` tests/demo/replay/profile/ops notes
 
 Do not implement features out of sequence unless the dependency map says they can run in parallel.
 
 ### Milestone Summary
 
-| Milestone | Objective | Key G-Steps |
-|-----------|-----------|-------------|
-| M0 | Design baseline & tracker setup | — |
-| M1 | Resource fidelity + visual rendering slice | G1–G3 |
-| M2 | Deterministic simulation core + combat slice | G4–G10 |
-| M3 | Local playable skirmish (single machine, dummy AI) | G11–G16 |
-| M4 | Minimal online skirmish | G17 |
-| M5 | Campaign runtime vertical slice | G18 |
-| M6 | Campaign completeness + skirmish AI maturity | G19 |
-| M7 | Multiplayer productization (browser, ranked, trust, spectator) | G20 |
-| M8 | Creator foundation (CLI, minimal Workshop, profiles) | G21 |
-| M9 | Full SDK editor + Workshop + OpenRA export | G22 |
-| M10 | Campaign editor + game modes + RA1 export | — |
-| M11 | Ecosystem polish, optional AI/LLM, platform expansion | — |
+| Milestone | Objective                                                      | Key G-Steps |
+| --------- | -------------------------------------------------------------- | ----------- |
+| M0        | Design baseline & tracker setup                                | —           |
+| M1        | Resource fidelity + visual rendering slice                     | G1–G3       |
+| M2        | Deterministic simulation core + combat slice                   | G4–G10      |
+| M3        | Local playable skirmish (single machine, dummy AI)             | G11–G16     |
+| M4        | Minimal online skirmish                                        | G17         |
+| M5        | Campaign runtime vertical slice                                | G18         |
+| M6        | Campaign completeness + skirmish AI maturity                   | G19         |
+| M7        | Multiplayer productization (browser, ranked, trust, spectator) | G20         |
+| M8        | Creator foundation (CLI, minimal Workshop, profiles)           | G21         |
+| M9        | Full SDK editor + Workshop + OpenRA export                     | G22         |
+| M10       | Campaign editor + game modes + RA1 export                      | —           |
+| M11       | Ecosystem polish, optional AI/LLM, platform expansion          | —           |
 
 ## Source Code Navigation Index (Required)
 
@@ -232,4 +233,4 @@ Do not claim a feature is complete without evidence:
 - **Milestone:** `M0`
 - **Priority:** `P-Core` (process-critical implementation hygiene)
 - **Feature Cluster:** `M0.OPS.EXTERNAL_CODE_REPO_BOOTSTRAP_AND_NAVIGATION_TEMPLATES`
-- **Depends on (hard):** `M0.CORE.TRACKER_FOUNDATION`, `M0.CORE.DEP_GRAPH_SCHEMA`, `M0.OPS.MAINTENANCE_RULES`
+- **Depends on (hard):** `M0.CORE.TRACKER_FOUNDATION`, `M0.CORE.DEP_GRAPH_SCHEMA`, `M0.OPS.MAINTENANCE_RULES`, `M0.QA.CI_PIPELINE_FOUNDATION`

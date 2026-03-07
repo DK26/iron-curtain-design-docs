@@ -167,14 +167,12 @@ Player claims nothing about their rating. The flow is:
 
 1. Two players connect to the relay for a match.
 2. The relay (D007) forwards all orders between players (lockstep).
-3. The match ends. Both clients report the outcome to the relay.
-   - The relay requires BOTH clients to agree on the outcome
-     (winner, loser, draw, disconnection). If they disagree,
-     the relay flags the match as disputed and does not certify it.
-   - For additional integrity, the relay can optionally run a headless
-     sim (same deterministic code — Invariant #1) to independently
-     verify the outcome. This is expensive but available for ranked
-     matches on well-resourced servers.
+3. The match ends. The relay determines the outcome internally via
+   its own `check_match_end()` logic (system-wiring.md § relay tick
+   loop, step f). Because the relay receives all orders and the sim
+   is deterministic (Invariant #1), the relay's outcome is authoritative.
+   Clients do not report outcomes — there is no client outcome-report
+   frame in the wire protocol (wire-format.md § Frame enum).
 4. The relay produces a CertifiedMatchResult:
    - Signed by the relay's own key
    - Contains: player keys, game module, map, duration,
@@ -188,7 +186,9 @@ Player claims nothing about their rating. The flow is:
 7. The RankingProvider computes new Glicko-2 ratings from the
    match outcome + previous ratings.
 8. The community server signs the new rating as an SCR.
-9. The signed SCR is returned to both players.
+9. The signed SCRs (rating + match record) are returned to both
+   players via Frame::RatingUpdate on MessageLane::Orders
+   (wire-format.md § Frame enum).
 
 At no point does the player provide rating data to the server.
 The server computed the rating. The server signs its own computation.

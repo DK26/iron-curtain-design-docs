@@ -21,7 +21,7 @@ impl<N: NetworkModel, I: InputSource> GameLoop<N, I> {
         }
 
         // 2. Advance sim — bounded to avoid starving the renderer.
-        //    At 30 tps / 60 fps most frames process 0-1 ticks.
+        //    At default Slower speed (~15 tps) / 60 fps, most frames process 0-1 ticks.
         //    The cap handles edge cases (e.g., multiplayer reconnect backlog,
         //    system sleep resume) where many ticks are ready at once.
         const MAX_TICKS_PER_FRAME: u32 = 4;
@@ -32,6 +32,13 @@ impl<N: NetworkModel, I: InputSource> GameLoop<N, I> {
                 self.sim.tick(),
                 self.sim.state_hash(),
             );
+            // Full SHA-256 hash at signing cadence for replay signatures
+            if self.sim.tick().0 % SIGNING_CADENCE == 0 {
+                self.network.report_state_hash(
+                    self.sim.tick(),
+                    self.sim.full_state_hash(),
+                );
+            }
             ticks_this_frame += 1;
             if ticks_this_frame >= MAX_TICKS_PER_FRAME {
                 break; // Remaining ticks processed next frame
@@ -45,6 +52,8 @@ impl<N: NetworkModel, I: InputSource> GameLoop<N, I> {
 ```
 
 **Key property:** `GameLoop` is generic over `N: NetworkModel` and `I: InputSource`. It has zero knowledge of whether it's running single-player or multiplayer, or whether input comes from a mouse, touchscreen, or gamepad. This is the central architectural guarantee.
+
+**Lockstep-family only.** The `GameLoop` shown above is the **lockstep client loop** — it owns a full `Simulation` and calls `sim.apply_tick()` with confirmed orders from `poll_tick()`. This covers all shipping implementations: `LocalNetwork`, `ReplayPlayback`, `EmbeddedRelayNetwork`, and `RelayLockstepNetwork`. Deferred non-lockstep architectures (FogAuth, rollback) require a different client-side loop variant — FogAuth clients do not run the full sim but instead maintain a partial world via a reconciler (see `research/fog-authoritative-server-design.md` § 7), and rollback clients need speculative execution with snapshot/restore. The `NetworkModel` trait and `ic-server` capability infrastructure are designed to support these variants from day one, but the `GameLoop` struct itself would need a parallel implementation (e.g., `FogAuthGameLoop`) or an enum-based client driver. This is an `M11` design concern — the current `GameLoop` is complete and correct for all pre-`M11` milestones.
 
 **Not for headless use.** `GameLoop` always renders — it is the client-side frame driver. `ic-server` runs the relay protocol without any `GameLoop` or `Simulation` instance. External bot/test harnesses use the external sim API (`inject_orders()` + `step()`) in their own loop — see `02-ARCHITECTURE.md` § External Sim API for a concrete headless loop example. The sim's headless capability is a property of `ic-sim`, not of `GameLoop`.
 

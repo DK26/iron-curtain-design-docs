@@ -264,7 +264,7 @@ Player A                 Relay Server                 Player B
   │                          │                             │
   │  [Ping: "Attack Here"]   │                             │
   │─────────────────────────>│                             │
-  │  MessageLane::GameOrder  │  validate + broadcast       │
+  │  MessageLane::Orders     │  validate + broadcast       │
   │                          │────────────────────────────>│
   │                          │                             │ render ping marker
   │                          │                             │

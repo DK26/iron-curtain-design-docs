@@ -318,12 +318,13 @@ In competitive/ranked play, match results determine ratings. A dishonest client 
 pub struct CertifiedMatchResult {
     pub match_id: MatchId,
     pub players: Vec<PlayerId>,
-    pub result: MatchOutcome,          // winner(s), losers, draw, disconnect
+    pub result: MatchOutcome,
     pub final_tick: u64,
     pub duration: Duration,
-    pub final_state_hash: u64,         // hash of sim state at game end
-    pub replay_hash: [u8; 32],         // SHA-256 of the full replay data
-    pub server_signature: Ed25519Signature, // relay server signs the result
+    pub final_state_hash: u64,
+    pub order_stream_hash: [u8; 32],  // SHA-256 of deterministic order stream (for certification)
+    pub replay_hash: [u8; 32],        // SHA-256 of relay's replay file (for per-file integrity)
+    pub server_signature: Ed25519Signature,
 }
 
 impl RankingService {
@@ -332,7 +333,9 @@ impl RankingService {
         if !self.verify_relay_signature(result) {
             return Err(UntrustedSource);
         }
-        // Cross-check: if any player also submitted a replay, verify hashes match
+        // order_stream_hash is the relay's hash of the full pre-filtering order
+        // stream — clients cannot recompute it (they see filtered chat subsets),
+        // but the relay's Ed25519 signature guarantees its integrity.
         self.update_ratings(result);
         Ok(())
     }
@@ -341,22 +344,6 @@ impl RankingService {
 
 **Key:** Only relay-server-signed results update rankings.
 
-**Order-stream certification hash (F9 closure):** `replay_hash` in `CertifiedMatchResult` hashes the full replay file, which includes client-specific recording artifacts. V45 documents that `BackgroundReplayWriter` can lose frames during I/O spikes, meaning two clients recording the same match may produce different replay files (different frames lost). The V13 cross-check ("if any player also submitted a replay, verify hashes match") will always fail between clients with different frame loss patterns.
+**Order-stream certification hash (F9 closure):** `replay_hash` alone would be unsuitable as a certification primitive because `BackgroundReplayWriter` can lose frames during I/O spikes (V45), meaning two clients recording the same match may produce different replay files. The struct therefore separates `order_stream_hash` (SHA-256 of the relay's canonical, pre-filtering order stream — orders + ticks for all channels) from `replay_hash` (SHA-256 of the relay's specific replay file, for per-file integrity). Match certification uses `order_stream_hash`; replay file verification uses `replay_hash`.
 
-**Fix:** Separate `replay_hash` from `order_stream_hash`:
-
-```rust
-pub struct CertifiedMatchResult {
-    pub match_id: MatchId,
-    pub players: Vec<PlayerId>,
-    pub result: MatchOutcome,
-    pub final_tick: u64,
-    pub duration: Duration,
-    pub final_state_hash: u64,
-    pub order_stream_hash: [u8; 32],  // SHA-256 of deterministic order stream (for certification)
-    pub replay_hash: [u8; 32],        // SHA-256 of this client's replay file (for per-file integrity)
-    pub server_signature: Ed25519Signature,
-}
-```
-
-The `order_stream_hash` covers the deterministic input (orders + ticks) that all clients agree on. The `replay_hash` covers the specific replay file for per-file integrity. Match certification uses `order_stream_hash`; replay file verification uses `replay_hash`. Cross-client verification compares `order_stream_hash` (always identical) rather than `replay_hash` (may differ due to frame loss).
+**What the order stream covers:** The `order_stream_hash` is computed by the relay over the full *pre-filtering* order stream — including all `ChatMessage` orders for all channels. Per-recipient chat filtering (D059) happens *after* hashing. Clients cannot independently recompute this hash because they only see their filtered chat subset (relay-architecture.md § Per-recipient TickOrders). Instead, integrity is guaranteed by the relay's Ed25519 signature on `CertifiedMatchResult` — clients verify the signature, not the hash. The ranking service trusts the hash because it trusts the relay's signing key.

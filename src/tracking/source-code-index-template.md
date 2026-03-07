@@ -21,11 +21,11 @@ A good source code index:
 - makes architectural boundaries visible
 - links code to design decisions (`Dxxx`) and execution steps (`G*`)
 
-## Recommended Filename
+## Required Filename
 
-- `CODE-INDEX.md` (preferred)
+- `CODE-INDEX.md` (required — this file must exist in every external implementation repo)
 
-Alternative names are acceptable if the repo documents them in `AGENTS.md`.
+Alternative filenames are acceptable only if the repo documents the chosen name in `AGENTS.md`, but the file itself is not optional.
 
 ## Template (copy and fill in)
 
@@ -51,22 +51,22 @@ Alternative names are acceptable if the repo documents them in `AGENTS.md`.
 
 ## Task Routing (Start Here For X)
 
-| If you need to... | Start here | Then read | Avoid touching first |
-| --- | --- | --- | --- |
-| Implement deterministic sim behavior | `<path>` | `<path>`, tests | `<render/UI paths>` |
-| Work on netcode / relay timing | `<path>` | `<path>`, protocol types | `<sim internals>` unless required |
-| Add UI/HUD feature | `<path>` | `<path>`, UX mocks/docs | core sim/net paths |
-| Add editor feature | `<path>` | `<path>`, design docs | game binary integration |
-| Import/parse resource formats | `<path>` | `<path>`, format tests | UI/editor until parser stable |
-| Fix pathfinding bug | `<path>` | conformance tests, map fixtures | unrelated gameplay systems |
+| If you need to...                    | Start here | Then read                       | Avoid touching first              |
+| ------------------------------------ | ---------- | ------------------------------- | --------------------------------- |
+| Implement deterministic sim behavior | `<path>`   | `<path>`, tests                 | `<render/UI paths>`               |
+| Work on netcode / relay timing       | `<path>`   | `<path>`, protocol types        | `<sim internals>` unless required |
+| Add UI/HUD feature                   | `<path>`   | `<path>`, UX mocks/docs         | core sim/net paths                |
+| Add editor feature                   | `<path>`   | `<path>`, design docs           | game binary integration           |
+| Import/parse resource formats        | `<path>`   | `<path>`, format tests          | UI/editor until parser stable     |
+| Fix pathfinding bug                  | `<path>`   | conformance tests, map fixtures | unrelated gameplay systems        |
 
 ## Repository Map (Top-Level)
 
-| Path | Role | Notes |
-| --- | --- | --- |
-| `<path>` | `<crate/package/module>` | `<responsibility>` |
-| `<path>` | `<tests>` | `<integration/unit fixtures>` |
-| `<path>` | `<tools/scripts>` | `<generated/manual>` |
+| Path     | Role                     | Notes                         |
+| -------- | ------------------------ | ----------------------------- |
+| `<path>` | `<crate/package/module>` | `<responsibility>`            |
+| `<path>` | `<tests>`                | `<integration/unit fixtures>` |
+| `<path>` | `<tools/scripts>`        | `<generated/manual>`          |
 
 ## Subsystem Index (Canonical Entries)
 
@@ -98,10 +98,10 @@ List the highest-value rules that prevent accidental architecture violations.
 
 ## Generated / Vendored / Third-Party Areas
 
-| Path | Type | Edit policy |
-| --- | --- | --- |
-| `<path>` | Generated | Regenerate, do not hand-edit |
-| `<path>` | Vendored | Patch only with explicit note |
+| Path     | Type                 | Edit policy                     |
+| -------- | -------------------- | ------------------------------- |
+| `<path>` | Generated            | Regenerate, do not hand-edit    |
+| `<path>` | Vendored             | Patch only with explicit note   |
 | `<path>` | Build output fixture | Replace via script/test command |
 
 ## Implementation Evidence Paths
@@ -161,5 +161,5 @@ These are examples of the level of detail expected, using the planned crate layo
 - **Milestone:** `M0`
 - **Priority:** `P-Core`
 - **Feature Cluster:** `M0.OPS.EXTERNAL_CODE_REPO_BOOTSTRAP_AND_NAVIGATION_TEMPLATES`
-- **Depends on:** `M0.CORE.TRACKER_FOUNDATION`, `M0.CORE.DEP_GRAPH_SCHEMA`
+- **Depends on:** `M0.CORE.TRACKER_FOUNDATION`, `M0.CORE.DEP_GRAPH_SCHEMA`, `M0.OPS.MAINTENANCE_RULES`, `M0.QA.CI_PIPELINE_FOUNDATION`
 

@@ -68,7 +68,8 @@ Open source `ra-formats` early. Useful standalone, builds credibility and commun
 - Can convert MiniYAML to standard YAML losslessly
 - Code of conduct and RFC process published (D037)
 - SPDX headers present on all source files; `cargo deny check licenses` passes
-- GitHub template repo published; new repo instantiated from template has passing CI and a working `AGENTS.md` pointing to the design docs
+- GitHub template repo published; new engine repo instantiated from template has passing CI and a working `AGENTS.md` pointing to the design docs
+- Generic non-engine templates (`external-project-agents-template.md`, `source-code-index-template.md`) exist and produce valid `AGENTS.md` + `CODE-INDEX.md` when filled in
 
 ## Phase 1: Rendering Slice (Months 3–6)
 

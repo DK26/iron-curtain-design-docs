@@ -16,7 +16,7 @@ These exist from Phase 0, day one, in separate repositories (D076). They have ze
 ic-protocol  (shared types: PlayerOrder, TimestampedOrder)
     ↑         (depends on: fixed-game-math)
     ├── ic-sim      (depends on: ic-protocol, ra-formats, fixed-game-math, deterministic-rng)
-    ├── ic-net      (depends on: ic-protocol; contains RelayCore library + relay-server binary)
+    ├── ic-net      (depends on: ic-protocol; contains RelayCore library + ic-server binary)
     ├── ra-formats  (wraps cnc-formats + EA-derived constants — .mix, .shp, .pal, YAML)
     ├── ic-render   (depends on: ic-sim for reading state)
     ├── ic-ui       (depends on: ic-sim, ic-render; reads SQLite for player analytics — D034)
@@ -150,7 +150,7 @@ pub enum IoResult {
 - `tokio::net::UdpSocket` feeding `str0m` (sans-I/O WebRTC) for game relay and voice forwarding
 - Hundreds of concurrent sessions is well within tokio's comfort zone
 
-This is already established in `03-NETCODE.md` § Backend Language: "`relay-server` binary — standalone headless process that hosts multiple concurrent games. Not Bevy, no ECS. Uses `RelayCore` + async I/O (tokio)."
+This is already established in `03-NETCODE.md` § Backend Language: "`ic-server` binary — standalone headless process that hosts multiple concurrent games. Not Bevy, no ECS. Uses `RelayCore` + async I/O (tokio)."
 
 #### Embedded Relay: Bevy's I/O Pool
 
