@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -336,7 +336,7 @@
 │   │       ├── local.rs            #   LocalNetwork (testing, single-player)
 │   │       ├── relay_core.rs       #   RelayCore library (D007)
 │   │       └── bin/
-│   │           └── relay.rs        #   relay-server binary entry point
+│   │           └── server.rs       #   ic-server binary entry point
 │   ├── ic-render/                  # Isometric rendering (Bevy plugin)
 │   ├── ic-ui/                      # Game chrome, sidebar, minimap
 │   ├── ic-audio/                   # Sound, music, EVA, VoIP
@@ -506,8 +506,8 @@
 </ul>
 <p><strong>UI framework:</strong></p>
 <ul>
-<li><strong>egui</strong> (MIT) — the editor’s panel/widget framework. Ships with Bevy via <code>bevy_egui</code>. Provides buttons, sliders, text inputs, dropdown menus, tree views, docking, color pickers — all rendered procedurally with no external art needed. Handles 95% of SDK chrome requirements.</li>
-<li><strong>Bevy UI</strong> — the game client’s UI framework. Used for in-game chrome (sidebar, minimap, build queue) with IC-original sprite sheets styled per theme (D032).</li>
+<li><strong>egui</strong> (MIT) — the editor’s panel/widget framework, and the game client’s developer overlays (D058 console, D031 debug overlay — gated behind <code>dev-tools</code> feature flag, absent from release builds). Ships with Bevy via <code>bevy_egui</code>. Provides buttons, sliders, text inputs, dropdown menus, tree views, docking, color pickers — all rendered procedurally with no external art needed. Handles 95% of SDK chrome requirements.</li>
+<li><strong>Bevy UI</strong> — the game client’s player-facing UI framework. Used for in-game chrome (sidebar, minimap, build queue) with IC-original sprite sheets styled per theme (D032). Player-facing game UI uses <code>bevy_ui</code> exclusively.</li>
 </ul>
 <p><strong>Game content (sprites, terrain, audio, cutscenes):</strong></p>
 <ul>

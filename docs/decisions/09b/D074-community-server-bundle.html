@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-ac1642ae.js"></script>
+        <script src="../../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -254,7 +254,7 @@ moderation = false    # Overwatch-style review system (D052, opt-in)
 </code></pre>
 <p><strong>“Relay” is IC’s dedicated server.</strong> Unlike traditional game engines (Unreal, Source) where a dedicated server runs a headless simulation, IC’s dedicated server is an <strong>order router with time authority</strong> (D007). It receives player orders, validates them (D012), assigns sub-tick timestamps (D008), and rebroadcasts — it never runs the sim. This makes it extremely lightweight (~2–10 KB memory per game) and is why it’s called “relay.” The same <code>RelayCore</code> library component can also be embedded inside a game client for listen-server mode (“Host Game” button, zero external infrastructure). Enabling the <code>relay</code> capability in <code>ic-server</code> is what makes it a dedicated game server — capable of hosting multiplayer matches, handling NAT traversal, blocking lag switches, signing replays, and providing the trust anchor for ranked play.</p>
 <p><strong>Why a relay is sufficient — and when it isn’t.</strong> IC uses <strong>deterministic lockstep</strong>: all clients run the exact same simulation from the same validated orders. Players send commands (“move unit to X”, “build tank”), not state (“I have 500 tanks”). A compromised client cannot report more units, stronger units, or extra resources — the simulation computes state identically on every machine. Invalid orders (build without resources, control enemy units) are rejected deterministically by every client’s sim and by the relay before broadcast (D012). A cheater who modifies their local state simply desyncs from every other player and gets detected by per-tick sync hash comparison.</p>
-<p>The one vulnerability lockstep cannot solve is <strong>maphack</strong> — since every client runs the full simulation, all game state exists in client memory, and fog of war is a rendering filter, not a data boundary. IC addresses this with <code>FogAuthoritativeNetwork</code> (06-SECURITY.md) — a <code>NetworkModel</code> variant (D006) where the server runs the sim and sends each client only the entities they can see. This is a heavier deployment (real CPU per game, not just order routing), but it uses the same <code>ic-server</code> binary, the same <code>NetworkModel</code> trait, and the same capability infrastructure. An operator enables it per-room or per-match-type — it is not a separate product. The architecture (trait abstraction, capability flags, server binary) supports FogAuth from day one; implementation ships at <code>M11</code> (<code>P-Optional</code>).</p>
+<p>The one vulnerability lockstep cannot solve is <strong>maphack</strong> — since every client runs the full simulation, all game state exists in client memory, and fog of war is a rendering filter, not a data boundary. IC addresses this with <code>FogAuthoritativeNetwork</code> (06-SECURITY.md) — a deployment mode where the server runs the sim and sends each client only the entities they can see. This is a heavier deployment (real CPU per game, not just order routing), but it uses the same <code>ic-server</code> binary and the same capability infrastructure. An operator enables it per-room or per-match-type — it is not a separate product. The server-side architecture (capability flags, binary, configuration) supports FogAuth from day one; implementation ships at <code>M11</code> (<code>P-Optional</code>). Note: FogAuth clients do not run the full deterministic sim — they maintain a partial world via a reconciler. This means the client-side game loop needs a variant (<code>FogAuthGameLoop</code>) beyond the lockstep <code>GameLoop&lt;N, I&gt;</code> shown in <code>architecture/game-loop.md</code>. The <code>NetworkModel</code> trait boundary preserves the sim/net invariant (D006), but the game loop extension is part of the <code>M11</code> design scope. See <code>research/fog-authoritative-server-design.md</code> § 7 and § 9 for the client reconciler and trait implementation details.</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -267,7 +267,7 @@ moderation = false    # Overwatch-style review system (D052, opt-in)
 </tbody>
 </table>
 </div>
-<p>All three are <code>NetworkModel</code> implementations behind the same trait. Clients use the same protocol. The sim has zero imports from <code>ic-net</code> (D006 invariant).</p>
+<p>The relay and listen-server deployments are drop-in <code>NetworkModel</code> implementations behind the current lockstep game loop. FogAuth uses the same server binary and capability infrastructure but requires a client-side game loop variant (partial world reconciler instead of full sim) — see the caveat above. In all cases, <code>ic-sim</code> has zero imports from <code>ic-net</code> (D006 invariant).</p>
 <p>When a capability is disabled:</p>
 <ul>
 <li>Its ICRP endpoints are not registered (404 for capability-specific routes)</li>

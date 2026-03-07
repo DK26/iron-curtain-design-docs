@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -490,12 +490,13 @@ pub struct TrustFactors {
 </span>pub struct CertifiedMatchResult {
     pub match_id: MatchId,
     pub players: Vec&lt;PlayerId&gt;,
-    pub result: MatchOutcome,          // winner(s), losers, draw, disconnect
+    pub result: MatchOutcome,
     pub final_tick: u64,
     pub duration: Duration,
-    pub final_state_hash: u64,         // hash of sim state at game end
-    pub replay_hash: [u8; 32],         // SHA-256 of the full replay data
-    pub server_signature: Ed25519Signature, // relay server signs the result
+    pub final_state_hash: u64,
+    pub order_stream_hash: [u8; 32],  // SHA-256 of deterministic order stream (for certification)
+    pub replay_hash: [u8; 32],        // SHA-256 of relay's replay file (for per-file integrity)
+    pub server_signature: Ed25519Signature,
 }
 
 impl RankingService {
@@ -504,30 +505,17 @@ impl RankingService {
         if !self.verify_relay_signature(result) {
             return Err(UntrustedSource);
         }
-        // Cross-check: if any player also submitted a replay, verify hashes match
+        // order_stream_hash is the relay's hash of the full pre-filtering order
+        // stream — clients cannot recompute it (they see filtered chat subsets),
+        // but the relay's Ed25519 signature guarantees its integrity.
         self.update_ratings(result);
         Ok(())
     }
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Key:</strong> Only relay-server-signed results update rankings.</p>
-<p><strong>Order-stream certification hash (F9 closure):</strong> <code>replay_hash</code> in <code>CertifiedMatchResult</code> hashes the full replay file, which includes client-specific recording artifacts. V45 documents that <code>BackgroundReplayWriter</code> can lose frames during I/O spikes, meaning two clients recording the same match may produce different replay files (different frames lost). The V13 cross-check (“if any player also submitted a replay, verify hashes match”) will always fail between clients with different frame loss patterns.</p>
-<p><strong>Fix:</strong> Separate <code>replay_hash</code> from <code>order_stream_hash</code>:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct CertifiedMatchResult {
-    pub match_id: MatchId,
-    pub players: Vec&lt;PlayerId&gt;,
-    pub result: MatchOutcome,
-    pub final_tick: u64,
-    pub duration: Duration,
-    pub final_state_hash: u64,
-    pub order_stream_hash: [u8; 32],  // SHA-256 of deterministic order stream (for certification)
-    pub replay_hash: [u8; 32],        // SHA-256 of this client's replay file (for per-file integrity)
-    pub server_signature: Ed25519Signature,
-}
-<span class="boring">}</span></code></pre>
-<p>The <code>order_stream_hash</code> covers the deterministic input (orders + ticks) that all clients agree on. The <code>replay_hash</code> covers the specific replay file for per-file integrity. Match certification uses <code>order_stream_hash</code>; replay file verification uses <code>replay_hash</code>. Cross-client verification compares <code>order_stream_hash</code> (always identical) rather than <code>replay_hash</code> (may differ due to frame loss).</p>
+<p><strong>Order-stream certification hash (F9 closure):</strong> <code>replay_hash</code> alone would be unsuitable as a certification primitive because <code>BackgroundReplayWriter</code> can lose frames during I/O spikes (V45), meaning two clients recording the same match may produce different replay files. The struct therefore separates <code>order_stream_hash</code> (SHA-256 of the relay’s canonical, pre-filtering order stream — orders + ticks for all channels) from <code>replay_hash</code> (SHA-256 of the relay’s specific replay file, for per-file integrity). Match certification uses <code>order_stream_hash</code>; replay file verification uses <code>replay_hash</code>.</p>
+<p><strong>What the order stream covers:</strong> The <code>order_stream_hash</code> is computed by the relay over the full <em>pre-filtering</em> order stream — including all <code>ChatMessage</code> orders for all channels. Per-recipient chat filtering (D059) happens <em>after</em> hashing. Clients cannot independently recompute this hash because they only see their filtered chat subset (relay-architecture.md § Per-recipient TickOrders). Instead, integrity is guaranteed by the relay’s Ed25519 signature on <code>CertifiedMatchResult</code> — clients verify the signature, not the hash. The ranking service trusts the hash because it trusts the relay’s signing key.</p>
 
                     </main>
 

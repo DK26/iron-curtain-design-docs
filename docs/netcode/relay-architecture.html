@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -194,9 +194,11 @@
 <li>The relay receives timestamped orders from all players</li>
 <li>Validates/normalizes client timestamp hints into canonical sub-tick timestamps (relay-owned timing calibration + skew bounds)</li>
 <li>Orders them chronologically within the tick (CS2 insight — see below)</li>
-<li>Broadcasts the canonical <code>TickOrders</code> to all clients</li>
+<li>Builds per-recipient <code>TickOrders</code> and sends to each client</li>
 <li>All clients run the identical deterministic sim on those orders</li>
 </ol>
+<p><strong>Per-recipient TickOrders:</strong> All gameplay orders (Move, Attack, Build, etc.) are identical in every client’s <code>TickOrders</code> — this is required for deterministic lockstep. However, <code>ChatMessage</code> orders are per-recipient filtered based on <code>ChatChannel</code> (D059): Team chat goes only to same-team clients, Whisper goes only to the target, Observer chat goes only to observers. This is safe because <code>ChatMessage</code> orders do not affect game state — the sim records them for replay but makes no state-changing decisions based on chat. Sync hashes cover game state only, so per-recipient chat filtering never causes desync.</p>
+<p><strong>Certification hash ordering:</strong> The relay computes <code>order_stream_hash</code> (V13) over the full <em>pre-filtering</em> canonical order stream — including all ChatMessage orders for all channels. Per-recipient filtering happens <em>after</em> hashing. This gives a single deterministic hash that the relay signs. Clients cannot independently recompute this hash (they only see their filtered subset), but they can verify the relay’s signature. See <code>decisions/09g/D059/D059-overview-text-chat-voip-core.md</code> § Channel Routing for the full forwarding table.</p>
 <p>The relay also:</p>
 <ul>
 <li>Detects lag switches and cheating attempts (see anti-lag-switch below)</li>
@@ -232,8 +234,22 @@ pub struct RelayCore {
 
 impl RelayCore {
     /// Feed an incoming order packet. Called by the network layer.
+    /// The caller (relay binary or embedded relay) verifies the Ed25519
+    /// session signature (AuthenticatedOrder) before calling this method.
+    /// Signature-invalid orders are dropped and logged. See
+    /// vulns-protocol.md § Vulnerability 16 for the signing scheme.
     pub fn receive_order(&amp;mut self, player: PlayerId, order: TimestampedOrder) { ... }
     
+    /// Receive a per-tick SyncHash from a client. Compared against other
+    /// clients' hashes — mismatch triggers DesyncDetected.
+    pub fn receive_sync_hash(&amp;mut self, player: PlayerId, tick: SimTick, hash: SyncHash) { ... }
+
+    /// Receive a full StateHash at signing cadence (every N ticks).
+    /// Stored for the replay TickSignature chain and strong verification.
+    /// See wire-format.md § Frame::StateHash and save-replay-formats.md
+    /// § Signature Chain.
+    pub fn receive_state_hash(&amp;mut self, player: PlayerId, tick: SimTick, hash: StateHash) { ... }
+
     /// Produce the canonical TickOrders for this tick.
     /// Sub-tick sorts, runs filter chain, advances tick counter.
     pub fn finalize_tick(&amp;mut self) -&gt; TickOrders { ... }
@@ -272,45 +288,50 @@ pub struct InLobby;
 pub struct InGame;
 
 /// A network connection whose valid operations are determined by its state `S`.
-/// `PhantomData&lt;S&gt;` is zero-sized — no runtime cost.
-pub struct Connection&lt;S&gt; {
-    stream: TcpStream,
+/// Generic over `Transport` (D054) — works with UdpTransport, WebSocketTransport,
+/// MemoryTransport, etc. `PhantomData&lt;S&gt;` is zero-sized — no runtime cost.
+pub struct Connection&lt;S, T: Transport&gt; {
+    transport: T,
     player_id: Option&lt;PlayerId&gt;,
     _state: PhantomData&lt;S&gt;,
 }
 
-impl Connection&lt;Connecting&gt; {
+impl&lt;T: Transport&gt; Connection&lt;Connecting, T&gt; {
     /// Verify credentials. Consumes the Connecting connection,
     /// returns an Authenticated one. Can't be called twice.
-    pub fn authenticate(self, cred: &amp;Credential) -&gt; Result&lt;Connection&lt;Authenticated&gt;, AuthError&gt; {
+    pub fn authenticate(self, cred: &amp;Credential) -&gt; Result&lt;Connection&lt;Authenticated, T&gt;, AuthError&gt; {
         // ... verify Ed25519 signature (D052), assign PlayerId
     }
     // send_order() doesn't exist here — won't compile.
 }
 
-impl Connection&lt;Authenticated&gt; {
+impl&lt;T: Transport&gt; Connection&lt;Authenticated, T&gt; {
     /// Join a game lobby. Consumes Authenticated, returns InLobby.
-    pub fn join_lobby(self, room: RoomId) -&gt; Result&lt;Connection&lt;InLobby&gt;, LobbyError&gt; {
+    pub fn join_lobby(self, room: RoomId) -&gt; Result&lt;Connection&lt;InLobby, T&gt;, LobbyError&gt; {
         // ... register with lobby, send player list
     }
 }
 
-impl Connection&lt;InLobby&gt; {
+impl&lt;T: Transport&gt; Connection&lt;InLobby, T&gt; {
     /// Transition to in-game when the lobby starts.
-    pub fn start_game(self, game_id: GameId) -&gt; Connection&lt;InGame&gt; {
+    pub fn start_game(self, game_id: GameId) -&gt; Connection&lt;InGame, T&gt; {
         // ... initialize per-connection game state
     }
 
+    /// Send lobby chat (out-of-band, on MessageLane::Chat).
+    /// In-match chat flows as PlayerOrder::ChatMessage through send_order()
+    /// on Connection&lt;InGame&gt; — see D059.
     pub fn send_chat(&amp;self, msg: &amp;ChatMessage) { /* ... */ }
     // send_order() doesn't exist here — won't compile.
 }
 
-impl Connection&lt;InGame&gt; {
+impl&lt;T: Transport&gt; Connection&lt;InGame, T&gt; {
     /// Submit a game order. Only available during gameplay.
+    /// In-match chat is a PlayerOrder::ChatMessage — use this method.
     pub fn send_order(&amp;self, order: &amp;TimestampedOrder) { /* ... */ }
 
     /// Return to lobby after match ends.
-    pub fn end_game(self) -&gt; Connection&lt;InLobby&gt; {
+    pub fn end_game(self) -&gt; Connection&lt;InLobby, T&gt; {
         // ... cleanup per-connection game state
     }
 }

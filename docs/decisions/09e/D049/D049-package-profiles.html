@@ -35,10 +35,10 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../../../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../../toc-ac1642ae.js"></script>
+        <script src="../../../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -246,7 +246,7 @@
     └── bob--desert-map-1.1.0/
         └── manifest.yaml
 </code></pre>
-<p>The local CAS store is an optimization that ships alongside the full Workshop in Phase 6a. The initial Workshop (Phase 4–5) can use simpler <code>.icpkg</code>-on-disk storage and upgrade to CAS when the full Workshop matures — the manifest.yaml already contains per-file SHA-256 hashes, so the data model is forward-compatible.</p>
+<p>The local CAS blob store (deduplicating <code>workshop/blobs/</code> directory, <code>cache.db</code>, garbage collection) is an optimization that ships alongside the full Workshop in Phase 6a. The initial Workshop (Phase 4–5) can use simpler <code>.icpkg</code>-on-disk storage and upgrade to CAS when the full Workshop matures — the manifest.yaml already contains per-file SHA-256 hashes, so the data model is forward-compatible. Note: content-addressed <em>identification</em> (SHA-256 hashing for file identity) is used earlier — D062’s <code>VirtualNamespace</code> maps logical paths to content-addressed files from Phase 2, but these are resolved from source mod directories on disk, not from a deduplicating blob store. The CAS blob store is the storage optimization; content addressing as a concept is foundational.</p>
 <h3 id="workshop-player-configuration-profiles-controls--accessibility--hud-presets"><a class="header" href="#workshop-player-configuration-profiles-controls--accessibility--hud-presets">Workshop Player Configuration Profiles (Controls / Accessibility / HUD Presets)</a></h3>
 <p>Workshop packages also support an optional <strong>player configuration profile</strong> resource type for sharing non-authoritative client preferences — especially control layouts and accessibility presets.</p>
 <p><strong>Examples:</strong></p>

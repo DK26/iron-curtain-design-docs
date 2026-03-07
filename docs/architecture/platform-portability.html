@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -247,7 +247,7 @@
 <p><strong>No raw filesystem I/O.</strong> All asset loading goes through Bevy’s asset system, never <code>std::fs</code> directly. Mobile and browser have sandboxed filesystems; WASM targets use browser storage APIs (OPFS primary, IndexedDB fallback, localStorage for settings only — see <code>05-FORMATS.md</code> § Browser Asset Storage). Save games use platform-appropriate storage (OPFS/IndexedDB on web, app sandbox on mobile).</p>
 </li>
 <li>
-<p><strong>App lifecycle is handled.</strong> Mobile and consoles require suspend/resume/save-on-background. The snapshottable sim makes this trivial — <code>snapshot()</code> on suspend, <code>restore()</code> on resume. This must be an engine-level lifecycle hook, not an afterthought.</p>
+<p><strong>App lifecycle is handled.</strong> Mobile and consoles require suspend/resume/save-on-background. The snapshottable sim makes this trivial for <strong>single-player and local scenarios</strong> — <code>snapshot()</code> on suspend, <code>restore()</code> on resume. For <strong>live multiplayer</strong>, the local snapshot preserves state for crash recovery, but full recovery follows the reconnection protocol (relay-coordinated donor snapshot, verification, catch-up — see <code>desync-recovery.md</code> § Reconnection). The <code>NetworkModel</code> handles reconnection; the engine’s lifecycle hook handles the local snapshot. These are complementary, not interchangeable.</p>
 </li>
 <li>
 <p><strong>Audio backend is abstracted.</strong> Bevy handles this, but no code should assume a specific audio API. Platform-specific audio routing (e.g., phone speaker vs headphones, console audio mixing policies) is Bevy’s concern.</p>

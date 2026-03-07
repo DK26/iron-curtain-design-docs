@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -198,11 +198,11 @@
 <li>makes architectural boundaries visible</li>
 <li>links code to design decisions (<code>Dxxx</code>) and execution steps (<code>G*</code>)</li>
 </ul>
-<h2 id="recommended-filename"><a class="header" href="#recommended-filename">Recommended Filename</a></h2>
+<h2 id="required-filename"><a class="header" href="#required-filename">Required Filename</a></h2>
 <ul>
-<li><code>CODE-INDEX.md</code> (preferred)</li>
+<li><code>CODE-INDEX.md</code> (required — this file must exist in every external implementation repo)</li>
 </ul>
-<p>Alternative names are acceptable if the repo documents them in <code>AGENTS.md</code>.</p>
+<p>Alternative filenames are acceptable only if the repo documents the chosen name in <code>AGENTS.md</code>, but the file itself is not optional.</p>
 <h2 id="template-copy-and-fill-in"><a class="header" href="#template-copy-and-fill-in">Template (copy and fill in)</a></h2>
 <pre><code class="language-md"># CODE-INDEX.md — &lt;PROJECT NAME&gt;
 
@@ -225,22 +225,22 @@
 
 ## Task Routing (Start Here For X)
 
-| If you need to... | Start here | Then read | Avoid touching first |
-| --- | --- | --- | --- |
-| Implement deterministic sim behavior | `&lt;path&gt;` | `&lt;path&gt;`, tests | `&lt;render/UI paths&gt;` |
-| Work on netcode / relay timing | `&lt;path&gt;` | `&lt;path&gt;`, protocol types | `&lt;sim internals&gt;` unless required |
-| Add UI/HUD feature | `&lt;path&gt;` | `&lt;path&gt;`, UX mocks/docs | core sim/net paths |
-| Add editor feature | `&lt;path&gt;` | `&lt;path&gt;`, design docs | game binary integration |
-| Import/parse resource formats | `&lt;path&gt;` | `&lt;path&gt;`, format tests | UI/editor until parser stable |
-| Fix pathfinding bug | `&lt;path&gt;` | conformance tests, map fixtures | unrelated gameplay systems |
+| If you need to...                    | Start here | Then read                       | Avoid touching first              |
+| ------------------------------------ | ---------- | ------------------------------- | --------------------------------- |
+| Implement deterministic sim behavior | `&lt;path&gt;`   | `&lt;path&gt;`, tests                 | `&lt;render/UI paths&gt;`               |
+| Work on netcode / relay timing       | `&lt;path&gt;`   | `&lt;path&gt;`, protocol types        | `&lt;sim internals&gt;` unless required |
+| Add UI/HUD feature                   | `&lt;path&gt;`   | `&lt;path&gt;`, UX mocks/docs         | core sim/net paths                |
+| Add editor feature                   | `&lt;path&gt;`   | `&lt;path&gt;`, design docs           | game binary integration           |
+| Import/parse resource formats        | `&lt;path&gt;`   | `&lt;path&gt;`, format tests          | UI/editor until parser stable     |
+| Fix pathfinding bug                  | `&lt;path&gt;`   | conformance tests, map fixtures | unrelated gameplay systems        |
 
 ## Repository Map (Top-Level)
 
-| Path | Role | Notes |
-| --- | --- | --- |
-| `&lt;path&gt;` | `&lt;crate/package/module&gt;` | `&lt;responsibility&gt;` |
-| `&lt;path&gt;` | `&lt;tests&gt;` | `&lt;integration/unit fixtures&gt;` |
-| `&lt;path&gt;` | `&lt;tools/scripts&gt;` | `&lt;generated/manual&gt;` |
+| Path     | Role                     | Notes                         |
+| -------- | ------------------------ | ----------------------------- |
+| `&lt;path&gt;` | `&lt;crate/package/module&gt;` | `&lt;responsibility&gt;`            |
+| `&lt;path&gt;` | `&lt;tests&gt;`                | `&lt;integration/unit fixtures&gt;` |
+| `&lt;path&gt;` | `&lt;tools/scripts&gt;`        | `&lt;generated/manual&gt;`          |
 
 ## Subsystem Index (Canonical Entries)
 
@@ -272,10 +272,10 @@ List the highest-value rules that prevent accidental architecture violations.
 
 ## Generated / Vendored / Third-Party Areas
 
-| Path | Type | Edit policy |
-| --- | --- | --- |
-| `&lt;path&gt;` | Generated | Regenerate, do not hand-edit |
-| `&lt;path&gt;` | Vendored | Patch only with explicit note |
+| Path     | Type                 | Edit policy                     |
+| -------- | -------------------- | ------------------------------- |
+| `&lt;path&gt;` | Generated            | Regenerate, do not hand-edit    |
+| `&lt;path&gt;` | Vendored             | Patch only with explicit note   |
 | `&lt;path&gt;` | Build output fixture | Replace via script/test command |
 
 ## Implementation Evidence Paths
@@ -332,7 +332,7 @@ If implementation reveals a conflict with canonical design docs:
 <li><strong>Milestone:</strong> <code>M0</code></li>
 <li><strong>Priority:</strong> <code>P-Core</code></li>
 <li><strong>Feature Cluster:</strong> <code>M0.OPS.EXTERNAL_CODE_REPO_BOOTSTRAP_AND_NAVIGATION_TEMPLATES</code></li>
-<li><strong>Depends on:</strong> <code>M0.CORE.TRACKER_FOUNDATION</code>, <code>M0.CORE.DEP_GRAPH_SCHEMA</code></li>
+<li><strong>Depends on:</strong> <code>M0.CORE.TRACKER_FOUNDATION</code>, <code>M0.CORE.DEP_GRAPH_SCHEMA</code>, <code>M0.OPS.MAINTENANCE_RULES</code>, <code>M0.QA.CI_PIPELINE_FOUNDATION</code></li>
 </ul>
 
                     </main>

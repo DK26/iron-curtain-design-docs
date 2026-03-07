@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -226,12 +226,18 @@ fn compute_game_seed(reveals: &amp;[SeedReveal]) -&gt; u64 {
 <p><strong>Relay mode:</strong> The relay server collects all commitments, then broadcasts them, then collects all reveals, then broadcasts the final seed. A player who fails to reveal within the timeout is kicked (they were trying to abort after seeing others’ commitments).</p>
 <p><strong>Listen server:</strong> The embedded relay collects all commitments and reveals, following the same protocol as a dedicated relay.</p>
 <p><strong>Single-player:</strong> Skip commit-reveal. The client generates the seed directly.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// The final game seed used to initialize the simulation RNG.
+/// Computed via commit-reveal XOR of all player contributions.
+pub type GameSeed = u64;
+<span class="boring">}</span></code></pre>
 <h3 id="transport-encryption"><a class="header" href="#transport-encryption">Transport Encryption</a></h3>
 <p>All multiplayer connections are encrypted. The encryption layer sits between <code>Transport</code> and <code>NetworkModel</code> — transparent to both:</p>
 <ul>
 <li><strong>Key exchange:</strong> Curve25519 (X25519) for ephemeral key agreement. Each connection generates a fresh keypair; the shared secret is never reused across sessions.</li>
 <li><strong>Symmetric encryption:</strong> AES-256-GCM for authenticated encryption of all payload data. The GCM authentication tag detects tampering; no separate integrity check needed.</li>
-<li><strong>Sequence binding:</strong> The AES-GCM nonce incorporates the packet sequence number, binding encryption to the reliability layer’s sequence space. Replay attacks (resending a captured packet) fail because the nonce won’t match.</li>
+<li><strong>Sequence binding:</strong> The AES-GCM nonce incorporates the packet sequence number, binding encryption to the reliability layer’s sequence space. Replay attacks (resending a captured packet) fail because the nonce won’t match. Retransmitted packets receive a new sequence number (and thus a new nonce) — the payload is re-encrypted. See <code>wire-format.md</code> § Retransmission.</li>
 <li><strong>Identity binding:</strong> After key exchange, the connection is upgraded by signing the handshake transcript with the player’s Ed25519 identity key (D052). This binds the encrypted channel to a verified identity — a MITM cannot complete the handshake without the player’s private key.</li>
 </ul>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
@@ -264,12 +270,14 @@ pub struct TransportCrypto {
 /// - Relay mode: relay server brokers the introduction
 /// - Browser (WASM): WebRTC signaling server
 ///
-/// The trait is async — signaling involves network I/O and may take
-/// multiple round-trips (ICE candidate gathering, STUN/TURN).
+/// The trait uses non-blocking polling — `recv_signal` returns `Ok(None)`
+/// when no message is available. Signaling involves network I/O and may
+/// take multiple round-trips (ICE candidate gathering, STUN/TURN), but
+/// callers drive progress by polling rather than awaiting futures.
 pub trait Signaling: Send + Sync {
     /// Send a signaling message to the target peer.
     fn send_signal(&amp;mut self, peer: &amp;PeerId, msg: &amp;SignalingMessage) -&gt; Result&lt;(), SignalingError&gt;;
-    /// Receive the next incoming signaling message, if any.
+    /// Poll for the next incoming signaling message (non-blocking).
     fn recv_signal(&amp;mut self) -&gt; Result&lt;Option&lt;(PeerId, SignalingMessage)&gt;, SignalingError&gt;;
 }
 
@@ -304,7 +312,7 @@ pub enum SignalingMessage {
 <h3 id="direct-ip"><a class="header" href="#direct-ip">Direct IP</a></h3>
 <p>Classic approach. Host shares <code>IP:port</code>, other player connects.</p>
 <ul>
-<li>Simplest to implement (TCP connect, done)</li>
+<li>Simplest to implement (UDP connect to the host’s relay endpoint, done)</li>
 <li>Requires host to have a reachable IP (port forwarding or same LAN)</li>
 <li>Good for LAN parties, dedicated server setups, and power users</li>
 </ul>

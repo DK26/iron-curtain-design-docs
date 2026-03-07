@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-ac1642ae.js"></script>
+        <script src="../../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -180,14 +180,15 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h2 id="d014-templating--tera-in-phase-6a-nice-to-have"><a class="header" href="#d014-templating--tera-in-phase-6a-nice-to-have">D014: Templating — Tera in Phase 6a (Nice-to-Have)</a></h2>
-<p><strong>Decision:</strong> Add Tera template engine for YAML/Lua generation. Phase 6a. Not foundational.</p>
+                        <h2 id="d014-templating--tera"><a class="header" href="#d014-templating--tera">D014: Templating — Tera</a></h2>
+<p><strong>Decision:</strong> Add Tera template engine for YAML/Lua generation. Core integration in Phase 2–3 (first-party content depends on it). Advanced templating ecosystem (Workshop template distribution, in-game parameter editing UI, complex migration tooling) in Phase 6a.</p>
 <p><strong>Rationale:</strong></p>
 <ul>
 <li>Eliminates copy-paste for faction variants, bulk unit generation</li>
 <li>Load-time only (zero runtime cost)</li>
 <li>~50 lines to integrate</li>
-<li>Optional — no mod depends on it</li>
+<li>All first-party IC content (balance presets, resource packs, built-in campaigns) is Tera-templated — <code>.yaml.tera</code> files are processed at load time, so core Tera support must ship when that content does</li>
+<li>Optional for third-party mods — plain YAML is always valid, and most community content works without templating</li>
 </ul>
 
                     </main>

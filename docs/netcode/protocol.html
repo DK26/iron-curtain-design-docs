@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -201,18 +201,39 @@
 </span><span class="boring">fn main() {
 </span>#[derive(Clone, Serialize, Deserialize, Hash)]
 pub enum PlayerOrder {
-    Move { unit_ids: Vec&lt;UnitId&gt;, target: WorldPos },
-    Attack { unit_ids: Vec&lt;UnitId&gt;, target: Target },
-    Build { structure: StructureType, position: WorldPos },
-    SetRallyPoint { building: BuildingId, position: WorldPos },
-    Sell { building: BuildingId },
+    // === Game-agnostic core (all RTS game modules use these) ===
+    Move { units: Vec&lt;UnitTag&gt;, target: WorldPos },
+    Attack { units: Vec&lt;UnitTag&gt;, target: Target },
+    Stop { units: Vec&lt;UnitTag&gt; },
     Idle,  // Explicit no-op — keeps player in the tick's order list for timing/presence
-    ChatMessage { channel: ChatChannel, text: String },  // D059
+    ChatMessage { channel: ChatChannel, text: String },  // D059 — display/replay only, no game state effect
     ChatCommand { cmd: String, args: Vec&lt;String&gt; },       // Mod-registered sim commands (D058)
     CheatCode(CheatId),                                   // Hidden cheat activation (D058)
     SetCvar { name: String, value: String },              // DEV_ONLY/SERVER cvar mutation
-    // ... every other possible player action (deploy, stance, surrender, pings, etc.)
+    Vote(VoteOrder),                                      // Surrender, kick, remake, draw, custom (vote-framework.md)
+    // === Game-module extensibility (D018/D039, multi-game.md rule 7) ===
+    // Game modules register their own order types via this variant.
+    // The payload is serde-serialized by the game module and deserialized
+    // by its OrderValidator (D041). The engine core routes these opaquely.
+    // RA1 examples: Build, Sell, SetRallyPoint, Deploy, Stance, etc.
+    GameOrder(GameSpecificOrder),
 }
+
+/// Opaque game-module order. The engine core does not inspect this;
+/// the game module's OrderValidator (D041) deserializes and validates it.
+/// `type_tag` identifies the order kind (game module assigns its own IDs).
+/// `payload` is the serde-serialized order data.
+#[derive(Clone, Serialize, Deserialize, Hash)]
+pub struct GameSpecificOrder {
+    pub type_tag: u16,
+    pub payload: Vec&lt;u8&gt;,
+}
+
+/// UnitTag is the stable external entity identity (02-ARCHITECTURE.md § External
+/// Entity Identity). Generational index into a fixed-size pool — deterministic,
+/// cheap (4 bytes), safe across save/load/network boundaries. Bevy Entity is
+/// NEVER serialized into orders or replays.
+/// See also: type-safety.md § Newtype Policy.
 
 /// Sub-tick timestamp on every order (CS2-inspired, see below).
 /// In relay modes this is a client-submitted timing hint that the relay
@@ -227,9 +248,24 @@ pub struct TimestampedOrder {
 // At 15 ticks/sec the tick window is ~66,667µs — u32 is more than sufficient.
 // Integer ordering avoids any platform-dependent float comparison behavior
 // and keeps ic-protocol free of floating-point types entirely.
+//
+// Authentication note: TimestampedOrder is the sim-level type (ic-protocol).
+// The transport layer in ic-net wraps each order in an AuthenticatedOrder
+// (Ed25519 signature from a per-session ephemeral keypair) before
+// transmission. The relay verifies signatures before forwarding.
+// See vulns-protocol.md § Vulnerability 16 for the signing scheme and
+// system-wiring.md for the integration site.
+//
+// Chat routing note: ChatMessage orders are per-recipient filtered by the
+// relay based on ChatChannel (D059). Team chat goes only to same-team clients,
+// Whisper only to the target. This is safe because ChatMessage does not affect
+// game state — the sim records it for replay but makes no state-changing
+// decisions. Sync hashes cover game state only. The relay's order_stream_hash
+// (V13 certification) covers the full pre-filtering stream; per-recipient
+// filtering happens after hashing. See relay-architecture.md.
 
 pub struct TickOrders {
-    pub tick: u64,
+    pub tick: SimTick,
     pub orders: Vec&lt;TimestampedOrder&gt;,
 }
 

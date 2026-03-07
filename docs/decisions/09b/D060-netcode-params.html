@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-ac1642ae.js"></script>
+        <script src="../../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -268,7 +268,7 @@
 <tr><th>Parameter</th><th>Value</th><th>Why Fixed</th></tr>
 </thead>
 <tbody>
-<tr><td><strong>Sim tick rate</strong></td><td>30 tps (33ms/tick)</td><td>In lockstep, ticks are synchronization barriers (collect orders → process → advance sim → exchange hashes), not just simulation steps. Higher rates multiply CPU cost (full ECS update per tick for 500+ units), network overhead (more sync barriers, larger run-ahead in ticks), and late-arrival risk — with no gameplay benefit. RTS units move cell-to-cell, not sub-millimeter. Visual interpolation makes 30 tps smooth at 60+ FPS render. Game speed multiplies the tick <em>interval</em>, not the tick <em>rate</em>. See <code>03-NETCODE.md</code> § “Why Sub-Tick Instead of a Higher Tick Rate”</td></tr>
+<tr><td><strong>Sim tick rate</strong></td><td>Set by game speed preset (Slowest 80ms / Slower 67ms / Normal 50ms / Faster 35ms / Fastest 20ms per tick; Slower is default ≈ 15 tps)</td><td>The sim does identical work per tick regardless of speed — game speed changes only how frequently ticks are scheduled in wall time. The Slower default (~15 wall-time tps) is the performance budget target for weak machines. In lockstep, ticks are synchronization barriers (collect orders → process → advance sim → exchange hashes). Higher <em>base</em> rates would multiply CPU cost (full ECS update per tick for 500+ units), network overhead, and late-arrival risk with no gameplay benefit. Visual interpolation makes even ~15 wall-time tps smooth at 60+ FPS render. See <code>03-NETCODE.md</code> § “Why Sub-Tick Instead of a Higher Tick Rate”</td></tr>
 <tr><td><strong>Sub-tick ordering</strong></td><td>Always on</td><td>Zero cost (~4 bytes/order + one sort of ≤5 items); produces visibly fairer outcomes in simultaneous-action edge cases; CS2 proved universal acceptance; no reason to toggle</td></tr>
 <tr><td><strong>Adaptive run-ahead</strong></td><td>Always on</td><td>Generals proved this works over 20 years; adapts to both RTT and FPS; synchronized via network command</td></tr>
 <tr><td><strong>Timing feedback</strong></td><td>Always on</td><td>Client self-calibrates order submission timing based on relay feedback; DDNet-proven pattern</td></tr>

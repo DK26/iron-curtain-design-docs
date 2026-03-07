@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -275,9 +275,9 @@ Canonical design authority lives in the Iron Curtain design-doc repository.</p>
 <tr><td><code>ic-paths</code></td><td>Platform path resolution (XDG/APPDATA/portable mode)</td><td>1</td></tr>
 <tr><td><code>ic-sim</code></td><td>Pure deterministic simulation (fixed-point, no I/O, no floats)</td><td>2</td></tr>
 <tr><td><code>ic-render</code></td><td>Bevy isometric map/sprite renderer, camera, fog rendering</td><td>1</td></tr>
-<tr><td><code>ic-ui</code></td><td>Game UI and chrome (egui), sidebar, power bar, selection, menus</td><td>3–4</td></tr>
+<tr><td><code>ic-ui</code></td><td>Game UI and chrome (Bevy UI), sidebar, power bar, selection, menus</td><td>3–4</td></tr>
 <tr><td><code>ic-audio</code></td><td>Sound, music, EVA via Kira backend</td><td>3</td></tr>
-<tr><td><code>ic-net</code></td><td><code>NetworkModel</code> implementations, <code>RelayCore</code> library, relay-server binary</td><td>5</td></tr>
+<tr><td><code>ic-net</code></td><td><code>NetworkModel</code> implementations, <code>RelayCore</code> library, <code>ic-server</code> binary</td><td>5</td></tr>
 <tr><td><code>ic-script</code></td><td>Lua (<code>mlua</code>) and WASM (<code>wasmtime</code>) mod runtimes, deterministic sandbox</td><td>4–5</td></tr>
 <tr><td><code>ic-ai</code></td><td>Skirmish AI (<code>PersonalityDrivenAi</code>), adaptive difficulty, economy/production/military managers</td><td>4–6</td></tr>
 <tr><td><code>ic-llm</code></td><td>LLM integration for adaptive missions, briefings, coaching (D016, D044, D073)</td><td>6+</td></tr>
@@ -302,6 +302,7 @@ Canonical design authority lives in the Iron Curtain design-doc repository.</p>
 <li><code>Execution Step:</code> <code>G*</code></li>
 <li><code>Priority:</code> <code>P-Core</code> / <code>P-Differentiator</code> / <code>P-Creator</code> / <code>P-Scale</code> / <code>P-Optional</code></li>
 <li><code>Dependencies:</code> relevant <code>Dxxx</code>, cluster IDs, <code>Pxxx</code> blockers</li>
+<li><code>Evidence planned:</code> tests/demo/replay/profile/ops notes</li>
 </ul>
 <p>Do not implement features out of sequence unless the dependency map says they can run in parallel.</p>
 <h3 id="milestone-summary"><a class="header" href="#milestone-summary">Milestone Summary</a></h3>
@@ -414,7 +415,7 @@ Canonical design authority lives in the Iron Curtain design-doc repository.</p>
 <li><strong>Milestone:</strong> <code>M0</code></li>
 <li><strong>Priority:</strong> <code>P-Core</code> (process-critical implementation hygiene)</li>
 <li><strong>Feature Cluster:</strong> <code>M0.OPS.EXTERNAL_CODE_REPO_BOOTSTRAP_AND_NAVIGATION_TEMPLATES</code></li>
-<li><strong>Depends on (hard):</strong> <code>M0.CORE.TRACKER_FOUNDATION</code>, <code>M0.CORE.DEP_GRAPH_SCHEMA</code>, <code>M0.OPS.MAINTENANCE_RULES</code></li>
+<li><strong>Depends on (hard):</strong> <code>M0.CORE.TRACKER_FOUNDATION</code>, <code>M0.CORE.DEP_GRAPH_SCHEMA</code>, <code>M0.OPS.MAINTENANCE_RULES</code>, <code>M0.QA.CI_PIPELINE_FOUNDATION</code></li>
 </ul>
 
                     </main>

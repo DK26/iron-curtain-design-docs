@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -218,7 +218,7 @@ pub struct NetworkSimConfig {
 <tbody>
 <tr><td><strong>Tier 1: Lobby GUI</strong></td><td>Game speed (Slowest–Fastest)</td><td>One setting. The only parameter where player preference is legitimate.</td></tr>
 <tr><td><strong>Tier 2: Console</strong></td><td><code>net.sync_frequency</code>, <code>net.show_diagnostics</code>, <code>net.desync_debug_level</code>, <code>net.simulate_latency/loss/jitter</code></td><td>Power users only. Flagged <code>DEV_ONLY</code> or <code>SERVER</code> in the cvar system (D058).</td></tr>
-<tr><td><strong>Tier 3: Engine constants</strong></td><td>Tick rate (30 tps), sub-tick ordering, adaptive run-ahead, timing feedback, stall policy (never stall), anti-lag-switch, visual prediction</td><td>Fixed. These are correct engineering solutions, not preferences.</td></tr>
+<tr><td><strong>Tier 3: Engine constants</strong></td><td>Tick rate (set by game speed preset; default Slower ≈15 tps), sub-tick ordering, adaptive run-ahead, timing feedback, stall policy (never stall), anti-lag-switch, visual prediction</td><td>Fixed. These are correct engineering solutions, not preferences.</td></tr>
 </tbody>
 </table>
 </div>

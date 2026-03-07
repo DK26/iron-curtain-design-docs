@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -186,8 +186,8 @@
 <h4 id="dual-mode-state-hashing"><a class="header" href="#dual-mode-state-hashing">Dual-Mode State Hashing</a></h4>
 <p>Every tick, each client hashes their sim state. But a full <code>state_hash()</code> over the entire ECS world is expensive. We use a two-tier approach (validated by both OpenTTD and 0 A.D.):</p>
 <ul>
-<li><strong>Primary: RNG state comparison.</strong> Every sync frame, clients exchange their deterministic RNG seed. If the RNG diverges, the sim has diverged — this catches ~99% of desyncs at near-zero cost. The RNG is advanced by every stochastic sim operation (combat rolls, scatter patterns, AI decisions), so any state divergence quickly contaminates it.</li>
-<li><strong>Fallback: Full state hash.</strong> Periodically (every N ticks, configurable — default 120, ~4 seconds at 30 tps) or when RNG drift is detected, compute and compare a full <code>state_hash()</code>. This catches the rare case where a desync affects only deterministic state that doesn’t touch the RNG.</li>
+<li><strong>Primary: Fast sync hash (<code>SyncHash</code>, per tick).</strong> Every sync frame, clients submit a <code>SyncHash(u64)</code> — the Merkle root truncated to 64 bits (see <code>type-safety.md</code>). Because the deterministic RNG state is included in the Merkle tree, any RNG divergence contaminates the root — this catches ~99% of desyncs at near-zero cost per tick. The RNG is advanced by every stochastic sim operation (combat rolls, scatter patterns, AI decisions), so state divergence quickly propagates.</li>
+<li><strong>Fallback: Full state hash (<code>StateHash</code>, periodic).</strong> Every N ticks (configurable — default 30, ~1 second at 30 tps), clients also submit a <code>StateHash([u8; 32])</code> — the full SHA-256 Merkle root. This provides collision-resistant verification and doubles as the input for the relay’s replay <code>TickSignature</code> chain (see <code>formats/save-replay-formats.md</code>). The higher cadence versus the old 120-tick default reflects the dual use: desync fallback AND replay signing.</li>
 </ul>
 <p>The relay authority compares hashes. On mismatch → desync detected at a specific tick. Because the sim is snapshottable (D010), dump full state and diff to pinpoint exact divergence — entity by entity, component by component.</p>
 <h4 id="merkle-tree-state-hashing-phase-2"><a class="header" href="#merkle-tree-state-hashing-phase-2">Merkle Tree State Hashing (Phase 2+)</a></h4>

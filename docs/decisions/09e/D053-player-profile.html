@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-ac1642ae.js"></script>
+        <script src="../../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -333,7 +333,7 @@ pub enum AvatarSource {
 </tbody>
 </table>
 </div>
-<p>Match history is stored locally (from the player’s credential SQLite file). Community servers do not host full match histories — they only issue rating/match SCRs. This is consistent with the local-first principle.</p>
+<p>Match history is stored locally in <code>communities/*.db</code> (from the player’s community-issued match SCRs). Community servers do not host full match histories — they only issue rating/match SCRs. This is consistent with the local-first principle. Broader career analytics (including unranked and offline matches) are available in <code>gameplay.db</code> (D034) — the profile’s Match History panel shows specifically the SCR-backed verified match records with cryptographic provenance.</p>
 <p><strong>5. Friends &amp; Social</strong></p>
 <p>IC supports two complementary friend systems:</p>
 <ul>

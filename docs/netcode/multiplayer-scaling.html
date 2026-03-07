@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -237,16 +237,19 @@ Dedicated relay server (recommended for competitive)
 </ul>
 <p>The performance targets in <code>10-PERFORMANCE.md</code> already account for this. The efficiency pyramid (flowfields, spatial hash, sim LOD, amortized work) is designed for 2000+ units on mid-range hardware. An 8-player game is within budget.</p>
 <h3 id="team-games-2v2-3v3-4v4"><a class="header" href="#team-games-2v2-3v3-4v4">Team Games (2v2, 3v3, 4v4)</a></h3>
-<p>Team games work identically to FFA. Each player submits orders for their own units. The sim processes all orders from all players in sub-tick chronological order. Alliances, shared vision, and team chat are sim-layer and UI-layer concerns — the network model doesn’t distinguish between ally and enemy.</p>
+<p>Team games work identically to FFA. Each player submits orders for their own units. The sim processes all orders from all players in sub-tick chronological order. Alliances and shared vision are sim-layer concerns — the network model’s lockstep ordering does not distinguish between ally and enemy. Team chat routing, however, is a relay concern: the relay inspects <code>ChatChannel::Team</code> to forward messages only to same-team recipients (see D059 and <code>system-wiring.md</code> § tick loop). This team-awareness is limited to chat filtering and does not affect the deterministic order stream.</p>
 <h3 id="observers--spectators"><a class="header" href="#observers--spectators">Observers / Spectators</a></h3>
-<p>Observers receive <code>TickOrders</code> but never submit any. They run the sim locally (full state, all players’ perspective). In a relay server setup, the relay can optionally delay the observer feed by N ticks to prevent live coaching.</p>
+<p>Observers receive <code>TickOrders</code> but never submit any. In <strong>casual</strong> mode (default), observers run the sim with full state — all players’ perspective. In <strong>ranked team games</strong>, observers are assigned to one team’s perspective (<code>delayed_perspective: true</code>): the relay withholds the opposing team’s orders until the spectator delay expires — all orders are eventually delivered; the restriction is temporal, not permanent — preventing real-time intel relay (see <code>match-lifecycle.md</code> § Live Spectator Delay). In both modes, the relay enforces a per-observer delay on the TickOrders feed to prevent live coaching via spectator collusion.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct ObserverConnection {
-    pub delay_ticks: u64,        // e.g., 30 ticks (~2 seconds) for anti-coaching
+    /// Relay-enforced delay. Ranked minimum: 120 seconds (V59).
+    /// Unranked: configurable by host (can be 0). Tournament: ≥180s.
+    pub delay_ticks: u64,
     pub receive_only: bool,      // true — observer never submits orders
 }
 <span class="boring">}</span></code></pre>
+<p>The delay buffer is <strong>per-observer</strong> — each observer’s view is independently delayed at the relay. The client cannot bypass the delay; it is a relay-side enforcement point recorded in <code>CertifiedMatchResult</code> metadata. See <code>security/vulns-edge-cases-infra.md</code> § Vulnerability 59 for the full tiered delay policy and ranked floor rationale.</p>
 <h3 id="player-limits"><a class="header" href="#player-limits">Player Limits</a></h3>
 <p>No hard architectural limit. Practical limits:</p>
 <ul>
@@ -259,7 +262,7 @@ Dedicated relay server (recommended for competitive)
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../netcode/match-lifecycle.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../netcode/vote-framework.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -273,7 +276,7 @@ Dedicated relay server (recommended for competitive)
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../netcode/match-lifecycle.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../netcode/vote-framework.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 

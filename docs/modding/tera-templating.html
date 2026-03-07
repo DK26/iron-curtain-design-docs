@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -180,9 +180,9 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="tera-templating-phase-6a"><a class="header" href="#tera-templating-phase-6a">Tera Templating (Phase 6a)</a></h1>
+                        <h1 id="tera-templating"><a class="header" href="#tera-templating">Tera Templating</a></h1>
 <h3 id="tera-as-the-template-engine"><a class="header" href="#tera-as-the-template-engine">Tera as the Template Engine</a></h3>
-<p>Tera is a Rust-native Jinja2-compatible template engine. <strong>All first-party IC content uses it</strong> — the default Red Alert campaign, built-in resource packs, and balance presets are all Tera-templated. This means the system is proven by the content that ships with the engine, not just an abstract capability.</p>
+<p>Tera is a Rust-native Jinja2-compatible template engine. <strong>All first-party IC content uses it</strong> — the default Red Alert campaign, built-in resource packs, and balance presets are all Tera-templated. This means the system is proven by the content that ships with the engine, not just an abstract capability. Core Tera integration (load-time <code>.yaml.tera</code> processing) ships in Phase 2–3 alongside the first-party content that depends on it. Advanced templating features (Workshop template distribution, in-game parameter editing UI, migration tooling) ship in Phase 6a.</p>
 <p>For <strong>third-party content creators, Tera is entirely optional.</strong> Plain YAML is always valid and is the recommended starting point. Most community mods, resource packs, and maps work fine without any templating at all. Tera is there when you need it — not forced on you.</p>
 <p>What Tera handles:</p>
 <ol>

@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -238,7 +238,7 @@
 </tbody>
 </table>
 </div>
-<p><strong>Why <code>egui</code> for tool panels:</strong> Bevy UI (<code>bevy_ui</code>) is designed for game chrome — styled panels, themed buttons, responsive layouts. The SDK needs raw productivity UI: property grids with dozens of fields, type-ahead search in entity palettes, nested tree views for trigger folders, side-by-side diff panels. <code>egui</code> provides all of these out of the box. <code>bevy_egui</code> is a mature integration crate. The game never shows <code>egui</code> (it uses themed <code>bevy_ui</code>); the SDK uses both.</p>
+<p><strong>Why <code>egui</code> for tool panels:</strong> Bevy UI (<code>bevy_ui</code>) is designed for game chrome — styled panels, themed buttons, responsive layouts. The SDK needs raw productivity UI: property grids with dozens of fields, type-ahead search in entity palettes, nested tree views for trigger folders, side-by-side diff panels. <code>egui</code> provides all of these out of the box. <code>bevy_egui</code> is a mature integration crate. Player-facing game UI uses themed <code>bevy_ui</code> exclusively; <code>egui</code> appears in two contexts: the SDK (tool panels, inspectors) and the game client’s developer overlays (D058 console, D031 debug overlay — both gated behind a <code>dev-tools</code> feature flag, absent from release builds). The SDK uses both <code>bevy_ui</code> (for the isometric viewport chrome) and <code>egui</code> (for everything else).</p>
 <p><strong>Why <code>ic-render</code> for the viewport:</strong> The editor viewport must show exactly what the game will show — same sprite draw modes, same z-ordering, same palette application, same shroud rendering. If the editor used a simplified renderer, creators would encounter “looks different in-game” surprises. Reusing <code>ic-render</code> eliminates this class of bugs entirely.</p>
 <h3 id="what-graphical-resources-the-editor-uses"><a class="header" href="#what-graphical-resources-the-editor-uses">What Graphical Resources the Editor Uses</a></h3>
 <p>The SDK does not need its own art assets for the editor chrome — it uses <code>egui</code>’s default styling (suitable for professional tools) plus the game’s own assets for content preview.</p>

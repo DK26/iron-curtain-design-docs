@@ -35,10 +35,10 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../../../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../../toc-ac1642ae.js"></script>
+        <script src="../../../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -310,7 +310,7 @@ pub enum PlayerOrder {
 </tbody>
 </table>
 </div>
-<p><strong>Anti-coaching:</strong> During a live game, observer messages are never forwarded to players. This prevents spectator coaching in competitive matches. In replay playback, all channels are visible (the information is historical).</p>
+<p><strong>Anti-coaching:</strong> During a live game, observer messages are never forwarded to players. This prevents spectator coaching in competitive matches. In replay playback, Team and Observer channels become visible to all viewers (the information is historical and no longer competitively sensitive). Whisper messages remain private — they are only stored in the sender’s local replay and are never included in shared/published replays (see routing table above: “Sender only” replay visibility).</p>
 <p><strong>Chat cooldown:</strong> Rate-limited at the relay: max 5 messages per 3 seconds per player (configurable via server cvar). Exceeding the limit queues messages with a “slow mode” indicator. This prevents chat spam without blocking legitimate rapid communication during intense moments.</p>
 <h4 id="channel-switching"><a class="header" href="#channel-switching">Channel Switching</a></h4>
 <pre><code>Enter         → Open chat in last-used channel
@@ -450,7 +450,7 @@ impl VoiceBitrateAdapter {
 </span>pub enum MessageLane {
     Orders = 0,
     Control = 1,
-    Chat = 2,
+    Chat = 2,     // Lobby/post-game chat only; in-match chat flows as PlayerOrder in Orders lane
     Voice = 3,    // NEW — voice frames
     Bulk = 4,     // was 3, renumbered
 }
@@ -463,7 +463,7 @@ impl VoiceBitrateAdapter {
 <tbody>
 <tr><td><code>Orders</code></td><td>0</td><td>1</td><td>4 KB</td><td>Reliable</td><td>Orders must arrive; missed = Idle (deadline is the cap)</td></tr>
 <tr><td><code>Control</code></td><td>0</td><td>1</td><td>2 KB</td><td>Unreliable</td><td>Latest sync hash wins; stale hashes are useless</td></tr>
-<tr><td><code>Chat</code></td><td>1</td><td>1</td><td>8 KB</td><td>Reliable</td><td>Chat messages should arrive but can wait</td></tr>
+<tr><td><code>Chat</code></td><td>1</td><td>1</td><td>8 KB</td><td>Reliable</td><td>Lobby/post-game chat; in-match chat is in Orders lane</td></tr>
 <tr><td><code>Voice</code></td><td>1</td><td>2</td><td>16 KB</td><td>Unreliable</td><td>Real-time voice; dropped frames use Opus PLC (not retransmit)</td></tr>
 <tr><td><code>Bulk</code></td><td>2</td><td>1</td><td>64 KB</td><td>Unreliable</td><td>Telemetry/observer data uses spare bandwidth</td></tr>
 </tbody>

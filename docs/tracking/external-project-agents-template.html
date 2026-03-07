@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -234,6 +234,7 @@ Required in implementation issues/PRs:
 - `Execution Step:` `G*`
 - `Priority:` `P-*`
 - `Dependencies:` relevant `Dxxx`, cluster IDs, `Pxxx` blockers
+- `Evidence planned:` tests/demo/replay/profile/ops notes
 
 Do not implement features out of sequence unless the dependency map says they can run in parallel.
 
@@ -265,8 +266,12 @@ When you need a design change:
    - affected canonical docs / `Dxxx`
    - why the current design is insufficient
    - proposed options and tradeoffs
-3. Link the request in the implementation PR/issue
-4. Keep local workaround scope narrow until the design is resolved
+3. **Document the divergence locally in this repo:**
+   - a note in `docs/design-gap-requests/` (or equivalent local tracking path)
+   - inline code comments at the divergence point referencing the issue and rationale
+   - the full reasoning for why the original design was not followed
+4. Link the request in the implementation PR/issue
+5. Keep local workaround scope narrow until the design is resolved
 
 ## Local Repo-Specific Rules (Fill These In)
 
@@ -310,7 +315,7 @@ Do not claim a feature is complete without evidence:
 <li><strong>Milestone:</strong> <code>M0</code></li>
 <li><strong>Priority:</strong> <code>P-Core</code></li>
 <li><strong>Feature Cluster:</strong> <code>M0.OPS.EXTERNAL_CODE_REPO_BOOTSTRAP_AND_NAVIGATION_TEMPLATES</code></li>
-<li><strong>Depends on:</strong> <code>M0.CORE.TRACKER_FOUNDATION</code>, <code>M0.CORE.DEP_GRAPH_SCHEMA</code></li>
+<li><strong>Depends on:</strong> <code>M0.CORE.TRACKER_FOUNDATION</code>, <code>M0.CORE.DEP_GRAPH_SCHEMA</code>, <code>M0.OPS.MAINTENANCE_RULES</code>, <code>M0.QA.CI_PIPELINE_FOUNDATION</code></li>
 </ul>
 
                     </main>

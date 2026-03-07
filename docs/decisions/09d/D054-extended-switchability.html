@@ -35,10 +35,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-ac1642ae.js"></script>
+        <script src="../../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -239,12 +239,12 @@
 pub trait Transport: Send + Sync {
     /// Send a datagram/message to the connected peer. Non-blocking or
     /// returns WouldBlock. Data is a complete message (not a byte stream).
-    fn send(&amp;self, data: &amp;[u8]) -&gt; Result&lt;(), TransportError&gt;;
+    fn send(&amp;mut self, data: &amp;[u8]) -&gt; Result&lt;(), TransportError&gt;;
 
     /// Receive the next available message, if any. Non-blocking.
     /// Returns the number of bytes written to `buf`, or None if no
     /// message is available.
-    fn recv(&amp;self, buf: &amp;mut [u8]) -&gt; Result&lt;Option&lt;usize&gt;, TransportError&gt;;
+    fn recv(&amp;mut self, buf: &amp;mut [u8]) -&gt; Result&lt;Option&lt;usize&gt;, TransportError&gt;;
 
     /// Maximum payload size for a single send() call.
     /// UdpTransport returns ~476 (MTU-safe). WebSocketTransport returns ~64KB.

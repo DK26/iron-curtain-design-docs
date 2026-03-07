@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -188,7 +188,7 @@
 ├── Metadata (JSON, uncompressed)
 └── Payload (serde-serialized SimSnapshot, LZ4-compressed)
 </code></pre>
-<h3 id="header-32-bytes-fixed"><a class="header" href="#header-32-bytes-fixed">Header (32 bytes, fixed)</a></h3>
+<h3 id="header-68-bytes-fixed"><a class="header" href="#header-68-bytes-fixed">Header (68 bytes, fixed)</a></h3>
 <p>All header fields use <strong>little-endian</strong> byte order and are <strong>packed with no padding</strong> (<code>#[repr(C, packed)]</code> in Rust, or equivalent sequential layout). Parsers must read fields at their exact byte offsets. This is the wire format — implementations in other languages read the same bytes in the same order.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -202,8 +202,12 @@
     pub payload_offset: u32,         // Byte offset to compressed payload
     pub payload_length: u32,         // Compressed payload length
     pub uncompressed_length: u32,    // Uncompressed payload length (for pre-allocation)
-    pub state_hash: u64,             // state_hash() of the saved tick (integrity check)
+    pub state_hash: u64,             // SyncHash of the saved tick (fast integrity check on load)
+    pub payload_hash: [u8; 32],      // StateHash — SHA-256 over the compressed payload bytes.
+                                     // Verified BEFORE decompression/deserialization (Fossilize pattern).
+                                     // See api-misuse-defense.md S4 for the verification flow.
 }
+// Total: 4 + 2 + 1 + 1 + 4 + 4 + 4 + 4 + 4 + 8 + 32 = 68 bytes
 <span class="boring">}</span></code></pre>
 <blockquote>
 <p><strong>Compression (D063):</strong> The <code>compression_algorithm</code> byte identifies which decompressor to use for the payload. Version 1 files use <code>0x01</code> (LZ4). The <code>version</code> field controls the serialization format (bincode vs. postcard) independently — see <code>decisions/09d/D054-extended-switchability.md</code> for codec dispatch and <code>decisions/09a-foundation.md</code> § D063 for algorithm dispatch. Compression level (fastest/balanced/compact) is configurable via <code>settings.toml</code> <code>compression.save_level</code> and affects encoding speed/ratio but not the format.</p>
@@ -243,7 +247,10 @@
 </span><span class="boring">fn main() {
 </span>pub struct SimSnapshot {
     pub tick: u64,
+    pub game_seed: u64,                  // game seed (for cross-game restore rejection — see api-misuse-defense.md S3)
+    pub map_hash: StateHash,             // SHA-256 of the map (for cross-game restore rejection)
     pub rng_state: DeterministicRngState,
+    pub intern_table: StringInternerSnapshot, // Interned string table — InternedId values depend on this (efficiency-pyramid.md)
     pub entities: Vec&lt;EntitySnapshot&gt;,   // all entities + all components
     pub player_states: Vec&lt;PlayerState&gt;, // credits, power, tech tree, etc.
     pub map_state: MapState,             // resource cells, terrain modifications
@@ -253,9 +260,11 @@
 
 /// Serializable snapshot of all active script state.
 /// This is the *data* extracted from Lua/WASM runtimes — not the VM handles
-/// themselves. On save, the engine calls each mod's `on_serialize()` callback
-/// to extract mod-declared variables into this struct. On load, `on_deserialize()`
-/// restores them into a freshly initialized VM.
+/// themselves. On save, `ic-game` (the integration layer) calls each mod's
+/// `on_serialize()` callback via `ic-script` to extract mod-declared variables
+/// into this struct, then attaches it to the `SimSnapshot` before persisting.
+/// On load, `on_deserialize()` restores them into a freshly initialized VM.
+/// This preserves the crate boundary: `ic-sim` never imports `ic-script`.
 pub struct ScriptState {
     /// Per-mod Lua variable snapshots (mod_id → serialized table).
     /// Each mod’s `on_serialize()` returns a Lua table; the engine
@@ -294,12 +303,13 @@ pub enum ScriptValue {
 ├── Header (fixed-size, uncompressed)
 ├── Metadata (JSON, uncompressed)
 ├── Tick Order Stream (framed, LZ4-compressed)
+├── Keyframe Index + Snapshots (LZ4-compressed, mandatory)
 ├── Analysis Event Stream (LZ4-compressed, optional — HAS_EVENTS flag)
 ├── Voice Stream (per-player Opus tracks, optional — HAS_VOICE flag, D059)
 ├── Signature Chain (Ed25519 hash chain, optional — SIGNED flag)
 └── Embedded Resources (map + mod manifest, optional)
 </code></pre>
-<h3 id="header-76-bytes-fixed"><a class="header" href="#header-76-bytes-fixed">Header (76 bytes, fixed)</a></h3>
+<h3 id="header-84-bytes-fixed"><a class="header" href="#header-84-bytes-fixed">Header (84 bytes, fixed)</a></h3>
 <p>Same wire-format rules as the save header: <strong>little-endian</strong>, <strong>packed with no padding</strong>.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -312,18 +322,21 @@ pub enum ScriptValue {
     pub metadata_length: u32,
     pub orders_offset: u32,
     pub orders_length: u32,          // Compressed length
+    pub keyframes_offset: u32,       // Byte offset to keyframe index + snapshot data
+    pub keyframes_length: u32,       // Compressed length of keyframe section
     pub events_offset: u32,          // 0 if no analysis events (HAS_EVENTS flag)
     pub events_length: u32,          // Compressed length of analysis event stream
     pub signature_offset: u32,
     pub signature_length: u32,
     pub total_ticks: u64,            // Total ticks in the replay
-    pub final_state_hash: u64,       // state_hash() of the last tick (integrity)
+    pub final_state_hash: u64,       // SyncHash of the last tick (fast integrity check)
     pub voice_offset: u32,           // 0 if no voice stream (HAS_VOICE flag, D059)
     pub voice_length: u32,           // Compressed length of voice stream
     pub embedded_offset: u32,        // 0 if Minimal mode (no embedded resources)
     pub embedded_length: u32,        // Length of embedded resources section
     pub lost_frame_count: u32,       // Frames dropped by BackgroundReplayWriter (V45, see network-model-trait.md)
 }
+// Total: 4 + 2 + 1 + 1 + (14 × 4) + 8 + 4 = 84 bytes
 <span class="boring">}</span></code></pre>
 <blockquote>
 <p><strong>Compression (D063):</strong> The <code>compression_algorithm</code> byte identifies which decompressor to use for the tick order stream and embedded keyframe snapshots. Version 1 files use <code>0x01</code> (LZ4). Compression level during live recording defaults to <code>fastest</code> (configurable via <code>settings.toml</code> <code>compression.replay_level</code>). Use <code>ic replay recompress</code> to re-encode at a higher compression level for archival. See <code>decisions/09a-foundation.md</code> § D063.</p>
@@ -335,7 +348,7 @@ pub enum ScriptValue {
 <li>Bit 3: <code>HAS_VOICE</code> — per-player Opus audio tracks recorded with player consent (<code>voice_offset</code>/<code>voice_length</code> are valid; see <code>decisions/09g/D059-communication.md</code>)</li>
 <li>Bit 4: <code>INCOMPLETE</code> — one or more tick frames were lost during recording (see <code>lost_frame_count</code>). Replay is playable but not ranked-verifiable — the Ed25519 signature chain has gaps (V45). Set by <code>BackgroundReplayWriter</code> when <code>lost_frame_count &gt; 0</code> at flush time.</li>
 </ul>
-<p><strong>Section presence convention:</strong> Each optional section has an <code>_offset</code>/<code>_length</code> pair in the header. A section is present when its corresponding flag bit is set AND its offset is non-zero. Readers must check the flag bit, not just the offset, to distinguish “section absent” from “section at offset 0” (impossible in practice since offset 0 is the header, but the flag is the canonical indicator). Embedded resources have no flag bit — presence is determined solely by <code>embedded_offset != 0</code>.</p>
+<p><strong>Section presence convention:</strong> Each optional section has an <code>_offset</code>/<code>_length</code> pair in the header. A section is present when its corresponding flag bit is set AND its offset is non-zero. Readers must check the flag bit, not just the offset, to distinguish “section absent” from “section at offset 0” (impossible in practice since offset 0 is the header, but the flag is the canonical indicator). Embedded resources and keyframes have no flag bit — keyframes are mandatory (always present), and embedded resource presence is determined solely by <code>embedded_offset != 0</code>.</p>
 <h3 id="metadata-json-1"><a class="header" href="#metadata-json-1">Metadata (JSON)</a></h3>
 <pre><code class="language-json">{
   "replay_id": "a3f7c2d1-...",
@@ -384,12 +397,44 @@ pub enum ScriptValue {
 </span>/// One tick's worth of orders in the replay.
 pub struct ReplayTickFrame {
     pub tick: u64,
-    pub state_hash: u64,                // for desync detection during playback
+    pub state_hash: u64,                // SyncHash — fast desync detection during playback (see type-safety.md)
     pub orders: Vec&lt;TimestampedOrder&gt;,   // all player orders this tick
 }
 <span class="boring">}</span></code></pre>
 <p>Frames are serialized with bincode and compressed in blocks (LZ4 block compression): every 256 ticks form a compression block. This enables seeking — jump to any 256-tick boundary by decompressing just that block, then fast-forward within the block.</p>
 <p><strong>Streaming write:</strong> During a live game, replay frames are appended incrementally (not buffered in memory). The replay file is valid at any point — if the game crashes, the replay up to that point is usable.</p>
+<h3 id="keyframe-index--snapshots"><a class="header" href="#keyframe-index--snapshots">Keyframe Index &amp; Snapshots</a></h3>
+<p>The keyframe section stores periodic <code>SimSnapshot</code> or <code>DeltaSnapshot</code> captures that enable fast seeking without re-simulating from tick 0. Keyframes are <strong>mandatory</strong> — the recorder writes one every 300 ticks (~10 seconds at 30 tps). A 60-minute replay contains ~360 keyframes.</p>
+<p>The section begins with a fixed-length index (for O(1) seek-to-tick), followed by the snapshot data blobs:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Keyframe index entry — one per keyframe, stored as a flat array
+/// at the start of the keyframe section for fast lookup.
+pub struct KeyframeIndexEntry {
+    pub tick: u64,                    // Tick this keyframe was captured at
+    pub blob_offset: u32,             // Offset within the keyframe section (after the index array)
+    pub blob_length: u32,             // Compressed length of the snapshot blob
+    pub uncompressed_length: u32,     // For pre-allocation
+    pub is_full: bool,                // true = Full SimSnapshot, false = DeltaSnapshot
+}
+
+/// DeltaSnapshot — encodes only components that changed since a baseline.
+/// See state-recording.md for the TrackChanges derive macro and ChangeMask
+/// that make delta encoding efficient.
+pub struct DeltaSnapshot {
+    pub baseline_tick: SimTick,       // Tick of the baseline this delta is relative to
+    pub baseline_hash: SyncHash,      // SyncHash of the baseline (for branch-safety — see api-misuse-defense.md S10)
+    pub tick: SimTick,                // Tick this delta represents
+    pub intern_table_delta: Option&lt;StringInternerDelta&gt;, // New interned strings since baseline (if any)
+    pub changed_entities: Vec&lt;EntityDelta&gt;,  // Only entities with changed components
+    pub changed_players: Vec&lt;PlayerStateDelta&gt;,
+    pub changed_map: Option&lt;MapStateDelta&gt;,
+    pub campaign_state: Option&lt;CampaignState&gt;,  // Full campaign state if changed since baseline (D021 — typically small: flags + mission ID)
+    pub script_state: Option&lt;ScriptState&gt;,      // Full script state if changed since baseline (collected by ic-game via ic-script)
+}
+<span class="boring">}</span></code></pre>
+<p>The first keyframe (tick 0) is always a full <code>SimSnapshot</code>. Subsequent keyframes alternate between full snapshots (every Nth keyframe, default N=10, i.e., every 3000 ticks) and delta snapshots relative to the previous full keyframe. This bounds worst-case seek cost: restoring to any tick requires loading at most one full snapshot + 9 deltas.</p>
+<p><strong>Seeking algorithm:</strong> To seek to tick T: (1) binary search the keyframe index for the largest keyframe tick ≤ T, (2) decompress and restore that snapshot, (3) re-simulate forward from the keyframe tick to T using the order stream.</p>
 <h3 id="analysis-event-stream"><a class="header" href="#analysis-event-stream">Analysis Event Stream</a></h3>
 <p>Alongside the order stream (which enables deterministic replay), IC replays include a separate <strong>analysis event stream</strong> — derived events sampled from the simulation state during recording. This stream enables replay analysis tools (stats sites, tournament review, community analytics) to extract rich data <strong>without re-simulating the entire game</strong>.</p>
 <p>This design follows SC2’s separation of <code>replay.game.events</code> (orders for playback) from <code>replay.tracker.events</code> (analytical data for post-game tools). See <code>research/blizzard-github-analysis.md</code> § 5.2–5.3.</p>
@@ -398,17 +443,19 @@ pub struct ReplayTickFrame {
 </span><span class="boring">fn main() {
 </span>/// Analysis events derived from simulation state during recording.
 /// These are NOT inputs — they are sampled observations for tooling.
+/// Entity references use UnitTag — the stable generational identity
+/// defined in 02-ARCHITECTURE.md § External Entity Identity.
 pub enum AnalysisEvent {
     /// Unit fully created (spawned or construction completed).
-    UnitCreated { tick: u64, tag: EntityTag, unit_type: UnitTypeId, owner: PlayerId, pos: WorldPos },
+    UnitCreated { tick: u64, tag: UnitTag, unit_type: UnitTypeId, owner: PlayerId, pos: WorldPos },
     /// Building/unit construction started.
-    ConstructionStarted { tick: u64, tag: EntityTag, unit_type: UnitTypeId, owner: PlayerId, pos: WorldPos },
+    ConstructionStarted { tick: u64, tag: UnitTag, unit_type: UnitTypeId, owner: PlayerId, pos: WorldPos },
     /// Building/unit construction completed (pairs with ConstructionStarted).
-    ConstructionCompleted { tick: u64, tag: EntityTag },
+    ConstructionCompleted { tick: u64, tag: UnitTag },
     /// Unit destroyed.
-    UnitDestroyed { tick: u64, tag: EntityTag, killer_tag: Option&lt;EntityTag&gt;, killer_owner: Option&lt;PlayerId&gt; },
+    UnitDestroyed { tick: u64, tag: UnitTag, killer_tag: Option&lt;UnitTag&gt;, killer_owner: Option&lt;PlayerId&gt; },
     /// Periodic position sample for combat-active units (delta-encoded, max 256 per event).
-    UnitPositionSample { tick: u64, positions: Vec&lt;(EntityTag, WorldPos)&gt; },
+    UnitPositionSample { tick: u64, positions: Vec&lt;(UnitTag, WorldPos)&gt; },
     /// Periodic per-player economy/military snapshot.
     PlayerStatSnapshot { tick: u64, player: PlayerId, stats: PlayerStats },
     /// Resource harvested.
@@ -426,7 +473,7 @@ pub enum AnalysisEvent {
     /// Player selection changed — what the player is controlling.
     /// Delta-encoded: only records additions/removals from the previous selection.
     /// Enables micro/macro analysis and attention tracking.
-    SelectionChanged { tick: u64, player: PlayerId, added: Vec&lt;EntityTag&gt;, removed: Vec&lt;EntityTag&gt; },
+    SelectionChanged { tick: u64, player: PlayerId, added: Vec&lt;UnitTag&gt;, removed: Vec&lt;UnitTag&gt; },
     /// Control group assignment or recall.
     ControlGroupEvent { tick: u64, player: PlayerId, group: u8, action: ControlGroupAction },
     /// Ability or superweapon activation.
@@ -460,7 +507,7 @@ pub enum ControlGroupAction {
 <li><strong>Independent compression</strong> — the analysis stream is LZ4-compressed in its own block, separate from the order stream. Tools that only need orders skip it; tools that only need stats skip the orders.</li>
 </ul>
 <h3 id="signature-chain-relay-certified-replays"><a class="header" href="#signature-chain-relay-certified-replays">Signature Chain (Relay-Certified Replays)</a></h3>
-<p>For ranked/tournament matches, the relay server signs each tick’s state hash. The signature algorithm is determined by the replay header version — version <code>1</code> uses Ed25519 (current). Later replay header versions, if introduced, may select post-quantum algorithms via the <code>SignatureScheme</code> enum (D054) while preserving versioned verification dispatch:</p>
+<p>For ranked/tournament matches, the relay server signs state hashes at signing cadence (every N ticks, default 30 — see <code>network-model-trait.md</code>), producing a <code>TickSignature</code> chain. The chain is sparse — not every tick has a signature, only those at signing cadence boundaries. The signature algorithm is determined by the replay header version — version <code>1</code> uses Ed25519 (current). Later replay header versions, if introduced, may select post-quantum algorithms via the <code>SignatureScheme</code> enum (D054) while preserving versioned verification dispatch:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct ReplaySignature {
@@ -470,7 +517,7 @@ pub enum ControlGroupAction {
 
 pub struct TickSignature {
     pub tick: u64,
-    pub state_hash: u64,
+    pub state_hash: StateHash,    // Full SHA-256 — relay receives StateHash at signing cadence (see network-model-trait.md)
     /// Number of ticks skipped before this one (0 = contiguous, &gt;0 = gap due to
     /// BackgroundReplayWriter frame loss — see V45). Verifiers include the gap
     /// count in the hash chain: `hash(prev_sig_hash, skipped_ticks, tick, state_hash)`.

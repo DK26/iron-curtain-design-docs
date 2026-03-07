@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -252,12 +252,13 @@ pub struct ClientMetrics {
 </span>/// Sent by the relay to each client after every N ticks (default: 30).
 /// Tells the client how its orders are arriving relative to the tick deadline.
 pub struct TimingFeedback {
-    pub avg_arrival_delta_us: i32,  // +N = arrived N μs before deadline, -N = late
-    pub late_count: u16,            // orders missed deadline in this window
-    pub jitter_us: u32,             // arrival time variance
+    pub early_us: i32,               // avg μs before deadline (0 if not early)
+    pub late_us: i32,                // avg μs after deadline (0 if not late)
+    pub recommended_offset_us: i32,  // relay's suggested adjustment
+    pub late_count: u16,             // orders missed deadline in this window
 }
 <span class="boring">}</span></code></pre>
-<p>The client uses this feedback to adjust when it submits orders — if orders are consistently arriving just barely before the deadline, the client shifts submission earlier. If orders are arriving far too early (wasting buffer), the client can relax. This is a feedback loop that converges toward optimal submission timing without the relay needing to adjust global tick deadlines, reducing the number of late drops for marginal connections.</p>
+<p>The client uses this feedback to adjust when it submits orders — if <code>late_count &gt; 0</code>, the client shifts submission earlier by up to <code>recommended_offset_us</code>. If <code>early_us</code> is large (orders arriving very early, wasting buffer), the client relaxes. This is a feedback loop that converges toward optimal submission timing without the relay needing to adjust global tick deadlines, reducing the number of late drops for marginal connections. See <code>system-wiring.md</code> § <code>RelayLockstepNetwork::apply_timing_feedback()</code> for the client-side consumption and <code>system-wiring.md</code> § <code>RelayCore::compute_timing_feedback()</code> for the relay-side computation.</p>
 <h4 id="match-start-calibration"><a class="header" href="#match-start-calibration">Match-Start Calibration</a></h4>
 <p>The adaptive run-ahead and sub-tick normalization algorithms converge during play — but convergence takes time. Without calibration, the first few seconds of a match use generic defaults (e.g., 3-tick run-ahead for everyone, zero clock offset estimate), which may under- or over-buffer for the actual latency profile of the players in this match. This creates a brief window where orders are more likely to arrive late (stall-risk) or where sub-tick normalization is less accurate (fairness-risk).</p>
 <p>To eliminate this convergence period, the relay runs a <strong>calibration handshake</strong> during the loading screen — a phase all players already wait through (map loading, asset sync, per-player progress bars):</p>

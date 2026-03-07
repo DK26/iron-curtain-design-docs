@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -195,8 +195,8 @@
 <tr><td>Order injection</td><td>Server rejects</td><td>Server rejects</td></tr>
 <tr><td>Order forgery</td><td>Server stamps + sigs</td><td>Server stamps + sigs</td></tr>
 <tr><td>Lag switch</td><td><strong>BLOCKED</strong> ✓</td><td><strong>BLOCKED</strong> ✓</td></tr>
-<tr><td>Eavesdropping</td><td>TLS encrypted</td><td>TLS encrypted</td></tr>
-<tr><td>Packet forgery</td><td>TLS rejects</td><td>TLS rejects</td></tr>
+<tr><td>Eavesdropping</td><td>AEAD encrypted</td><td>AEAD encrypted</td></tr>
+<tr><td>Packet forgery</td><td>AEAD rejects</td><td>AEAD rejects</td></tr>
 <tr><td>Protocol DoS</td><td>Relay absorbs + limits</td><td>Server absorbs + limits</td></tr>
 <tr><td>State saturation</td><td>Rate caps ✓</td><td>Rate caps ✓</td></tr>
 <tr><td>Desync exploit</td><td>Server-only analysis</td><td>N/A</td></tr>
@@ -239,16 +239,20 @@
 <p><strong>FogAuth wire format:</strong> Complete byte-level entity delta format (EntityEnter/Update/Leave with offset tables), bandwidth budget constants (64 KB/s, 2184 bytes/tick, capacity estimates per delta type), and Fiedler priority accumulator algorithm (1024-scale tier constants, staleness bonus formula, starvation timing guarantees) are specified in <code>research/fog-authoritative-server-design.md</code>.</p>
 </blockquote>
 <p>Server runs full sim, sends each client only entities they can see. Breaks pure lockstep. Requires server compute per game.</p>
+<p><strong>Client architecture change:</strong> FogAuth clients do not run the full deterministic sim — they maintain a partial world and consume server-sent entity state deltas via a reconciler. This requires a client-side game loop variant beyond the lockstep <code>GameLoop&lt;N, I&gt;</code> (see <code>architecture/game-loop.md</code>). The <code>NetworkModel</code> trait boundary is preserved, but the client loop that drives it differs. See <code>research/fog-authoritative-server-design.md</code> § 7 (client reconciler) and § 9 (trait implementation) for the full design. Implementation milestone: <code>M11</code> (<code>P-Optional</code>).</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>pub struct FogAuthoritativeNetwork {
-    known_entities: HashSet&lt;EntityId&gt;,
+</span>// Simplified sketch — full implementation in research/fog-authoritative-server-design.md § 9
+pub struct FogAuthClientNetwork {
+    outgoing_orders: VecDeque&lt;TimestampedOrder&gt;,
+    incoming_updates: VecDeque&lt;FogAuthTickData&gt;,
 }
-impl NetworkModel for FogAuthoritativeNetwork {
+impl NetworkModel for FogAuthClientNetwork {
     fn poll_tick(&amp;mut self) -&gt; Option&lt;TickOrders&gt; {
-        // Returns orders AND visibility deltas:
-        // "Entity 47 entered your vision at (30, 8)"
-        // "Entity 23 left your vision"
+        // Returns mostly-empty TickOrders; entity state deltas are
+        // side-channeled to the reconciler (not through TickOrders).
+        // The lockstep GameLoop's sim.apply_tick() is NOT called —
+        // a FogAuthGameLoop variant drives the reconciler instead.
     }
 }
 <span class="boring">}</span></code></pre>

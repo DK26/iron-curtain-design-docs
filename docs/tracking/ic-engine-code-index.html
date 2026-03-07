@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -236,7 +236,7 @@ Canonical design authority: <code>https://github.com/AE26/iron-curtain-design-do
 <tr><td><code>crates/ic-paths/</code></td><td>Platform path resolution</td><td>Standalone, wraps <code>app-path</code></td></tr>
 <tr><td><code>crates/ic-sim/</code></td><td>Deterministic simulation</td><td>Pure, no I/O, no floats</td></tr>
 <tr><td><code>crates/ic-render/</code></td><td>Bevy isometric renderer</td><td>Reads sim state (read-only)</td></tr>
-<tr><td><code>crates/ic-ui/</code></td><td>Game UI chrome (egui)</td><td>Reads sim + render state</td></tr>
+<tr><td><code>crates/ic-ui/</code></td><td>Game UI chrome (Bevy UI)</td><td>Reads sim + render state</td></tr>
 <tr><td><code>crates/ic-audio/</code></td><td>Sound/music/EVA (Kira)</td><td>Reads ra-formats for .aud</td></tr>
 <tr><td><code>crates/ic-net/</code></td><td>Networking + relay server</td><td>RelayCore lib + relay binary</td></tr>
 <tr><td><code>crates/ic-script/</code></td><td>Lua + WASM mod runtimes</td><td>Sandboxed, capability-gated</td></tr>
@@ -303,7 +303,7 @@ Canonical design authority: <code>https://github.com/AE26/iron-curtain-design-do
 <li><strong>Does not own:</strong> rendering, networking, audio, UI, file I/O, system clock</li>
 <li><strong>Public interfaces / trait seams:</strong> <code>Simulation</code>, <code>SimReadView</code>, <code>SimSnapshot</code>, <code>DeltaSnapshot</code>, <code>GameModule</code> trait, <code>FogProvider</code> trait, <code>OrderValidator</code> trait, <code>AiStrategy</code> trait, <code>WorldPos</code>, <code>CellPos</code>, <code>SimCoord</code>, <code>UnitTag</code>, <code>Health</code>, <code>Mobile</code>, <code>Armament</code>, <code>Building</code>, <code>Selectable</code></li>
 <li><strong>Key files to read first:</strong> <code>src/lib.rs</code> (public API), <code>src/simulation.rs</code>, <code>src/types.rs</code> (newtypes)</li>
-<li><strong>Hot paths / perf-sensitive files:</strong> <code>src/simulation.rs</code> (tick loop — runs 15x/sec), <code>src/pathfinding/</code> (hundreds of queries/tick), <code>src/combat.rs</code> (weapon fire, hit detection), <code>src/movement.rs</code> (unit movement), <code>src/spatial/</code> (spatial indexing queries)</li>
+<li><strong>Hot paths / perf-sensitive files:</strong> <code>src/simulation.rs</code> (tick loop — runs ~15x/sec at default Slower speed, up to 50x/sec at Fastest), <code>src/pathfinding/</code> (hundreds of queries/tick), <code>src/combat.rs</code> (weapon fire, hit detection), <code>src/movement.rs</code> (unit movement), <code>src/spatial/</code> (spatial indexing queries)</li>
 <li><strong>Generated files:</strong> none</li>
 <li><strong>Tests / verification entry points:</strong> determinism conformance tests (same input → same output across platforms), unit tests per system, replay-based regression tests</li>
 <li><strong>Related design decisions (<code>Dxxx</code>):</strong> D009, D010, D012, D013, D015, D018, D022, D028, D029, D041, D045</li>
@@ -359,7 +359,7 @@ Canonical design authority: <code>https://github.com/AE26/iron-curtain-design-do
 <h3 id="ic-net"><a class="header" href="#ic-net"><code>ic-net</code></a></h3>
 <ul>
 <li><strong>Path:</strong> <code>crates/ic-net/</code></li>
-<li><strong>Primary responsibility:</strong> <code>NetworkModel</code> implementations, <code>RelayCore</code> library, relay-server binary, timing normalization, delta compression, sub-tick fairness (D008), order rate control (D060)</li>
+<li><strong>Primary responsibility:</strong> <code>NetworkModel</code> implementations, <code>RelayCore</code> library, <code>ic-server</code> binary, timing normalization, delta compression, sub-tick fairness (D008), order rate control (D060)</li>
 <li><strong>Does not own:</strong> sim state mutation, order validation logic (that’s <code>ic-sim</code>), rendering</li>
 <li><strong>Public interfaces / trait seams:</strong> <code>NetworkModel</code> trait, <code>RelayCore</code>, <code>Connection&lt;S&gt;</code> (typestate: <code>Disconnected</code> → <code>Handshaking</code> → <code>Authenticated</code> → <code>InGame</code>), <code>ClientMetrics</code>, <code>TimingFeedback</code>, <code>OrderBudget</code>, <code>AckVector</code></li>
 <li><strong>Key files to read first:</strong> <code>src/lib.rs</code>, <code>src/relay_core.rs</code>, <code>src/network_model.rs</code></li>
@@ -508,7 +508,7 @@ Canonical design authority: <code>https://github.com/AE26/iron-curtain-design-do
 <li><strong>Milestone:</strong> <code>M0</code></li>
 <li><strong>Priority:</strong> <code>P-Core</code></li>
 <li><strong>Feature Cluster:</strong> <code>M0.OPS.EXTERNAL_CODE_REPO_BOOTSTRAP_AND_NAVIGATION_TEMPLATES</code></li>
-<li><strong>Depends on:</strong> <code>M0.CORE.TRACKER_FOUNDATION</code>, <code>M0.CORE.DEP_GRAPH_SCHEMA</code></li>
+<li><strong>Depends on:</strong> <code>M0.CORE.TRACKER_FOUNDATION</code>, <code>M0.CORE.DEP_GRAPH_SCHEMA</code>, <code>M0.OPS.MAINTENANCE_RULES</code>, <code>M0.QA.CI_PIPELINE_FOUNDATION</code></li>
 </ul>
 
                     </main>

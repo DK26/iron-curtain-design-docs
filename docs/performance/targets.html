@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -189,7 +189,7 @@
 </thead>
 <tbody>
 <tr><td>Smooth battle size</td><td>500 units</td><td>2000 units</td><td>3000+ units</td><td>200 units</td><td>300 units</td></tr>
-<tr><td>Tick time budget</td><td>66ms (15 tps)</td><td>66ms (15 tps)</td><td>33ms (30 tps)</td><td>66ms (15 tps)</td><td>66ms (15 tps)</td></tr>
+<tr><td>Tick time budget</td><td>66ms (Slower, ~15 tps)</td><td>66ms (Slower, ~15 tps)</td><td>50ms (Normal, ~20 tps)</td><td>66ms (Slower, ~15 tps)</td><td>66ms (Slower, ~15 tps)</td></tr>
 <tr><td>Actual tick time (target)</td><td>&lt; 40ms</td><td>&lt; 10ms</td><td>&lt; 5ms</td><td>&lt; 50ms</td><td>&lt; 40ms</td></tr>
 <tr><td>Render framerate</td><td>60fps</td><td>144fps</td><td>240fps</td><td>30fps</td><td>60fps</td></tr>
 <tr><td>RAM usage (1000 units)</td><td>&lt; 150MB</td><td>&lt; 200MB</td><td>&lt; 200MB</td><td>&lt; 100MB</td><td>&lt; 100MB</td></tr>
@@ -198,6 +198,9 @@
 </tbody>
 </table>
 </div>
+<blockquote>
+<p><strong>Tick budget rationale (D060):</strong> The sim tick rate varies with game speed preset (Slowest 80ms / Slower 67ms / Normal 50ms / Faster 35ms / Fastest 20ms per tick). The Slower default runs ~15 tps (67ms). Tick time budgets target the default Slower speed for weak/mid/mobile/browser, and Normal speed (~20 tps, 50ms) for strong machines. Actual tick time must be well under the budget to leave headroom for faster speed presets.</p>
+</blockquote>
 <h2 id="performance-vs-c-rts-engines-projected"><a class="header" href="#performance-vs-c-rts-engines-projected">Performance vs. C# RTS Engines (Projected)</a></h2>
 <p><em>These are projected comparisons based on architectural analysis, not benchmarks. C# numbers are estimates for a typical C#/.NET single-threaded game loop with GC.</em></p>
 <div class="table-wrapper">
@@ -231,12 +234,12 @@
 <tr><td>Achievable tick rate</td><td>~15 tps</td><td>30+ tps</td><td>4x shorter lockstep window</td></tr>
 <tr><td>GC pauses during tick</td><td>5-50ms (C# characteristic)</td><td>0ms</td><td>Rust, zero-allocation</td></tr>
 <tr><td>Visual feedback on click</td><td>Waits for confirmation</td><td>Immediate (cosmetic)</td><td>Render-side prediction, no sim dependency</td></tr>
-<tr><td>Single-player order delay</td><td>~66ms (1 projected frame)</td><td>~33ms (next tick at 30 tps)</td><td><code>LocalNetwork</code> = zero scheduling delay</td></tr>
+<tr><td>Single-player order delay</td><td>~66ms (1 projected frame)</td><td>~50ms (next tick at Normal speed)</td><td><code>LocalNetwork</code> = zero scheduling delay</td></tr>
 <tr><td>Worst-case MP click-to-move</td><td>Estimated 200-400ms</td><td>80-120ms (relay deadline)</td><td>Fixed deadline, no hostage-taking</td></tr>
 </tbody>
 </table>
 </div>
-<p><strong>Combined effect:</strong> A single-player click-to-move that takes ~200ms in OpenRA (order latency + tick time + potential GC jank) should take ~33ms in Iron Curtain — imperceptible to human reaction time. Multiplayer improves from “at the mercy of the worst connection” to a fixed, predictable deadline.</p>
+<p><strong>Combined effect:</strong> A single-player click-to-move that takes ~200ms in OpenRA (order latency + tick time + potential GC jank) should take ~50ms in Iron Curtain at Normal speed — imperceptible to human reaction time. Multiplayer improves from “at the mercy of the worst connection” to a fixed, predictable deadline.</p>
 <p>See <code>03-NETCODE.md</code> § “Why It Feels Faster Than OpenRA” for the full architectural analysis, including visual prediction and single-player zero-delay.</p>
 
                     </main>

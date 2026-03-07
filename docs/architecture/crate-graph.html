@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -191,7 +191,7 @@ deterministic-rng   (seedable platform-identical PRNG: range sampling, weighted 
 <pre><code>ic-protocol  (shared types: PlayerOrder, TimestampedOrder)
     ↑         (depends on: fixed-game-math)
     ├── ic-sim      (depends on: ic-protocol, ra-formats, fixed-game-math, deterministic-rng)
-    ├── ic-net      (depends on: ic-protocol; contains RelayCore library + relay-server binary)
+    ├── ic-net      (depends on: ic-protocol; contains RelayCore library + ic-server binary)
     ├── ra-formats  (wraps cnc-formats + EA-derived constants — .mix, .shp, .pal, YAML)
     ├── ic-render   (depends on: ic-sim for reading state)
     ├── ic-ui       (depends on: ic-sim, ic-render; reads SQLite for player analytics — D034)
@@ -323,7 +323,7 @@ pub enum IoResult {
 <li><code>tokio::net::UdpSocket</code> feeding <code>str0m</code> (sans-I/O WebRTC) for game relay and voice forwarding</li>
 <li>Hundreds of concurrent sessions is well within tokio’s comfort zone</li>
 </ul>
-<p>This is already established in <code>03-NETCODE.md</code> § Backend Language: “<code>relay-server</code> binary — standalone headless process that hosts multiple concurrent games. Not Bevy, no ECS. Uses <code>RelayCore</code> + async I/O (tokio).”</p>
+<p>This is already established in <code>03-NETCODE.md</code> § Backend Language: “<code>ic-server</code> binary — standalone headless process that hosts multiple concurrent games. Not Bevy, no ECS. Uses <code>RelayCore</code> + async I/O (tokio).”</p>
 <h4 id="embedded-relay-bevys-io-pool"><a class="header" href="#embedded-relay-bevys-io-pool">Embedded Relay: Bevy’s I/O Pool</a></h4>
 <p>When a player clicks “Host Game,” <code>EmbeddedRelayNetwork</code> wraps <code>RelayCore</code> inside the game process. The relay’s socket I/O runs on <strong>Bevy’s <code>IoTaskPool</code></strong> — not the tokio thread. This is the pattern established in <code>03-NETCODE.md</code>: the embedded relay uses Bevy’s async task system, not a separate tokio runtime.</p>
 <p>The embedded relay does not need tokio because <code>RelayCore</code> is a library with no runtime dependency — it processes orders and manages sessions. The socket I/O layer is thin and fits naturally into Bevy’s I/O pool. Only external service calls (Workshop API, LLM, BitTorrent) route through the tokio thread.</p>

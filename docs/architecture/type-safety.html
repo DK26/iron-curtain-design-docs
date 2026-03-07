@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7885430e.js";
+            window.path_to_searchindex_js = "../searchindex-a5b1fbe2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ac1642ae.js"></script>
+        <script src="../toc-194dde15.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -190,10 +190,13 @@
 pub struct PlayerId(u32);
 pub struct SlotIndex(u8);
 pub struct AccountId(u64);
-pub struct UnitId(Entity);     // wraps Bevy Entity
-pub struct BuildingId(Entity);
-pub struct ProjectileId(Entity);
+pub struct UnitId(Entity);     // wraps Bevy Entity — ECS-INTERNAL ONLY
+pub struct BuildingId(Entity); // wraps Bevy Entity — ECS-INTERNAL ONLY
+pub struct ProjectileId(Entity); // wraps Bevy Entity — ECS-INTERNAL ONLY
 pub struct SimTick(u64);
+// NOTE: UnitId/BuildingId/ProjectileId are for ECS queries within ic-sim.
+// For serialized contexts (orders, replays, Lua, network), use UnitTag —
+// the stable generational identity. See 02-ARCHITECTURE.md § External Entity Identity.
 
 // WRONG — bare integers allow passing a PlayerId where a SlotIndex is expected
 fn apply_order(player: u32, slot: u32, tick: u64) { ... }
