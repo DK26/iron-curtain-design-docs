@@ -35,7 +35,7 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-8f315fcc.js";
+            window.path_to_searchindex_js = "../../searchindex-0f263f9c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-02bd7aa6.js"></script>
@@ -553,11 +553,11 @@ pub struct DamageResult {
 <p><strong>What we build now:</strong> Only <code>StandardDamageResolver</code>. The trait exists from Phase 2 (ships with D028). Shield-aware resolver ships when the D029 shield system lands.</p>
 <p><strong>Phase:</strong> Phase 2 (ships with D028 damage pipeline).</p>
 <h4 id="4-rankingprovider--pluggable-rating-and-matchmaking"><a class="header" href="#4-rankingprovider--pluggable-rating-and-matchmaking">4. <code>RankingProvider</code> — Pluggable Rating and Matchmaking</a></h4>
-<p><strong>Problem:</strong> The competitive infrastructure (AGENTS.md) specifies Glicko-2 ratings, but the ranking algorithm is implemented directly in the relay/tracking server with no abstraction boundary. Tournament organizers and community servers may want Elo (simpler, well-understood), TrueSkill (better for team games), or custom rating systems (handicap-adjusted, seasonal decay variants, faction-specific ratings). Since tracking servers are community-hostable and federated (D030/D037), locking the rating algorithm to Glicko-2 limits what community operators can offer.</p>
+<p><strong>Problem:</strong> The competitive infrastructure (AGENTS.md) specifies Glicko-2 ratings, but the ranking algorithm is implemented directly in the community server with no abstraction boundary. Tournament organizers and community servers may want Elo (simpler, well-understood), TrueSkill (better for team games), or custom rating systems (handicap-adjusted, seasonal decay variants, faction-specific ratings). Since community servers are self-hostable and federated (D052/D037), locking the rating algorithm to Glicko-2 limits what community operators can offer.</p>
 <p><strong>Solution:</strong></p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>/// Tracking servers implement this to provide rating calculations.
+</span>/// Community servers (D052) implement this to provide rating calculations.
 /// The default implementation uses Glicko-2.
 pub trait RankingProvider: Send + Sync {
     /// Calculate updated ratings after a match result.
@@ -596,8 +596,8 @@ pub struct MatchQuality {
 <li>Community operators provide alternatives: <code>EloProvider</code> (simpler), <code>TrueSkillProvider</code> (better team rating), or custom implementations.</li>
 <li><code>algorithm_id()</code> prevents mixing ratings from different algorithms — a Glicko-2 “1800” is not an Elo “1800”.</li>
 <li><code>CertifiedMatchResult</code> (from relay server, D007) is the input — no self-reported results.</li>
-<li>Ratings stored in SQLite (D034) on the tracking server.</li>
-<li>The official tracking server uses Glicko-2. Community tracking servers choose their own.</li>
+<li>Ratings stored in SQLite (D034) on the community server (D052 ranking authority).</li>
+<li>The official IC community server uses Glicko-2. Community servers choose their own algorithm via the <code>RankingProvider</code> trait.</li>
 <li>Fixed-point ratings (matching sim math conventions) — no floating-point in the ranking pipeline.</li>
 </ul>
 <p><strong>Information content weighting (from Valve CS Regional Standings):</strong> The <code>match_quality()</code> method returns a <code>MatchQuality</code> struct that includes an <code>information_content</code> field (0–1000, fixed-point). This parameter scales how much a match affects rating changes — low-information matches (casual, heavily mismatched, very short duration) contribute less to rating updates, while high-information matches (ranked, well-matched, full-length) contribute more. This prevents rating inflation/deflation from low-quality matches. For IC, information content is derived from: (1) game mode (ranked vs. casual), (2) player count balance (1v1 is higher information than 3v1), (3) game duration (very short games may indicate disconnection, not skill), (4) map symmetry rating (if available). See <code>research/valve-github-analysis.md</code> § 4.2.</p>
@@ -702,7 +702,7 @@ pub enum RejectionReason {
 <tr><td><code>AiStrategy</code></td><td>One trait + <code>PersonalityDrivenAi</code> wrapper</td><td>Community AI cannot plug in without forking ic-ai</td></tr>
 <tr><td><code>FogProvider</code></td><td>One trait + <code>RadiusFogProvider</code></td><td>RA2 elevation fog requires rewriting fog_system(); fog-authoritative server requires separate fog codebase</td></tr>
 <tr><td><code>DamageResolver</code></td><td>One trait + <code>StandardDamageResolver</code></td><td>Shield/sub-object games require rewriting projectile_system()</td></tr>
-<tr><td><code>RankingProvider</code></td><td>One trait + <code>Glicko2Provider</code></td><td>Community tracking servers stuck with one rating algorithm</td></tr>
+<tr><td><code>RankingProvider</code></td><td>One trait + <code>Glicko2Provider</code></td><td>Community servers stuck with one rating algorithm</td></tr>
 <tr><td><code>OrderValidator</code></td><td>One trait + explicit validate() call</td><td>Game modules can silently skip validation; anti-cheat guarantee is informal</td></tr>
 </tbody>
 </table>

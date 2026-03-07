@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8f315fcc.js";
+            window.path_to_searchindex_js = "../searchindex-0f263f9c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-02bd7aa6.js"></script>
@@ -274,6 +274,8 @@
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Platform-agnostic input source. Each platform implements this.
+/// Covers simulation orders (hot path, every tick) and UI-level input
+/// (chat, navigation — used in lobby and post-game loops).
 pub trait InputSource {
     /// Drain pending player orders from whatever input device is active.
     fn drain_orders(&amp;mut self, buf: &amp;mut Vec&lt;TimestampedOrder&gt;);
@@ -281,6 +283,17 @@ pub trait InputSource {
 
     /// Optional: hint about input capabilities for UI adaptation.
     fn capabilities(&amp;self) -&gt; InputCapabilities;
+
+    /// Drain a pending chat message typed by the user (lobby/post-game).
+    /// Returns None if no chat input is pending. Platform implementations
+    /// source this from text fields, on-screen keyboards, etc.
+    /// Default: no-op (platforms without chat input).
+    fn drain_chat_input(&amp;mut self) -&gt; Option&lt;ChatMessage&gt; { None }
+
+    /// Whether the user has signaled intent to leave the current screen
+    /// (e.g., pressed Escape, tapped Back, clicked Leave button).
+    /// Used by post-game and lobby loops. Default: false.
+    fn wants_leave(&amp;self) -&gt; bool { false }
 }
 
 pub struct InputCapabilities {

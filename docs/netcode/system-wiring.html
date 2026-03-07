@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8f315fcc.js";
+            window.path_to_searchindex_js = "../searchindex-0f263f9c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-02bd7aa6.js"></script>
@@ -440,10 +440,13 @@ impl&lt;T: Transport&gt; RelayLockstepNetwork&lt;T&gt; {
         let encoded = self.codec.encode_frame(&amp;Frame::DesyncDebugReport(report));
         self.transport.send(&amp;encoded).ok();
     }
-    /// Send out-of-band chat (post-game/lobby). In-match chat flows as
+    /// Send out-of-band chat (post-game/lobby). Accepts ChatMessage
+    /// (client → relay type), not ChatNotification (relay → client type).
+    /// The relay stamps the sender field and broadcasts as
+    /// ChatNotification::PlayerChat. In-match chat flows as
     /// PlayerOrder::ChatMessage through submit_order() — see D059.
-    pub fn send_chat(&amp;mut self, msg: ChatNotification) {
-        let encoded = self.codec.encode_frame(&amp;Frame::ChatNotification(msg));
+    pub fn send_chat(&amp;mut self, msg: ChatMessage) {
+        let encoded = self.codec.encode_frame(&amp;Frame::Chat(msg));
         self.transport.send(&amp;encoded).ok();
     }
 }
@@ -712,11 +715,28 @@ pub fn run_relay_session(relay: &amp;mut RelayCore, transport: &amp;mut RelayTra
             }
         }
 
-        // f. Check termination (MatchOutcome from match-lifecycle.md)
+        // f. Check termination (MatchOutcome from match-lifecycle.md).
+        //    The relay determines outcomes from two sources:
+        //    - Protocol-level: surrender votes, disconnects, desync hashes,
+        //      remake votes — the relay observes these directly from orders
+        //      and connection state without running the sim.
+        //    - Sim-determined: elimination, objective completion — the relay
+        //      collects GameEndedReport frames from all players (observers
+        //      excluded) and verifies consensus (deterministic sim guarantees
+        //      agreement). If players disagree, relay treats it as a desync.
         if let Some(outcome) = relay.check_match_end() {
             transport.broadcast(&amp;codec.encode_frame(&amp;Frame::MatchEnd(outcome.clone())));
             match_outcome = Some(outcome);
             break;
+        }
+
+        // g. Collect client GameEndedReport frames (sim-determined outcomes).
+        //    When all players (excluding observers) report the same MatchOutcome,
+        //    the relay accepts the consensus. See wire-format.md § Frame::GameEndedReport.
+        for player in relay.players() {
+            if let Some(report) = transport.recv_game_ended_report(player) {
+                relay.record_game_ended_report(player, report);
+            }
         }
 
         relay.tick += 1;

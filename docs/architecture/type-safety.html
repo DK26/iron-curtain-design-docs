@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8f315fcc.js";
+            window.path_to_searchindex_js = "../searchindex-0f263f9c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-02bd7aa6.js"></script>
@@ -309,6 +309,7 @@ pub struct Disconnected;
 pub struct Handshaking;
 pub struct Authenticated;
 pub struct InGame;
+pub struct PostGame;
 
 impl Connection&lt;Disconnected&gt; {
     pub fn begin_handshake(self) -&gt; Connection&lt;Handshaking&gt; { ... }
@@ -319,9 +320,12 @@ impl Connection&lt;Handshaking&gt; {
 impl Connection&lt;Authenticated&gt; {
     pub fn join_game(self, lobby: LobbyId) -&gt; Connection&lt;InGame&gt; { ... }
 }
+impl Connection&lt;InGame&gt; {
+    pub fn end_game(self) -&gt; Connection&lt;PostGame&gt; { ... }
+}
 
 // WRONG — runtime enum allows invalid transitions
-pub enum ConnectionState { Disconnected, Handshaking, Authenticated, InGame }
+pub enum ConnectionState { Disconnected, Handshaking, Authenticated, InGame, PostGame }
 impl Connection {
     pub fn transition(&amp;mut self, to: ConnectionState) { self.state = to; } // any transition allowed!
 }
@@ -555,6 +559,7 @@ fn handle_team_chat(msg: ChatMessage&lt;TeamScope&gt;) { ... }
 fn handle_all_chat(msg: ChatMessage&lt;AllScope&gt;) { ... }
 <span class="boring">}</span></code></pre>
 <p><strong>Rationale:</strong> Branding the message type with its scope makes routing errors a compile-time type mismatch. Conversion between scopes requires an explicit, auditable function call. This extends the direction-branded messages pattern (see <code>FromClient&lt;T&gt;</code> / <code>FromServer&lt;T&gt;</code> above) to chat delivery scope.</p>
+<p><strong>Layering note:</strong> The scope-branded <code>ChatMessage&lt;S&gt;</code> is the <strong>domain/UI layer</strong> type used inside <code>ic-ui</code> and <code>ic-game</code> for routing enforcement. When a branded message crosses the network boundary, it is <strong>lowered</strong> to the unbranded wire type <code>ChatMessage { channel, text }</code> (wire-format.md § ChatMessage) — the scope is carried in the <code>channel: ChatChannel</code> enum field, and the <code>sender</code> is stripped (the relay stamps it from the authenticated connection). On the receiving side, the network layer delivers <code>ChatNotification::PlayerChat { sender, channel, text }</code>, which the UI layer can <strong>lift</strong> back into a branded <code>ChatMessage&lt;S&gt;</code> based on <code>channel</code>. The two types serve different layers: branded for compile-time routing safety, unbranded for wire efficiency.</p>
 <h3 id="validated-construction-policy-invariant-checked-types"><a class="header" href="#validated-construction-policy-invariant-checked-types">Validated Construction Policy: Invariant-Checked Types</a></h3>
 <p>Some types have invariants that cannot be encoded in const generics but must hold for correctness. The “validated construction” pattern puts the check at the only place values are created, making invalid instances unconstructible.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]

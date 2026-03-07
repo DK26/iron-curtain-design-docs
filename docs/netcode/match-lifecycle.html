@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8f315fcc.js";
+            window.path_to_searchindex_js = "../searchindex-0f263f9c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-02bd7aa6.js"></script>
@@ -369,9 +369,9 @@ pub struct SpectatorConfig {
 <p><strong>Anti-coaching:</strong> In ranked team games, spectators are assigned to one team’s perspective (<code>full_visibility: false</code>) and cannot switch mid-game. This prevents a friend from spectating and relaying enemy information via external voice. The relay enforces this — it simply doesn’t send the opposing team’s orders to biased spectators until the delay expires.</p>
 <p><strong>Player control:</strong> Players can disable live spectating for their matches via a preference (<code>/set allow_spectators false</code>). In ranked, the server’s spectator policy overrides individual preference (e.g., “all ranked games allow delayed spectating for anti-cheat review”).</p>
 <h3 id="post-game-flow"><a class="header" href="#post-game-flow">Post-Game Flow</a></h3>
-<p>After the sim transitions to <code>GameEnded</code>, the network layer manages the post-game sequence:</p>
+<p>After the sim transitions to <code>GameEnded</code>, each player’s client sends a <code>Frame::GameEndedReport</code> to the relay (wire-format.md § Frame enum). The relay verifies player consensus on the outcome — the deterministic sim guarantees agreement. Observers are receive-only and do not participate in the consensus set (see multiplayer-scaling.md § Observer Model). For protocol-level outcomes (surrender, abandon, desync, remake), the relay already determined the outcome directly from order/connection state. The relay then manages the post-game sequence:</p>
 <ol>
-<li><strong>Match result broadcast.</strong> The relay computes the <code>CertifiedMatchResult</code> and broadcasts it to all participants and spectators.</li>
+<li><strong>Match result broadcast.</strong> The relay produces the <code>CertifiedMatchResult</code> (from the consensus outcome or protocol-level determination) and broadcasts it to all participants and spectators.</li>
 <li><strong>Post-game lobby.</strong> Players remain connected. Chat stays active (both teams can talk). Statistics screen displays (see <code>02-ARCHITECTURE.md</code> § GameScore). Players can:
 <ul>
 <li>View detailed stats (economy graph, production timeline, combat events)</li>

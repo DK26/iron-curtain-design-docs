@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8f315fcc.js";
+            window.path_to_searchindex_js = "../searchindex-0f263f9c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-02bd7aa6.js"></script>
@@ -201,7 +201,7 @@
 │  Rating: Captain II → Captain I (+32)  🎖                    │
 │                                                              │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │ CHAT (30-second post-game lobby, still active)       │   │
+│  │ CHAT (5-minute post-game lobby, still active)        │   │
 │  │ Opponent: gg wp                                      │   │
 │  │ You: gg                                              │   │
 │  └──────────────────────────────────────────────────────┘   │
@@ -219,10 +219,10 @@
 <li><strong>Stats comparison</strong> — Economy, production, combat, activity (APM/EPM). Graphs available on hover/click.</li>
 <li><strong>MVP Awards</strong> — Stat-based recognition cards highlighting top performers (see MVP Awards section below).</li>
 <li><strong>Rating update</strong> — Tier badge animation if promoted/demoted. Delta shown.</li>
-<li><strong>Chat</strong> — 30-second active period, auto-closes after 5 minutes.</li>
+<li><strong>Chat</strong> — Active for the full 5-minute post-game lobby duration. Both teams can talk.</li>
 <li><strong>Post-game learning</strong> (D065) — Rule-based tip analyzing the match (e.g., idle harvesters, low APM, no control groups used). Links to tutorial or replay annotation.</li>
-<li><strong>Watch Replay</strong> → Replay Viewer (immediate, file already recorded)</li>
-<li><strong>Save Replay</strong> → Save <code>.icrep</code> file with metadata</li>
+<li><strong>Watch Replay</strong> → Replay Viewer (immediate — the <code>.icrep</code> file is incrementally valid during recording, so the viewer can open it before the writer finalizes the archival header)</li>
+<li><strong>Save Replay</strong> → Save finalized <code>.icrep</code> file with complete header (<code>total_ticks</code>, <code>final_state_hash</code>) and metadata (available after the background writer flushes on match end)</li>
 <li><strong>Re-Queue</strong> → Back to matchmaking queue (ranked)</li>
 <li><strong>Main Menu</strong> → Return to main menu</li>
 <li><strong>Report Player</strong> → Report dialog (reason dropdown, optional text)</li>

@@ -35,7 +35,7 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-8f315fcc.js";
+            window.path_to_searchindex_js = "../../searchindex-0f263f9c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-02bd7aa6.js"></script>
@@ -213,7 +213,7 @@
 </li>
 <li><strong>Non-goals:</strong> Microservice architecture, mandatory cloud hosting, centralized content CDN, dependence on external BT library limitations, centralized moderation authority</li>
 <li><strong>Out of current scope:</strong> WebTorrent bridge for browser builds (Phase 5+), Kubernetes Operator multi-capability CRD (Phase 6a), Steam Workshop bridge</li>
-<li><strong>Invariants preserved:</strong> Sim/net boundary unchanged; server never runs simulation; relay remains an order router with time authority; sandbox safety is architectural (not policy) — default settings make harm impossible, not just unlikely</li>
+<li><strong>Invariants preserved:</strong> Sim/net boundary unchanged; server does not run simulation in the default relay mode (FogAuth and cross-engine relay-headless are opt-in deployment modes that run <code>ic-sim</code> on the server — see deployment table); relay remains an order router with time authority; sandbox safety is architectural (not policy) — default settings make harm impossible, not just unlikely</li>
 <li><strong>Defaults / UX behavior:</strong> Default preset is <code>community</code> (relay + tracker + workshop + ranking). <code>ic-server</code> with no config auto-creates <code>server_config.toml</code> with <code>community</code> preset. First-run setup wizard via <code>ic-server --setup</code> or web dashboard on first access.</li>
 <li><strong>Security / Trust impact:</strong> Each capability inherits its own trust model (D052 Ed25519 identity for ranking, D007 relay signing for match certification). Capability isolation: disabling a capability removes its ICRP endpoints, health fields, and attack surface. Content Advisory Records (CARs) provide federated, Ed25519-signed content trust signals; Garden Fence consensus prevents single-community censorship.</li>
 <li><strong>Public interfaces / types / commands:</strong> <code>[capabilities]</code> config section, <code>--preset</code> CLI flag, deployment presets (<code>minimal</code>, <code>community</code>, <code>competitive</code>, <code>workshop-seed</code>, <code>custom</code>), <code>ic-server --setup</code>, Content Advisory Record (CAR) format, <code>[content_trust]</code> config section, <code>[workshop.moderation]</code> quarantine config</li>
@@ -263,11 +263,12 @@ moderation = false    # Overwatch-style review system (D052, opt-in)
 <tbody>
 <tr><td><strong>Relay (default)</strong></td><td>No — order router only</td><td>No (fog is client-side)</td><td>~2–10 KB/game</td><td>Casual, ranked, LAN, most play</td></tr>
 <tr><td><strong>FogAuth</strong></td><td>Yes — full sim, partial state to each client</td><td>Yes</td><td>Real CPU per game</td><td>Tournaments, high-stakes, anti-cheat-critical</td></tr>
+<tr><td><strong>Cross-engine relay-headless</strong></td><td>Yes — reference sim for cross-engine matches</td><td>No</td><td>Real CPU per game</td><td>Cross-engine IcAuthority mode when no IC client is reference</td></tr>
 <tr><td><strong>Listen server</strong></td><td>No — embedded relay in host client</td><td>No</td><td>Zero infrastructure</td><td>“Host Game” button, zero setup</td></tr>
 </tbody>
 </table>
 </div>
-<p>The relay and listen-server deployments are drop-in <code>NetworkModel</code> implementations behind the current lockstep game loop. FogAuth uses the same server binary and capability infrastructure but requires a client-side game loop variant (partial world reconciler instead of full sim) — see the caveat above. In all cases, <code>ic-sim</code> has zero imports from <code>ic-net</code> (D006 invariant).</p>
+<p>The relay and listen-server deployments are drop-in <code>NetworkModel</code> implementations behind the current lockstep game loop. FogAuth and cross-engine relay-headless use the same server binary and capability infrastructure but require specialized game loop variants — FogAuth needs a partial world reconciler (see caveat above), while cross-engine relay-headless runs a full <code>ic-sim</code> instance as the reference sim for cross-engine <code>IcAuthority</code> matches (07-CROSS-ENGINE.md). In all cases, <code>ic-sim</code> has zero imports from <code>ic-net</code> (D006 invariant).</p>
 <p>When a capability is disabled:</p>
 <ul>
 <li>Its ICRP endpoints are not registered (404 for capability-specific routes)</li>

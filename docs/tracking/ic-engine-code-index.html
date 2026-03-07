@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8f315fcc.js";
+            window.path_to_searchindex_js = "../searchindex-0f263f9c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-02bd7aa6.js"></script>
@@ -361,7 +361,7 @@ Canonical design authority: <code>https://github.com/AE26/iron-curtain-design-do
 <li><strong>Path:</strong> <code>crates/ic-net/</code></li>
 <li><strong>Primary responsibility:</strong> <code>NetworkModel</code> implementations, <code>RelayCore</code> library, <code>ic-server</code> binary, timing normalization, delta compression, sub-tick fairness (D008), order rate control (D060)</li>
 <li><strong>Does not own:</strong> sim state mutation, order validation logic (that’s <code>ic-sim</code>), rendering</li>
-<li><strong>Public interfaces / trait seams:</strong> <code>NetworkModel</code> trait, <code>RelayCore</code>, <code>Connection&lt;S&gt;</code> (typestate: <code>Disconnected</code> → <code>Handshaking</code> → <code>Authenticated</code> → <code>InGame</code>), <code>ClientMetrics</code>, <code>TimingFeedback</code>, <code>OrderBudget</code>, <code>AckVector</code></li>
+<li><strong>Public interfaces / trait seams:</strong> <code>NetworkModel</code> trait, <code>RelayCore</code>, <code>Connection&lt;S&gt;</code> (typestate: <code>Disconnected</code> → <code>Handshaking</code> → <code>Authenticated</code> → <code>InGame</code> → <code>PostGame</code>), <code>ClientMetrics</code>, <code>TimingFeedback</code>, <code>OrderBudget</code>, <code>AckVector</code></li>
 <li><strong>Key files to read first:</strong> <code>src/lib.rs</code>, <code>src/relay_core.rs</code>, <code>src/network_model.rs</code></li>
 <li><strong>Hot paths / perf-sensitive files:</strong> order serialization/delta compression (TLV wire format), relay tick broadcast, timing normalization</li>
 <li><strong>Generated files:</strong> none</li>

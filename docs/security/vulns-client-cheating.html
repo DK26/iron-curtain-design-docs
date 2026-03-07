@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8f315fcc.js";
+            window.path_to_searchindex_js = "../searchindex-0f263f9c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-02bd7aa6.js"></script>
@@ -451,7 +451,7 @@ pub struct TrustFactors {
 </table>
 </div>
 <p><strong>Trust score recovery:</strong> Trust score recovers passively through clean play — completing rated games without reports, earning commendations, and not triggering anti-cheat flags. Recovery is slow and intentional: it takes longer to rebuild trust than to lose it (asymmetric by design, matching Dota 2’s model).</p>
-<p><strong>Federated trust:</strong> In IC’s federated community server model (D052), trust scores are community-scoped. A player’s trust score on Community Server A is independent of their score on Community Server B (matching the cross-community reputation design in D052). The official IC ranking authority maintains the canonical trust score; community servers can maintain their own or defer to the canonical one.</p>
+<p><strong>Federated trust:</strong> In IC’s federated community server model (D052), trust scores are community-scoped. A player’s trust score on Community Server A is independent of their score on Community Server B (matching the cross-community reputation design in D052). Each community server — including the official IC community — computes and maintains its own trust scores. No single community’s score is privileged or canonical (D052: “not a privileged singleton”). Players who move between communities start from the default score on each; SCR-portable trust factors (D052) allow communities to consider imported evidence, but the final score is always locally computed.</p>
 <p><strong>Default weighting algorithm (F11 closure):</strong> The weighting formula converting <code>TrustFactors</code> to <code>TrustScore.score</code> must be specified to prevent divergent community server implementations from undermining trust score’s purpose. The default algorithm:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -478,7 +478,7 @@ pub struct TrustFactors {
 <li><code>rated_games_played</code> has a dead zone: the first 20 games contribute nothing (prevents idle account trust inflation)</li>
 <li><code>anti_cheat_points</code> can drive the score to zero alone — no combination of positive factors overrides an active anti-cheat flag (5+ points = maximum penalty regardless of age/games/commends)</li>
 <li>All factors apply NaN guards (F1 pipeline-wide NaN protection) before weighting</li>
-<li>Community servers may adjust weights via <code>server_config.toml</code> (D064) but the default is canonical</li>
+<li>Community servers may adjust weights via <code>server_config.toml</code> (D064) but the default algorithm above is the reference implementation shipped with <code>ic-server</code></li>
 </ul>
 <p><strong>Phase:</strong> Trust score system ships with ranked matchmaking (Phase 5). Trust score factors are computed from the same match database as population baselines. Integration with D055’s matchmaking queue is a Phase 5 exit criterion.</p>
 <h2 id="vulnerability-13-match-result-fraud"><a class="header" href="#vulnerability-13-match-result-fraud">Vulnerability 13: Match Result Fraud</a></h2>

@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8f315fcc.js";
+            window.path_to_searchindex_js = "../searchindex-0f263f9c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-02bd7aa6.js"></script>
@@ -412,7 +412,7 @@ min_matches = 10
 <p><strong>Opt-in per tracking server:</strong></p>
 <ul>
 <li>Third-party tracking servers are listed in <code>settings.toml</code> but OFF by default. The first-run setup asks: “Show games from CnCNet and OpenRA browsers?” with an explanation of what data is shared (IP address, query frequency). The user must explicitly enable each third-party source.</li>
-<li>The official IC tracking server is always enabled (same privacy policy as the rest of IC infrastructure).</li>
+<li>The official IC tracking server is enabled by default as a bootstrapping source — the client needs at least one discovery endpoint to find games on first launch (same pattern as default DNS root servers or Matrix clients defaulting to matrix.org). This gives the official service a privileged default role in client behavior and privacy exposure, but it does not make the architecture centralized: users can add community tracking servers, remove the official one, or run entirely on LAN/direct-connect with no tracking server at all. The default is a convenience, not a dependency (same privacy policy as the rest of IC infrastructure).</li>
 </ul>
 <p><strong>Proxy option:</strong></p>
 <ul>

@@ -35,7 +35,7 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-8f315fcc.js";
+            window.path_to_searchindex_js = "../../../searchindex-0f263f9c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc-02bd7aa6.js"></script>
@@ -414,7 +414,7 @@ pub struct MatchmakingConfig {
 <li>Draw: Treated as Glicko-2 draw (0.5 result). Both players’ deviations decrease.</li>
 <li>Disconnect: Full loss + escalating queue cooldown (5min → 30min → 2hr). Reconnection within 60s = no penalty. Grace period voiding for early abandons (&lt;2 min, &lt;5% game progress).</li>
 <li>Spectator delay: 120 seconds wall-time floor (2,400 ticks at Normal ~20 tps; relay computes ticks from speed preset, V59). Players cannot disable spectating in ranked (needed for anti-cheat review).</li>
-<li>Post-game: 30-second lobby with stats, rating change display, report button, instant re-queue option.</li>
+<li>Post-game: 5-minute lobby with stats, rating change display, report button, instant re-queue option.</li>
 </ul>
 <p>See <code>03-NETCODE.md</code> § “Match Lifecycle” for the full protocol, data structures, rationale, and the In-Match Vote Framework that generalizes surrender/kick/remake/draw into a unified callvote system.</p>
 <h3 id="integration-with-existing-decisions"><a class="header" href="#integration-with-existing-decisions">Integration with Existing Decisions</a></h3>

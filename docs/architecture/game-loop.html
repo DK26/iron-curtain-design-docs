@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8f315fcc.js";
+            window.path_to_searchindex_js = "../searchindex-0f263f9c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-02bd7aa6.js"></script>
@@ -220,6 +220,18 @@ impl&lt;N: NetworkModel, I: InputSource&gt; GameLoop&lt;N, I&gt; {
                     self.sim.full_state_hash(),
                 );
             }
+            // If the sim transitioned to GameEnded this tick, report
+            // the outcome to the network layer for relay consensus.
+            // Also emit a final state hash for the terminal tick
+            // regardless of signing cadence (see match-end signing below).
+            if let Some(outcome) = self.sim.match_outcome() {
+                self.network.report_state_hash(
+                    self.sim.tick(),
+                    self.sim.full_state_hash(),
+                );
+                self.network.report_game_ended(self.sim.tick(), outcome);
+                break; // No more ticks — match is over
+            }
             ticks_this_frame += 1;
             if ticks_this_frame &gt;= MAX_TICKS_PER_FRAME {
                 break; // Remaining ticks processed next frame
@@ -231,7 +243,7 @@ impl&lt;N: NetworkModel, I: InputSource&gt; GameLoop&lt;N, I&gt; {
     }
 }
 <span class="boring">}</span></code></pre>
-<p><strong>Match-end signing:</strong> When a match ends (surrender, victory, disconnect — see <code>netcode/match-lifecycle.md</code>), the game loop emits a final <code>report_state_hash()</code> for the terminal tick regardless of whether it falls on a signing cadence boundary. This ensures the relay’s <code>TickSignature</code> chain covers the complete match with no unsigned tail (see <code>formats/save-replay-formats.md</code> § Signature Chain).</p>
+<p><strong>Match-end signing and outcome reporting:</strong> When a match ends (surrender vote, elimination, disconnect — see <code>netcode/match-lifecycle.md</code>), the game loop detects the sim’s <code>GameEnded</code> state via <code>sim.match_outcome()</code>, emits a final <code>report_state_hash()</code> for the terminal tick regardless of signing cadence, and calls <code>report_game_ended()</code> to send the outcome to the relay for consensus verification. This ensures the relay’s <code>TickSignature</code> chain covers the complete match with no unsigned tail (see <code>formats/save-replay-formats.md</code> § Signature Chain), and enables the relay to produce a <code>CertifiedMatchResult</code> from client consensus on sim-determined outcomes (see <code>netcode/wire-format.md</code> § <code>Frame::GameEndedReport</code>).</p>
 <p><strong>Key property:</strong> <code>GameLoop</code> is generic over <code>N: NetworkModel</code> and <code>I: InputSource</code>. It has zero knowledge of whether it’s running single-player or multiplayer, or whether input comes from a mouse, touchscreen, or gamepad. This is the central architectural guarantee.</p>
 <p><strong>Lockstep-family only.</strong> The <code>GameLoop</code> shown above is the <strong>lockstep client loop</strong> — it owns a full <code>Simulation</code> and calls <code>sim.apply_tick()</code> with confirmed orders from <code>poll_tick()</code>. This covers all shipping implementations: <code>LocalNetwork</code>, <code>ReplayPlayback</code>, <code>EmbeddedRelayNetwork</code>, and <code>RelayLockstepNetwork</code>. Deferred non-lockstep architectures (FogAuth, rollback) require a different client-side loop variant — FogAuth clients do not run the full sim but instead maintain a partial world via a reconciler (see <code>research/fog-authoritative-server-design.md</code> § 7), and rollback clients need speculative execution with snapshot/restore. The <code>NetworkModel</code> trait and <code>ic-server</code> capability infrastructure are designed to support these variants from day one, but the <code>GameLoop</code> struct itself would need a parallel implementation (e.g., <code>FogAuthGameLoop</code>) or an enum-based client driver. This is an <code>M11</code> design concern (pending decision <code>P007</code>) — the current <code>GameLoop</code> is complete and correct for all pre-<code>M11</code> milestones.</p>
 <p><strong>Not for headless use.</strong> <code>GameLoop</code> always renders — it is the client-side frame driver. <code>ic-server</code> runs the relay protocol without any <code>GameLoop</code> or <code>Simulation</code> instance. External bot/test harnesses use the external sim API (<code>inject_orders()</code> + <code>step()</code>) in their own loop — see <code>02-ARCHITECTURE.md</code> § External Sim API for a concrete headless loop example. The sim’s headless capability is a property of <code>ic-sim</code>, not of <code>GameLoop</code>.</p>
@@ -257,9 +269,9 @@ impl&lt;N: NetworkModel, I: InputSource&gt; GameLoop&lt;N, I&gt; {
 <li><strong>Launched → InMenus:</strong> Engine initialization, asset loading, mod registration, and (when required) entry into the first-run setup wizard / setup assistant flow (D069). This remains menu/UI-only — no sim world exists yet.</li>
 <li><strong>InMenus → Loading:</strong> Player starts a game or joins a lobby; map and rules are loaded</li>
 <li><strong>Loading → InGame:</strong> All assets loaded, <code>NetworkModel</code> connected, sim initialized. See <code>03-NETCODE.md</code> § “Match Lifecycle” for the ready-check and countdown protocol that governs this transition in multiplayer.</li>
-<li><strong>InGame → GameEnded:</strong> Victory/defeat condition met, player surrenders (<code>PlayerOrder::Surrender</code>), vote-driven resolution (kick, remake, draw via the In-Match Vote Framework), or match void. See <code>03-NETCODE.md</code> § “Match Lifecycle” for the surrender mechanic, team vote thresholds, and the generic callvote system.</li>
-<li><strong>GameEnded → InMenus:</strong> Return to main menu (post-game stats shown during transition). See <code>03-NETCODE.md</code> § “Post-Game Flow” for the 30-second post-game lobby with stats, rating display, and re-queue.</li>
-<li><strong>GameEnded → InReplay:</strong> Watch the just-finished game (replay file already recorded)</li>
+<li><strong>InGame → GameEnded:</strong> Victory/defeat condition met, player surrenders (via the In-Match Vote Framework — <code>PlayerOrder::Vote(VoteOrder::Propose { vote_type: Surrender })</code>), vote-driven resolution (kick, remake, draw), or match void. See <code>03-NETCODE.md</code> § “Match Lifecycle” for the surrender mechanic, team vote thresholds, and the generic callvote system.</li>
+<li><strong>GameEnded → InMenus:</strong> Return to main menu. <code>GameEnded</code> IS the post-game screen: the 5-minute post-game lobby with stats display, chat, rating update, re-queue option, and replay save runs during this state (see <code>03-NETCODE.md</code> § “Post-Game Flow”). Maps to <code>NetworkStatus::PostGame(CertifiedMatchResult)</code>. The transition to <code>InMenus</code> occurs on user action (leave/re-queue) or lobby timeout.</li>
+<li><strong>GameEnded → InReplay:</strong> Watch the just-finished game (<code>.icrep</code> is incrementally valid during recording — the viewer opens it immediately; the finalized archival header is written when the background writer flushes)</li>
 <li><strong>InMenus → InReplay:</strong> Load a saved replay file</li>
 <li><strong>InReplay → InMenus:</strong> Exit replay viewer</li>
 <li><strong>InGame → Shutdown:</strong> Application exit (snapshot saved for resume on platforms that require it)</li>

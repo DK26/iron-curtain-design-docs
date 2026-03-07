@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8f315fcc.js";
+            window.path_to_searchindex_js = "../searchindex-0f263f9c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-02bd7aa6.js"></script>
@@ -229,6 +229,8 @@ pub struct RelayCore {
     filter_chain: Vec&lt;Box&lt;dyn RelayFilter&gt;&gt;,
     liveness_tokens: HashMap&lt;PlayerId, LivenessToken&gt;,
     clock_calibration: HashMap&lt;PlayerId, ClockCalibration&gt;,
+    game_ended_reports: HashMap&lt;PlayerId, GameEndedReport&gt;,  // client outcome consensus
+    match_outcome: Option&lt;MatchOutcome&gt;,  // set when protocol-level or consensus outcome resolved
     // ... anti-lag-switch state, replay signer, etc.
 }
 
@@ -249,6 +251,31 @@ impl RelayCore {
     /// See wire-format.md § Frame::StateHash and save-replay-formats.md
     /// § Signature Chain.
     pub fn receive_state_hash(&amp;mut self, player: PlayerId, tick: SimTick, hash: StateHash) { ... }
+
+    /// Record a GameEndedReport from a player. The relay collects these
+    /// and checks for consensus — if all players (excluding observers)
+    /// report the same MatchOutcome, the relay accepts it as the
+    /// sim-determined outcome. If players disagree, the relay treats it
+    /// as a desync. Observers are receive-only and never submit reports.
+    /// Protocol-level outcomes (surrender, abandon, desync, remake)
+    /// are determined directly by check_match_end() from order/connection
+    /// state and do not require client reports.
+    pub fn record_game_ended_report(&amp;mut self, player: PlayerId, report: GameEndedReport) { ... }
+
+    /// Check whether the match has ended. Returns Some(MatchOutcome) when:
+    /// - A protocol-level termination occurred (surrender vote passed,
+    ///   player disconnected past timeout, desync detected, remake voted), OR
+    /// - All players (excluding observers) reached consensus via
+    ///   GameEndedReport (sim-determined outcomes: elimination,
+    ///   objective completion).
+    /// Returns None if the match is still in progress.
+    pub fn check_match_end(&amp;self) -&gt; Option&lt;MatchOutcome&gt; { ... }
+
+    /// Produce a relay-signed CertifiedMatchResult from a MatchOutcome.
+    /// Contains: player keys, game module, map, duration, outcome,
+    /// order hashes, desync status, Ed25519 signature.
+    /// Called once after check_match_end() returns Some.
+    pub fn certify_match_result(&amp;self, outcome: &amp;MatchOutcome) -&gt; CertifiedMatchResult { ... }
 
     /// Produce the canonical TickOrders for this tick.
     /// Sub-tick sorts, runs filter chain, advances tick counter.
@@ -275,7 +302,7 @@ impl RelayCore {
 <p><strong>Trust boundary for ranked play.</strong> An embedded relay runs inside the host’s process — a malicious host could theoretically modify <code>RelayCore</code> behavior (drop opponents’ orders, manipulate timestamps). For <strong>ranked/competitive</strong> play, the matchmaking system requires connection to an official or community-verified relay server (standalone binary on trusted infrastructure). For <strong>casual, LAN, and custom games</strong>, the embedded relay is perfect — zero setup, “Host Game” button just works, no external server needed.</p>
 <p><strong>Connecting clients can’t tell the difference.</strong> Both the standalone binary and the embedded relay present the same protocol. <code>RelayLockstepNetwork</code> on the client side connects identically — it doesn’t know or care whether the relay is a dedicated server or running inside another player’s game client. This is a deployment concern, not a protocol concern.</p>
 <h3 id="connection-lifecycle-type-state"><a class="header" href="#connection-lifecycle-type-state">Connection Lifecycle Type State</a></h3>
-<p>Network connections transition through a fixed lifecycle: <code>Connecting → Authenticated → InLobby → InGame → Disconnecting</code>. Calling the wrong method in the wrong state is a security risk — processing game orders from an unauthenticated connection, or sending lobby messages during gameplay, shouldn’t be possible to write accidentally.</p>
+<p>Network connections transition through a fixed lifecycle: <code>Connecting → Authenticated → InLobby → InGame → PostGame → InLobby → Disconnecting</code>. Calling the wrong method in the wrong state is a security risk — processing game orders from an unauthenticated connection, or sending lobby messages during gameplay, shouldn’t be possible to write accidentally.</p>
 <p>IC uses Rust’s <strong>type state pattern</strong> to make invalid state transitions a compile error instead of a runtime bug:</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -286,6 +313,7 @@ pub struct Connecting;
 pub struct Authenticated;
 pub struct InLobby;
 pub struct InGame;
+pub struct PostGame;
 
 /// A network connection whose valid operations are determined by its state `S`.
 /// Generic over `Transport` (D054) — works with UdpTransport, WebSocketTransport,
@@ -330,9 +358,30 @@ impl&lt;T: Transport&gt; Connection&lt;InGame, T&gt; {
     /// In-match chat is a PlayerOrder::ChatMessage — use this method.
     pub fn send_order(&amp;self, order: &amp;TimestampedOrder) { /* ... */ }
 
-    /// Return to lobby after match ends.
-    pub fn end_game(self) -&gt; Connection&lt;InLobby, T&gt; {
-        // ... cleanup per-connection game state
+    /// Transition to post-game when the match ends.
+    /// The relay has broadcast MatchEnd and CertifiedMatchResult.
+    pub fn end_game(self) -&gt; Connection&lt;PostGame, T&gt; {
+        // ... transition to post-game phase
+    }
+}
+
+impl&lt;T: Transport&gt; Connection&lt;PostGame, T&gt; {
+    /// Send post-game chat (out-of-band, on MessageLane::Chat).
+    /// Accepts ChatMessage (client → relay type, not ChatNotification).
+    pub fn send_chat(&amp;self, msg: &amp;ChatMessage) { /* ... */ }
+
+    /// Receive CertifiedMatchResult if not yet consumed.
+    pub fn take_certified_result(&amp;mut self) -&gt; Option&lt;CertifiedMatchResult&gt; { /* ... */ }
+
+    /// Receive rating update SCRs (ranked matches only).
+    pub fn take_rating_update(&amp;mut self) -&gt; Option&lt;Vec&lt;SignedCredentialRecord&gt;&gt; { /* ... */ }
+
+    /// Drain post-game chat/system notifications.
+    pub fn drain_chat(&amp;mut self) -&gt; impl Iterator&lt;Item = ChatNotification&gt; + '_ { /* ... */ }
+
+    /// Leave post-game and return to lobby (user action or 5-minute timeout).
+    pub fn leave_post_game(self) -&gt; Connection&lt;InLobby, T&gt; {
+        // ... cleanup post-game state, return to lobby
     }
 }
 <span class="boring">}</span></code></pre>

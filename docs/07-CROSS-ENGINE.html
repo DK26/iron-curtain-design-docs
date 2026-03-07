@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-8f315fcc.js";
+            window.path_to_searchindex_js = "searchindex-0f263f9c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-02bd7aa6.js"></script>
@@ -496,10 +496,10 @@ pub enum CrossEngineAuthorityMode {
 <span class="boring">}</span></code></pre>
 <p><strong>IC-as-authority flow:</strong></p>
 <ol>
-<li>IC relay runs <code>ic-sim</code> headlessly (or one IC client’s sim is designated reference)</li>
-<li>Every <code>hash_interval_ticks</code>, IC broadcasts a state hash to all clients</li>
+<li>One IC client’s sim is designated the <strong>reference sim</strong> (default). Alternatively, operators can deploy relay-headless mode where <code>ic-server</code> runs <code>ic-sim</code> headlessly — this is a special deployment similar to FogAuth (see D074 deployment table).</li>
+<li>Every <code>hash_interval_ticks</code>, the reference sim broadcasts a state hash to all clients</li>
 <li>Foreign clients compare against their own sim state</li>
-<li>On divergence: IC sends <code>EntityCorrection</code> packets to foreign clients (bounded by <code>max_correction_magnitude</code>)</li>
+<li>On divergence: the reference sim sends <code>EntityCorrection</code> packets to foreign clients (bounded by <code>max_correction_magnitude</code>)</li>
 <li>Foreign clients apply corrections to converge toward IC’s state</li>
 <li><strong>IC never accepts inbound corrections</strong> — <code>SimReconciler</code> is not instantiated on the authority side</li>
 </ol>

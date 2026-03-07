@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8f315fcc.js";
+            window.path_to_searchindex_js = "../searchindex-0f263f9c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-02bd7aa6.js"></script>
@@ -215,7 +215,7 @@
 </div>
 <hr>
 <h3 id="10-chat--communication-system-d059"><a class="header" href="#10-chat--communication-system-d059">10. Chat &amp; Communication System (D059)</a></h3>
-<p><strong>Surface:</strong> <code>ChatMessage&lt;S&gt;</code> scope-branded messages, ping system, chat wheel, minimap drawing.</p>
+<p><strong>Surface:</strong> <code>ChatMessage&lt;S&gt;</code> scope-branded messages (domain/UI layer — lowered to unbranded <code>ChatMessage { channel, text }</code> at the wire boundary; see type-safety.md § Layering note), ping system, chat wheel, minimap drawing.</p>
 <div class="table-wrapper">
 <table>
 <thead>
