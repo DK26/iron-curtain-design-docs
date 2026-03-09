@@ -1,6 +1,6 @@
 ﻿## D016: LLM-Generated Missions and Campaigns
 
-**Decision:** Provide an optional LLM-powered mission generation system (Phase 7) via the `ic-llm` crate. Players bring their own LLM provider (BYOLLM) — the engine never ships or requires one. Every game feature works fully without an LLM configured.
+**Decision:** Provide an optional LLM-powered mission generation system (Phase 7) via the `ic-llm` crate. IC ships built-in CPU models (D047 Tier 1) that make LLM features functional with zero setup; users who want higher quality bring their own provider (BYOLLM Tiers 2–4). Every game feature works fully without an LLM configured.
 
 **Rationale:**
 - Transforms Red Alert from finite content to infinite content — for players who opt in
@@ -31,16 +31,16 @@
 
 **Bring-Your-Own-LLM (BYOLLM) architecture:**
 - `ic-llm` defines a `LlmProvider` trait — any backend that accepts a prompt and returns structured text
-- Built-in providers: OpenAI-compatible API, local Ollama/llama.cpp, Anthropic API
-- Users configure their provider in settings (API key, endpoint, model name)
-- The engine never ships or requires a specific model — the user chooses
+- Built-in providers: IC Built-in (pure Rust CPU inference), OpenAI-compatible API, local Ollama, Anthropic API
+- Users configure their provider in settings (API key, endpoint, model name) — or use IC Built-in with zero configuration
+- The engine never *requires* a specific external model — the user chooses; IC Built-in is the default floor
 - Provider is a runtime setting, not a compile-time dependency
 - All prompts and responses are logged (opt-in) for debugging and sharing
 - Offline mode: pre-generated content works without any LLM connection
 
 **Prompt strategy is provider/model-specific (especially local vs cloud):**
 - IC does **not** assume one universal prompt style works across all BYOLLM providers.
-- Local models (Ollama/llama.cpp and other self-hosted backends) often require different **chat templates**, tighter context budgets, simpler output schemas, and more staged task decomposition than frontier cloud APIs.
+- Local models (Ollama and other self-hosted backends) often require different **chat templates**, tighter context budgets, simpler output schemas, and more staged task decomposition than frontier cloud APIs.
 - A "bad local model result" may actually be a **prompt/template mismatch** (wrong role formatting, unsupported tool-call pattern, too much context, overly complex schema).
 - D047 therefore introduces a provider/model-aware **Prompt Strategy Profile** system (auto-selected by capability probe, user-overridable) rather than a single hardcoded prompt preset for every backend.
 

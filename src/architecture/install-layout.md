@@ -21,7 +21,7 @@ What an end user sees after installing Iron Curtain:
 ```
 iron-curtain/
 ├── iron-curtain[.exe]              # Game client — GUI application (ic-game binary)
-├── ic-server[.exe]                 # Relay / dedicated server — CLI daemon (ic-net binary)
+├── ic-server[.exe]                 # Relay / dedicated server — CLI daemon (ic-server binary)
 ├── ic[.exe]                        # Developer/modder utility — CLI tool (mod, CI/CD, diagnostics)
 ├── ic-editor[.exe]                 # SDK — GUI application: scenario editor, asset studio (D038+D040)
 ├── mods/                           # Game modules + content — the heart of the project
@@ -148,23 +148,25 @@ iron-curtain/                       # Cargo workspace root
 │   │       │   ├── alias.rs        #     OpenRA trait name alias registry (D023)
 │   │       │   └── inheritance.rs  #     YAML inheritance resolver
 │   │       └── snapshot.rs         #   State serialization for saves/replays/rollback
-│   ├── ic-net/                     # Networking (never imports ic-sim)
+│   ├── ic-net/                     # Networking library (never imports ic-sim)
 │   │   ├── Cargo.toml
 │   │   └── src/
 │   │       ├── lib.rs
 │   │       ├── network_model.rs    #   NetworkModel trait (D006)
 │   │       ├── relay_lockstep.rs    #   EmbeddedRelayNetwork + RelayLockstepNetwork
 │   │       ├── local.rs            #   LocalNetwork (testing, single-player)
-│   │       ├── relay_core.rs       #   RelayCore library (D007)
-│   │       └── bin/
-│   │           └── server.rs       #   ic-server binary entry point
+│   │       └── relay_core.rs       #   RelayCore library (D007)
+│   ├── ic-server/                  # Unified server binary (D074) — top-level, depends on ic-net + optionally ic-sim
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       └── main.rs             #   ic-server binary entry point
 │   ├── ic-render/                  # Isometric rendering (Bevy plugin)
 │   ├── ic-ui/                      # Game chrome, sidebar, minimap
 │   ├── ic-audio/                   # Sound, music, EVA, VoIP
 │   ├── ic-script/                  # Lua + WASM mod runtimes
-│   ├── ic-ai/                      # Skirmish AI, adaptive difficulty
-│   ├── ic-llm/                     # LLM mission generation (optional)
-│   ├── ic-paths/                   # Platform path resolution, portable mode (wraps `app-path`)
+│   ├── ic-ai/                      # Skirmish AI, adaptive difficulty, LLM strategies (depends on ic-llm)
+│   ├── ic-llm/                     # LLM provider traits + infra, Tier 1 CPU inference (no ic-sim)
+│   ├── ic-paths/                   # Platform path resolution, portable mode, credential store (wraps `app-path` + `strict-path` + `keyring` + `aes-gcm` + `argon2` + `zeroize`)
 │   ├── ic-editor/                  # SDK binary: scenario editor, asset studio (D038+D040)
 │   └── ic-game/                    # Game binary: ties all plugins together
 │       ├── Cargo.toml

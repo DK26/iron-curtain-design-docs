@@ -359,7 +359,9 @@ impl<T> Verified<T> {
 - `Verified<SignedCredentialRecord>` — an SCR whose Ed25519 signature has been checked (D052)
 - `Verified<ManifestHash>` — a Workshop manifest whose content hash matches the declared hash (D030)
 - `Verified<ReplaySignature>` — a replay whose signature chain has been validated
-- `ValidatedOrder` (type alias for `Verified<PlayerOrder>`) — an order that passed all validation checks (D012)
+- `ValidatedOrder` (type alias for `Verified<PlayerOrder>`) — an order that passed **all** validation checks in `ic-sim` (D012)
+
+**Related but distinct:** `StructurallyChecked<T>` (defined in `cross-engine/relay-security.md`) is a weaker wrapper for relay-level structural validation. The relay does NOT run `ic-sim` (relay-architecture.md), so it cannot produce `Verified<T>`. `StructurallyChecked<TimestampedOrder>` means "decoded and structurally valid" — full sim validation (D012) runs on each client after broadcast.
 
 **Rationale:** A function accepting `Verified<SignedCredentialRecord>` cannot receive an unverified SCR without a compile error. The `new_verified` constructor is `pub(crate)` to prevent external construction — only the actual verification function in the same crate can wrap a value.
 
@@ -481,3 +483,89 @@ impl OrderBudget {
 **Rationale:** `CampaignGraph` guarantees DAG structure, full reachability, and valid references at construction time — no downstream code needs to re-validate. `OrderBudget` guarantees `tokens <= burst_cap` and `refill > 0` — the rate limiter cannot be constructed in a broken state.
 
 **Applies to:** `CampaignGraph`, `OrderBudget`, `BalancePreset` (no circular inheritance), `WeatherSchedule` (non-empty cycle list, valid intensity ranges), `DependencyGraph` (no cycles, all references resolve).
+
+### WASM ABI Boundary Policy: Newtypes Across the FFI
+
+WASM's ABI supports only primitive types (`i32`, `i64`, `f32`, `f64`). Rust newtypes cannot cross the WASM boundary directly. This creates a tension with the Newtype Policy above — the resolution is a **two-layer convention**:
+
+1. **WASM FFI signatures** (`#[wasm_export]` functions implemented by mods) use primitives because the ABI requires it. These are the actual byte-level interface.
+2. **Host-side structs and functions** (Rust types used *within* the engine to represent WASM-exchanged data) use newtypes. The host converts at the boundary.
+
+```rust
+// HOST SIDE — newtypes enforced. This is what the engine works with.
+pub struct AiUnitInfo {
+    pub tag: UnitTag,               // NOT u32
+    pub unit_type_id: UnitTypeId,   // NOT u32
+    pub position: WorldPos,
+    pub health: SimCoord,
+    pub max_health: SimCoord,
+    pub is_idle: bool,
+    pub is_moving: bool,
+}
+
+// WASM ABI BOUNDARY — primitives required by the ABI.
+// The host serializes AiUnitInfo into this layout for the guest.
+// The guest receives opaque u32 handles — it cannot construct
+// arbitrary UnitTag values (see api-misuse-patterns.md § U4).
+#[repr(C)]
+struct WasmAiUnitInfo {
+    tag_raw: u32,           // opaque handle — guest cannot decode
+    unit_type_id_raw: u32,  // interned ID
+    pos_x: i32, pos_y: i32, pos_z: i32,
+    health: i32, max_health: i32,
+    flags: u8,              // is_idle | is_moving packed
+}
+```
+
+**Rule:** If a type appears in a Rust `struct` or `fn` signature that is *not* a raw WASM ABI function, it must use the newtype. WASM host functions (`#[wasm_host_fn]`) and WASM exports (`#[wasm_export]`) show the *logical* API — what mod authors write. The `#[wasm_host_fn]`/`#[wasm_export]` macros generate primitive ABI wrappers automatically. Structs like `AiUnitInfo` and `AiEventEntry` are engine-side types and must use newtypes.
+
+**Concrete ABI shape:** Complex types cross the WASM boundary via a **serde bridge**:
+- **Structs / `Vec<T>` / slices:** The host serializes the value as MessagePack into the guest's linear memory, then passes `(ptr: i32, len: i32)`. The guest deserializes on its side (and vice versa for return values).
+- **`&str`:** The host writes UTF-8 bytes into guest memory and passes `(ptr: i32, len: i32)`.
+- **`Option<T>` (small):** Encoded as `(tag: i32, value: i32)` where `tag=0` is None.
+- **`u64` / `SimTick`:** Split into two `i32` parameters (WASM has no native 64-bit params in the MVP spec).
+- **Return of `Vec<T>`:** The guest allocates in its own memory, serializes as MessagePack, returns a packed `i64` encoding `(ptr << 32 | len)`. The host copies and deserializes.
+
+The `#[wasm_export]` and `#[wasm_host_fn]` proc-macros generate this glue — mod authors never write it manually. See `wasm-modules.md` § "WASM-exported trait functions" for worked examples.
+
+**Enforcement:** Code review checks that WASM host function *implementations* (not signatures) wrap/unwrap newtypes at the boundary. The api-misuse-patterns.md § U4 test validates that mods cannot forge entity handles.
+
+### Finite Float Policy: NaN-Safe Server-Side Floats
+
+`f64` is permitted in server-side infrastructure (`ic-net`, anti-cheat, telemetry) but IEEE 754 `NaN`/`Inf` values are a silent correctness hazard: `NaN > threshold` is always `false`, which can disable security checks entirely (see V34 in `security/vulns-infrastructure.md`).
+
+**Rule:** Every `f64` field in security-critical server code (anti-cheat scoring, behavioral analysis, trust factors) must use a NaN-guarded update pattern:
+
+```rust
+/// Update an f64 field with NaN/Inf guard. If the computed value is
+/// non-finite, reset to the fail-safe default and log a warning.
+fn guarded_update(field: &mut f64, new_value: f64, fail_safe: f64, name: &str) {
+    *field = new_value;
+    if !field.is_finite() {
+        log::warn!("{} became non-finite ({}), resetting to {}", name, new_value, fail_safe);
+        *field = fail_safe;
+    }
+}
+```
+
+**Fail-safe defaults follow the fail-closed principle:**
+- Abuse detection scores (`EwmaTrafficMonitor`): NaN → `0.0` (resets to clean state, re-accumulates)
+- Behavioral/trust scores (`DualModelAssessment`): NaN → `1.0` (maximum suspicion, not immunity)
+- Population baselines: NaN → retains previous valid value
+
+**Scope:** This policy applies to all security-critical server-side infrastructure — relay (`ic-net`), ranking authority, and community server (`ic-server`) code. The `DualModelAssessment` pipeline spans both relay-side behavioral analysis and ranking-authority-side statistical analysis (V36 in `vulns-infrastructure.md`); NaN guards must be present at both computation sites. `ic-sim` never uses floats (Fixed-Point Math Policy). `ic-render`/`ic-audio`/`ic-ui` floats are presentation-only and NaN is a visual glitch, not a security bypass.
+
+### Typestate vs. Enum Guidance: When to Use Which
+
+Not every state machine needs the full typestate pattern. The deciding factors are:
+
+| Use Typestate When                                                                                                       | Use Enum When                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| Invalid transitions are **security-critical** or **correctness-critical** (connection auth, WASM sandbox, verified data) | State needs to be **serialized/deserialized** (save games, network messages, config files) |
+| The state machine is **consumed linearly** (each transition takes `self` by value)                                       | State is **stored in a collection** and transitions are driven by external events          |
+| There are few states (3–6) with clear one-way transitions                                                                | There are many states or transitions are data-dependent                                    |
+| Different states expose **completely different APIs**                                                                    | All states share the same interface with minor behavioral differences                      |
+
+**Current typestate machines:** Connection lifecycle, WASM sandbox, Workshop package install, campaign mission execution, balance patch application.
+
+**Current enum-based state machines (justified):** `ReadyCheckState` (serialized in lobby protocol), `MatchPhase` (stored in `SimState`, serialized in snapshots), `WeatherState` (deterministic sim state, serialized). These use enums because they are part of serializable sim/protocol state where typestate's compile-time guarantees conflict with serde's need for a single concrete type.

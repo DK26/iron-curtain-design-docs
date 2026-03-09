@@ -19,19 +19,19 @@
 
 ## Existing Types Referenced (Not Redefined)
 
-| Type | Defined In | Crate |
-|------|-----------|-------|
-| `StrategicPlan`, `StrategicTarget`, `BuildFocus`, `EconomicGuidance`, `RiskAssessment` | D044 + `llm-generation-schemas.md` §9 | `ic-ai` |
-| `LlmOrchestratorAi`, `LlmPlayerAi` | D044 | `ic-ai` |
-| `AiStrategy` trait, `AiEventLog`, `FogFilteredView`, `ParameterSpec` | D041 | `ic-ai` |
-| `Skill`, `SkillBody`, `SkillDomain`, `SituationSignature`, `SkillQuality` | D057 | `ic-llm` |
-| `PlayerOrder`, `TimestampedOrder`, `TickOrders`, `PlayerId` | `03-NETCODE.md` §Protocol | `ic-protocol` |
-| `GameLoop<N, I>` | `architecture/game-loop.md` | `ic-game` |
-| `NetworkModel` trait | `03-NETCODE.md` §NetworkModel Trait | `ic-net` |
-| `PromptStrategyProfile`, `ModelCapabilityProbe` | D047 | `ic-llm` |
-| `llm_providers`, `llm_task_routing`, `llm_prompt_profiles` tables | D047 | SQLite |
-| `VoiceProvider`, `MusicProvider`, `SoundFxProvider` traits | D016 | `ic-llm` |
-| `CampaignSkeleton`, `GenerativeCampaignContext`, `BattleReport` | D016 | `ic-llm` |
+| Type                                                                                   | Defined In                            | Crate         |
+| -------------------------------------------------------------------------------------- | ------------------------------------- | ------------- |
+| `StrategicPlan`, `StrategicTarget`, `BuildFocus`, `EconomicGuidance`, `RiskAssessment` | D044 + `llm-generation-schemas.md` §9 | `ic-ai`       |
+| `LlmOrchestratorAi`, `LlmPlayerAi`                                                     | D044                                  | `ic-ai`       |
+| `AiStrategy` trait, `AiEventLog`, `FogFilteredView`, `ParameterSpec`                   | D041                                  | `ic-ai`       |
+| `Skill`, `SkillBody`, `SkillDomain`, `SituationSignature`, `SkillQuality`              | D057                                  | `ic-llm`      |
+| `PlayerOrder`, `TimestampedOrder`, `TickOrders`, `PlayerId`                            | `03-NETCODE.md` §Protocol             | `ic-protocol` |
+| `GameLoop<N, I>`                                                                       | `architecture/game-loop.md`           | `ic-game`     |
+| `NetworkModel` trait                                                                   | `03-NETCODE.md` §NetworkModel Trait   | `ic-net`      |
+| `PromptStrategyProfile`, `ModelCapabilityProbe`                                        | D047                                  | `ic-llm`      |
+| `llm_providers`, `llm_task_routing`, `llm_prompt_profiles` tables                      | D047                                  | SQLite        |
+| `VoiceProvider`, `MusicProvider`, `SoundFxProvider` traits                             | D016                                  | `ic-llm`      |
+| `CampaignSkeleton`, `GenerativeCampaignContext`, `BattleReport`                        | D016                                  | `ic-llm`      |
 
 ---
 
@@ -115,9 +115,18 @@ pub enum LlmError {
 }
 
 pub enum ProviderType {
+    /// Tier 1: IC-shipped embedded inference runtime with first-party model packs.
+    /// CPU-only, zero configuration. See D047 § Provider Tiers.
+    IcBuiltIn,
+    /// Tier 2/3/4: Ollama local server.
     Ollama,
+    /// Tier 2/3: OpenAI (OAuth or API key).
     OpenAi,
+    /// Tier 2/3: Anthropic (OAuth or API key).
     Anthropic,
+    /// Tier 2/3: Google AI (OAuth or API key).
+    GoogleAi,
+    /// Tier 3/4: Any OpenAI-compatible endpoint.
     OpenAiCompatible,
 }
 
@@ -562,54 +571,94 @@ impl TokenBudget {
 ### 2.3 Credential Encryption
 
 ```rust
-/// API key storage. Lives in ic-llm.
-/// Keys encrypted at rest in SQLite llm_providers.api_key column.
+/// Credential storage. Lives in ic-paths (not ic-llm — shared by ic-llm, ic-net/D052, ic-game).
+/// Sensitive columns in SQLite store AES-256-GCM encrypted BLOBs, never plaintext.
+/// See research/credential-protection-design.md for full design.
 pub struct CredentialStore {
     backend: CredentialBackend,
+    dek: Option<Zeroizing<[u8; 32]>>,  // Data Encryption Key — zeroized on lock/drop
 }
 
 enum CredentialBackend {
-    /// Primary: OS credential manager (Windows Credential Locker, macOS Keychain, Linux Secret Service)
-    Keyring { service: String },
-    /// Fallback: AES-256-GCM with machine-derived key
-    Aes256Gcm { key: [u8; 32] },
+    /// Tier 1 (primary): OS credential manager via `keyring` crate
+    /// Windows DPAPI / macOS Keychain / Linux Secret Service
+    /// Single DEK stored in keyring, used to encrypt all secrets in SQLite
+    OsKeyring,
+    /// Tier 2 (fallback): User vault passphrase → Argon2id → DEK
+    /// Prompted once per session when no OS keyring is available
+    Passphrase { salt: [u8; 16], params: Argon2Params },
+    /// Tier 3 (WASM): Session-only, secrets not persisted
+    SessionOnly,
 }
 
 impl CredentialStore {
-    pub fn new() -> Self {
-        // Try keyring first, fall back to AES
-        match keyring::Entry::new("iron-curtain", "llm-master-key") {
-            Ok(_) => Self { backend: CredentialBackend::Keyring { service: "iron-curtain".into() } },
-            Err(_) => {
-                // Derive key from machine-specific entropy
-                let key = derive_machine_key(); // MAC + username + fixed salt → PBKDF2
-                Self { backend: CredentialBackend::Aes256Gcm { key } }
+    pub fn open() -> Result<Self, CredentialError> {
+        // Try OS keyring first (Tier 1)
+        if let Ok(entry) = keyring::Entry::new("iron-curtain", "vault-dek") {
+            if entry.get_secret().is_ok() {
+                return Ok(Self { backend: CredentialBackend::OsKeyring, dek: None });
             }
         }
+        // No OS keyring → Tier 2 (vault passphrase)
+        // Read salt from vault_meta table, or prompt user to set passphrase
+        Ok(Self { backend: CredentialBackend::Passphrase { /* ... */ }, dek: None })
     }
 
-    pub fn store(&self, provider_id: i64, api_key: &str) -> Result<(), CredentialError> {
+    pub fn unlock(&mut self) -> Result<(), CredentialError> {
         match &self.backend {
-            CredentialBackend::Keyring { service } => {
-                let entry = keyring::Entry::new(service, &provider_id.to_string())?;
-                entry.set_password(api_key)?;
+            CredentialBackend::OsKeyring => {
+                // Retrieve DEK from OS keyring
+                let entry = keyring::Entry::new("iron-curtain", "vault-dek")?;
+                let dek_bytes = entry.get_secret()?;
+                self.dek = Some(Zeroizing::new(dek_bytes.try_into()?));
                 Ok(())
             }
-            CredentialBackend::Aes256Gcm { key } => {
-                let encrypted = aes_gcm_encrypt(key, api_key.as_bytes())?;
-                // Store encrypted blob in SQLite
+            CredentialBackend::Passphrase { salt, params } => {
+                // Prompt user for passphrase, derive DEK via Argon2id
+                let passphrase = prompt_vault_passphrase()?;
+                let dek = argon2id_derive(&passphrase, salt, params)?;
+                self.dek = Some(dek);
                 Ok(())
             }
+            CredentialBackend::SessionOnly => Ok(()), // No persistent DEK
         }
     }
 
-    pub fn retrieve(&self, provider_id: i64) -> Result<String, CredentialError> {
-        // Reverse of store — decrypt from keyring or AES blob
-        // Key lives in memory only while LlmProvider instance exists
-        todo!()
+    /// Encrypt plaintext for storage in SQLite. Returns versioned blob:
+    /// [version(1)] [nonce(12)] [ciphertext + GCM tag]
+    pub fn encrypt_secret(&self, plaintext: &[u8], aad: &[u8])
+        -> Result<Vec<u8>, CredentialError> { /* ... */ }
+
+    /// Decrypt a stored blob. Result is Zeroizing — cleared on drop.
+    pub fn decrypt_secret(&self, ciphertext: &[u8], aad: &[u8])
+        -> Result<Zeroizing<Vec<u8>>, CredentialError> { /* ... */ }
+
+    /// Zeroize DEK from memory. Requires re-unlock for next access.
+    pub fn lock(&mut self) {
+        self.dek = None; // Zeroizing<[u8; 32]> auto-zeroizes on drop
     }
+
+    /// Check which providers have readable credentials.
+    /// Providers with decryption failures are flagged for re-entry.
+    pub fn check_provider_credentials(
+        &self, db: &rusqlite::Connection,
+    ) -> Vec<CredentialHealthEntry> { /* ... */ }
+
+    /// Reset credentials for one provider (set encrypted columns to NULL).
+    /// Non-sensitive config (name, endpoint, model) is preserved.
+    pub fn reset_provider_credentials(
+        &self, db: &rusqlite::Connection, provider_id: i64,
+    ) -> Result<(), CredentialError> { /* ... */ }
+
+    /// Nuclear: purge ALL encrypted credentials and reset vault_meta.
+    /// Used when vault passphrase is forgotten.
+    pub fn reset_all_credentials(
+        &self, db: &rusqlite::Connection,
+    ) -> Result<(), CredentialError> { /* ... */ }
 }
 ```
+
+**Security note:** The previous design used `derive_machine_key()` (MAC address + username + fixed salt → PBKDF2) as the fallback. This is **security theater** in an open-source project — an attacker running as the same user can reproduce the key deterministically. The updated design requires either an OS keyring (Tier 1) or a user-provided vault passphrase (Tier 2). There is no "silent" fallback that derives a key from machine-specific entropy. If no OS keyring is available and the user declines to set a passphrase, LLM credentials are not persisted (session-only behavior).
 
 **Export safety (D047):** The `ic llm export` command and Workshop config sharing NEVER include `api_key`. The export serializer explicitly skips the column.
 
@@ -1023,15 +1072,15 @@ impl LlmProvider for OpenAiProvider {
 
 **Compatible services using this exact provider (only `endpoint` and `model` differ):**
 
-| Service | `endpoint` | Example `model` | Notes |
-|---------|-----------|-----------------|-------|
-| OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` | Cheapest good option |
-| OpenAI | `https://api.openai.com/v1` | `gpt-4o` | Best quality |
-| Azure OpenAI | `https://{resource}.openai.azure.com/openai/deployments/{deployment}` | `gpt-4o` | Enterprise |
-| Groq | `https://api.groq.com/openai/v1` | `llama-3.1-70b-versatile` | Very fast inference |
-| Together.ai | `https://api.together.xyz/v1` | `meta-llama/Llama-3.1-70B-Instruct-Turbo` | Open models on cloud |
-| OpenRouter | `https://openrouter.ai/api/v1` | `anthropic/claude-sonnet-4` | Multi-provider router |
-| Fireworks | `https://api.fireworks.ai/inference/v1` | `accounts/fireworks/models/llama-v3p1-70b-instruct` | Fast open models |
+| Service      | `endpoint`                                                            | Example `model`                                     | Notes                 |
+| ------------ | --------------------------------------------------------------------- | --------------------------------------------------- | --------------------- |
+| OpenAI       | `https://api.openai.com/v1`                                           | `gpt-4o-mini`                                       | Cheapest good option  |
+| OpenAI       | `https://api.openai.com/v1`                                           | `gpt-4o`                                            | Best quality          |
+| Azure OpenAI | `https://{resource}.openai.azure.com/openai/deployments/{deployment}` | `gpt-4o`                                            | Enterprise            |
+| Groq         | `https://api.groq.com/openai/v1`                                      | `llama-3.1-70b-versatile`                           | Very fast inference   |
+| Together.ai  | `https://api.together.xyz/v1`                                         | `meta-llama/Llama-3.1-70B-Instruct-Turbo`           | Open models on cloud  |
+| OpenRouter   | `https://openrouter.ai/api/v1`                                        | `anthropic/claude-sonnet-4`                         | Multi-provider router |
+| Fireworks    | `https://api.fireworks.ai/inference/v1`                               | `accounts/fireworks/models/llama-v3p1-70b-instruct` | Fast open models      |
 
 ### 3.2c AnthropicProvider Implementation (Claude)
 
@@ -1155,11 +1204,11 @@ impl LlmProvider for AnthropicProvider {
 
 Google Gemini exposes an OpenAI-compatible endpoint — use `OpenAiProvider` directly:
 
-| Setting | Value |
-|---------|-------|
+| Setting    | Value                                                     |
+| ---------- | --------------------------------------------------------- |
 | `endpoint` | `https://generativelanguage.googleapis.com/v1beta/openai` |
-| `model` | `gemini-2.0-flash` or `gemini-2.5-pro` |
-| `api_key` | Google AI Studio API key |
+| `model`    | `gemini-2.0-flash` or `gemini-2.5-pro`                    |
+| `api_key`  | Google AI Studio API key                                  |
 
 No separate provider implementation needed.
 

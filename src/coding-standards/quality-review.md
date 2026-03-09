@@ -390,6 +390,8 @@ When reviewing code, check:
 - [ ] Are version constraints parsed into `VersionConstraint` enum at ingestion, never stored or compared as strings?
 - [ ] Is `WasmInstanceId` used consistently, never bare `u32` or `usize` index?
 - [ ] Is `Fingerprint` constructed only via `Fingerprint::compute()`, never from raw `[u8; 32]`?
+- [ ] **WASM boundary:** Do host-side structs (e.g., `AiUnitInfo`, `AiEventEntry`) use newtypes? WASM FFI signatures use primitives (ABI constraint), but any Rust struct exchanging data with the engine must use `UnitTag`, `SimTick`, etc. See `type-safety.md` § WASM ABI Boundary Policy.
+- [ ] **Server-side floats:** Do `f64` fields in anti-cheat/scoring code have NaN guards? See `type-safety.md` § Finite Float Policy.
 
 ```rust
 // ✅ Good newtype pattern
@@ -450,6 +452,15 @@ When reviewing code that handles security-sensitive data (see `02-ARCHITECTURE.m
 - [ ] Are there any code paths that bypass verification and construct `Verified<T>` directly? (the `_private` field should prevent this)
 - [ ] Does the verification function check ALL required properties before wrapping in `Verified`?
 - [ ] Are `Verified` values passed through without re-verification? (re-verification is wasted work; the type already proves it)
+
+### StructurallyChecked Wrapper Review
+
+When reviewing relay-side code that processes orders before broadcast (see `cross-engine/relay-security.md` § StructurallyChecked):
+
+- [ ] Does the relay pipeline produce `StructurallyChecked<TimestampedOrder>` rather than bare `TimestampedOrder` for forwarded orders?
+- [ ] Is `StructurallyChecked::new()` called ONLY inside the `ForeignOrderPipeline::process()` path (or equivalent structural validation)? (the `_private` field should prevent external construction)
+- [ ] Is `StructurallyChecked<T>` NEVER confused with `Verified<T>`? (the relay does NOT run `ic-sim` — it cannot produce `Verified<T>`)
+- [ ] Are rejected orders logged to `rejection_log` for behavioral scoring?
 
 ### Hash Type Review
 

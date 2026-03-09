@@ -53,7 +53,7 @@ The goal is simple: **make us fall in love again.**
 
 **Cross-engine bridges.** Import and replay OpenRA and Remastered Collection matches. Load existing OpenRA mods, maps, and assets directly. Play with friends on different engines through cross-engine compatibility modes (with clear trust labels for what's ranked-safe and what's experimental).
 
-**A community that can't be shut down.** Self-hostable relay, matchmaking, and workshop servers. Federated architecture — communities mirror each other's content via P2P. Your identity is a 24-word recovery phrase, not an account on someone's server. Your player data lives in local SQLite files you own. No single point of failure. Built to survive.
+**A community that can't be shut down.** A single `ic-server` binary with toggleable capability flags handles relay, matchmaking, ranking, Workshop P2P seeding, and moderation. Federated architecture — communities mirror each other's content via P2P. Your identity is a 24-word recovery phrase, not an account on someone's server. Your player data lives in local SQLite files you own. No single point of failure. Built to survive.
 
 **Open source, community governed.** GPL v3 engine with an explicit modding exception — your mods, your license. Community-elected governance, RFC process, modder reputation and recognition. Not a product. A platform.
 
@@ -116,7 +116,7 @@ The goal is simple: **make us fall in love again.**
 - In-game communication — push-to-talk voice chat, contextual pings (8 types + ping wheel), auto-translated chat wheel phrases, minimap drawing, and tactical markers. Voice optionally recorded in replays
 - Unified command console — every action available as a `/` command. Developer overlay, cvar system, mod-registered commands via Lua/WASM, and Workshop-shareable `.iccmd` command scripts
 - Your data is yours — all player data stored locally in open SQLite files anyone can query. 24-word recovery phrase restores your identity on any machine, no account server needed. `ic backup` CLI for full backup/restore
-- Self-hostable relay, matchmaking, and workshop servers — federated, no single point of failure. One `server_config.toml` configures ~200 parameters with deployment profiles for tournament, casual, competitive, and training setups
+- Self-hostable unified `ic-server` binary with toggleable capabilities (relay, matchmaking, ranking, Workshop P2P seeding, moderation) — federated, no single point of failure. One `server_config.toml` configures ~200 parameters with deployment profiles for tournament, casual, competitive, and training setups
 - Capability-scoped moderation, evidence-backed reports, and optional community review workflows
 - Community contribution recognition (profile-only) — helpful-review badges, creator acknowledgements, and deferred optional `M11` cosmetic/profile rewards (never gameplay or ranked bonuses)
 - Selective installs / content footprints — full install vs campaign-only vs multiplayer-only presets, optional media packs, and maintenance/repair flows via the content manager
@@ -125,7 +125,7 @@ The goal is simple: **make us fall in love again.**
 
 ### Optional / Later-Phase Systems
 
-- Optional AI-generated missions (BYOLLM) — describe a scenario, get a playable mission. Generate branching campaigns where characters evolve, betray, and die based on your choices. World Domination mode lets you conquer a strategic map region by region, with missions that react to how you actually played. Bring your own LLM; built-in mission templates work without one
+- AI-generated missions — describe a scenario, get a playable mission. Generate branching campaigns where characters evolve, betray, and die based on your choices. World Domination mode lets you conquer a strategic map region by region, with missions that react to how you actually played. Built-in CPU models run locally after a one-time download (no account needed); connect your own LLM (cloud or local) for higher quality
 - Switchable visual render modes / visual modding infrastructure (classic/HD/3D)
 - Browser/mobile/Deck polish over the same platform-agnostic input/UI abstractions
 
@@ -167,7 +167,7 @@ Every major system was designed by studying real, working implementations — no
 
 The networking design alone analyzed the source code of 20+ open-source games and multiple academic papers. Four EA GPL codebases (Generals/Zero Hour, Remastered Collection, Red Alert, Tiberian Dawn), open-source RTS engines (OpenRA, 0 A.D., Spring Engine, Warzone 2100, OpenTTD, and more), and non-RTS references (Quake 3, Minetest, Veloren, Lichess). The same methodology applies to AI, pathfinding, modding, and the workshop.
 
-Across the project: 70 design decisions with rationale and alternatives, 42 standalone research documents, 20+ codebases studied at the source code level, ~51,000 lines of structured documentation — all built through 140+ commits of iterative refinement. The LLM accelerated the research; the human directed every question and made every decision.
+Across the project: 76 design decisions with rationale and alternatives, 63 standalone research documents, 20+ codebases studied at the source code level, ~95,000 lines of design and research documentation — all built through 160+ commits of iterative refinement. The LLM accelerated the research; the human directed every question and made every decision.
 
 📖 **[Read the methodology →](https://dk26.github.io/iron-curtain-design-docs/14-METHODOLOGY.html)**
 

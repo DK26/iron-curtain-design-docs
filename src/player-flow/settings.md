@@ -26,15 +26,15 @@ Settings are organized in a tabbed layout. Each tab covers one domain. Changes a
 
 ### Settings Tabs
 
-| Tab          | Contents                                                                                                                                                                                                                                                            |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Video**    | **Performance Profile** selector (Optimize for Performance / Optimize for Graphics / Recommended / Custom — see section below). Resolution, fullscreen/windowed/borderless, render mode (Classic/HD/3D), zoom limits, UI scale, shroud style (hard/smooth edges), FPS limit, VSync, texture filtering, particle density, unit detail LOD, weather effects. Theme selection (Classic/Remastered/Modern/community). Cutscene playback preference (`Auto` / `Original` / `Clean Remaster` / `AI Enhanced` / `Briefing Fallback`). Display language / subtitle language selection and UI text direction (`Auto`, `LTR`, `RTL`) test override for localization QA/creators. Cutscene subtitle/CC fallback policy (primary + secondary language chain, original-audio fallback behavior). Optional `Allow Machine-Translated Subtitles/CC Fallback` toggle (clearly labeled, trust-tagged, off by default unless user opts in). |
-| **Audio**    | Master / Music / SFX / Voice / Ambient volume sliders. Music mode (Jukebox/Dynamic/Off). EVA voice. Spatial audio toggle. Voice-over preferences (D068): per-category selection/fallback for `EVA`, `Unit Responses`, and campaign/cutscene dialogue dubs where installed (`Auto` / specific language or style pack / `Off` where subtitle/CC fallback exists). |
-| **Controls** | Official input profiles by device: `Classic RA (KBM)`, `OpenRA (KBM)`, `Modern RTS (KBM)`, `Gamepad Default`, `Steam Deck Default`, plus `Custom` (profile diff). Full rebinding UI with category filters (Unit Commands, Production, Control Groups, Camera, Communication, UI/System, Debug). Mouse settings: edge scroll speed, scroll inversion, drag selection shape. Controller/Deck settings: deadzones, stick curves, cursor acceleration, radial behavior, gyro sensitivity (when available). Touch settings: handedness (mirror layout), touch target size, hold/drag thresholds, command rail behavior, camera bookmark dock preferences. Includes `Import`, `Export`, and `Share on Workshop` (config-profile packages with scope/diff preview), plus `View Controls Quick Reference` and `What's Changed in Controls` replay entry. |
-| **Gameplay** | Experience profile (one-click preset). Balance preset. Pathfinding preset. AI behavior preset. Full D033 QoL toggle list organized by category: Production, Commands, UI Feedback, Selection, Gameplay. Tutorial hint frequency, Controls Walkthrough prompts, and mobile Tempo Advisor warnings (client-only) also live here. |
-| **Social**   | Voice settings: PTT key, input/output device, voice effect preset, mic test. Chat settings: profanity filter, emojis, auto-translated phrases. Privacy: who can spectate, who can friend-request, online status visibility, and **campaign progress / benchmark sharing** controls (D021/D052/D053).                                         |
-| **LLM**      | Provider cards (add/edit/remove LLM providers). Task routing table (which provider handles which task). Connection test. Community config import/export (D047).                                                                                                     |
-| **Data**     | Content sources (detected game installations, manual paths, re-scan). **Installed Content Manager** (install profiles like `Minimal Multiplayer` / `Campaign Core` / `Full`, optional media packs, media variant groups such as cutscenes `Original` / `Clean Remaster` / `AI Enhanced` and voice-over variants by language/style, language capability badges for media packs (`Audio`, `Subs`, `CC`), translation source/trust labels, size estimates, reclaimable space). **Modify Installation / Repair & Verify** (D069 maintenance wizard re-entry). Data health summary. Backup/Restore buttons. Cloud sync toggle. Mod profile manager link. Storage usage. Export profile data (GDPR, D061). Recovery phrase viewer ("Show my 24-word phrase"). **Database Management** section: per-database size display, [Optimize Databases] button (VACUUM + ANALYZE — reclaim disk space, useful for portable/flash drive installs), [Open in DB Browser] per database, [Export to CSV/JSON] for tables/views, link to schema documentation. See D034 § User-Facing Database Access and D061 § `ic db` CLI. |
+| Tab          | Contents                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Video**    | **Performance Profile** selector (Optimize for Performance / Optimize for Graphics / Recommended / Custom — see section below). Resolution, fullscreen/windowed/borderless, render mode (Classic/HD/3D), zoom limits, UI scale, shroud style (hard/smooth edges), FPS limit, VSync, texture filtering, particle density, unit detail LOD, weather effects. Theme selection (Classic/Remastered/Modern/community). Cutscene playback preference (`Auto` / `Original` / `Clean Remaster` / `AI Enhanced` / `Briefing Fallback`). Display language / subtitle language selection and UI text direction (`Auto`, `LTR`, `RTL`) test override for localization QA/creators. Cutscene subtitle/CC fallback policy (primary + secondary language chain, original-audio fallback behavior). Optional `Allow Machine-Translated Subtitles/CC Fallback` toggle (clearly labeled, trust-tagged, off by default unless user opts in).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **Audio**    | Master / Music / SFX / Voice / Ambient volume sliders. Music mode (Jukebox/Dynamic/Off). EVA voice. Spatial audio toggle. Voice-over preferences (D068): per-category selection/fallback for `EVA`, `Unit Responses`, and campaign/cutscene dialogue dubs where installed (`Auto` / specific language or style pack / `Off` where subtitle/CC fallback exists).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **Controls** | Official input profiles by device: `Classic RA (KBM)`, `OpenRA (KBM)`, `Modern RTS (KBM)`, `Gamepad Default`, `Steam Deck Default`, plus `Custom` (profile diff). Full rebinding UI with category filters (Unit Commands, Production, Control Groups, Camera, Communication, UI/System, Debug). Mouse settings: edge scroll speed, scroll inversion, drag selection shape. Controller/Deck settings: deadzones, stick curves, cursor acceleration, radial behavior, gyro sensitivity (when available). Touch settings: handedness (mirror layout), touch target size, hold/drag thresholds, command rail behavior, camera bookmark dock preferences. Includes `Import`, `Export`, and `Share on Workshop` (config-profile packages with scope/diff preview), plus `View Controls Quick Reference` and `What's Changed in Controls` replay entry.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| **Gameplay** | Experience profile (one-click preset). Balance preset. Pathfinding preset. AI behavior preset. Full D033 QoL toggle list organized by category: Production, Commands, UI Feedback, Selection, Gameplay. Tutorial hint frequency, Controls Walkthrough prompts, and mobile Tempo Advisor warnings (client-only) also live here.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| **Social**   | Voice settings: PTT key, input/output device, voice effect preset, mic test. Chat settings: profanity filter, emojis, auto-translated phrases. Privacy: who can spectate, who can friend-request, online status visibility, and **campaign progress / benchmark sharing** controls (D021/D052/D053).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| **LLM**      | Provider cards (add/edit/remove LLM providers). Providers with credential issues show ⚠ badge and [Sign In] button instead of [Edit]. Task routing table (which provider handles which task). Connection test. Community config import/export (D047). See `llm-setup-guide.md` § Credential Recovery for the full re-entry flow.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| **Data**     | Content sources (detected game installations, manual paths, re-scan). **Installed Content Manager** (install profiles like `Minimal Multiplayer` / `Campaign Core` / `Full`, optional media packs, media variant groups such as cutscenes `Original` / `Clean Remaster` / `AI Enhanced` and voice-over variants by language/style, language capability badges for media packs (`Audio`, `Subs`, `CC`), translation source/trust labels, size estimates, reclaimable space). **Modify Installation / Repair & Verify** (D069 maintenance wizard re-entry). Data health summary. Backup/Restore buttons. Cloud sync toggle. Mod profile manager link. Storage usage. Export profile data (GDPR, D061). Recovery phrase viewer ("Show my 24-word phrase"). **Security** section: [Change Vault Passphrase] (Tier 2 only, visible when vault passphrase is active), [Reset Vault Passphrase] (clears all saved AI provider logins, prompts new passphrase — discoverable escape hatch for forgotten passphrases), [Reset All AI Logins] (purges all encrypted credentials, prompts confirmation). **Database Management** section: per-database size display, [Optimize Databases] button (VACUUM + ANALYZE — reclaim disk space, useful for portable/flash drive installs), [Open in DB Browser] per database, [Export to CSV/JSON] for tables/views, link to schema documentation. See D034 § User-Facing Database Access and D061 § `ic db` CLI. |
 
 ---
 
@@ -64,23 +64,23 @@ A single top-level selector that configures multiple subsystems at once — rend
 
 **Profile definitions:**
 
-| Setting | Performance | Recommended (auto) | Graphics |
-|---------|-------------|-------------------|----------|
-| **Render mode** | Classic (sprite-based) | Auto-selected by GPU capability | HD or 3D if hardware supports |
-| **Resolution** | Native (no supersampling) | Native | Native or supersampled |
-| **Post-FX** | None | Classic | Enhanced |
-| **Shadow style** | SpriteShadow | Auto | ProjectedShadow |
-| **FPS limit** | 60 | Monitor refresh rate | Uncapped / VSync |
-| **Zoom range** | Standard (less GPU load) | Standard | Extended |
-| **Audio quality** | Compressed, fewer channels | Auto | Full quality, spatial audio |
-| **I/O policy** | `ram_first` (zero disk I/O during gameplay) | `ram_first` | `ram_first` |
-| **SQLite mode** | In-memory during gameplay | In-memory during gameplay | In-memory during gameplay |
-| **Texture filtering** | Nearest (pixel-perfect) | Bilinear | Anisotropic |
-| **Particle density** | Reduced | Normal | Full |
-| **Unit detail LOD** | Aggressive (fewer animation frames at distance) | Normal | Full (all frames at all distances) |
-| **Weather effects** | Minimal (sim-only, no visual particles) | Normal | Full (rain/snow/dust particles, screen effects) |
-| **UI scale** | Auto (readable on small screens) | Auto | Auto |
-| **Replay recording** | Buffered in RAM | Buffered in RAM | Buffered in RAM |
+| Setting               | Performance                                     | Recommended (auto)              | Graphics                                        |
+| --------------------- | ----------------------------------------------- | ------------------------------- | ----------------------------------------------- |
+| **Render mode**       | Classic (sprite-based)                          | Auto-selected by GPU capability | HD or 3D if hardware supports                   |
+| **Resolution**        | Native (no supersampling)                       | Native                          | Native or supersampled                          |
+| **Post-FX**           | None                                            | Classic                         | Enhanced                                        |
+| **Shadow style**      | SpriteShadow                                    | Auto                            | ProjectedShadow                                 |
+| **FPS limit**         | 60                                              | Monitor refresh rate            | Uncapped / VSync                                |
+| **Zoom range**        | Standard (less GPU load)                        | Standard                        | Extended                                        |
+| **Audio quality**     | Compressed, fewer channels                      | Auto                            | Full quality, spatial audio                     |
+| **I/O policy**        | `ram_first` (zero disk I/O during gameplay)     | `ram_first`                     | `ram_first`                                     |
+| **SQLite mode**       | In-memory during gameplay                       | In-memory during gameplay       | In-memory during gameplay                       |
+| **Texture filtering** | Nearest (pixel-perfect)                         | Bilinear                        | Anisotropic                                     |
+| **Particle density**  | Reduced                                         | Normal                          | Full                                            |
+| **Unit detail LOD**   | Aggressive (fewer animation frames at distance) | Normal                          | Full (all frames at all distances)              |
+| **Weather effects**   | Minimal (sim-only, no visual particles)         | Normal                          | Full (rain/snow/dust particles, screen effects) |
+| **UI scale**          | Auto (readable on small screens)                | Auto                            | Auto                                            |
+| **Replay recording**  | Buffered in RAM                                 | Buffered in RAM                 | Buffered in RAM                                 |
 
 **Design rules:**
 
@@ -94,13 +94,13 @@ A single top-level selector that configures multiple subsystems at once — rend
 
 **Relationship to other preset systems:**
 
-| System | What it controls | Scope |
-|--------|-----------------|-------|
-| **Performance Profile** (this) | Render quality, I/O policy, audio quality, visual effects | Client-side only, per-machine |
-| **Experience Profile** (D033) | Balance, AI, pathfinding, QoL toggles | Gameplay, per-lobby |
-| **Render Mode** (D048) | Camera projection, asset set, palette handling | Visual identity, switchable mid-game |
-| **Install Preset** (D069) | Storage footprint, downloaded content | Data management |
-| **Mod Profile** (D062) | Active mods + experience settings | Content composition |
+| System                         | What it controls                                          | Scope                                |
+| ------------------------------ | --------------------------------------------------------- | ------------------------------------ |
+| **Performance Profile** (this) | Render quality, I/O policy, audio quality, visual effects | Client-side only, per-machine        |
+| **Experience Profile** (D033)  | Balance, AI, pathfinding, QoL toggles                     | Gameplay, per-lobby                  |
+| **Render Mode** (D048)         | Camera projection, asset set, palette handling            | Visual identity, switchable mid-game |
+| **Install Preset** (D069)      | Storage footprint, downloaded content                     | Data management                      |
+| **Mod Profile** (D062)         | Active mods + experience settings                         | Content composition                  |
 
 These are orthogonal — a player can run Performance profile + OpenRA experience preset + Classic render mode + Campaign Core install preset simultaneously.
 
@@ -259,9 +259,9 @@ The D069 wizard is re-enterable after first launch for guided maintenance and re
 
 ---
 
-### BYOLLM Feature Discovery Prompt (Settings → LLM, and contextual)
+### AI Feature Discovery Prompt (Settings → LLM, and contextual)
 
-IC does not require an LLM to play, but connecting one unlocks a significant set of optional features. Rather than letting players discover these features piecemeal (or never), a **one-time discovery prompt** appears at a natural moment to show what becomes available.
+IC does not require an LLM to play, but enabling one unlocks a significant set of optional features. IC ships built-in CPU models that work with zero setup, and supports cloud providers and local servers for higher quality. Rather than letting players discover these features piecemeal (or never), a **one-time discovery prompt** appears at a natural moment to show what becomes available.
 
 #### Trigger Conditions (show once, dismissible)
 
@@ -271,7 +271,7 @@ The prompt appears **once** when any of the following first occurs:
 - Player encounters a no-dead-end guidance panel for an LLM-gated feature (e.g., Generative Campaign, AI Coaching)
 - Player completes their first campaign mission or first 3 skirmish games (engaged enough to benefit from extended features)
 
-The prompt is a single, skippable panel — not a modal gate. Dismissing it records `llm_discovery_prompt_shown = true` locally (D034) and never re-triggers. The player can always find the same information at Settings → LLM → "What does BYOLLM unlock?"
+The prompt is a single, skippable panel — not a modal gate. Dismissing it records `llm_discovery_prompt_shown = true` locally (D034) and never re-triggers. The player can always find the same information at Settings → LLM → "What does AI unlock?"
 
 #### Panel Design
 
@@ -279,8 +279,10 @@ The prompt is a single, skippable panel — not a modal gate. Dismissing it reco
 ┌─────────────────────────────────────────────────────────────────┐
 │  EXTEND YOUR GAME WITH AI                            [Dismiss ×]│
 │                                                                 │
-│  Iron Curtain supports Bring-Your-Own-LLM — connect your own   │
-│  AI provider (local or cloud) to unlock optional features:      │
+│  Iron Curtain includes built-in AI models that run locally on   │
+│  your computer — no account, no third-party setup needed.       │
+│  A one-time download (~850 MB) is required for the model pack.  │
+│  For higher quality, connect a cloud or local provider.         │
 │                                                                 │
 │  CAMPAIGNS & MISSIONS                                           │
 │  ● Generative Campaigns — AI-authored campaigns from a text     │
@@ -313,10 +315,13 @@ The prompt is a single, skippable panel — not a modal gate. Dismissing it reco
 │                                                                 │
 │  ─────────────────────────────────────────────────────────────  │
 │                                                                 │
-│  Works with: Ollama (free, local), OpenAI, Anthropic, or any   │
-│  OpenAI-compatible API. Your keys stay on your machine.         │
+│  Built-in: runs on CPU, no account needed (download ~850 MB).   │
+│  Upgrade: connect a cloud or local-GPU provider for stronger    │
+│  models, faster responses, and lower CPU usage during gameplay.  │
+│  Cloud providers may charge per use (many offer free tiers).     │
+│  Your data stays on your machine unless you choose cloud.       │
 │                                                                 │
-│  [Set Up LLM Provider →]  [Browse Community Configs →]  [Later] │
+│  [Enable Built-in AI →]  [Connect Cloud →]  [Advanced →] [Later]│
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -324,9 +329,10 @@ The prompt is a single, skippable panel — not a modal gate. Dismissing it reco
 
 - **Never blocks gameplay.** The panel is informational and fully dismissible. No feature outside the LLM tab requires LLM configuration to function.
 - **No upsell language.** The tone is "here's what exists" not "you're missing out." The panel describes capabilities, not deficiencies.
-- **BYOLLM principle preserved.** IC never provides, recommends, or prices a specific provider. The panel lists compatibility categories (local, cloud, compatible APIs) without endorsement.
-- **Community configs reduce friction.** The [Browse Community Configs →] button links to the Workshop LLM Configurations category (D047/D030), where community-tested setups with performance notes and cost estimates are shared.
-- **One-time only.** The prompt respects the player's attention. If dismissed, it stays dismissed. Settings → LLM always has the feature list accessible via a "What does BYOLLM unlock?" link for players who want to revisit it.
+- **Built-in first, upgrade second.** The primary call-to-action is [Enable Built-in AI →], which downloads a model pack and requires zero accounts or configuration. Cloud and local options are presented as upgrades for users who want higher quality, not as the expected path.
+- **BYOLLM principle preserved.** IC never mandates a specific provider for cloud/local tiers. The built-in tier uses IC-validated model packs, but users can replace them with Workshop alternatives.
+- **Community configs reduce friction.** The [Advanced →] button provides access to the Workshop LLM Configurations category (D047/D030), where community-tested setups with performance notes and cost estimates are shared.
+- **One-time only.** The prompt respects the player's attention. If dismissed, it stays dismissed. Settings → LLM always has the feature list accessible via a "What does AI unlock?" link for players who want to revisit it.
 - **Platform-responsive.** On small screens (Phone/Tablet `ScreenClass`), the panel uses a scrollable list rather than the full grid layout. On TV/Deck, navigation follows the standard D-pad flow.
 
 #### Contextual Mini-Prompts (No-Dead-End Integration)
@@ -335,20 +341,20 @@ In addition to the one-time discovery panel, individual LLM-gated features show 
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  This feature uses an AI provider (BYOLLM)                      │
+│  This feature uses AI                                           │
 │                                                                 │
 │  {Feature description, 1-2 sentences}                           │
 │                                                                 │
-│  [Set Up LLM Provider →]  [Browse Community Configs →]          │
-│  [See All BYOLLM Features →]                                    │
+│  [Enable Built-in AI →]  [Connect Provider →]                   │
+│  [See All AI Features →]                                        │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-The [See All BYOLLM Features →] link opens the full discovery panel, giving context for players who encounter it feature-by-feature rather than through settings.
+The [See All AI Features →] link opens the full discovery panel, giving context for players who encounter it feature-by-feature rather than through settings.
 
 #### Cross-References
 
-- **D047 (LLM Config Manager):** Target of [Set Up LLM Provider →] — the LLM Manager UI
+- **D047 (LLM Config Manager):** Target of [Enable Built-in AI →] and [Connect Cloud →] — the LLM Manager UI with four provider tiers
 - **D016 (LLM Missions):** Generative campaigns and procedural missions
 - **D044 (LLM AI):** LLM Orchestrator AI and LLM Player AI
 - **D042 (Behavioral Profiles):** AI-powered playstyle analysis

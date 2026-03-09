@@ -1472,7 +1472,11 @@ resume_save_interval = 300           # Seconds between automatic resume data sav
 recheck_on_crash_recovery = true     # Full piece recheck after unclean shutdown. Default: true
 
 # Path safety (critical for untrusted .torrent files)
-sanitize_paths = true                # Remove "..", absolute paths, reserved names from torrent file paths. Default: true
+# When writing torrent data to disk, all file paths from .torrent metadata are validated
+# via the `strict-path` crate (MIT/Apache-2.0) using `PathBoundary` enforcement.
+# This defends against symlink escapes, Windows 8.3 short names, NTFS ADS, Unicode
+# normalization bypasses, null byte injection, and TOCTOU races — not just string checks.
+sanitize_paths = true                # Enforce strict-path boundary validation on all torrent file paths. Default: true
                                     # MUST be true for untrusted input. Disabling is a security risk.
 max_path_length = 255                # Max path component length. Range: 64–4096. Default: 255
 reject_hidden_files = false          # Reject torrents containing dotfiles. Default: false
@@ -1484,7 +1488,7 @@ reject_hidden_files = false          # Reject torrents containing dotfiles. Defa
 **Interactions & pitfalls:**
 - `preallocation_mode = "full"` on a nearly-full disk may fail immediately on `add_torrent`. The error is caught and reported.
 - `fsync_policy = "every_write"` reduces throughput by ~10x on spinning disks. Use `"periodic"` for a balance.
-- `sanitize_paths = false` allows directory traversal attacks from malicious .torrent files. Only disable in fully trusted environments (e.g., application-generated torrents).
+- `sanitize_paths = false` disables `strict-path` boundary enforcement, allowing directory traversal attacks from malicious .torrent files. Only disable in fully trusted environments (e.g., application-generated torrents).
 - `max_open_files` interacts with the OS limit — on Linux the default `ulimit -n` is 1024. Values above the OS limit cause `EMFILE` errors.
 
 #### Group 6: Bandwidth & QoS
@@ -1604,6 +1608,8 @@ max_torrent_size_bytes = 0           # Max torrent content size (0 = unlimited).
                                     # Useful for embedded systems with limited storage.
 
 # Path safety (duplicated from storage for emphasis)
+# All path validation is backed by `strict-path` PathBoundary enforcement — not just string checks.
+# This covers symlinks, Windows 8.3 short names, NTFS ADS, Unicode tricks, and TOCTOU races.
 sanitize_file_paths = true           # MANDATORY for untrusted torrents. Default: true
 reject_absolute_paths = true         # Reject torrents with absolute file paths. Default: true
 reject_path_traversal = true         # Reject torrents with ".." in file paths. Default: true

@@ -4,18 +4,34 @@
 Settings → LLM → [+ Add Provider]
 ```
 
-This page walks players through connecting an LLM provider. Iron Curtain does not include an AI model — you bring your own (BYOLLM). All LLM features are optional; the game is fully functional without one.
+This page walks players through enabling AI features. Iron Curtain ships with built-in CPU models that work with zero setup — just click [Enable Built-in AI →]. For higher quality, you can connect a cloud provider or a local server like Ollama. All LLM features are optional; the game is fully functional without one.
 
 ### What You Need
 
-An LLM provider is a service that runs an AI model and answers questions. You have two options:
+Iron Curtain supports four provider tiers (D047). Pick whichever fits your situation:
 
-| Option | Cost | Speed | Privacy | Setup Difficulty |
-|--------|------|-------|---------|-----------------|
-| **Local (Ollama)** | Free | Fast (your hardware) | Full — nothing leaves your machine | Medium (install one app) |
-| **Cloud (OpenAI, Claude, etc.)** | Pay-per-use | Fast (their hardware) | Prompts sent to provider | Easy (get an API key) |
+| Option                   | Cost                               | Speed                 | Privacy                            | Setup Difficulty            | Notes                                                             |
+| ------------------------ | ---------------------------------- | --------------------- | ---------------------------------- | --------------------------- | ----------------------------------------------------------------- |
+| **Built-in (IC Models)** | Free                               | Moderate (CPU)        | Full — nothing leaves your machine | None (one click)            | Uses your CPU — may affect game performance on lower-end hardware |
+| **Cloud Login (OAuth)**  | Pay-per-use (free tiers available) | Fast (their hardware) | Prompts sent to provider           | Easy (sign in with browser) | Stronger models, zero local resource usage                        |
+| **Cloud API Key**        | Pay-per-use (free tiers available) | Fast (their hardware) | Prompts sent to provider           | Easy (paste an API key)     | Stronger models, zero local resource usage                        |
+| **Local (Ollama, etc.)** | Free                               | Fast (your hardware)  | Full — nothing leaves your machine | Medium (install one app)    | Best with a dedicated GPU; frees CPU for the game                 |
 
-Both work identically in-game. You can use one for some tasks and another for others (task routing).
+All tiers work identically in-game. You can use one for some tasks and another for others (task routing).
+
+---
+
+### Quickest Start: Built-in AI (Zero Setup)
+
+Iron Curtain includes optimized CPU models via Workshop model packs. No accounts, no downloads beyond the model pack, no configuration.
+
+1. Settings → LLM → [Enable Built-in AI →]
+2. IC downloads the default model pack (~850 MB)
+3. Done — all AI features are active
+
+The built-in models are designed for CPU inference. They provide good results for coaching, mission generation, and AI orchestration while requiring no GPU.
+
+> **Why upgrade to a cloud or local-GPU provider?** Built-in models share your CPU with the game. An external provider (cloud or Ollama with GPU) frees those resources — the game runs smoother, and the AI responds faster with stronger models. Cloud providers may charge per use (typically a few cents per session), but many offer free tiers. See the comparison table above to decide what fits your situation.
 
 ---
 
@@ -37,13 +53,13 @@ ollama pull llama3.2
 
 This downloads a ~4 GB model. Smaller models (`llama3.2:1b`, ~1.3 GB) work too but give lower quality strategic advice. Larger models (`llama3.1:70b`) give better advice but require more RAM/VRAM.
 
-| Model | Size | RAM Needed | Quality | Best For |
-|-------|------|-----------|---------|----------|
-| `llama3.2:1b` | 1.3 GB | 4 GB | Basic | Low-end machines, fast responses |
-| `llama3.2` (8B) | 4.7 GB | 8 GB | Good | Most players |
-| `llama3.1:70b` | 40 GB | 48 GB | Excellent | High-end machines, best strategy |
-| `qwen2.5:7b` | 4.4 GB | 8 GB | Good | Alternative to Llama |
-| `mistral` (7B) | 4.1 GB | 8 GB | Good | Alternative to Llama |
+| Model           | Size   | RAM Needed | Quality   | Best For                         |
+| --------------- | ------ | ---------- | --------- | -------------------------------- |
+| `llama3.2:1b`   | 1.3 GB | 4 GB       | Basic     | Low-end machines, fast responses |
+| `llama3.2` (8B) | 4.7 GB | 8 GB       | Good      | Most players                     |
+| `llama3.1:70b`  | 40 GB  | 48 GB      | Excellent | High-end machines, best strategy |
+| `qwen2.5:7b`    | 4.4 GB | 8 GB       | Good      | Alternative to Llama             |
+| `mistral` (7B)  | 4.1 GB | 8 GB       | Good      | Alternative to Llama             |
 
 **Step 3 — Verify Ollama is running**
 
@@ -124,11 +140,11 @@ Uses OpenAI's cloud API. Requires an account and API key. Pay-per-use (typically
 └──────────────────────────────────────────────────────────┘
 ```
 
-| Model | Cost per Consultation | Quality | Context Window |
-|-------|----------------------|---------|----------------|
-| `gpt-4o-mini` | ~$0.005 | Good | 128k tokens |
-| `gpt-4o` | ~$0.05 | Excellent | 128k tokens |
-| `o4-mini` | ~$0.02 | Very good (reasoning) | 200k tokens |
+| Model         | Cost per Consultation | Quality               | Context Window |
+| ------------- | --------------------- | --------------------- | -------------- |
+| `gpt-4o-mini` | ~$0.005               | Good                  | 128k tokens    |
+| `gpt-4o`      | ~$0.05                | Excellent             | 128k tokens    |
+| `o4-mini`     | ~$0.02                | Very good (reasoning) | 200k tokens    |
 
 **Approximate cost per game session** (10 orchestrator consultations): $0.05–$0.50 depending on model.
 
@@ -157,10 +173,10 @@ Uses Anthropic's cloud API. Same pattern as OpenAI — account, API key, pay-per
 5. Click [Test Connection]
 6. If the test passes, click [Save]
 
-| Model | Cost per Consultation | Quality | Context Window |
-|-------|----------------------|---------|----------------|
-| `claude-haiku-4-5-20251001` | ~$0.005 | Good | 200k tokens |
-| `claude-sonnet-4-20250514` | ~$0.03 | Excellent | 200k tokens |
+| Model                       | Cost per Consultation | Quality   | Context Window |
+| --------------------------- | --------------------- | --------- | -------------- |
+| `claude-haiku-4-5-20251001` | ~$0.005               | Good      | 200k tokens    |
+| `claude-sonnet-4-20250514`  | ~$0.03                | Excellent | 200k tokens    |
 
 ---
 
@@ -184,10 +200,10 @@ Google Gemini exposes an OpenAI-compatible API. Free tier available.
 5. API Key: paste your Google AI key
 6. Click [Test Connection]
 
-| Model | Cost per Consultation | Quality | Notes |
-|-------|----------------------|---------|-------|
-| `gemini-2.0-flash` | Free (rate limited) | Good | Great starting point |
-| `gemini-2.5-pro` | ~$0.02 | Excellent | Best Google model |
+| Model              | Cost per Consultation | Quality   | Notes                |
+| ------------------ | --------------------- | --------- | -------------------- |
+| `gemini-2.0-flash` | Free (rate limited)   | Good      | Great starting point |
+| `gemini-2.5-pro`   | ~$0.02                | Excellent | Best Google model    |
 
 ---
 
@@ -195,12 +211,12 @@ Google Gemini exposes an OpenAI-compatible API. Free tier available.
 
 Many services use the same API format as OpenAI. Use **OpenAI Compatible** provider type with these settings:
 
-| Service | Endpoint | Example Model | Notes |
-|---------|----------|---------------|-------|
-| **Groq** | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` | Very fast, free tier |
-| **Together.ai** | `https://api.together.xyz/v1` | `meta-llama/Llama-3.1-70B-Instruct-Turbo` | Open models on cloud |
-| **OpenRouter** | `https://openrouter.ai/api/v1` | `anthropic/claude-sonnet-4` | Routes to many providers |
-| **Fireworks** | `https://api.fireworks.ai/inference/v1` | `accounts/fireworks/models/llama-v3p1-70b-instruct` | Fast open models |
+| Service         | Endpoint                                | Example Model                                       | Notes                    |
+| --------------- | --------------------------------------- | --------------------------------------------------- | ------------------------ |
+| **Groq**        | `https://api.groq.com/openai/v1`        | `llama-3.3-70b-versatile`                           | Very fast, free tier     |
+| **Together.ai** | `https://api.together.xyz/v1`           | `meta-llama/Llama-3.1-70B-Instruct-Turbo`           | Open models on cloud     |
+| **OpenRouter**  | `https://openrouter.ai/api/v1`          | `anthropic/claude-sonnet-4`                         | Routes to many providers |
+| **Fireworks**   | `https://api.fireworks.ai/inference/v1` | `accounts/fireworks/models/llama-v3p1-70b-instruct` | Fast open models         |
 
 Get an API key from the service's website, then add as OpenAI Compatible in Iron Curtain.
 
@@ -228,12 +244,12 @@ After adding one or more providers, you can assign them to specific tasks:
 
 **Recommended routing for players with both local and cloud:**
 
-| Task | Recommended Provider | Why |
-|------|---------------------|-----|
-| AI Orchestrator | Local (Ollama) | Called every ~10s during gameplay — latency matters, cost adds up |
-| Mission Generation | Cloud (GPT-4o / Claude) | Called once per mission — quality matters more than speed |
-| Campaign Briefings | Cloud | Creative writing benefits from larger models |
-| Post-Match Coaching | Either | One call per match — either works well |
+| Task                | Recommended Provider    | Why                                                               |
+| ------------------- | ----------------------- | ----------------------------------------------------------------- |
+| AI Orchestrator     | Local (Ollama)          | Called every ~10s during gameplay — latency matters, cost adds up |
+| Mission Generation  | Cloud (GPT-4o / Claude) | Called once per mission — quality matters more than speed         |
+| Campaign Briefings  | Cloud                   | Creative writing benefits from larger models                      |
+| Post-Match Coaching | Either                  | One call per match — either works well                            |
 
 ---
 
@@ -241,7 +257,7 @@ After adding one or more providers, you can assign them to specific tasks:
 
 Don't want to configure everything yourself? Browse community-tested configurations:
 
-1. Settings → LLM → [Browse Community Configs]
+1. Settings → LLM → [Advanced →] → Browse Community Configs
 2. Browse by tag: `local-only`, `budget`, `high-quality`, `fast`
 3. Click [Import] on a config you like
 4. The config pre-fills provider settings and task routing — you only need to add your own API keys
@@ -252,15 +268,44 @@ Community configs never include API keys. They share everything else: endpoint U
 
 ### Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| "Connection refused" (Ollama) | Is Ollama running? Check `ollama list` in terminal. Restart Ollama if needed. |
-| "401 Unauthorized" (Cloud) | API key is wrong or expired. Generate a new one from the provider's dashboard. |
-| "429 Too Many Requests" | You've hit the provider's rate limit. Wait a minute, or switch to a different provider for high-frequency tasks. |
-| "Model not found" (Ollama) | Run `ollama pull <model-name>` to download the model first. |
-| "Timeout" | The model is too slow for the timeout setting. Try a smaller/faster model, or increase timeout in provider settings. |
-| Responses are low quality | Try a larger model. `llama3.2:1b` is fast but basic; `gpt-4o` or `claude-sonnet-4` give much better strategic advice. |
-| High cloud costs | Switch AI Orchestrator to local (Ollama). Use cloud only for one-time tasks like mission generation. |
+| Problem                       | Solution                                                                                                              |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Built-in model download fails | Check internet connection. The model pack is ~850 MB. Retry via Settings → LLM → Model Packs → [Retry Download].      |
+| "Connection refused" (Ollama) | Is Ollama running? Check `ollama list` in terminal. Restart Ollama if needed.                                         |
+| "401 Unauthorized" (Cloud)    | API key is wrong or expired. Generate a new one from the provider's dashboard.                                        |
+| "429 Too Many Requests"       | You've hit the provider's rate limit. Wait a minute, or switch to a different provider for high-frequency tasks.      |
+| "Model not found" (Ollama)    | Run `ollama pull <model-name>` to download the model first.                                                           |
+| "Timeout"                     | The model is too slow for the timeout setting. Try a smaller/faster model, or increase timeout in provider settings.  |
+| Responses are low quality     | Try a larger model. `llama3.2:1b` is fast but basic; `gpt-4o` or `claude-sonnet-4` give much better strategic advice. |
+| High cloud costs              | Switch AI Orchestrator to local (Ollama). Use cloud only for one-time tasks like mission generation.                  |
+| ⚠ "Needs sign-in" badge       | Your saved login for an AI provider couldn't be read — see Credential Recovery below.                                 |
+
+---
+
+### Credential Recovery
+
+If you see an **"AI features need your attention"** banner, or a provider card shows a ⚠ badge in Settings → LLM, it means IC can't read the saved login for one or more AI providers. This typically happens when:
+
+- You moved to a **new computer** (your login was protected by your old machine's system keychain)
+- You **reinstalled your operating system** (the OS keychain was reset)
+- You **cleared your system keychain** (Windows Credential Manager, macOS Keychain, Linux Secret Service)
+- You **forgot your vault passphrase** (if you were using passphrase-based protection)
+
+**Your provider settings are safe** — name, endpoint, model, and task routing are all intact. Only the login (API key or sign-in token) needs to be re-entered.
+
+**To fix:**
+
+1. Click **[Fix Now →]** in the banner, or go to Settings → LLM
+2. Providers that need attention show a ⚠ badge and a **[Sign In]** button
+3. Click **[Sign In]** → the edit form opens with all your settings preserved
+4. Paste your API key (from your provider's dashboard) or click Sign In to redo the login flow
+5. Click **[Save]** — the new login is encrypted with your current machine's key
+
+**If you don't want to fix it right now:** Click **[Use Built-in AI]** to fall back to built-in models for this session, or **[Not Now]** to dismiss the banner. Features that need the affected provider will show a guidance panel with options to fix, switch to built-in, or cancel.
+
+**If you forgot your vault passphrase:** Go to Settings → Data → Security → **[Reset Vault Passphrase]**. This clears all saved logins and lets you set a new passphrase. You'll need to sign in to your AI providers again afterward. (Power users: `/vault reset` in the console does the same thing.)
+
+**This is by design:** IC stores your logins encrypted, and the encryption key doesn't travel with your data files. A stolen backup or copied database can't expose your API keys. The trade-off is re-entering logins when the encryption key is unavailable.
 
 ---
 

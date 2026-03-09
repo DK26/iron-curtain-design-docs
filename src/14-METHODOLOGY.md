@@ -77,7 +77,7 @@ Development follows eight stages. They're roughly sequential, but later stages f
 - Research is concurrent with other work in later stages — new questions arise during implementation
 - Research is a **continuous discipline**, not a phase that ends. Every new prior art study can challenge assumptions, confirm patterns, or reveal gaps. The project's commit history shows active research throughout pre-development — not tapering early but intensifying as design maturity makes it easier to ask precise questions.
 
-**Current status (February 2026):** The major architectural questions are answered across 14 design chapters, 70+ indexed decisions, and 41+ research analyses. Research continues as a parallel track — recent examples include AI implementation surveys across 7+ codebases, Stratagus/Stargus engine analysis, a transcript-backed RTS 2026 trend scan (`research/rts-2026-trend-scan.md`), a BAR/Recoil source-study (`research/bar-recoil-source-study.md`) used to refine creator-workflow and scripting-boundary implementation priorities, an open-source RTS communication/marker study (`research/open-source-rts-communication-markers-study.md`) used to harden D059 beacon/marker schema and `M7` communication UX priorities, an RTL/BiDi implementation study (`research/rtl-bidi-open-source-implementation-study.md`) used to harden localization directionality/font-fallback/shaping requirements across `M6`/`M7`/`M9`/`M10`, a Source SDK 2013 source study (`research/source-sdk-2013-source-study.md`) used to validate fixed-point determinism, safe parsing, capability tokens, typestate, and CI-from-day-one priorities, and a Generals/Zero Hour diagnostic tools study (`research/generals-zero-hour-diagnostic-tools-study.md`) used to refine the diagnostic overlay design with SAGE engine patterns (cushion metric, gross/net time, category-filtered world markers, tick-stepping). Each produces cross-references and actionable refinements. The shift is from *exploratory* research ("what should we build?") to *confirmatory* research ("does this prior art validate or challenge our approach?").
+**Current status (February 2026):** The major architectural questions are answered across 14 design chapters, 76 indexed decisions, and 63 research analyses. Research continues as a parallel track — recent examples include AI implementation surveys across 7+ codebases, Stratagus/Stargus engine analysis, a transcript-backed RTS 2026 trend scan (`research/rts-2026-trend-scan.md`), a BAR/Recoil source-study (`research/bar-recoil-source-study.md`) used to refine creator-workflow and scripting-boundary implementation priorities, an open-source RTS communication/marker study (`research/open-source-rts-communication-markers-study.md`) used to harden D059 beacon/marker schema and `M7` communication UX priorities, an RTL/BiDi implementation study (`research/rtl-bidi-open-source-implementation-study.md`) used to harden localization directionality/font-fallback/shaping requirements across `M6`/`M7`/`M9`/`M10`, a Source SDK 2013 source study (`research/source-sdk-2013-source-study.md`) used to validate fixed-point determinism, safe parsing, capability tokens, typestate, and CI-from-day-one priorities, and a Generals/Zero Hour diagnostic tools study (`research/generals-zero-hour-diagnostic-tools-study.md`) used to refine the diagnostic overlay design with SAGE engine patterns (cushion metric, gross/net time, category-filtered world markers, tick-stepping). Each produces cross-references and actionable refinements. The shift is from *exploratory* research ("what should we build?") to *confirmatory* research ("does this prior art validate or challenge our approach?").
 
 ### Trend Scan Checklist (Videos, Listicles, Talks, Showcase Demos)
 
@@ -356,14 +356,14 @@ The context-bounded discipline applies equally to design work — not just code.
 
 **Example decomposition for a research integration task:**
 
-| #   | Work Unit                                      | Scope                       | Context Needed                                 | Depends On |
-| --- | ---------------------------------------------- | --------------------------- | ---------------------------------------------- | ---------- |
-| 1   | Research Stratagus/Stargus engine architecture | `research/`                 | GitHub repos, AGENTS.md § Reference Material   | —          |
-| 2   | Create research document with findings         | `research/`                 | Notes from #1                                  | #1         |
+| #   | Work Unit                                      | Scope                              | Context Needed                                 | Depends On |
+| --- | ---------------------------------------------- | ---------------------------------- | ---------------------------------------------- | ---------- |
+| 1   | Research Stratagus/Stargus engine architecture | `research/`                        | GitHub repos, AGENTS.md § Reference Material   | —          |
+| 2   | Create research document with findings         | `research/`                        | Notes from #1                                  | #1         |
 | 3   | Extract lessons applicable to IC AI system     | `decisions/09d/D043-ai-presets.md` | Research doc from #2, D043 section             | #2         |
-| 4   | Update modding docs with Lua AI primitives     | `src/04-MODDING.md`         | Research doc from #2, existing Lua API section | #2         |
-| 5   | Update security docs with Lua stdlib policy    | `src/06-SECURITY.md`        | Research doc from #2, existing sandbox section | #2         |
-| 6   | Update AGENTS.md reference material            | `AGENTS.md`                 | Research doc from #2                           | #2         |
+| 4   | Update modding docs with Lua AI primitives     | `src/04-MODDING.md`                | Research doc from #2, existing Lua API section | #2         |
+| 5   | Update security docs with Lua stdlib policy    | `src/06-SECURITY.md`               | Research doc from #2, existing sandbox section | #2         |
+| 6   | Update AGENTS.md reference material            | `AGENTS.md`                        | Research doc from #2                           | #2         |
 
 Work units 3–6 are independent of each other (can proceed in parallel) but all depend on #2. This is the same dependency logic as code work units — applied to documentation.
 
@@ -401,7 +401,7 @@ The full agent rules live in `AGENTS.md` § "Working With This Codebase." This s
 
 1. **Read `AGENTS.md` first.** Always. It's the single source of truth for architectural invariants, crate boundaries, settled decisions, and prohibited actions.
 
-2. **Respect crate boundaries.** `ic-sim` never imports from `ic-net`. `ic-net` never imports from `ic-sim`. They share only `ic-protocol`. `ic-game` never imports from `ic-editor`. If your change requires a cross-boundary import, the design is wrong — add a trait to the shared boundary instead.
+2. **Respect crate boundaries.** `ic-sim` never imports from `ic-net`. The `ic-net` **library crate** (`RelayCore`, `NetworkModel` trait) never imports from `ic-sim`. They share only `ic-protocol`. `ic-server` is a top-level binary that may depend on both (D074). `ic-game` never imports from `ic-editor`. If your change requires a cross-boundary library import, the design is wrong — add a trait to the shared boundary instead.
 
 3. **No floats in `ic-sim`.** Fixed-point only (`i32`/`i64`). This is invariant #1. If you need fractional math in the simulation, use the fixed-point scale (P002).
 
@@ -436,6 +436,6 @@ The full agent rules live in `AGENTS.md` § "Working With This Codebase." This s
 
 ## Sub-Pages
 
-| Section | Topic | File |
-| --- | --- | --- |
+| Section                                 | Topic                                                                                                                                                                      | File                                               |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
 | Integration, Evolution & Research Rigor | Stages 7-8 (Integration/Validation, Design Evolution), stage-to-phase mapping, research-design-refine cycle, methodology principles, research rigor and AI-assisted design | [research-rigor.md](methodology/research-rigor.md) |

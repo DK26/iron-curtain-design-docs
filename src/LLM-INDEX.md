@@ -2,7 +2,7 @@
 
 This page is a **retrieval-oriented map** of the design docs for agentic LLM use (RAG, assistants, copilots, review bots).
 
-For a **human-facing overview** of the project's experimental LLM gameplay/content/tooling plans, see [Experimental LLM Modes & Plans (BYOLLM)](LLM-MODES.md).
+For a **human-facing overview** of the project's experimental LLM gameplay/content/tooling plans, see [Experimental LLM Modes & Plans](LLM-MODES.md).
 
 It is not a replacement for the main docs. It exists to improve:
 
@@ -139,6 +139,7 @@ All previously identified high-cost files (>40KB) have been split into individua
 | `05-FORMATS.md`          | 4 topic files                 | `formats/`          |
 | `06-SECURITY.md`         | 9 vulnerability-group files   | `security/`         |
 | `08-ROADMAP.md`          | 1 sub-file (Phases 6a–7)      | `roadmap/`          |
+| `07-CROSS-ENGINE.md`     | 1 sub-file (Relay Security)   | `cross-engine/`     |
 | `10-PERFORMANCE.md`      | 6 topic files                 | `performance/`      |
 | `11-OPENRA-FEATURES.md`  | 7 section files               | `openra-features/`  |
 | `14-METHODOLOGY.md`      | 1 sub-file (Research Rigor)   | `methodology/`      |

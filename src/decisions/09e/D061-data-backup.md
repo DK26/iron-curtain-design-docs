@@ -30,7 +30,7 @@ All player data lives under a single, stable, documented directory. The layout i
 ```
 <data_dir>/
 ├── config.toml                         # Engine + game settings (D033 toggles, keybinds, render quality)
-├── profile.db                          # Player identity, friends, blocks, privacy settings (D053)
+├── profile.db                          # Player identity, friends, blocks, privacy settings (D053), LLM provider config (D047)
 ├── achievements.db                     # Achievement collection (D036)
 ├── gameplay.db                         # Event log, replay catalog, save game index, map catalog, asset index (D034)
 ├── telemetry.db                        # Unified telemetry events (D031) — pruned at 100 MB
@@ -97,12 +97,18 @@ ic backup verify ic-backup-2027-03-15.zip     # Verify archive integrity without
 5. **Key files:** `keys/identity.key` is included (the player's private key — also recoverable via mnemonic seed phrase, but a full backup preserves everything).
 6. **Package:** Everything is bundled into a ZIP archive with the original directory structure preserved. No compression on already-compressed files (`.icsave`, `.icrep` are LZ4-compressed internally).
 
+**Credential safety in backups:** `profile.db` contains AES-256-GCM encrypted credential columns (OAuth tokens, API keys — see V61 in `06-SECURITY.md`, D047). The encrypted BLOBs are included in the backup as-is — still encrypted. The Data Encryption Key (DEK) is **not** in the backup (it lives in the OS keyring or is derived from the user's vault passphrase). This means a stolen backup archive does not expose LLM provider credentials. On restore, the user must unlock the `CredentialStore` on the new machine (OS keyring auto-unlocks on login; Tier 2 vault passphrase is prompted). If the DEK is lost (new machine, no keyring migration), the encrypted columns are unreadable — the user re-enters their API keys. This is the intended behavior: credentials fail-safe to "re-enter" rather than fail-open to "exposed."
+
+**How `ic backup restore` works:**
+
+`ic backup restore` extracts a backup ZIP into `<data_dir>`. Because backup archives may come from untrusted sources (shared online, downloaded from a forum, received from another player), extraction uses `strict-path` `PathBoundary` scoped to `<data_dir>` — the same Zip Slip defense used for `.oramap` and `.icpkg` extraction (see `06-SECURITY.md` § Path Security Infrastructure). A crafted backup ZIP with entries like `../../.config/autostart/malware.sh` is rejected before any file is written.
+
 **Backup categories for `--exclude` and `--only`:**
 
 | Category       | Contents                       | Typical Size   | Critical?                                                    |
 | -------------- | ------------------------------ | -------------- | ------------------------------------------------------------ |
 | `keys`         | `keys/identity.key`            | < 1 KB         | **Yes** — recoverable via mnemonic seed phrase               |
-| `profile`      | `profile.db`                   | < 1 MB         | **Yes** — friends, settings, avatar                          |
+| `profile`      | `profile.db`                   | < 1 MB         | **Yes** — friends, settings, avatar, LLM provider config     |
 | `communities`  | `communities/*.db`             | 1–10 MB        | **Yes** — ratings, match history (SCRs)                      |
 | `achievements` | `achievements.db`              | < 1 MB         | **Yes** — local achievement progress and unlock state (D036) |
 | `config`       | `config.toml`                  | < 100 KB       | Medium — preferences, easily recreated                       |

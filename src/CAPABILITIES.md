@@ -6,16 +6,16 @@
 
 ### Gameplay Modes
 
-| Mode | What You Get |
-|------|-------------|
-| **Campaign (Allied + Soviet)** | All original Red Alert missions fully playable with branching outcomes, unit roster persistence, veterancy carry-over, and optional hero progression (D021) |
-| **Skirmish vs AI** | Up to 8 players/AI on any map; AI difficulty (Easy–Brutal) with distinct personality profiles (Classic Westwood, OpenRA, IC Default); mix different AI personalities in the same match (D043) |
-| **Ranked Multiplayer** | Glicko-2 rating with seasonal tiers (Conscript → Supreme Commander), per-queue ratings (1v1, 2v2, FFA), map veto system, placement matches, escalating cooldowns (D055) |
-| **Casual Multiplayer** | Game browser, Among Us-style room codes (IRON-XXXX), QR join for LAN/streaming, Discord/Steam deep links, auto-download missing mods on join (D030) |
-| **Asymmetric Co-op** | Commander + Field Ops roles with separate HUDs, support request system (CAS, Recon, Reinforcements, Extraction), and War-Effort Board pacing (D070) |
-| **Generative Campaigns (BYOLLM)** | Describe a campaign in plain text → LLM generates branching missions, briefings, AI behavior, and narrative that adapts to your play (D016) |
-| **LLM Exhibition** | BYO-LLM Fight Night (AI vs AI), Prompt Duel (guide AI with strategy prompts), Director Showmatch (audience-driven spectacle) (D073) |
-| **Spectating** | Mid-game join, configurable broadcast delay, observer panels (Army/Production/Economy/Score/APM), directed camera AI, community observer UI layouts via Workshop |
+| Mode                           | What You Get                                                                                                                                                                                                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Campaign (Allied + Soviet)** | All original Red Alert missions fully playable with branching outcomes, unit roster persistence, veterancy carry-over, and optional hero progression (D021)                                                                                                   |
+| **Skirmish vs AI**             | Up to 8 players/AI on any map; AI difficulty (Easy–Brutal) with distinct personality profiles (Classic Westwood, OpenRA, IC Default); mix different AI personalities in the same match (D043)                                                                 |
+| **Ranked Multiplayer**         | Glicko-2 rating with seasonal tiers (Conscript → Supreme Commander), per-queue ratings (1v1, 2v2, FFA), map veto system, placement matches, escalating cooldowns (D055)                                                                                       |
+| **Casual Multiplayer**         | Game browser, Among Us-style room codes (IRON-XXXX), QR join for LAN/streaming, Discord/Steam deep links, auto-download missing mods on join (D030)                                                                                                           |
+| **Asymmetric Co-op**           | Commander + Field Ops roles with separate HUDs, support request system (CAS, Recon, Reinforcements, Extraction), and War-Effort Board pacing (D070)                                                                                                           |
+| **Generative Campaigns**       | Describe a campaign in plain text → LLM generates branching missions, briefings, AI behavior, and narrative that adapts to your play; built-in CPU models run locally after a one-time download, external LLM providers (BYOLLM) unlock higher quality (D016) |
+| **LLM Exhibition**             | BYO-LLM Fight Night (AI vs AI), Prompt Duel (guide AI with strategy prompts), Director Showmatch (audience-driven spectacle) (D073)                                                                                                                           |
+| **Spectating**                 | Mid-game join, configurable broadcast delay, observer panels (Army/Production/Economy/Score/APM), directed camera AI, community observer UI layouts via Workshop                                                                                              |
 
 ### The Red Alert Experience — Faithful and Enhanced
 
@@ -73,8 +73,8 @@ IC doesn't force one way to play. Every axis is independently composable:
 - **Relay servers** eliminate lag-switching and host advantage — relay owns the clock (D007)
 - **Sub-tick fairness** — orders from faster and slower players processed fairly (D008)
 - **Adaptive run-ahead** — client predicts during lag, corrects without rubber-banding
-- **Encrypted transport** — all traffic encrypted and authenticated (TLS/QUIC)
-- **Community servers** — anyone can host their own relay, matchmaking, and workshop servers with federated trust (D052)
+- **Encrypted transport** — X25519 key exchange, AES-256-GCM authenticated encryption, Ed25519 identity binding (TransportCrypto)
+- **Community servers** — single `ic-server` binary with toggleable capability flags (relay, matchmaking, ranking, Workshop P2P seeding, moderation) and federated trust (D074)
 - **Cross-engine browser** — see OpenRA and CnCNet games from the IC client (D011)
 - **Portable identity** — 24-word recovery phrase; restore on any machine (D061)
 
@@ -108,14 +108,14 @@ IC doesn't force one way to play. Every axis is independently composable:
 
 ### Platform Support
 
-| Platform | Status |
-|----------|--------|
-| Windows, macOS, Linux | Full desktop support |
-| Steam Deck | Gamepad controls, touchpad, gyro, shoulder-button PTT |
-| Browser (WASM) | Full game playable in browser with WebRTC VoIP |
-| Tablet | Touch-optimized sidebar, command rail, camera bookmark dock |
-| Phone | Bottom-bar layout, build drawer, compact minimap, tempo advisory |
-| Portable mode | USB-stick deployment, no installation required |
+| Platform              | Status                                                           |
+| --------------------- | ---------------------------------------------------------------- |
+| Windows, macOS, Linux | Full desktop support                                             |
+| Steam Deck            | Gamepad controls, touchpad, gyro, shoulder-button PTT            |
+| Browser (WASM)        | Full game playable in browser with WebRTC VoIP                   |
+| Tablet                | Touch-optimized sidebar, command rail, camera bookmark dock      |
+| Phone                 | Bottom-bar layout, build drawer, compact minimap, tempo advisory |
+| Portable mode         | USB-stick deployment, no installation required                   |
 
 ---
 
@@ -123,25 +123,25 @@ IC doesn't force one way to play. Every axis is independently composable:
 
 ### Three-Tier Modding System
 
-| Tier | Tool | What You Can Do | Skill Required |
-|------|------|----------------|---------------|
-| **Tier 1: YAML** | Text editor | Unit stats, weapons, buildings, factions, balance presets, UI themes, terrain, achievements | None — edit values in plain text |
-| **Tier 2: Lua** | Text editor + SDK | Mission scripting, campaign logic, AI behavior, weather control, custom triggers, tutorial sequences | Basic scripting |
-| **Tier 3: WASM** | Rust/C/AssemblyScript | Custom mechanics, new components, total conversions, custom pathfinding, custom export targets | Programming |
+| Tier             | Tool                  | What You Can Do                                                                                      | Skill Required                   |
+| ---------------- | --------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------- |
+| **Tier 1: YAML** | Text editor           | Unit stats, weapons, buildings, factions, balance presets, UI themes, terrain, achievements          | None — edit values in plain text |
+| **Tier 2: Lua**  | Text editor + SDK     | Mission scripting, campaign logic, AI behavior, weather control, custom triggers, tutorial sequences | Basic scripting                  |
+| **Tier 3: WASM** | Rust/C/AssemblyScript | Custom mechanics, new components, total conversions, custom pathfinding, custom export targets       | Programming                      |
 
 Each tier is optional and sandboxed. No C# runtime. No engine recompilation. No forking.
 
 ### OpenRA Compatibility — Bring Your Existing Work
 
-| Feature | What It Means |
-|---------|--------------|
-| **MiniYAML loading** (D025) | OpenRA `rules.yaml` files load directly — no conversion required |
-| **Mod manifest parsing** (D026) | OpenRA `mod.yaml` recognized natively; `ic mod import` for permanent migration |
-| **Vocabulary aliases** (D023) | OpenRA trait names (`Armament`, `Valued`, `Buildable`) accepted as aliases |
-| **Replay import** (D056) | OpenRA `.orarep` files play back with divergence tracking |
-| **Lua API superset** (D024) | All 16 OpenRA Lua globals work identically; IC adds 11 more (Campaign, Weather, Layer, SubMap, Region, Var, Workshop, LLM, Achievement, Tutorial, Ai) |
-| **C# assembly handling** (D026) | C# DLLs flagged with warnings; affected units get placeholder rendering |
-| **Cross-engine browser** (D011) | IC games appear in OpenRA/CnCNet browser and vice versa |
+| Feature                         | What It Means                                                                                                                                         |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **MiniYAML loading** (D025)     | OpenRA `rules.yaml` files load directly — no conversion required                                                                                      |
+| **Mod manifest parsing** (D026) | OpenRA `mod.yaml` recognized natively; `ic mod import` for permanent migration                                                                        |
+| **Vocabulary aliases** (D023)   | OpenRA trait names (`Armament`, `Valued`, `Buildable`) accepted as aliases                                                                            |
+| **Replay import** (D056)        | OpenRA `.orarep` files play back with divergence tracking                                                                                             |
+| **Lua API superset** (D024)     | All 16 OpenRA Lua globals work identically; IC adds 11 more (Campaign, Weather, Layer, SubMap, Region, Var, Workshop, LLM, Achievement, Tutorial, Ai) |
+| **C# assembly handling** (D026) | C# DLLs flagged with warnings; affected units get placeholder rendering                                                                               |
+| **Cross-engine browser** (D011) | IC games appear in OpenRA/CnCNet browser and vice versa                                                                                               |
 
 ### Scenario Editor (SDK — D038)
 
@@ -193,10 +193,10 @@ XCC Mixer replacement with visual editing — no command-line tools needed:
 
 IC scenarios can be exported to other Red Alert implementations:
 
-| Target | Output | Fidelity |
-|--------|--------|----------|
-| **IC Native** | `.icscn` / `.iccampaign` | Full |
-| **OpenRA** | `.oramap` ZIP + MiniYAML rules + `mod.yaml` | High (IC-only features degrade with warnings) |
+| Target                 | Output                                                      | Fidelity                                                     |
+| ---------------------- | ----------------------------------------------------------- | ------------------------------------------------------------ |
+| **IC Native**          | `.icscn` / `.iccampaign`                                    | Full                                                         |
+| **OpenRA**             | `.oramap` ZIP + MiniYAML rules + `mod.yaml`                 | High (IC-only features degrade with warnings)                |
 | **Original Red Alert** | `rules.ini` + `.bin` + `.mpr` + `.shp`/`.pal`/`.aud`/`.mix` | Moderate (complex triggers downcompile via pattern matching) |
 
 - **Export-safe authoring mode** — live fidelity indicators (green/yellow/red) per entity/trigger
@@ -218,7 +218,9 @@ IC scenarios can be exported to other Red Alert implementations:
 - **CI/CD integration** — headless publishing via scoped API tokens; tag-based automation
 - **CLI:** `ic mod install`, `ic mod update`, `ic mod tree`, `ic mod audit`, `ic mod publish`
 
-### LLM-Powered Creator Tools (Optional, BYOLLM — D016)
+### LLM-Powered Creator Tools (Optional — D016)
+
+Built-in CPU models (Tier 1) run locally after a one-time download; no account or external service needed. External LLM providers (BYOLLM Tiers 2–4) unlock higher quality.
 
 - **Single mission generation** — text prompt → terrain, objectives, AI behavior, triggers, briefing
 - **Campaign generation** — text description → full branching multi-mission campaign
@@ -245,20 +247,20 @@ IC scenarios can be exported to other Red Alert implementations:
 
 Every major subsystem is abstracted behind a trait — swap algorithms without forking:
 
-| Trait | Built-In Implementations | What You Can Swap |
-|-------|------------------------|-------------------|
-| `NetworkModel` | Relay lockstep, local, replay playback | Network transport |
-| `Pathfinder` | JPS+flowfield, A* grid, navmesh | Movement algorithm |
-| `SpatialIndex` | Grid hash, BVH, R-tree | Range query structure |
-| `FogProvider` | Radius (RA1), elevation LOS (RA2/TS) | Visibility model |
-| `DamageResolver` | Standard (RA1), shield-first (RA2), sub-object (Generals) | Damage calculation |
-| `AiStrategy` | Personality-driven, planning, neural net | AI decision-making |
-| `OrderValidator` | Standard ownership/affordability | Rule enforcement |
-| `RankingProvider` | Glicko-2, Elo, TrueSkill | Rating algorithm |
-| `Renderable` | Sprite (2D), voxel, mesh (3D) | Visual representation |
-| `GameModule` | RA1, TD, D2K, custom | Entire game ruleset |
-| `InputSource` | Mouse/KB, touch, gamepad, AI | Input device |
-| `Transport` | TCP, QUIC, WebSocket, WebRTC | Wire protocol |
+| Trait             | Built-In Implementations                                  | What You Can Swap     |
+| ----------------- | --------------------------------------------------------- | --------------------- |
+| `NetworkModel`    | Relay lockstep, local, replay playback                    | Network transport     |
+| `Pathfinder`      | JPS+flowfield, A* grid, navmesh                           | Movement algorithm    |
+| `SpatialIndex`    | Grid hash, BVH, R-tree                                    | Range query structure |
+| `FogProvider`     | Radius (RA1), elevation LOS (RA2/TS)                      | Visibility model      |
+| `DamageResolver`  | Standard (RA1), shield-first (RA2), sub-object (Generals) | Damage calculation    |
+| `AiStrategy`      | Personality-driven, planning, neural net                  | AI decision-making    |
+| `OrderValidator`  | Standard ownership/affordability                          | Rule enforcement      |
+| `RankingProvider` | Glicko-2, Elo, TrueSkill                                  | Rating algorithm      |
+| `Renderable`      | Sprite (2D), voxel, mesh (3D)                             | Visual representation |
+| `GameModule`      | RA1, TD, D2K, custom                                      | Entire game ruleset   |
+| `InputSource`     | Mouse/KB, touch, gamepad, AI                              | Input device          |
+| `Transport`       | TCP, QUIC, WebSocket, WebRTC                              | Wire protocol         |
 
 ### Multi-Game Engine
 
@@ -297,7 +299,7 @@ IC is not hardcoded for Red Alert. The `GameModule` trait defines everything gam
 
 ### Community Infrastructure
 
-- **Self-hostable relay, matchmaking, and workshop servers** (D052)
+- **Unified `ic-server` binary** with independently toggleable capability flags: relay, matchmaking, ranking, Workshop P2P seeding, moderation (D074)
 - **Ed25519 signed credential records** — portable reputation across communities
 - **Transparency logs** — server publishes signed operation log for accountability
 - **Federated architecture** — communities interoperate with official infrastructure
@@ -307,22 +309,22 @@ IC is not hardcoded for Red Alert. The `GameModule` trait defines everything gam
 
 ## Quick Comparison
 
-| Capability | OpenRA | Remastered | **Iron Curtain** |
-|-----------|--------|-----------|-----------------|
-| Open source | Yes | No | Yes |
-| Branching campaigns | No | No | **Yes (D021)** |
-| Balance presets (switchable) | No (one balance) | No | **Yes — Classic/OpenRA/Remastered/IC/Custom (D019)** |
-| Relay server (no host advantage) | No (P2P) | No (P2P) | **Yes (D007)** |
-| Ranked matchmaking | Community | No | **Built-in Glicko-2 (D055)** |
-| Mod workshop with dependencies | No | Steam Workshop | **Federated with semver, P2P, offline (D030)** |
-| Scenario editor | Map editor only | No | **Full OFP-inspired mission editor (D038)** |
-| Asset studio | No | No | **Visual sprite/palette/terrain/audio editor (D040)** |
-| Export to other engines | N/A | N/A | **OpenRA + RA1 export with fidelity warnings (D066)** |
-| LLM-generated missions | No | No | **BYOLLM — text → playable campaigns (D016)** |
-| Multi-game engine | RA1/TD/TS/D2K (separate mods) | RA1 + TD only | **GameModule trait — any RTS (D018)** |
-| Weather system | No | No | **Dynamic with gameplay effects (D022)** |
-| Render mode toggle | No | Toggle (Classic/HD) | **Classic/HD/3D — mid-game (D048)** |
-| Tutorial system | Wiki link | Basic tooltips | **5-layer onboarding (D065)** |
-| Mobile/browser | No | No | **Phone, tablet, browser WASM, Steam Deck** |
-| Voice chat | No | No | **Built-in WebRTC/Opus (D059)** |
-| Asymmetric co-op | No | No | **Commander + Field Ops roles (D070)** |
+| Capability                       | OpenRA                        | Remastered          | **Iron Curtain**                                         |
+| -------------------------------- | ----------------------------- | ------------------- | -------------------------------------------------------- |
+| Open source                      | Yes                           | No                  | Yes                                                      |
+| Branching campaigns              | No                            | No                  | **Yes (D021)**                                           |
+| Balance presets (switchable)     | No (one balance)              | No                  | **Yes — Classic/OpenRA/Remastered/IC/Custom (D019)**     |
+| Relay server (no host advantage) | No (P2P)                      | No (P2P)            | **Yes (D007)**                                           |
+| Ranked matchmaking               | Community                     | No                  | **Built-in Glicko-2 (D055)**                             |
+| Mod workshop with dependencies   | No                            | Steam Workshop      | **Federated with semver, P2P, offline (D030)**           |
+| Scenario editor                  | Map editor only               | No                  | **Full OFP-inspired mission editor (D038)**              |
+| Asset studio                     | No                            | No                  | **Visual sprite/palette/terrain/audio editor (D040)**    |
+| Export to other engines          | N/A                           | N/A                 | **OpenRA + RA1 export with fidelity warnings (D066)**    |
+| LLM-generated missions           | No                            | No                  | **Built-in + BYOLLM — text → playable campaigns (D016)** |
+| Multi-game engine                | RA1/TD/TS/D2K (separate mods) | RA1 + TD only       | **GameModule trait — any RTS (D018)**                    |
+| Weather system                   | No                            | No                  | **Dynamic with gameplay effects (D022)**                 |
+| Render mode toggle               | No                            | Toggle (Classic/HD) | **Classic/HD/3D — mid-game (D048)**                      |
+| Tutorial system                  | Wiki link                     | Basic tooltips      | **5-layer onboarding (D065)**                            |
+| Mobile/browser                   | No                            | No                  | **Phone, tablet, browser WASM, Steam Deck**              |
+| Voice chat                       | No                            | No                  | **Built-in WebRTC/Opus (D059)**                          |
+| Asymmetric co-op                 | No                            | No                  | **Commander + Field Ops roles (D070)**                   |

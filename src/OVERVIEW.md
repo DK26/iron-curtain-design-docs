@@ -70,7 +70,7 @@ Iron Curtain is a new open-source RTS engine built for the Command & Conquer com
 
 ## For Community Leaders & Server Operators
 
-- **Self-hostable everything.** Relay, matchmaking, and workshop servers are all self-hostable. Federated architecture — communities mirror each other's content. Ed25519-signed credential records (not JWT) with transparency logs for server accountability. No single point of failure.
+- **Self-hostable everything.** A single `ic-server` binary (D074) with toggleable capability flags handles relay, matchmaking, ranking, Workshop P2P seeding, and moderation. Federated architecture — communities mirror each other's content. Ed25519-signed credential records (not JWT) with transparency logs for server accountability. No single point of failure.
 - **Community governance.** RFC process, community-elected representatives, self-hosting independence. The project can't be killed by one organization.
 - **Observability.** OTEL-based telemetry (metrics, traces, logs), pre-built Grafana dashboards for self-hosters. Zero-cost when disabled.
 
@@ -78,7 +78,7 @@ Iron Curtain is a new open-source RTS engine built for the Command & Conquer com
 
 ## For Developers & Contributors
 
-- **Modern Rust on Bevy.** No GC, memory safety, fearless concurrency. ECS scheduling, parallel queries, asset hot-reloading, large plugin ecosystem. 11 focused crates with clear boundaries.
+- **Modern Rust on Bevy.** No GC, memory safety, fearless concurrency. ECS scheduling, parallel queries, asset hot-reloading, large plugin ecosystem. 14 focused crates with clear boundaries.
 - **Clean sim/net separation.** `ic-sim` and `ic-net` never import each other — only `ic-protocol`. Swap the network model without touching simulation code.
 - **Multi-game engine.** Game-agnostic core. RA and TD are game modules via a `GameModule` trait. Pathfinding, spatial queries, rendering, fog — all pluggable per game.
 - **Standalone crates.** `ra-formats` parses C&C formats independently. `ic-sim` runs headless for AI training or testing.
@@ -87,13 +87,13 @@ Iron Curtain is a new open-source RTS engine built for the Command & Conquer com
 
 ## Nice-to-Haves
 
-Interested specifically in the LLM-related gameplay/content/tooling plans? See [Experimental LLM Modes & Plans (BYOLLM)](LLM-MODES.md) for a consolidated BYOLLM overview (all experimental / optional).
+Interested specifically in the LLM-related gameplay/content/tooling plans? See [Experimental LLM Modes & Plans](LLM-MODES.md) for a consolidated overview (all experimental / optional). IC ships built-in CPU models (Tier 1) for zero-config operation; external LLM providers (BYOLLM Tiers 2–4) are optional for higher quality.
 
-- **AI-generated missions and campaigns (BYOLLM).** Describe a scenario, get a playable mission — or generate an entire branching campaign with recurring characters who evolve, betray, and die based on your choices. Choose a story style (C&C Classic, Realistic Military, Political Thriller, and more). World Domination mode: conquer a strategic map region by region with garrison management and faction dynamics. Each mission reacts to how you actually played — the LLM reads your battle report and adapts the next mission's narrative, difficulty, and objectives. Mid-mission radar comms, RPG-style dialogue choices, and cinematic moments are all generated. Every output is standard YAML + Lua, fully playable without the LLM after creation. Built-in mission templates provide a fallback without any LLM at all. Bring your own LLM; the engine never requires one. Phase 7.
-- **AI-generated custom factions (BYOLLM).** Describe a faction concept in plain English — "a guerrilla faction that relies on stealth, traps, and hit-and-run" — and the LLM generates a complete tech tree, unit roster, building roster, and unique mechanics as standard YAML. References Workshop sprite packs, sound packs, and weapon definitions (with author consent) to assemble factions with real assets from day one. Balance-validated against existing factions. Fully editable by hand, publishable to Workshop, playable in skirmish and custom games. Phase 7.
-- **LLM-enhanced AI (BYOLLM).** Two modes: `LlmOrchestratorAi` wraps conventional AI with LLM strategic guidance, `LlmPlayerAi` lets the LLM play the game directly — designed for community entertainment streams ("GPT vs. Claude playing Red Alert"). Observable reasoning overlay for spectators. Neither mode allowed in ranked. Phase 7.
-- **LLM coaching (BYOLLM).** Post-match analysis, personalized improvement suggestions, and adaptive briefings based on your play history. Phase 7.
-- **LLM Skill Library (BYOLLM).** Persistent, semantically-indexed store of verified LLM outputs — AI strategies and generation patterns that improve over time. Verification-to-promotion pipeline ensures quality. Shareable via Workshop. Voyager-inspired lifelong learning. Phase 7.
+- **AI-generated missions and campaigns.** Describe a scenario, get a playable mission — or generate an entire branching campaign with recurring characters who evolve, betray, and die based on your choices. Choose a story style (C&C Classic, Realistic Military, Political Thriller, and more). World Domination mode: conquer a strategic map region by region with garrison management and faction dynamics. Each mission reacts to how you actually played — the LLM reads your battle report and adapts the next mission's narrative, difficulty, and objectives. Mid-mission radar comms, RPG-style dialogue choices, and cinematic moments are all generated. Every output is standard YAML + Lua, fully playable without the LLM after creation. Built-in mission templates provide a fallback without any LLM at all. IC ships built-in CPU models for zero-config operation; external LLM providers unlock higher quality. Phase 7.
+- **AI-generated custom factions.** Describe a faction concept in plain English — "a guerrilla faction that relies on stealth, traps, and hit-and-run" — and the LLM generates a complete tech tree, unit roster, building roster, and unique mechanics as standard YAML. References Workshop sprite packs, sound packs, and weapon definitions (with author consent) to assemble factions with real assets from day one. Balance-validated against existing factions. Fully editable by hand, publishable to Workshop, playable in skirmish and custom games. Phase 7.
+- **LLM-enhanced AI.** Two modes: `LlmOrchestratorAi` wraps conventional AI with LLM strategic guidance, `LlmPlayerAi` lets the LLM play the game directly — designed for community entertainment streams ("GPT vs. Claude playing Red Alert"). Observable reasoning overlay for spectators. Neither mode allowed in ranked. Phase 7.
+- **LLM coaching.** Post-match analysis, personalized improvement suggestions, and adaptive briefings based on your play history. Phase 7.
+- **LLM Skill Library.** Persistent, semantically-indexed store of verified LLM outputs — AI strategies and generation patterns that improve over time. Verification-to-promotion pipeline ensures quality. Shareable via Workshop. Voyager-inspired lifelong learning. Phase 7.
 - **Dynamic weather.** Real-time transitions (sunny → rain → storm), terrain effects (frozen water, mud), snow accumulation. Deterministic weather state machine.
 - **Advanced visuals for modders.** Bevy's wgpu stack gives modders access to bloom, dynamic lighting, GPU particles, shader effects, day/night, smooth zoom, and even full 3D rendering — while the base game stays classic isometric. Render modes are switchable mid-game (see above).
 - **Switchable UI themes.** Classic, Remastered, or Modern look — YAML-driven, community themes via Workshop.
@@ -104,6 +104,6 @@ Interested specifically in the LLM-related gameplay/content/tooling plans? See [
 
 ## How This Was Designed
 
-The networking design alone studied 20+ open-source codebases, 4 EA GPL source releases, and multiple academic papers — all at the source code level. Every major subsystem went through the same process. 62 design decisions with rationale. 32 research documents. ~57,000 lines of documentation across 120+ commits.
+The networking design alone studied 20+ open-source codebases, 4 EA GPL source releases, and multiple academic papers — all at the source code level. Every major subsystem went through the same process. 76 design decisions with rationale. 63 research documents. ~95,000 lines of design and research documentation across 160+ commits.
 
 📖 **[Read the full design documentation →](https://dk26.github.io/iron-curtain-design-docs/)**

@@ -12,7 +12,7 @@
 - **Invariants preserved:** `ra-formats` remains a pure parsing library with no I/O side effects. All imported assets convert to IC-native representations (PNG sprites, OGG/WAV audio, WebM video). Sim determinism unaffected — asset formats are presentation-only.
 - **Defaults / UX behavior:** "Import Remastered Installation" wizard in Asset Studio auto-detects a Remastered install folder, inventories available assets, and offers selective import. Users choose which asset categories to import. Imported assets land in a mod-ready directory structure.
 - **Compatibility / Export impact:** Imported Remastered assets are usable in IC mods but NOT publishable to Workshop (proprietary EA content). Asset Studio marks provenance as `source: remastered_collection` and Publish Readiness (D038) blocks Workshop upload of EA-sourced assets.
-- **Security / Trust impact:** MEG archive parser must handle malformed archives safely (fuzzing required). TGA/DDS parsers use established Rust crates (`image`, `ddsfile`) — no custom decoder needed.
+- **Security / Trust impact:** MEG archive parser must handle malformed archives safely (fuzzing required). MEG entry extraction uses `strict-path` `PathBoundary` to sandbox output to the mod directory — same Zip Slip defense as `.oramap` and `.icpkg` (see `06-SECURITY.md` § Path Security Infrastructure). TGA/DDS parsers use established Rust crates (`image`, `ddsfile`) — no custom decoder needed.
 - **Public interfaces / types / commands:** `MegArchive`, `MegEntry`, `RemasteredSpriteSheet`, `MetaFrame`, `RemasteredImportManifest`, `ic asset import-remastered`
 - **Affected docs:** `src/05-FORMATS.md`, `src/decisions/09f/D040-asset-studio.md`, `src/architecture/ra-experience.md`, `src/decisions/09c-modding.md`
 - **Keywords:** remastered, remaster, MEG, TGA, META, BK2, Bink2, HD sprites, megasheet, GlyphX, Petroglyph, EA GPL, import wizard
@@ -31,52 +31,52 @@ The Remastered Collection uses Petroglyph's format family (from Empire at War / 
 
 #### Archives
 
-| Format | Purpose | Structure | IC Strategy |
-|--------|---------|-----------|-------------|
+| Format | Purpose                   | Structure                                                                                                            | IC Strategy                                                                                                  |
+| ------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `.meg` | Primary archive container | Petroglyph archive format. Header + file table + packed data. Openable by community tools (OS Big Editor, OpenSage). | New `MegArchive` parser in `ra-formats`. Read-only (no write support needed — IC doesn't produce MEG files). |
-| `.pgm` | Map package archive | MEG file with different extension. Contains map file + related data (preview image, metadata). | Reuse `MegArchive` parser. Map data extracted and converted to IC YAML map format. |
+| `.pgm` | Map package archive       | MEG file with different extension. Contains map file + related data (preview image, metadata).                       | Reuse `MegArchive` parser. Map data extracted and converted to IC YAML map format.                           |
 
 #### Sprites & Textures
 
-| Format | Purpose | Structure | IC Strategy |
-|--------|---------|-----------|-------------|
-| `.tga` | HD sprite sheets | 32-bit RGBA Targa files. One TGA per unit/building/animation contains all frames composited into a single large sheet (a "megasheet"). Alpha channel for transparency. Player color uses chroma-key green (HSV hue ~110–111) instead of palette index remapping. | Rust `image` crate reads TGA natively. Chroma-key detection replaces green band with IC's palette-index remap shader. |
-| `.meta` | Frame geometry metadata | JSON file paired 1:1 with each TGA. Contains per-frame `{"size":[w,h],"crop":[x,y,w,h]}` entries that define where each sprite frame lives within the megasheet. | Parse JSON → `Vec<MetaFrame>` → split TGA into individual frames → map to IC sprite sequences. |
-| `.dds` | GPU-compressed textures | DirectDraw Surface format. BC1/BC3/BC7 compression. Used for terrain, UI chrome, effects. | Rust `ddsfile` crate + `image` for decompression. Convert to KTX2 (IC's recommended GPU texture format) or PNG. |
-| `.mtd` | MegaTexture data | Petroglyph format for packed UI elements (sidebar icons in `MT_COMMANDBAR_COMMON` variants). | Custom parser in `ra-formats`. Low priority — only needed for UI chrome import. |
+| Format  | Purpose                 | Structure                                                                                                                                                                                                                                                        | IC Strategy                                                                                                           |
+| ------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `.tga`  | HD sprite sheets        | 32-bit RGBA Targa files. One TGA per unit/building/animation contains all frames composited into a single large sheet (a "megasheet"). Alpha channel for transparency. Player color uses chroma-key green (HSV hue ~110–111) instead of palette index remapping. | Rust `image` crate reads TGA natively. Chroma-key detection replaces green band with IC's palette-index remap shader. |
+| `.meta` | Frame geometry metadata | JSON file paired 1:1 with each TGA. Contains per-frame `{"size":[w,h],"crop":[x,y,w,h]}` entries that define where each sprite frame lives within the megasheet.                                                                                                 | Parse JSON → `Vec<MetaFrame>` → split TGA into individual frames → map to IC sprite sequences.                        |
+| `.dds`  | GPU-compressed textures | DirectDraw Surface format. BC1/BC3/BC7 compression. Used for terrain, UI chrome, effects.                                                                                                                                                                        | Rust `ddsfile` crate + `image` for decompression. Convert to KTX2 (IC's recommended GPU texture format) or PNG.       |
+| `.mtd`  | MegaTexture data        | Petroglyph format for packed UI elements (sidebar icons in `MT_COMMANDBAR_COMMON` variants).                                                                                                                                                                     | Custom parser in `ra-formats`. Low priority — only needed for UI chrome import.                                       |
 
 #### Audio
 
-| Format | Purpose | Structure | IC Strategy |
-|--------|---------|-----------|-------------|
+| Format | Purpose                       | Structure                                                         | IC Strategy                                                                                                                                                     |
+| ------ | ----------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `.wav` | Remixed sound effects & music | Standard WAV containers. Microsoft ADPCM codec in tested samples. | Rust `hound` crate reads WAV natively. ADPCM decode via `symphonia` or platform codec. Direct passthrough into IC's Kira audio pipeline — no conversion needed. |
 
 **Note:** The Remastered Collection's audio is standard WAV, not a proprietary format. IC already plays WAV natively. The only work is reading them out of MEG archives.
 
 #### Video
 
-| Format | Purpose | Structure | IC Strategy |
-|--------|---------|-----------|-------------|
+| Format | Purpose                  | Structure                                                                                 | IC Strategy                                                                                                                                                                                                  |
+| ------ | ------------------------ | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `.bk2` | HD cutscenes & briefings | Bink Video 2 format (RAD Game Tools). Proprietary codec with wide game-industry adoption. | Two options: (1) Bink SDK integration (free for non-commercial, licensed for commercial — terms TBD). (2) Community `binkdec` / FFmpeg Bink2 decoder. Convert to WebM (VP9) at import time via Asset Studio. |
 
 **Bink2 strategy:** Unlike classic `.vqa` (which IC decodes natively), Bink2 is a proprietary codec. IC does NOT ship a Bink2 runtime decoder. Instead, the Asset Studio **converts BK2 → WebM at import time**. This is a one-time operation per cutscene. The converted WebM plays through IC's standard video pipeline. Users who want the Remastered cutscenes in IC import them once; the originals remain untouched in the Remastered install folder.
 
 #### Configuration & Metadata
 
-| Format | Purpose | Structure | IC Strategy |
-|--------|---------|-----------|-------------|
-| `.xml` | GlyphX configuration | Standard XML. Game settings, asset mappings, sequence definitions. | Rust `quick-xml` crate. Extract asset mapping tables (classic frame → HD frame correspondence) for the sprite import pipeline. |
-| `.dat` / `.loc` | String tables | Petroglyph localization format. | Parse for completeness; IC uses its own localization system. Low priority. |
-| `.bui` | UI layout | Petroglyph UI description format. Undocumented. | Skip. IC has its own UI theme system (D032). |
+| Format          | Purpose              | Structure                                                          | IC Strategy                                                                                                                    |
+| --------------- | -------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `.xml`          | GlyphX configuration | Standard XML. Game settings, asset mappings, sequence definitions. | Rust `quick-xml` crate. Extract asset mapping tables (classic frame → HD frame correspondence) for the sprite import pipeline. |
+| `.dat` / `.loc` | String tables        | Petroglyph localization format.                                    | Parse for completeness; IC uses its own localization system. Low priority.                                                     |
+| `.bui`          | UI layout            | Petroglyph UI description format. Undocumented.                    | Skip. IC has its own UI theme system (D032).                                                                                   |
 
 #### Formats IC Skips
 
-| Format | Why Skipped |
-|--------|-------------|
-| `.alo` | Petroglyph 3D model format. Only one file exists in Remastered (a null hardpoint). No useful content. |
-| `.pgso` | Compiled DirectX shader bytecode. IC uses wgpu/WGSL shaders. |
-| `.bfd`, `.cfx`, `.cpd`, `.gpd`, `.gtl`, `.mtm`, `.sob`, `.ted` | Undocumented Petroglyph internal formats. No community documentation. No useful content for IC. |
-| `.ttf` | Standard TrueType fonts. IC loads system fonts or bundles its own. |
+| Format                                                         | Why Skipped                                                                                           |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `.alo`                                                         | Petroglyph 3D model format. Only one file exists in Remastered (a null hardpoint). No useful content. |
+| `.pgso`                                                        | Compiled DirectX shader bytecode. IC uses wgpu/WGSL shaders.                                          |
+| `.bfd`, `.cfx`, `.cpd`, `.gpd`, `.gtl`, `.mtm`, `.sob`, `.ted` | Undocumented Petroglyph internal formats. No community documentation. No useful content for IC.       |
+| `.ttf`                                                         | Standard TrueType fonts. IC loads system fonts or bundles its own.                                    |
 
 ### HD Sprite Import Pipeline
 
@@ -115,9 +115,9 @@ Output: Vec<RgbaImage> (individual frames) + SequenceMap (frame→animation mapp
 
 The Remastered Collection's chroma-key approach is more flexible than the original's palette-index approach — it allows smooth gradients and anti-aliasing in player-colored areas. IC's import pipeline preserves this:
 
-| Approach | When Used | How |
-|----------|-----------|-----|
-| **HD mode (D048 modern render)** | Player uses HD render mode | Keep full RGBA. Shader detects green-band pixels at runtime and remaps to player color with gradient preservation. Same technique as Remastered. |
+| Approach                               | When Used                       | How                                                                                                                                                    |
+| -------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **HD mode (D048 modern render)**       | Player uses HD render mode      | Keep full RGBA. Shader detects green-band pixels at runtime and remaps to player color with gradient preservation. Same technique as Remastered.       |
 | **Classic mode (D048 classic render)** | Player uses classic render mode | Quantize green-band pixels to palette indices 80–95. Produces exact classic look. Loses HD anti-aliasing (intentional — that's the classic aesthetic). |
 
 #### Rust Types
@@ -152,14 +152,15 @@ pub struct RemasteredSpriteSheet {
 
 /// Import manifest tracking what was imported from a Remastered installation.
 pub struct RemasteredImportManifest {
-    pub source_path: PathBuf,
-    pub imported_at: String, // RFC 3339 UTC
+    pub source_path: PathBuf,        // Remastered install dir (trusted, user-provided)
+    pub output_boundary: PathBoundary, // `mods/remastered-hd/` — all extraction sandboxed here
+    pub imported_at: String,         // RFC 3339 UTC
     pub assets: Vec<ImportedAsset>,
 }
 
 pub struct ImportedAsset {
-    pub original_path: String,       // Path within MEG archive
-    pub ic_path: PathBuf,            // Where it landed in IC mod structure
+    pub original_path: String,       // Path within MEG archive (untrusted — validated via PathBoundary)
+    pub ic_path: PathBuf,            // Where it landed in IC mod structure (within output_boundary)
     pub asset_type: ImportedAssetType,
     pub provenance: AssetProvenance, // From D040 — source: remastered_collection
 }
@@ -207,25 +208,25 @@ The Asset Studio (D040) gains a dedicated import workflow for Remastered Collect
 
 #### Import Performance Estimate
 
-| Category | Count | Per-Asset | Total (est.) |
-|----------|-------|-----------|-------------|
-| Sprites (TGA+META → PNG) | ~2,400 | ~50ms | ~2 min |
-| Audio (WAV passthrough) | ~800 | ~1ms (copy) | ~1 sec |
-| Video (BK2 → WebM) | ~40 | ~10s | ~7 min |
-| UI (DDS → PNG) | ~200 | ~20ms | ~4 sec |
+| Category                 | Count  | Per-Asset   | Total (est.) |
+| ------------------------ | ------ | ----------- | ------------ |
+| Sprites (TGA+META → PNG) | ~2,400 | ~50ms       | ~2 min       |
+| Audio (WAV passthrough)  | ~800   | ~1ms (copy) | ~1 sec       |
+| Video (BK2 → WebM)       | ~40    | ~10s        | ~7 min       |
+| UI (DDS → PNG)           | ~200   | ~20ms       | ~4 sec       |
 
 **Total:** ~10 minutes for a full import. One-time operation. Progress bar with per-category status.
 
 ### Legal Model
 
-| What | Legal Status | IC Policy |
-|------|-------------|-----------|
-| **Format definitions** (how to read MEG, TGA+META, etc.) | GPL v3 (from EA DLL source) + community documentation | Freely implement parsers in `ra-formats` |
-| **HD art assets** (sprites, textures, UI) | Proprietary EA content | Never redistribute. Import from user's own purchase. Block Workshop upload. |
-| **Remixed audio** (SFX, music, EVA) | Proprietary EA content | Same as art — import from user's purchase only. |
-| **HD cutscenes** (BK2 video) | Proprietary EA content | Same — convert from user's purchase. |
-| **Gameplay values** (costs, HP, speeds) | GPL v3 (in DLL source) | Already captured in D019 `remastered` balance preset. |
-| **Pathfinding algorithm** | GPL v3 (in DLL source) | Already implemented as D045 `RemastersPathfinder` preset. |
+| What                                                     | Legal Status                                          | IC Policy                                                                   |
+| -------------------------------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------- |
+| **Format definitions** (how to read MEG, TGA+META, etc.) | GPL v3 (from EA DLL source) + community documentation | Freely implement parsers in `ra-formats`                                    |
+| **HD art assets** (sprites, textures, UI)                | Proprietary EA content                                | Never redistribute. Import from user's own purchase. Block Workshop upload. |
+| **Remixed audio** (SFX, music, EVA)                      | Proprietary EA content                                | Same as art — import from user's purchase only.                             |
+| **HD cutscenes** (BK2 video)                             | Proprietary EA content                                | Same — convert from user's purchase.                                        |
+| **Gameplay values** (costs, HP, speeds)                  | GPL v3 (in DLL source)                                | Already captured in D019 `remastered` balance preset.                       |
+| **Pathfinding algorithm**                                | GPL v3 (in DLL source)                                | Already implemented as D045 `RemastersPathfinder` preset.                   |
 
 This is the same legal model that OpenRA, CnCNet, and every other community project uses: format compatibility is legal; redistributing proprietary assets is not.
 
@@ -243,7 +244,7 @@ This is the same legal model that OpenRA, CnCNet, and every other community proj
 
 - **Phase 2:** `ra-formats` gains MEG archive parser, TGA+META sprite sheet splitter, and DDS reader. These are pure parsing — no UI.
 - **Phase 6a:** Asset Studio "Import Remastered Installation" wizard ships. BK2→WebM conversion pipeline. Full import workflow with provenance tracking.
-- **CLI fallback (Phase 2):** `ic asset import-remastered <path>` provides headless import for CI/automation/power users before Asset Studio ships.
+- **CLI fallback (Phase 2):** `ic asset import-remastered <path>` provides headless import for CI/automation/power users before Asset Studio ships. The output directory (`mods/remastered-hd/`) is enforced via `strict-path` `PathBoundary` — MEG archive entry names (potentially user-modified in modded installs) cannot escape the output mod directory.
 
 ### Cross-References
 

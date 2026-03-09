@@ -81,6 +81,8 @@ Resources aren't limited to mod-sized packages. Granularity is flexible:
 | Experience Profile | Combined balance + theme + QoL + AI + pathfinding + render mode (D019+D032+D033+D043+D045+D048)                                                             |
 | Resource Packs     | Switchable asset layer for any category — see `04-MODDING.md` § "Resource Packs"                                                                            |
 | Script Libraries   | Reusable Lua modules, utility functions, AI behavior scripts, trigger templates, console automation scripts (`.iccmd`) — see D058 § "Competitive Integrity" |
+| LLM Model Packs    | CPU-optimized GGUF weights + manifest — downloaded on demand by Tier 1 built-in inference (D047)                                                            |
+| LLM Configurations | Exported provider/routing/prompt-strategy presets — no API keys (D047 § Workshop Integration)                                                               |
 | Full Mods          | Traditional mod (may depend on individual resources)                                                                                                        |
 
 A published resource is just a `ResourcePackage` with the appropriate `ResourceCategory`. The existing `asset-pack` template and `ic mod publish` flow handle this natively — no separate command needed.
@@ -424,6 +426,6 @@ The `[···]` action menu per resource:
 
 ## Sub-Pages
 
-| Section | Topic | File |
-| --- | --- | --- |
+| Section                 | Topic                                                                                                                                                                                        | File                                                                |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | Deployment & Operations | Continuous deployment, content moderation/DMCA, modpack system, creator features (reputation, tipping, achievements), LLM integration, cross-engine registry, rationale, alternatives, phase | [D030-deployment-operations.md](D030/D030-deployment-operations.md) |

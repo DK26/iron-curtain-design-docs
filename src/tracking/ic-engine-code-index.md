@@ -39,24 +39,24 @@
 
 ## Repository Map (Top-Level)
 
-| Path                  | Role                          | Notes                                 |
-| --------------------- | ----------------------------- | ------------------------------------- |
-| `crates/ic-protocol/` | Shared wire types             | Boundary crate between sim and net    |
-| `crates/ra-formats/`  | RA1 asset parsers             | Standalone, no game dependencies      |
-| `crates/ic-paths/`    | Platform path resolution      | Standalone, wraps `app-path`          |
-| `crates/ic-sim/`      | Deterministic simulation      | Pure, no I/O, no floats               |
-| `crates/ic-render/`   | Bevy isometric renderer       | Reads sim state (read-only)           |
-| `crates/ic-ui/`       | Game UI chrome (Bevy UI)      | Reads sim + render state              |
-| `crates/ic-audio/`    | Sound/music/EVA (Kira)        | Reads ra-formats for .aud             |
-| `crates/ic-net/`      | Networking + relay server     | RelayCore lib + relay binary          |
-| `crates/ic-script/`   | Lua + WASM mod runtimes       | Sandboxed, capability-gated           |
-| `crates/ic-ai/`       | Skirmish AI                   | Reads sim state via fog-filtered view |
-| `crates/ic-llm/`      | LLM integration               | Adaptive missions, coaching           |
-| `crates/ic-editor/`   | SDK editor tools              | Separate binary from ic-game          |
-| `crates/ic-game/`     | Main game binary              | Orchestrates all systems              |
-| `tests/`              | Integration test suites       | Conformance, replay, determinism      |
-| `assets/`             | Test fixtures and sample maps | Not shipped — test corpus only        |
-| `docs/`               | Implementation notes          | Local docs, design-gap requests       |
+| Path                  | Role                                        | Notes                                                                                       |
+| --------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `crates/ic-protocol/` | Shared wire types                           | Boundary crate between sim and net                                                          |
+| `crates/ra-formats/`  | RA1 asset parsers                           | Standalone, no game dependencies                                                            |
+| `crates/ic-paths/`    | Platform path resolution + credential store | Standalone, wraps `app-path` + `strict-path` + `keyring` + `aes-gcm` + `argon2` + `zeroize` |
+| `crates/ic-sim/`      | Deterministic simulation                    | Pure, no I/O, no floats                                                                     |
+| `crates/ic-render/`   | Bevy isometric renderer                     | Reads sim state (read-only)                                                                 |
+| `crates/ic-ui/`       | Game UI chrome (Bevy UI)                    | Reads sim + render state                                                                    |
+| `crates/ic-audio/`    | Sound/music/EVA (Kira)                      | Reads ra-formats for .aud                                                                   |
+| `crates/ic-net/`      | Networking + relay server                   | RelayCore lib + relay binary                                                                |
+| `crates/ic-script/`   | Lua + WASM mod runtimes                     | Sandboxed, capability-gated                                                                 |
+| `crates/ic-ai/`       | Skirmish AI + LLM strategies                | Reads sim state via fog-filtered view; depends on ic-llm                                    |
+| `crates/ic-llm/`      | LLM provider traits + infra                 | No ic-sim import; candle inference runtime (D047)                                           |
+| `crates/ic-editor/`   | SDK editor tools                            | Separate binary from ic-game                                                                |
+| `crates/ic-game/`     | Main game binary                            | Orchestrates all systems                                                                    |
+| `tests/`              | Integration test suites                     | Conformance, replay, determinism                                                            |
+| `assets/`             | Test fixtures and sample maps               | Not shipped — test corpus only                                                              |
+| `docs/`               | Implementation notes                        | Local docs, design-gap requests                                                             |
 
 ## Subsystem Index (Canonical Entries)
 
@@ -93,17 +93,17 @@
 ### `ic-paths`
 
 - **Path:** `crates/ic-paths/`
-- **Primary responsibility:** Platform path resolution — XDG on Linux, APPDATA on Windows, portable mode via `portable.marker`
+- **Primary responsibility:** Platform path resolution — XDG on Linux, APPDATA on Windows, portable mode via `portable.marker`. Wraps `app-path` (exe-relative resolution) and `strict-path` (path boundary enforcement for untrusted inputs). Also owns `CredentialStore` — three-tier credential protection (OS keyring / vault passphrase / session-only) with AES-256-GCM per-column encryption for sensitive SQLite data
 - **Does not own:** file I/O beyond path construction, asset loading
-- **Public interfaces / trait seams:** `AppDirs`, `PathMode::Platform` / `PathMode::Portable`
-- **Key files to read first:** `src/lib.rs`
-- **Hot paths / perf-sensitive files:** none (called once at startup)
+- **Public interfaces / trait seams:** `AppDirs`, `PathMode::Platform` / `PathMode::Portable`, `AppDirs::save_boundary()` / `mod_boundary()` / `replay_cache_boundary()` (→ `PathBoundary`), `CredentialStore`, `CredentialBackend`
+- **Key files to read first:** `src/lib.rs`, `src/credentials.rs`
+- **Hot paths / perf-sensitive files:** none (called once at startup; credential ops are infrequent)
 - **Generated files:** none
-- **Tests / verification entry points:** unit tests for path resolution on each platform
-- **Related design decisions (`Dxxx`):** D061
+- **Tests / verification entry points:** unit tests for path resolution on each platform; credential round-trip encryption tests
+- **Related design decisions (`Dxxx`):** D061, D047
 - **Related execution steps (`G*`):** G1 (asset discovery)
-- **Common change risks:** platform-specific path bugs; portable mode detection
-- **Search hints:** `AppDirs`, `PathMode`, `portable.marker`, `XDG`, `APPDATA`
+- **Common change risks:** platform-specific path bugs; portable mode detection; OS keyring API differences across Linux DEs
+- **Search hints:** `AppDirs`, `PathMode`, `portable.marker`, `XDG`, `APPDATA`, `CredentialStore`, `CredentialBackend`, `vault_meta`
 
 ### `ic-sim`
 
@@ -198,7 +198,7 @@
 ### `ic-ai`
 
 - **Path:** `crates/ic-ai/`
-- **Primary responsibility:** Skirmish AI — `PersonalityDrivenAi`, economy/production/military managers, adaptive difficulty. Reads SQLite (D034) for player analytics
+- **Primary responsibility:** Skirmish AI — `PersonalityDrivenAi`, economy/production/military managers, adaptive difficulty, LLM-enhanced AI strategies (`LlmOrchestratorAi`, `LlmPlayerAi` — D044). Depends on `ic-llm` for provider access. Reads SQLite (D034) for player analytics and personalization
 - **Does not own:** sim state mutation (emits `PlayerOrder` through `AiStrategy` trait), rendering, networking
 - **Public interfaces / trait seams:** `AiStrategy` trait, `PersonalityDrivenAi`, `AiDifficulty` enum, personality config
 - **Key files to read first:** `src/lib.rs`, `src/personality.rs`, `src/strategy.rs`
@@ -213,9 +213,9 @@
 ### `ic-llm`
 
 - **Path:** `crates/ic-llm/`
-- **Primary responsibility:** LLM integration — adaptive mission generation (D016), LLM-enhanced AI coaching (D044), exhibition modes (D073), provider configuration (D047). Reads SQLite (D034) for personalization
-- **Does not own:** sim logic, rendering, core gameplay
-- **Public interfaces / trait seams:** LLM prompt pipelines, provider abstraction, skill library (D057)
+- **Primary responsibility:** LLM provider abstraction — four-tier provider system (D047: IC Built-in CPU models, Cloud OAuth, API Key, Local External), `LlmProvider` trait, prompt infrastructure, skill library (D057), pure Rust CPU inference runtime. Does NOT import `ic-sim` or `ic-ai` — traits and infra only. Reads SQLite (D034) for model pack state and provider config.
+- **Does not own:** sim logic, rendering, core gameplay, AI strategies (those live in `ic-ai` which depends on `ic-llm`)
+- **Public interfaces / trait seams:** `LlmProvider` trait, `ProviderTier` enum, `PromptAssembler`, prompt strategy profiles, skill library (D057), pure Rust inference runtime (Tier 1)
 - **Key files to read first:** `src/lib.rs`, `src/provider.rs`, `src/mission_gen.rs`
 - **Hot paths / perf-sensitive files:** none (LLM calls are async, not frame-budget-sensitive)
 - **Generated files:** none

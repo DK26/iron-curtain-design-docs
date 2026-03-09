@@ -294,6 +294,8 @@ impl RelayServer {
 
 Beyond hard rate caps, the relay maintains an **exponential weighted moving average (EWMA)** of each player's order rate and bandwidth consumption. This catches sustained abuse patterns that stay just below the hard caps — a technique proven by DDNet's anti-abuse infrastructure (see `research/veloren-hypersomnia-openbw-ddnet-netcode-analysis.md`):
 
+> **NaN/Inf hazard:** The `f64` fields below are vulnerable to NaN propagation under edge conditions (zero traffic, extreme bursts, denormalized floats). A NaN score silently disables abuse detection because `NaN > threshold` is always `false`. See **V34** in `vulns-infrastructure.md` for the mandatory NaN guard pattern, fail-closed defaults, and `alpha` range validation. The defended implementation there supersedes this simplified sketch. See also `type-safety.md` § Finite Float Policy.
+
 ```rust
 /// Exponential weighted moving average for traffic monitoring.
 /// α = 0.1 means ~90% of the score comes from the last ~10 ticks.

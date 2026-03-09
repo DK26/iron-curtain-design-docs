@@ -54,7 +54,7 @@ ic-net/
 /// The relay engine. Embedding-agnostic — works identically whether
 /// hosted in a standalone binary or inside a game client.
 pub struct RelayCore {
-    tick: u64,
+    tick: SimTick,
     pending_orders: Vec<TimestampedOrder>,
     filter_chain: Vec<Box<dyn RelayFilter>>,
     liveness_tokens: HashMap<PlayerId, LivenessToken>,

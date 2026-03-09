@@ -1,4 +1,4 @@
-# Experimental LLM Modes & Plans (BYOLLM)
+# Experimental LLM Modes & Plans
 
 This page is the **human-facing overview** of Iron Curtain's LLM-related modes and plans for:
 
@@ -9,7 +9,7 @@ This page is the **human-facing overview** of Iron Curtain's LLM-related modes a
 
 Everything here is **design-stage only** (no playable build yet) and should be treated as **experimental**. Some items are "accepted" decisions in the docs, but that means "accepted as a design direction," not "implemented" or "stable."
 
-> `BYOLLM` = **Bring Your Own LLM**. Iron Curtain does not ship or require a model/provider. You configure your own local or cloud provider if you want these features.
+> `BYOLLM` = **Bring Your Own LLM**. Iron Curtain does not require a specific model/provider. You can use IC's built-in local models (CPU-only, zero setup), sign in to a cloud provider, connect your own local inference server, or paste an API key — whatever fits your setup.
 
 > For agentic retrieval / RAG routing, use `LLM-INDEX.md`. This page is for humans.
 
@@ -18,10 +18,10 @@ Everything here is **design-stage only** (no playable build yet) and should be t
 ## Ground Rules (Applies to All LLM Features)
 
 - **Optional, never required.** The game and SDK are designed to work fully without any LLM configured (D016).
-- **BYOLLM only.** Users choose providers/models; the engine does not bundle a mandatory vendor (D016, D047).
+- **BYOLLM architecture, built-in floor.** The engine supports four provider tiers: IC Built-in (embedded CPU models, zero setup), Cloud OAuth (browser login), Cloud API Key (paste key), and Local External (Ollama, LM Studio, etc.). Users choose their tier; the engine does not mandate a vendor. IC Built-in provides a functional baseline; BYOLLM provides the ceiling (D047).
 - **Determinism preserved.** `ic-sim` never performs LLM or network I/O. LLM outputs affect gameplay only by producing normal orders through existing pipelines (D044, D073).
 - **No ranked assistance.** LLM-controlled/player-assisted match modes are excluded from ranked-certified play (D044, D073, D055).
-- **Privacy and disclosure matter.** Replay annotations, prompt capture, and voice-like context features are opt-in/configurable, with stripping/redaction paths planned (D059, D073).
+- **Privacy and disclosure matter.** Replay annotations, prompt capture, and voice-like context features are opt-in/configurable, with stripping/redaction paths planned (D059, D073). Built-in models run entirely on-device — no data leaves the machine. Cloud providers are the user's choice and the user's responsibility.
 - **Standard outputs for creators.** Generated content is standard YAML/Lua/assets, not opaque engine-only blobs (D016, D040).
 
 ---
@@ -30,7 +30,7 @@ Everything here is **design-stage only** (no playable build yet) and should be t
 
 ### Players
 
-- **LLM-generated missions/campaigns** (BYOLLM, optional) — D016
+- **LLM-generated missions/campaigns** (optional) — D016
 - **LLM-enhanced AI opponents** (`LlmOrchestratorAi`, experimental `LlmPlayerAi`) — D044
 - **LLM exhibition / prompt-coached match modes** (showmatch/custom-focused) — D073
 - **LLM coaching / post-match commentary** (optional, built on behavioral profiles) — D042 + D016
@@ -47,7 +47,7 @@ Everything here is **design-stage only** (no playable build yet) and should be t
 - **Replay-to-scenario narrative generation** (optional LLM layer on top of replay extraction) — D038 + D016
 - **Asset Studio agentic generation** (optional Layer 3 in SDK) — D040
 - **LLM-callable editor tools (planned)** for structured editor automation — D016
-- **Custom factions (planned, BYOLLM)** — D016
+- **Custom factions (planned)** — D016
 
 ### Tool Developers
 
@@ -108,7 +108,7 @@ Fairness model (important):
 
 ## Player-Facing LLM Content Generation (Campaigns / Missions)
 
-### 3. LLM-Generated Missions & Campaigns (BYOLLM)
+### 3. LLM-Generated Missions & Campaigns
 
 Canonical: D016
 
@@ -222,7 +222,7 @@ This is aimed at modder productivity and SDK automation, not live gameplay.
 
 Canonical: D016
 
-Planned BYOLLM path for power users:
+Planned path for power users (built-in models work; external providers unlock higher quality):
 
 - generate faction concepts into editable YAML-based faction definitions
 - pull compatible Workshop resources (subject to permissions/licensing rules)
@@ -234,7 +234,7 @@ This is a planned experimental feature, not a core onboarding path for modders.
 
 ## Tooling & Infrastructure That Makes LLM Features Practical
 
-### 11. LLM Configuration Manager (BYOLLM UX Layer)
+### 11. LLM Configuration Manager
 
 Canonical: D047
 
@@ -243,14 +243,17 @@ Why it exists:
 - different tasks need different model/provider tradeoffs
 - local vs cloud models need different prompt strategies
 - users may want multiple providers at once
+- non-technical players need a zero-config path to LLM features
 
 Key planned capabilities:
 
-- multiple provider profiles
-- task-specific routing (e.g., fast local for orchestration, richer cloud for generation)
-- prompt strategy profiles (auto + override)
+- **four provider tiers:** IC Built-in (CPU models, zero setup), Cloud OAuth (browser login), Cloud API Key, Local External (Ollama, etc.)
+- multiple provider profiles with tier mixing (built-in for quick tasks, cloud for quality)
+- task-specific routing (e.g., built-in for coaching, cloud for generation)
+- prompt strategy profiles (auto + override), including `EmbeddedCompact` for built-in models
 - capability probing and prompt test harness
 - shareable configs without API keys
+- Workshop model packs for first-party and community-provided model weights
 
 ### 12. LLM Skill Library (Lifelong Learning Layer)
 
@@ -292,17 +295,17 @@ It is designed to preserve determinism and competitive integrity:
 
 This page is a consolidation of **planned** LLM features. Most of the LLM-heavy work clusters in **Phase 7**.
 
-| Area | Example Modes / Features | Planned Phase | Experimental Notes |
-| --- | --- | --- | --- |
-| LLM missions/campaigns | Mission gen, generative campaigns, replay narrative layer | Phase 7 | Optional BYOLLM only; hand-authored campaigns remain primary |
-| LLM-enhanced AI | `LlmOrchestratorAi` | Phase 7 | Best path for practical gameplay/spectating |
-| Full LLM player | `LlmPlayerAi` | Experimental, no scheduled phase | Architecture supported; quality/latency dependent |
-| LLM exhibition/prompt matches | LLM exhibition, prompt duel, director showmatch | Phase 7 | Explicitly non-ranked, trust-labeled |
-| LLM coaching | Post-match coaching loop | Phase 7 (LLM layer) | Built on D042 profile/training system |
-| LLM config/routing | LLM Manager, prompt profiles, capability probes | Phase 7 | Supports the rest of BYOLLM features |
-| Skill library | Verified reusable AI/generation skills | Phase 7 | Can start accumulating once D044 exists |
-| Asset generation in SDK | Asset Studio Layer 3 | Phase 7 | Optional creator enhancement |
-| MCP / external LLM tools | ICRP MCP workflows | Phase 6a+ | Infrastructure phases start earlier than most LLM gameplay/content features |
+| Area                          | Example Modes / Features                                  | Planned Phase                    | Experimental Notes                                                                                                              |
+| ----------------------------- | --------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| LLM missions/campaigns        | Mission gen, generative campaigns, replay narrative layer | Phase 7                          | Optional; IC Built-in (Tier 1) provides baseline, BYOLLM (Tiers 2–4) for higher quality; hand-authored campaigns remain primary |
+| LLM-enhanced AI               | `LlmOrchestratorAi`                                       | Phase 7                          | Best path for practical gameplay/spectating                                                                                     |
+| Full LLM player               | `LlmPlayerAi`                                             | Experimental, no scheduled phase | Architecture supported; quality/latency dependent                                                                               |
+| LLM exhibition/prompt matches | LLM exhibition, prompt duel, director showmatch           | Phase 7                          | Explicitly non-ranked, trust-labeled                                                                                            |
+| LLM coaching                  | Post-match coaching loop                                  | Phase 7 (LLM layer)              | Built on D042 profile/training system                                                                                           |
+| LLM config/routing            | LLM Manager, prompt profiles, capability probes           | Phase 7                          | Supports the rest of BYOLLM features                                                                                            |
+| Skill library                 | Verified reusable AI/generation skills                    | Phase 7                          | Can start accumulating once D044 exists                                                                                         |
+| Asset generation in SDK       | Asset Studio Layer 3                                      | Phase 7                          | Optional creator enhancement                                                                                                    |
+| MCP / external LLM tools      | ICRP MCP workflows                                        | Phase 6a+                        | Infrastructure phases start earlier than most LLM gameplay/content features                                                     |
 
 ---
 
@@ -343,5 +346,5 @@ This is the line that keeps the LLM experimentation ecosystem compatible with IC
 
 ## Suggested Public Messaging (If You Want a One-Paragraph Summary)
 
-Iron Curtain's LLM features are a **BYOLLM, opt-in, experimental power-user layer** for content generation, AI experimentation, replay analysis, and creator tooling. The engine is fully playable and moddable without any LLM configured. Competitive integrity remains intact because ranked play excludes LLM-assisted modes, and showmatch/coached LLM events are explicitly labeled with clear trust and visibility rules.
+Iron Curtain's LLM features are an **opt-in, experimental layer** for content generation, AI experimentation, replay analysis, and creator tooling. Built-in CPU models provide a zero-setup starting point; users who want higher quality can connect their own cloud or local providers (BYOLLM). The engine is fully playable and moddable without any LLM configured. Competitive integrity remains intact because ranked play excludes LLM-assisted modes, and showmatch/coached LLM events are explicitly labeled with clear trust and visibility rules.
 

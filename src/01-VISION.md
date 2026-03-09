@@ -188,7 +188,7 @@ OpenRA is a mature, actively maintained project with 18 years of community inves
 9. **Workshop with auto-download** — join a game, missing mods download automatically (CS:GO-style); no manual file hunting
 10. **Creator recognition** — reputation scores, featured badges, optional tipping — modders get credit and visibility
 11. **Achievement system** — per-game-module achievements stored locally, mod-defined achievements via YAML + Lua, Steam sync for Steam builds
-12. **Optional LLM enhancements** (BYOLLM) — bring your own LLM for generated missions, adaptive briefings, coaching suggestions — a quiet power-user feature, not a headline
+12. **Optional LLM enhancements** — IC ships built-in CPU models for zero-config operation; external LLM providers (BYOLLM) unlock higher quality for generated missions, adaptive briefings, coaching suggestions — a quiet power-user feature, not a headline
 
 Item 8 is the linchpin. If existing mods just work, migration cost drops to near zero.
 

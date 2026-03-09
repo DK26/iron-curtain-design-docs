@@ -119,6 +119,8 @@ APIs that grant access (filesystem, network, ECS queries from mods) require unfo
 
 Security-critical data passes through verification once, then carries proof of verification in the type system. `Verified<T>` prevents the "forgot to verify" bug class. Applies to: SCR signatures, manifest hashes, replay signatures, validated orders.
 
+`StructurallyChecked<T>` is the relay-side counterpart — a weaker wrapper indicating structural validation (decode + field bounds) has passed, but NOT full sim validation (D012). The relay cannot produce `Verified<T>` because it does not run `ic-sim`. Applies to: `StructurallyChecked<TimestampedOrder>` in the `ForeignOrderPipeline` (see `cross-engine/relay-security.md`). Same `_private: ()` construction guard as `Verified<T>` — only the structural validation path can wrap.
+
 ### Pattern 5: Bounded Collections
 
 Every collection that grows based on external input has a type-enforced bound. `BoundedVec<T, N>` returns `Err(CapacityExceeded)` on overflow. This applies to: order queues, chat buffers, ping lists, draw commands, waypoints, build queues, group assignments.

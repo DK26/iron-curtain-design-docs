@@ -34,18 +34,18 @@ The LLM generates terrain **features** (rivers, bridges, forests, cliffs, roads)
 
 ### Feature Types
 
-| Feature Type | Fields | Description |
-|---|---|---|
-| `river` | `from_zone`, `to_zone`, `width` (narrow/medium/wide), `crossable` (bool) | Water feature flowing between zones. Width affects tile count. Non-crossable rivers require bridges or naval transport. |
-| `bridge` | `zone`, `orientation` (north_south/east_west), `destructible` (bool) | Crossing point over a river or chasm. Destructible bridges can be targeted by demolition objectives. |
-| `forest` | `zone`, `density` (sparse/medium/dense), `radius` | Tree cover providing concealment. Dense forests block vehicles. Radius is in zone-relative units (small/medium/large). |
-| `cliff` | `from_zone`, `to_zone`, `height` (low/medium/high), `passable` (bool) | Elevation change. High cliffs block all ground movement. Low cliffs slow infantry only. |
-| `road` | `from_zone`, `to_zone`, `type` (dirt/paved/highway) | Movement speed bonus path. Paved roads give highest bonus. Connects zones for pathfinding. |
-| `hill` | `zone`, `elevation` (low/medium/high), `radius` | Elevated terrain providing sight range bonus. High hills affect projectile trajectories. |
-| `water_body` | `zone`, `type` (lake/ocean/swamp), `radius` | Open water area. Lakes block ground units. Swamps slow all ground movement. Ocean enables naval units. |
-| `structure_ruin` | `zone`, `density` (light/heavy), `radius` | Destroyed urban terrain. Provides partial cover. Heavy ruins block vehicles. |
-| `minefield` | `zone`, `density` (light/heavy), `radius`, `faction` (player/enemy/neutral) | Pre-placed mines. Visible to owning faction only. Density affects damage frequency. |
-| `ore_field` | `zone`, `richness` (poor/standard/rich), `radius` | Resource deposit. Richness determines total harvestable value. |
+| Feature Type     | Fields                                                                      | Description                                                                                                             |
+| ---------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `river`          | `from_zone`, `to_zone`, `width` (narrow/medium/wide), `crossable` (bool)    | Water feature flowing between zones. Width affects tile count. Non-crossable rivers require bridges or naval transport. |
+| `bridge`         | `zone`, `orientation` (north_south/east_west), `destructible` (bool)        | Crossing point over a river or chasm. Destructible bridges can be targeted by demolition objectives.                    |
+| `forest`         | `zone`, `density` (sparse/medium/dense), `radius`                           | Tree cover providing concealment. Dense forests block vehicles. Radius is in zone-relative units (small/medium/large).  |
+| `cliff`          | `from_zone`, `to_zone`, `height` (low/medium/high), `passable` (bool)       | Elevation change. High cliffs block all ground movement. Low cliffs slow infantry only.                                 |
+| `road`           | `from_zone`, `to_zone`, `type` (dirt/paved/highway)                         | Movement speed bonus path. Paved roads give highest bonus. Connects zones for pathfinding.                              |
+| `hill`           | `zone`, `elevation` (low/medium/high), `radius`                             | Elevated terrain providing sight range bonus. High hills affect projectile trajectories.                                |
+| `water_body`     | `zone`, `type` (lake/ocean/swamp), `radius`                                 | Open water area. Lakes block ground units. Swamps slow all ground movement. Ocean enables naval units.                  |
+| `structure_ruin` | `zone`, `density` (light/heavy), `radius`                                   | Destroyed urban terrain. Provides partial cover. Heavy ruins block vehicles.                                            |
+| `minefield`      | `zone`, `density` (light/heavy), `radius`, `faction` (player/enemy/neutral) | Pre-placed mines. Visible to owning faction only. Density affects damage frequency.                                     |
+| `ore_field`      | `zone`, `richness` (poor/standard/rich), `radius`                           | Resource deposit. Richness determines total harvestable value.                                                          |
 
 ### Full Annotated YAML Example
 
@@ -235,25 +235,25 @@ Actors are organized by allegiance: `player_forces`, `enemy_forces`, and `neutra
 
 ### Placement Modes
 
-| Mode | Behavior |
-|---|---|
-| `spread` | Units distributed evenly across the zone. Good for patrols and garrisons. |
-| `clustered` | Units grouped tightly at the zone center. Good for strike forces and convoys. |
+| Mode        | Behavior                                                                                               |
+| ----------- | ------------------------------------------------------------------------------------------------------ |
+| `spread`    | Units distributed evenly across the zone. Good for patrols and garrisons.                              |
+| `clustered` | Units grouped tightly at the zone center. Good for strike forces and convoys.                          |
 | `formation` | Units arranged in a military formation (line, wedge, column). Formation type inferred from unit types. |
-| `perimeter` | Units placed along the zone boundary. Good for defensive positions. |
-| `random` | Units placed at random positions within the zone. Good for scattered resistance. |
+| `perimeter` | Units placed along the zone boundary. Good for defensive positions.                                    |
+| `random`    | Units placed at random positions within the zone. Good for scattered resistance.                       |
 
 ### AI Behavior Types
 
-| Behavior | Description |
-|---|---|
-| `guard` | Hold position, engage enemies within range. |
-| `patrol` | Move along patrol_route, engage enemies encountered. |
-| `hunt` | Actively seek and destroy player units. |
+| Behavior               | Description                                                        |
+| ---------------------- | ------------------------------------------------------------------ |
+| `guard`                | Hold position, engage enemies within range.                        |
+| `patrol`               | Move along patrol_route, engage enemies encountered.               |
+| `hunt`                 | Actively seek and destroy player units.                            |
 | `retreat_when_damaged` | Engage but retreat to a fallback zone when health drops below 50%. |
-| `demolition` | Move to target and destroy it (used for demo teams). |
-| `scripted` | Behavior controlled entirely by Lua triggers. |
-| `passive` | Do not engage unless attacked. |
+| `demolition`           | Move to target and destroy it (used for demo teams).               |
+| `scripted`             | Behavior controlled entirely by Lua triggers.                      |
+| `passive`              | Do not engage unless attacked.                                     |
 
 ### Full Annotated YAML Example
 
@@ -474,18 +474,18 @@ Objectives are divided into **primary** (must complete for victory), **secondary
 
 ### Objective Types
 
-| Type | Fields | Description |
-|---|---|---|
-| `capture_structure` | `target` (structure id or type + zone) | Player must capture the specified structure. |
-| `destroy_all` | `target_faction` or `target_zone` | Destroy all enemy units/structures in a faction or zone. |
-| `protect` | `target` (unit/structure/zone), `duration` (optional) | Keep the target alive for the mission or a duration. |
-| `enter_region` | `unit_filter` (type or named), `zone` | Move specified units into the target zone. |
-| `survive_time` | `duration_seconds` | Survive for a specified real-time duration. |
-| `escort` | `unit_filter`, `from_zone`, `to_zone` | Move specified units safely from one zone to another. |
-| `build` | `structure_type`, `count`, `zone` (optional) | Construct the specified structures. |
-| `reach_tech_level` | `tech_level` or `research_id` | Research a specific technology or reach a tech tier. |
-| `eliminate_unit` | `target` (named character or unit type + count) | Kill a specific named unit or a count of a unit type. |
-| `prevent_destruction` | `target`, `threat_timer` (optional) | Stop the enemy from destroying a target before a deadline. |
+| Type                  | Fields                                                | Description                                                |
+| --------------------- | ----------------------------------------------------- | ---------------------------------------------------------- |
+| `capture_structure`   | `target` (structure id or type + zone)                | Player must capture the specified structure.               |
+| `destroy_all`         | `target_faction` or `target_zone`                     | Destroy all enemy units/structures in a faction or zone.   |
+| `protect`             | `target` (unit/structure/zone), `duration` (optional) | Keep the target alive for the mission or a duration.       |
+| `enter_region`        | `unit_filter` (type or named), `zone`                 | Move specified units into the target zone.                 |
+| `survive_time`        | `duration_seconds`                                    | Survive for a specified real-time duration.                |
+| `escort`              | `unit_filter`, `from_zone`, `to_zone`                 | Move specified units safely from one zone to another.      |
+| `build`               | `structure_type`, `count`, `zone` (optional)          | Construct the specified structures.                        |
+| `reach_tech_level`    | `tech_level` or `research_id`                         | Research a specific technology or reach a tech tier.       |
+| `eliminate_unit`      | `target` (named character or unit type + count)       | Kill a specific named unit or a count of a unit type.      |
+| `prevent_destruction` | `target`, `threat_timer` (optional)                   | Stop the enemy from destroying a target before a deadline. |
 
 ### Full Annotated YAML Example
 
@@ -608,13 +608,13 @@ Each mission has **multiple named outcomes** representing different ways the mis
 
 ### State Effect Types
 
-| Effect Type | Fields | Description |
-|---|---|---|
-| `set_flag` | `flag`, `value` | Set a campaign story flag (D021 persistent state). |
-| `adjust_character` | `name`, field changes | Modify a named character's state (loyalty, relationship, status). |
-| `roster_changes` | `add`, `remove`, `promote` | Modify the player's persistent unit roster for carryover. |
-| `unlock_tech` | `tech_id` | Permanently unlock a technology for future missions. |
-| `modify_arc` | `thread`, `adjustment` | Nudge a narrative thread forward or back in the campaign arc. |
+| Effect Type        | Fields                     | Description                                                       |
+| ------------------ | -------------------------- | ----------------------------------------------------------------- |
+| `set_flag`         | `flag`, `value`            | Set a campaign story flag (D021 persistent state).                |
+| `adjust_character` | `name`, field changes      | Modify a named character's state (loyalty, relationship, status). |
+| `roster_changes`   | `add`, `remove`, `promote` | Modify the player's persistent unit roster for carryover.         |
+| `unlock_tech`      | `tech_id`                  | Permanently unlock a technology for future missions.              |
+| `modify_arc`       | `thread`, `adjustment`     | Nudge a narrative thread forward or back in the campaign arc.     |
 
 ### Full Annotated YAML Example
 
@@ -2193,16 +2193,16 @@ Prompt templates adapt their content, complexity, and structure based on the act
 
 ### Profile Differences
 
-| Aspect | CloudRich | LocalCompact |
-|---|---|---|
-| System prompt length | Full (2000-4000 tokens) | Condensed (500-1000 tokens) |
-| Few-shot examples | 2-3 complete examples | 0-1 abbreviated examples |
-| Schema complexity | Full YAML with all optional fields | Minimal YAML — required fields only |
-| Output format | Strict structured YAML | Simplified YAML with relaxed parsing |
-| Story style rules | All 13 rules listed | 3-4 most important rules |
-| Unit type listing | Full descriptions with cost/category | Names only (no descriptions) |
-| Retry passes | 2 (parse + validate + repair) | 1 (parse + best-effort repair) |
-| Max output tokens | 4000-8000 | 1500-3000 |
+| Aspect               | CloudRich                            | LocalCompact                         |
+| -------------------- | ------------------------------------ | ------------------------------------ |
+| System prompt length | Full (2000-4000 tokens)              | Condensed (500-1000 tokens)          |
+| Few-shot examples    | 2-3 complete examples                | 0-1 abbreviated examples             |
+| Schema complexity    | Full YAML with all optional fields   | Minimal YAML — required fields only  |
+| Output format        | Strict structured YAML               | Simplified YAML with relaxed parsing |
+| Story style rules    | All 13 rules listed                  | 3-4 most important rules             |
+| Unit type listing    | Full descriptions with cost/category | Names only (no descriptions)         |
+| Retry passes         | 2 (parse + validate + repair)        | 1 (parse + best-effort repair)       |
+| Max output tokens    | 4000-8000                            | 1500-3000                            |
 
 ### CloudRich System Prompt (Orchestrator Example)
 
@@ -2321,8 +2321,12 @@ impl PromptAssembler {
 
         // Auto selection
         match provider.provider_type() {
-            ProviderType::Ollama | ProviderType::LlamaCpp => {
-                // Local model — check probe results
+            ProviderType::IcBuiltIn => {
+                // Embedded CPU model — always use compact profile
+                PromptStrategyProfile::embedded_compact()
+            }
+            ProviderType::Ollama => {
+                // Local model (Tier 4) — check probe results
                 if let Some(probe) = probe_results {
                     if probe.json_reliability_score.unwrap_or(0.0) > 0.8
                         && probe.tool_call_support == Some(true)
@@ -2341,7 +2345,7 @@ impl PromptAssembler {
                     PromptStrategyProfile::local_compact()
                 }
             }
-            ProviderType::OpenAI | ProviderType::Anthropic | ProviderType::Custom => {
+            ProviderType::OpenAI | ProviderType::Anthropic | ProviderType::GoogleAi | ProviderType::OpenAiCompatible => {
                 // Cloud provider — assume capable
                 match task {
                     LlmTask::Orchestrator => {
@@ -2358,13 +2362,13 @@ impl PromptAssembler {
 
 ### Few-Shot Example Scaling
 
-| Profile | Mission Generation | Orchestrator | Coaching |
-|---|---|---|---|
-| CloudRich | 2 full mission examples | 1 full example | 1 full example |
-| CloudStructuredJson | 1 full example + JSON schema | 1 JSON schema | 1 JSON schema |
-| LocalCompact | 0 examples (schema only) | 0 examples (schema only) | 0 examples (schema only) |
-| LocalStructured | 1 abbreviated example | 0 examples (inline enums) | 1 abbreviated example |
-| LocalStepwise | N/A (decomposed into sub-prompts) | N/A (simplified to key-value) | N/A (decomposed) |
+| Profile             | Mission Generation                | Orchestrator                  | Coaching                 |
+| ------------------- | --------------------------------- | ----------------------------- | ------------------------ |
+| CloudRich           | 2 full mission examples           | 1 full example                | 1 full example           |
+| CloudStructuredJson | 1 full example + JSON schema      | 1 JSON schema                 | 1 JSON schema            |
+| LocalCompact        | 0 examples (schema only)          | 0 examples (schema only)      | 0 examples (schema only) |
+| LocalStructured     | 1 abbreviated example             | 0 examples (inline enums)     | 1 abbreviated example    |
+| LocalStepwise       | N/A (decomposed into sub-prompts) | N/A (simplified to key-value) | N/A (decomposed)         |
 
 ### LocalStepwise Decomposition
 
@@ -2577,25 +2581,25 @@ system: |
   Use this table to guide your parameter choices. These are patterns, not rigid rules —
   use judgment when the user's description implies something not listed here.
 
-  | Signal | → Parameters | Confidence | Why |
-  |--------|-------------|-----------|-----|
-  | "redemption" / "disgraced" / "fallen" / "second chance" | difficulty: escalating, resource_level: scarce, moral_complexity: medium | 0.8 | Redemption arcs start from weakness |
-  | "Eastern Front" / "Stalingrad" / "Moscow" / "Berlin" | theater: arctic or european, faction: soviet (if not stated) | 0.7 | Historical theater mapping |
-  | "Pacific" / "island hopping" / "naval" / "fleet" | theater: pacific, mission_variety: naval_heavy | 0.9 | Naval domain signal |
-  | "espionage" / "spy" / "infiltration" / "undercover" | tone: espionage, story_style: political_thriller, mission_variety: stealth_heavy | 0.8 | Genre signal |
-  | "brutal" / "hard" / "punishing" / "dark souls" | difficulty_curve: brutal, resource_level: scarce | 0.9 | Direct difficulty signal |
-  | "fun" / "crazy" / "over the top" / "wacky" | story_style: pulp_sci_fi, moral_complexity: low | 0.7 | Tone signal |
-  | "like Red Alert" / "classic C&C" / "feels like RA" | story_style: cnc_classic, tone: military_thriller | 0.9 | Direct style reference |
-  | "short" / "quick" / "one evening" | campaign_length: 8 | 0.8 | Length signal |
-  | "epic" / "long" / "saga" / "massive" | campaign_length: 32 | 0.8 | Length signal |
-  | "betrayal" / "traitor" / "double agent" | moral_complexity: high, branching_density: high | 0.7 | Narrative complexity signal |
-  | "survival" / "desperate" / "last stand" / "holdout" | mission_variety: defense_heavy, resource_level: scarce, difficulty_curve: escalating | 0.8 | Mission type signal |
-  | "conquest" / "domination" / "world war" | campaign_length: 0 (open-ended), theater: global | 0.7 | Scale signal |
-  | "stealth" / "covert" / "behind enemy lines" | mission_variety: stealth_heavy, tone: espionage | 0.8 | Gameplay style signal |
-  | "horror" / "alien" / "supernatural" / "Yuri" | story_style: pulp_sci_fi, moral_complexity: medium | 0.6 | Thematic signal |
-  | Named character described in detail | named_character_count: +1, character → narrative_seed | 0.9 | Explicit character signal |
-  | "no base building" / "commando" / "special forces" | mission_variety: stealth_heavy, resource_level: scarce | 0.7 | Gameplay constraint signal |
-  | "build up" / "turtle" / "economy" / "tech rush" | resource_level: abundant, mission_variety: assault_heavy | 0.6 | Playstyle preference signal |
+  | Signal                                                  | → Parameters                                                                         | Confidence | Why                                 |
+  | ------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------- | ----------------------------------- |
+  | "redemption" / "disgraced" / "fallen" / "second chance" | difficulty: escalating, resource_level: scarce, moral_complexity: medium             | 0.8        | Redemption arcs start from weakness |
+  | "Eastern Front" / "Stalingrad" / "Moscow" / "Berlin"    | theater: arctic or european, faction: soviet (if not stated)                         | 0.7        | Historical theater mapping          |
+  | "Pacific" / "island hopping" / "naval" / "fleet"        | theater: pacific, mission_variety: naval_heavy                                       | 0.9        | Naval domain signal                 |
+  | "espionage" / "spy" / "infiltration" / "undercover"     | tone: espionage, story_style: political_thriller, mission_variety: stealth_heavy     | 0.8        | Genre signal                        |
+  | "brutal" / "hard" / "punishing" / "dark souls"          | difficulty_curve: brutal, resource_level: scarce                                     | 0.9        | Direct difficulty signal            |
+  | "fun" / "crazy" / "over the top" / "wacky"              | story_style: pulp_sci_fi, moral_complexity: low                                      | 0.7        | Tone signal                         |
+  | "like Red Alert" / "classic C&C" / "feels like RA"      | story_style: cnc_classic, tone: military_thriller                                    | 0.9        | Direct style reference              |
+  | "short" / "quick" / "one evening"                       | campaign_length: 8                                                                   | 0.8        | Length signal                       |
+  | "epic" / "long" / "saga" / "massive"                    | campaign_length: 32                                                                  | 0.8        | Length signal                       |
+  | "betrayal" / "traitor" / "double agent"                 | moral_complexity: high, branching_density: high                                      | 0.7        | Narrative complexity signal         |
+  | "survival" / "desperate" / "last stand" / "holdout"     | mission_variety: defense_heavy, resource_level: scarce, difficulty_curve: escalating | 0.8        | Mission type signal                 |
+  | "conquest" / "domination" / "world war"                 | campaign_length: 0 (open-ended), theater: global                                     | 0.7        | Scale signal                        |
+  | "stealth" / "covert" / "behind enemy lines"             | mission_variety: stealth_heavy, tone: espionage                                      | 0.8        | Gameplay style signal               |
+  | "horror" / "alien" / "supernatural" / "Yuri"            | story_style: pulp_sci_fi, moral_complexity: medium                                   | 0.6        | Thematic signal                     |
+  | Named character described in detail                     | named_character_count: +1, character → narrative_seed                                | 0.9        | Explicit character signal           |
+  | "no base building" / "commando" / "special forces"      | mission_variety: stealth_heavy, resource_level: scarce                               | 0.7        | Gameplay constraint signal          |
+  | "build up" / "turtle" / "economy" / "tech rush"         | resource_level: abundant, mission_variety: assault_heavy                             | 0.6        | Playstyle preference signal         |
 
   ## Output Format
 
@@ -2699,12 +2703,12 @@ user: |
 
 The Intent Interpreter uses D047's prompt strategy profiles like any other LLM call:
 
-| Profile | Adaptation |
-|---|---|
-| `CloudRich` | Full heuristic table in system prompt, detailed JSON output, multi-paragraph explanations |
-| `LocalCompact` | Shortened heuristic table (top 10 most common signals), simplified JSON (no explanations), lower token budget |
-| `LocalStructured` | JSON-mode only output, no narrative seeds (those are generated in a separate follow-up call if the model is too small for combined output) |
-| `LocalStepwise` | Step 1: extract explicit facts. Step 2: infer parameters from context. Step 3: generate narrative seeds. Three small calls instead of one large one. |
+| Profile           | Adaptation                                                                                                                                           |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CloudRich`       | Full heuristic table in system prompt, detailed JSON output, multi-paragraph explanations                                                            |
+| `LocalCompact`    | Shortened heuristic table (top 10 most common signals), simplified JSON (no explanations), lower token budget                                        |
+| `LocalStructured` | JSON-mode only output, no narrative seeds (those are generated in a separate follow-up call if the model is too small for combined output)           |
+| `LocalStepwise`   | Step 1: extract explicit facts. Step 2: infer parameters from context. Step 3: generate narrative seeds. Three small calls instead of one large one. |
 
 ### Fallback: No LLM Available for Interpretation
 
@@ -2718,19 +2722,19 @@ Narrative seeds are creative guidance extracted from the user's natural language
 
 ### Seed Types
 
-| Type | Purpose | Example |
-|---|---|---|
-| `protagonist_archetype` | Who the player character is — personality, history, motivation | "Disgraced colonel seeking redemption" |
-| `starting_situation` | Where the story begins — context, constraints, stakes | "Given a suicide mission nobody expects to succeed" |
-| `arc_shape` | The overall narrative trajectory | "Fall → proving ground → vindication" |
-| `character_suggestion` | A named or unnamed character the user wants in the story | "Loyal sergeant who followed the colonel into disgrace" |
-| `thematic_tension` | A dramatic question the campaign should explore | "Redemption vs. revenge" |
-| `narrative_thread` | A specific plot thread to weave through the campaign | "A mole inside the protagonist's unit" |
-| `geographic_context` | Setting details beyond the `theater` parameter | "Eastern Front, harsh winter, long supply lines" |
-| `historical_inspiration` | Real history or fiction the user wants the campaign to evoke | "Based on Operation Barbarossa" or "Like Band of Brothers" |
-| `tone_modifier` | Adjustments to the story style preset | "But with dark humor" or "More personal, less political" |
-| `gameplay_constraint` | Gameplay rules the user wants enforced | "No base building for the first 5 missions" or "Always outnumbered" |
-| `custom_constraint` | Anything else that doesn't fit the above types | Catch-all for unique user requests |
+| Type                     | Purpose                                                        | Example                                                             |
+| ------------------------ | -------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `protagonist_archetype`  | Who the player character is — personality, history, motivation | "Disgraced colonel seeking redemption"                              |
+| `starting_situation`     | Where the story begins — context, constraints, stakes          | "Given a suicide mission nobody expects to succeed"                 |
+| `arc_shape`              | The overall narrative trajectory                               | "Fall → proving ground → vindication"                               |
+| `character_suggestion`   | A named or unnamed character the user wants in the story       | "Loyal sergeant who followed the colonel into disgrace"             |
+| `thematic_tension`       | A dramatic question the campaign should explore                | "Redemption vs. revenge"                                            |
+| `narrative_thread`       | A specific plot thread to weave through the campaign           | "A mole inside the protagonist's unit"                              |
+| `geographic_context`     | Setting details beyond the `theater` parameter                 | "Eastern Front, harsh winter, long supply lines"                    |
+| `historical_inspiration` | Real history or fiction the user wants the campaign to evoke   | "Based on Operation Barbarossa" or "Like Band of Brothers"          |
+| `tone_modifier`          | Adjustments to the story style preset                          | "But with dark humor" or "More personal, less political"            |
+| `gameplay_constraint`    | Gameplay rules the user wants enforced                         | "No base building for the first 5 missions" or "Always outnumbered" |
+| `custom_constraint`      | Anything else that doesn't fit the above types                 | Catch-all for unique user requests                                  |
 
 ### YAML Format
 
@@ -2803,13 +2807,13 @@ The skeleton generator treats narrative seeds as **strong suggestions, not const
 
 ### Narrative Seeds vs. Custom Instructions
 
-| | Narrative Seeds | Custom Instructions |
-|---|---|---|
-| **Source** | Extracted by Intent Interpreter from natural language | Typed directly in Advanced parameters text field |
-| **Structure** | Typed (seed_type, content, related_characters) | Freeform string |
-| **Prompt placement** | `creative_direction` block (structured) | `custom_instructions` field (appended raw) |
-| **Override behavior** | Seeds are suggestions the LLM can adapt | Custom instructions are directives the LLM should follow |
-| **Coexistence** | Both can be present simultaneously | Both can be present simultaneously |
+|                       | Narrative Seeds                                       | Custom Instructions                                      |
+| --------------------- | ----------------------------------------------------- | -------------------------------------------------------- |
+| **Source**            | Extracted by Intent Interpreter from natural language | Typed directly in Advanced parameters text field         |
+| **Structure**         | Typed (seed_type, content, related_characters)        | Freeform string                                          |
+| **Prompt placement**  | `creative_direction` block (structured)               | `custom_instructions` field (appended raw)               |
+| **Override behavior** | Seeds are suggestions the LLM can adapt               | Custom instructions are directives the LLM should follow |
+| **Coexistence**       | Both can be present simultaneously                    | Both can be present simultaneously                       |
 
 When both exist, custom instructions take priority over conflicting narrative seeds (following the override priority in D016 § Step 1b).
 
@@ -2817,11 +2821,11 @@ When both exist, custom instructions take priority over conflicting narrative se
 
 ## Cross-References
 
-| Decision / Doc | Relationship |
-|---|---|
+| Decision / Doc                    | Relationship                                                                                                                                                                |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **D016** (LLM-Generated Missions) | Primary design source. Schemas in this document implement D016's generation pipeline, campaign skeleton, battle report, validation pass, and Intent Interpreter (§§ 13–14). |
-| **D021** (Branching Campaigns) | Output format. All generated content is standard D021 — YAML campaign graph, mission nodes, named outcomes, story flags, roster carryover. |
-| **D042** (Behavioral Profiles) | Coaching prompt template (Section 10) consumes `PlayerStyleProfile` data. Player tendencies feed into mission generation prompts. |
-| **D044** (LLM-Enhanced AI) | Orchestrator serialization (Section 9) implements D044's `StrategicPlan` response schema and game state serialization for `LlmOrchestratorAi`. |
-| **D047** (LLM Configuration) | Prompt Strategy Profile integration (Section 11) implements D047's `PromptStrategyProfile` system — CloudRich vs. LocalCompact template adaptation. |
-| **04-MODDING.md** (Lua API) | Trigger API surface (Section 5) is a subset of the Lua API defined in 04-MODDING.md. LLM-generated Lua uses only sandboxed functions. |
+| **D021** (Branching Campaigns)    | Output format. All generated content is standard D021 — YAML campaign graph, mission nodes, named outcomes, story flags, roster carryover.                                  |
+| **D042** (Behavioral Profiles)    | Coaching prompt template (Section 10) consumes `PlayerStyleProfile` data. Player tendencies feed into mission generation prompts.                                           |
+| **D044** (LLM-Enhanced AI)        | Orchestrator serialization (Section 9) implements D044's `StrategicPlan` response schema and game state serialization for `LlmOrchestratorAi`.                              |
+| **D047** (LLM Configuration)      | Prompt Strategy Profile integration (Section 11) implements D047's `PromptStrategyProfile` system — CloudRich vs. LocalCompact template adaptation.                         |
+| **04-MODDING.md** (Lua API)       | Trigger API surface (Section 5) is a subset of the Lua API defined in 04-MODDING.md. LLM-generated Lua uses only sandboxed functions.                                       |

@@ -99,7 +99,8 @@ Related decisions: D012, D041
 | `ic-render`   | Bevy isometric map/sprite renderer, camera, fog rendering                                      | 1     |
 | `ic-ui`       | Game UI and chrome (Bevy UI), sidebar, power bar, selection, menus                             | 3–4   |
 | `ic-audio`    | Sound, music, EVA via Kira backend                                                             | 3     |
-| `ic-net`      | `NetworkModel` implementations, `RelayCore` library, `ic-server` binary                        | 5     |
+| `ic-net`      | `NetworkModel` implementations, `RelayCore` library                                            | 5     |
+| `ic-server`   | Unified server binary (D074): relay + optional headless sim for FogAuth/cross-engine           | 5     |
 | `ic-script`   | Lua (`mlua`) and WASM (`wasmtime`) mod runtimes, deterministic sandbox                         | 4–5   |
 | `ic-ai`       | Skirmish AI (`PersonalityDrivenAi`), adaptive difficulty, economy/production/military managers | 4–6   |
 | `ic-llm`      | LLM integration for adaptive missions, briefings, coaching (D016, D044, D073)                  | 6+    |
@@ -109,7 +110,8 @@ Related decisions: D012, D041
 **Critical crate boundaries:**
 
 - `ic-sim` never imports `ic-net`, `ic-render`, `ic-ui`, `ic-audio`, `ic-editor`
-- `ic-net` never imports `ic-sim`
+- `ic-net` library never imports `ic-sim`
+- `ic-server` is a top-level binary (like `ic-game`) that depends on `ic-net` for RelayCore and optionally `ic-sim` for FogAuth/relay-headless (D074)
 - `ic-sim` and `ic-net` share only `ic-protocol`
 - `ic-game` never imports `ic-editor` (separate binaries, shared libraries)
 - `ic-sim` never reads/writes SQLite directly

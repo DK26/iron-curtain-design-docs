@@ -16,24 +16,27 @@ These exist from Phase 0, day one, in separate repositories (D076). They have ze
 ic-protocol  (shared types: PlayerOrder, TimestampedOrder)
     ↑         (depends on: fixed-game-math)
     ├── ic-sim      (depends on: ic-protocol, ra-formats, fixed-game-math, deterministic-rng, bevy_ecs [public])
-    ├── ic-net      (depends on: ic-protocol; contains RelayCore library + ic-server binary)
+    ├── ic-net      (depends on: ic-protocol; contains RelayCore library — no ic-sim dependency)
     ├── ra-formats  (wraps cnc-formats + EA-derived constants — .mix, .shp, .pal, YAML)
     ├── ic-render   (depends on: ic-sim for reading state)
     ├── ic-ui       (depends on: ic-sim, ic-render; reads SQLite for player analytics — D034)
     ├── ic-audio    (depends on: ra-formats)
     ├── ic-script   (depends on: ic-sim, ic-protocol)
-    ├── ic-ai       (depends on: ic-sim, ic-protocol; reads SQLite for adaptive difficulty — D034)
-    ├── ic-llm      (depends on: ic-sim, ic-script, ic-protocol; reads SQLite for personalization — D034)
-    ├── ic-paths    (standalone — platform path resolution, portable mode; wraps `app-path` crate)
+    ├── ic-ai       (depends on: ic-sim, ic-protocol, ic-llm; reads SQLite for adaptive difficulty — D034; contains LlmOrchestratorAi/LlmPlayerAi — D044)
+    ├── ic-llm      (standalone — LlmProvider trait, prompt infra, skill library; embeds candle-core/candle-transformers/tokenizers for Tier 1 CPU inference — D047; no ic-sim, no ic-ai imports)
+    ├── ic-paths    (standalone — platform path resolution, portable mode, credential store; wraps `app-path` + `strict-path` + `keyring` + `aes-gcm` + `argon2` + `zeroize` crates)
     ├── ic-editor   (depends on: ic-render, ic-sim, ic-ui, ic-protocol, ra-formats, ic-paths; SDK binary — D038+D040)
     └── ic-game     (depends on: everything above EXCEPT ic-editor)
+
+ic-server (top-level binary; depends on: ic-net for RelayCore, ic-protocol, ic-paths;
+           optionally ic-sim for FogAuth/relay-headless deployments — D074)
 ```
 
-**Critical boundary:** `ic-sim` never imports from `ic-net`. `ic-net` never imports from `ic-sim`. They only share `ic-protocol`. `ic-game` never imports from `ic-editor` — the game and SDK are separate binaries that share library crates.
+**Critical boundary:** `ic-sim` never imports from `ic-net`. The `ic-net` **library crate** (`RelayCore`, `NetworkModel` trait) never imports from `ic-sim`. They only share `ic-protocol`. `ic-server` is a top-level binary (like `ic-game`) that may depend on both `ic-net` and `ic-sim` — this does not violate the library-level boundary. `ic-game` never imports from `ic-editor` — the game and SDK are separate binaries that share library crates.
 
 **Bevy ECS dependency:** `ic-sim` depends on `bevy_ecs` as a **public** dependency — `Simulation` wraps a Bevy `World`, and the `GameModule` trait exposes `&mut World` in `register_components()` and returns `Box<dyn System>` from `system_pipeline()`. Callers (`ic-game`, `ic-editor`, `ic-render`) already depend on Bevy directly, so the leaked types create no additional coupling. `ic-net` and `ic-protocol` have zero Bevy dependency.
 
-**Storage boundary:** `ic-sim` never reads or writes SQLite (invariant #1). Three crates are read-only consumers of the client-side SQLite database: `ic-ui` (post-game stats, career page, campaign dashboard), `ic-llm` (personalized missions, adaptive briefings, coaching), `ic-ai` (difficulty scaling, counter-strategy selection). Gameplay events are written by a Bevy observer system in `ic-game`, outside the deterministic sim. See D034 in `decisions/09e-community.md`.
+**Storage boundary:** `ic-sim` never reads or writes SQLite (invariant #1). Three crates are read-only consumers of the client-side SQLite database: `ic-ui` (post-game stats, career page, campaign dashboard), `ic-ai` (difficulty scaling, counter-strategy selection, personalized missions via `ic-llm` providers, coaching), `ic-llm` (model pack state, provider config, skill library). Gameplay events are written by a Bevy observer system in `ic-game`, outside the deterministic sim. See D034 in `decisions/09e-community.md`.
 
 ### Binary Architecture: GUI-First Design
 
@@ -43,7 +46,7 @@ The crate graph produces four ship binaries. Each targets a distinct audience wi
 | -------------------- | ------------------------- | ------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `iron-curtain[.exe]` | `ic-game`                 | **GUI application** | Players                    | The game. Launches into a windowed/fullscreen menu with mouse/touch/controller interaction. Players never see a terminal.                                  |
 | `ic-editor[.exe]`    | `ic-editor`               | **GUI application** | Modders, map makers        | The SDK. Visual scenario editor, asset studio, campaign editor (D038+D040).                                                                                |
-| `ic-server[.exe]`    | `ic-net`                  | **CLI / daemon**    | Server operators           | Headless dedicated/relay server. Designed for systemd, Docker, and unattended operation. No window, no renderer.                                           |
+| `ic-server[.exe]`    | `ic-server`               | **CLI / daemon**    | Server operators           | Headless dedicated/relay server. Designed for systemd, Docker, and unattended operation. No window, no renderer.                                           |
 | `ic[.exe]`           | `ic-game` (feature-gated) | **CLI tool**        | Modders, CI/CD, developers | Developer/modder utility. `ic mod check`, `ic mod publish`, `ic replay validate`, `ic server validate-config`. Analogous to OpenRA's `OpenRA.Utility.exe`. |
 
 **GUI-first principle:** The game client (`iron-curtain`) is a GUI application — not a CLI tool with a GUI bolted on. Players interact through menus, buttons, and mouse clicks. CLI flags on the game binary (`--windowed`, `--mod mymod`, `--portable`) are **launch parameters** (the same kind every game accepts), not a "CLI mode." The game never requires a terminal to play.
@@ -577,6 +580,8 @@ pub struct WasmInstance {
 
 `ic-paths` is the single crate responsible for resolving all filesystem paths the engine uses at runtime: the player data directory (D061), log directory, mod search paths, and install-relative asset paths. Every other crate that needs a filesystem location imports from `ic-paths` — no crate resolves platform paths on its own.
 
+`ic-paths` also owns the `CredentialStore` — the three-tier credential protection system that encrypts sensitive SQLite columns (OAuth tokens, API keys) with AES-256-GCM. The DEK (Data Encryption Key) is protected by OS keyring (Tier 1, via `keyring` crate), user vault passphrase with Argon2id KDF (Tier 2), or held session-only in memory (Tier 3, WASM). All crates that handle secrets (`ic-llm`, `ic-net`, `ic-game`) import `CredentialStore` from `ic-paths`. See `research/credential-protection-design.md` for the full design and V61 in `06-SECURITY.md` for the threat model.
+
 **Two modes:**
 
 | Mode                   | Resolution strategy                                                 | Use case                                                                                    |
@@ -606,6 +611,27 @@ pub struct AppDirs {
 
 pub enum PathMode { Platform, Portable }
 ```
+
+**Path boundary integration:** `AppDirs` resolves *where* directories live; `strict-path` `PathBoundary` enforces that untrusted paths stay *within* them. Callers that handle untrusted input (archive extraction, mod file references, save loading) must create a `PathBoundary` from the relevant `AppDirs` field before performing I/O. Convenience methods provide pre-built boundaries for common cases:
+
+```rust
+impl AppDirs {
+    /// PathBoundary for save directory — save game loading is sandboxed here.
+    pub fn save_boundary(&self) -> Result<PathBoundary, strict_path::Error> {
+        PathBoundary::new(self.data_dir.join("saves"))
+    }
+    /// PathBoundary for mod directory — mod file references are sandboxed here.
+    pub fn mod_boundary(&self, mod_id: &ModId) -> Result<PathBoundary, strict_path::Error> {
+        PathBoundary::new(self.data_dir.join("mods").join(mod_id.as_ref()))
+    }
+    /// PathBoundary for replay cache — embedded resource extraction is sandboxed here.
+    pub fn replay_cache_boundary(&self) -> Result<PathBoundary, strict_path::Error> {
+        PathBoundary::new(self.cache_dir.join("replay-resources"))
+    }
+}
+```
+
+See `06-SECURITY.md` § Path Security Infrastructure for the full integration table.
 
 **Additional override:** `--data-dir <path>` CLI flag overrides the data directory location regardless of mode. This is useful for developers running multiple profiles or testing with different data sets. If `--data-dir` is set, `PathMode` is still reported as `Platform` or `Portable` based on the detection above — the override only changes `data_dir`, not the mode label.
 

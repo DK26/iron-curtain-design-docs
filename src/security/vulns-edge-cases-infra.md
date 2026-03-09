@@ -260,6 +260,55 @@ This vulnerability is **not fully closable** in lockstep architecture without se
 
 **Phase:** Documentation only (no implementation change). Observer delay (V59) and fog-authoritative server provide the practical mitigations.
 
+## Vulnerability 61: Local Credential Theft from SQLite Databases
+
+### The Problem
+
+**Severity: HIGH**
+
+Iron Curtain is open source — the database schema, file paths, and storage format are public knowledge. An attacker who gains same-user filesystem access (malware, physical access to an unlocked machine, shared PC, stolen backup archive) can:
+
+1. Read `profile.db` and extract OAuth tokens, refresh tokens, and API keys from known columns
+2. Use stolen OAuth refresh tokens to mint new access tokens indefinitely, incurring billing on the victim's LLM provider account
+3. Copy `keys/identity.key` and attempt to brute-force a weak passphrase to impersonate the player
+
+This is not theoretical — credential-stealing malware targeting open-source applications with known file layouts is well-documented (browser password DBs, Discord token files, SSH private keys).
+
+### Defense
+
+**Three-tier `CredentialStore` with mandatory encryption at rest:**
+
+IC never stores sensitive credentials as plaintext in SQLite. All credential columns (`api_key`, `oauth_token`, `oauth_refresh_token`) contain AES-256-GCM encrypted BLOBs. The Data Encryption Key (DEK) is protected by a tiered system:
+
+| Tier                  | Environment                                   | DEK Protection                                                                                               | User Experience                |
+| --------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------ |
+| **Tier 1** (primary)  | Desktop with OS keyring                       | DEK stored in OS credential store: Windows DPAPI, macOS Keychain, Linux Secret Service (via `keyring` crate) | Transparent — no extra prompts |
+| **Tier 2** (fallback) | Headless Linux, containers, portable installs | DEK derived from user-provided vault passphrase via Argon2id (t=3, m=64MiB, p=1)                             | Prompted once per session      |
+| **Tier 3** (WASM)     | Browser builds                                | Session-only — secrets not persisted to storage                                                              | Re-enter each session          |
+
+**Critical design choice:** There is no "silent" machine-derived key fallback. The previous `derive_machine_key()` approach (MAC address + username + fixed salt → PBKDF2) is **security theater** in an open-source project — same-user malware can reproduce it. If no OS keyring is available, the user must explicitly set a vault passphrase. If they decline, LLM credentials are not persisted.
+
+**Additional protections:**
+- **Memory zeroization:** Decrypted secrets use `Zeroizing<T>` wrappers (`zeroize` crate, RustCrypto) — memory is overwritten on drop
+- **Per-value encryption:** Individual SQLite columns encrypted (not whole-database SQLCipher), allowing non-sensitive data to remain readable without the DEK
+- **AAD binding:** Each encrypted blob includes Associated Authenticated Data (table + column + row ID), preventing column/row swapping attacks
+- **Export prohibition:** API keys and tokens are never included in Workshop config exports, `ic llm export`, or telemetry
+- **Backup safety:** Encrypted columns remain encrypted in `ic backup create` ZIPs (DEK is not in the backup)
+- **Identity key independence:** Ed25519 private key has its own AEAD encryption with user passphrase (BIP-39 derivation path, independent of the LLM credential DEK)
+
+**Decryption failure recovery:** If the DEK is unavailable (new machine, keyring cleared, forgotten vault passphrase) or an encrypted blob is corrupted, the affected providers are flagged as needing attention. The player sees a non-blocking banner — "Some AI features need your attention" — only when they actually trigger an LLM-gated action, not at game launch (Progressive Disclosure). The banner offers [Fix Now →] (opens affected provider's credential form — all non-sensitive settings preserved), [Use Built-in AI] (silent Tier 1 fallback for the session), or [Not Now] (dismiss with anti-nag suppression). In Settings → LLM, affected providers show ⚠ badges with [Sign In] buttons. A no-dead-end guidance panel (UX Principle #3) appears when the player triggers a feature whose assigned provider is broken, offering direct resolution paths instead of opaque error strings. Vault passphrase reset is available through UI (Settings → Data → Security → [Reset Vault Passphrase]) in addition to the `/vault reset` console command. Credentials fail-safe to "re-enter" rather than fail-open to "exposed" or fail-hard to "unusable." See `research/credential-protection-design.md` § Decryption Failure Recovery for the full UX spec.
+
+**Honest limitations:**
+- Same-user malware with OS keyring access can still retrieve the DEK (this is true for ALL desktop applications — Chrome, VS Code, Git Credential Manager)
+- Tier 2 is only as strong as the vault passphrase. Argon2id makes brute-forcing expensive but not impossible for weak passphrases
+- Swap file / hibernation may page decrypted secrets to disk. Mitigation: full-disk encryption (user's responsibility)
+
+The credential store raises the bar from "copy a file" to "execute code as the user on a running session" — a meaningful improvement against the most common attack vectors (disk theft, backup theft, casual snooping, most credential-stealing malware).
+
+**Cross-reference:** `research/credential-protection-design.md` (full design spec), D047 (LLM credential schema), D052 (`keys/identity.key` encryption), D061 (backup credential safety), D034 (SQLite storage, `vault_meta` table).
+
+**Phase:** `CredentialStore` implementation in `ic-paths` is Phase 2 (M2). LLM credential encryption is Phase 7 (M11). Vault passphrase CLI is Phase 2 (M2).
+
 ## Path Security Infrastructure
 
 All path operations involving untrusted input — archive extraction, save game loading, mod file references, Workshop package installation, replay resource extraction, YAML asset paths — require boundary-enforced path handling that defends against more than `..` sequences.
@@ -277,19 +326,22 @@ The [`strict-path`](https://github.com/DK26/strict-path-rs) crate (MIT/Apache-2.
 
 **Integration points across Iron Curtain:**
 
-| Component                            | Use Case                                            | `strict-path` Type |
-| ------------------------------------ | --------------------------------------------------- | ------------------ |
-| `ra-formats` (`.oramap` extraction)  | Sandbox extracted map files to map directory        | `PathBoundary`     |
-| Workshop (`.icpkg` extraction)       | Prevent Zip Slip during package installation (D030) | `PathBoundary`     |
-| Save game loading                    | Restrict save file access to save directory         | `PathBoundary`     |
-| Replay resource extraction           | Sandbox embedded resources to cache (V41)           | `PathBoundary`     |
-| WASM `ic_format_read_bytes`          | Enforce mod's allowed file read scope               | `PathBoundary`     |
-| Mod file references (`mod.yaml`)     | Ensure mod paths don't escape mod root              | `PathBoundary`     |
-| YAML asset paths (icon, sprite refs) | Validate asset paths within content directory (V33) | `PathBoundary`     |
+| Component                              | Use Case                                               | `strict-path` Type |
+| -------------------------------------- | ------------------------------------------------------ | ------------------ |
+| `ra-formats` (`.oramap` extraction)    | Sandbox extracted map files to map directory           | `PathBoundary`     |
+| `ra-formats` (`.meg` extraction)       | Sandbox Remastered MEG entries to mod directory (D075) | `PathBoundary`     |
+| Workshop (`.icpkg` extraction)         | Prevent Zip Slip during package installation (D030)    | `PathBoundary`     |
+| `p2p-distribute` (torrent file writes) | Sandbox downloaded content to torrent directory (D076) | `PathBoundary`     |
+| Save game loading                      | Restrict save file access to save directory            | `PathBoundary`     |
+| Backup restore (ZIP extraction)        | Sandbox backup extraction to `<data_dir>` (D061)       | `PathBoundary`     |
+| Replay resource extraction             | Sandbox embedded resources to cache (V41)              | `PathBoundary`     |
+| WASM `ic_format_read_bytes`            | Enforce mod's allowed file read scope                  | `PathBoundary`     |
+| Mod file references (`mod.yaml`)       | Ensure mod paths don't escape mod root                 | `PathBoundary`     |
+| YAML asset paths (icon, sprite refs)   | Validate asset paths within content directory (V33)    | `PathBoundary`     |
 
 This supersedes naive string-based checks like `path.contains("..")` (see V33) which miss symlinks, Windows 8.3 short names, NTFS ADS, encoding tricks, and race conditions. `strict-path`'s compile-time marker types (`PathBoundary` vs `VirtualRoot`) provide domain separation — a path validated for one boundary cannot be accidentally used for another.
 
-**Adoption strategy:** `strict-path` is integrated as a dependency of `ra-formats` (archive extraction), `ic-game` (save/load, replay extraction), and `ic-script` (WASM file access scope). All public APIs that accept filesystem paths from untrusted sources take `StrictPath<PathBoundary>` instead of `std::path::Path`.
+**Adoption strategy:** `strict-path` is integrated as a dependency of `ra-formats` (archive extraction including `.oramap` and `.meg`), `ic-game` (save/load, replay extraction, backup restore), `ic-script` (WASM file access scope), and `p2p-distribute` (torrent file path validation — D076 standalone crate). `ic-paths` provides convenience methods (`AppDirs::save_boundary()`, `AppDirs::mod_boundary()`, etc.) that produce `PathBoundary` instances from resolved platform directories. All public APIs that accept filesystem paths from untrusted sources take `StrictPath<PathBoundary>` instead of `std::path::Path`.
 
 ## Competitive Integrity Summary
 
