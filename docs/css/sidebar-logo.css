@@ -1,8 +1,8 @@
 .sidebar .sidebar-scrollbox::before {
     content: "";
     display: block;
-    width: 120px;
-    height: 120px;
-    margin: 16px auto;
-    background: url("../images/logo.png") no-repeat center / contain;
+    width: 100%;
+    padding-bottom: 50%;
+    background: url("../images/logo.png") no-repeat center / 100% 100%;
+    flex-shrink: 0;
 }
