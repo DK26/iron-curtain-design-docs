@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-9adfe301.js"></script>
@@ -226,7 +226,7 @@
                  │
                  ▼
   ┌─────────────────────────────────────────────────────────────────┐
-  │ Add discovered resources as dependencies in generated mod.yaml │
+  │ Add discovered resources as dependencies in generated mod.toml │
   │ → Allow resources added directly                                │
   │ → MetadataOnly resources shown as suggestions in editor UI     │
   │ → Dependencies resolved at install time via `ic mod install`   │
@@ -273,42 +273,47 @@ priority = 3
 <h3 id="modpacks-as-first-class-workshop-resources-d030"><a class="header" href="#modpacks-as-first-class-workshop-resources-d030">Modpacks as First-Class Workshop Resources (D030)</a></h3>
 <p>A <strong>modpack</strong> is a Workshop resource that bundles a curated set of mods with pinned versions, load order, and configuration — published as a single installable resource. This is the lesson from Minecraft’s CurseForge and Modrinth: modpacks solve the three hardest problems in modding ecosystems — discovery (“what mods should I use?”), compatibility (“do these mods work together?”), and onboarding (“how do I install all of this?”).</p>
 <p><strong>Modpacks are published snapshots of mod profiles (D062).</strong> Curators build and test mod profiles locally (<code>ic profile save</code>, <code>ic profile inspect</code>, <code>ic profile diff</code>), then publish the working result via <code>ic mod publish-profile</code>. Workshop modpacks import as local profiles via <code>ic profile import</code>. This makes the curator workflow reproducible — no manual reconstruction of the mod configuration each session.</p>
-<pre><code class="language-yaml"># mod.yaml for a modpack
-mod:
-  id: alice/red-apocalypse-pack
-  title: "Red Apocalypse Complete Experience"
-  version: "2.1.0"
-  authors: ["alice"]
-  description: "A curated collection of 12 mods for an enhanced RA1 experience"
-  license: "CC0-1.0"
-  category: Modpack                    # distinct category from Mod
+<pre><code class="language-toml"># mod.toml for a modpack
+[mod]
+id = "alice/red-apocalypse-pack"
+title = "Red Apocalypse Complete Experience"
+version = "2.1.0"
+authors = ["alice"]
+description = "A curated collection of 12 mods for an enhanced RA1 experience"
+license = "CC0-1.0"
+category = "Modpack"    # distinct category from Mod
 
-engine:
-  version: "^0.5.0"
-  game_module: "ra1"
+[engine]
+version = "^0.5.0"
+game_module = "ra1"
 
 # Modpack-specific: list of mods with pinned versions and load order
-modpack:
-  mods:
-    - id: "bob/hd-sprites"
-      version: "=2.1.0"               # exact pin — tested with this version
-    - id: "carol/economy-overhaul"
-      version: "=1.4.2"
-    - id: "dave/ai-improvements"
-      version: "=3.0.1"
-    - id: "alice/tank-rebalance"
-      version: "=1.1.0"
+[[modpack.mods]]
+id = "bob/hd-sprites"
+version = "=2.1.0"    # exact pin — tested with this version
 
-  # Explicit conflict resolutions (if any)
-  conflicts:
-    - unit: heavy_tank
-      field: health.max
-      use_mod: "alice/tank-rebalance"
+[[modpack.mods]]
+id = "carol/economy-overhaul"
+version = "=1.4.2"
 
-  # Configuration overrides applied after all mods load
-  config:
-    balance_preset: classic
-    qol_preset: iron_curtain
+[[modpack.mods]]
+id = "dave/ai-improvements"
+version = "=3.0.1"
+
+[[modpack.mods]]
+id = "alice/tank-rebalance"
+version = "=1.1.0"
+
+# Explicit conflict resolutions (if any)
+[[modpack.conflicts]]
+unit = "heavy_tank"
+field = "health.max"
+use_mod = "alice/tank-rebalance"
+
+# Configuration overrides applied after all mods load
+[modpack.config]
+balance_preset = "classic"
+qol_preset = "iron_curtain"
 </code></pre>
 <p><strong>Why modpacks matter:</strong></p>
 <ul>

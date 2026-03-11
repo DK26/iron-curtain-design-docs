@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-9adfe301.js"></script>
@@ -375,20 +375,13 @@ Example: alice/soviet-march-music@1.2.0
 <li><strong>Name</strong> = resource name, lowercase with hyphens</li>
 <li><strong>Version</strong> = semantic versioning (semver)</li>
 </ul>
-<h4 id="dependency-declaration-in-modyaml"><a class="header" href="#dependency-declaration-in-modyaml">Dependency Declaration in <code>mod.yaml</code></a></h4>
+<h4 id="dependency-declaration-in-modtoml"><a class="header" href="#dependency-declaration-in-modtoml">Dependency Declaration in <code>mod.toml</code></a></h4>
 <p>Mods and resources declare dependencies on other Workshop resources:</p>
-<pre><code class="language-yaml"># mod.yaml
-dependencies:
-  - id: "community-project/hd-infantry-sprites"
-    version: "^2.0"                    # semver range (cargo-style)
-    source: workshop                   # workshop | local | url
-  - id: "alice/soviet-march-music"
-    version: "&gt;=1.0, &lt;3.0"
-    source: workshop
-    optional: true                     # soft dependency — mod works without it
-  - id: "bob/desert-terrain-textures"
-    version: "~1.4"                    # compatible with 1.4.x
-    source: workshop
+<pre><code class="language-toml"># mod.toml
+[dependencies]
+"community-project/hd-infantry-sprites" = { version = "^2.0", source = "workshop" }
+"alice/soviet-march-music" = { version = "&gt;=1.0, &lt;3.0", source = "workshop", optional = true }
+"bob/desert-terrain-textures" = { version = "~1.4", source = "workshop" }
 </code></pre>
 <p>Dependencies are <strong>transitive</strong> — if resource A depends on B, and B depends on C, installing A pulls all three.</p>
 <h4 id="dependency-resolution"><a class="header" href="#dependency-resolution">Dependency Resolution</a></h4>
@@ -415,7 +408,7 @@ dependencies:
 ic mod install         # download all dependencies to local cache (verifies SHA-256)
 ic mod update          # update deps to latest compatible versions (respects semver)
 ic mod tree            # display dependency tree (like `cargo tree`)
-ic mod lock            # regenerate ic.lock from current mod.yaml
+ic mod lock            # regenerate ic.lock from current mod.toml
 ic mod audit           # check dependency licenses for compatibility
 ic mod promote         # promote resource to a higher channel (beta → release)
 ic workshop export-bundle  # export selected resources as portable offline archive
@@ -447,9 +440,9 @@ $ ic mod audit
 </code></pre>
 <h4 id="license-system"><a class="header" href="#license-system">License System</a></h4>
 <p><strong>Every published Workshop resource MUST have a <code>license</code> field.</strong> Publishing without one is rejected by the Workshop server and by <code>ic mod publish</code>.</p>
-<pre><code class="language-yaml"># In mod.yaml
-mod:
-  license: "CC-BY-SA-4.0"             # SPDX identifier (required for publishing)
+<pre><code class="language-toml"># In mod.toml
+[mod]
+license = "CC-BY-SA-4.0"             # SPDX identifier (required for publishing)
 </code></pre>
 <ul>
 <li>Uses <a href="https://spdx.org/licenses/">SPDX identifiers</a> for machine-readable classification</li>
@@ -556,30 +549,30 @@ mod:
 <p>The command is the same in both phases — the backend is transparent to the modder.</p>
 <pre><code># Publish a single music track
 ic mod init asset-pack
-# Edit mod.yaml: set category to "Music", add license, add llm_meta
+# Edit mod.toml: set category to "Music", add license, add llm_meta
 # Add audio files
 ic mod check                   # validates license present, llm_meta recommended
 ic mod publish                 # Phase 0-3: uploads to GitHub Releases + opens PR to index
                                # Phase 5+:  uploads directly to Workshop server
 </code></pre>
-<pre><code class="language-yaml"># Example: publishing a music pack
-mod:
-  id: alice/soviet-march-music
-  title: "Soviet March — Original Composition"
-  version: "1.2.0"
-  authors: ["alice"]
-  description: "An original military march composition for Soviet faction missions"
-  license: "CC-BY-4.0"
-  category: Music
+<pre><code class="language-toml"># Example: publishing a music pack
+[mod]
+id = "alice/soviet-march-music"
+title = "Soviet March — Original Composition"
+version = "1.2.0"
+authors = ["alice"]
+description = "An original military march composition for Soviet faction missions"
+license = "CC-BY-4.0"
+category = "Music"
 
-assets:
-  media: ["audio/soviet-march.ogg"]
+[assets]
+media = ["audio/soviet-march.ogg"]
 
-llm:
-  summary: "Military march music, Soviet theme, 2:30 duration, orchestral"
-  purpose: "Background music for Soviet mission briefings or victory screens"
-  gameplay_tags: [soviet, military, march, orchestral, briefing]
-  composition_hints: "Pairs well with Soviet faction voice lines for immersive briefings"
+[llm]
+summary = "Military march music, Soviet theme, 2:30 duration, orchestral"
+purpose = "Background music for Soviet mission briefings or victory screens"
+gameplay_tags = ["soviet", "military", "march", "orchestral", "briefing"]
+composition_hints = "Pairs well with Soviet faction voice lines for immersive briefings"
 </code></pre>
 <h4 id="moderation--publisher-trust-d030"><a class="header" href="#moderation--publisher-trust-d030">Moderation &amp; Publisher Trust (D030)</a></h4>
 <blockquote>
@@ -599,7 +592,7 @@ llm:
 <ul>
 <li><strong>Scoped API tokens:</strong> <code>ic auth create-token --scope publish</code> generates a token limited to publish operations. Separate scopes: <code>publish</code>, <code>admin</code>, <code>readonly</code>. Tokens stored in <code>~/.ic/credentials.yaml</code> locally, or <code>IC_AUTH_TOKEN</code> env var in CI.</li>
 <li><strong>Non-interactive mode:</strong> <code>--non-interactive</code> flag skips all prompts (required for CI). <code>--json</code> flag returns structured output for pipeline parsing.</li>
-<li><strong>Lockfile verification in CI:</strong> <code>ic mod install --locked</code> fails if <code>ic.lock</code> doesn’t match <code>mod.yaml</code> — ensures reproducible builds.</li>
+<li><strong>Lockfile verification in CI:</strong> <code>ic mod install --locked</code> fails if <code>ic.lock</code> doesn’t match <code>mod.toml</code> — ensures reproducible builds.</li>
 <li><strong>Pre-publish validation:</strong> <code>ic mod check --strict</code> validates manifest, license, dependencies, SHA-256 integrity, and file format compliance before upload. Catch errors before hitting the server.</li>
 </ul>
 <h4 id="platform-targeted-releases"><a class="header" href="#platform-targeted-releases">Platform-Targeted Releases</a></h4>

@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -203,6 +203,8 @@
 <tr><td>Server deployment profiles</td><td><code>profiles/tournament-lan.toml</code>, <code>profiles/casual-community.toml</code>, etc.</td><td>D064, 15-SERVER-GUIDE</td></tr>
 <tr><td><code>compression.advanced.toml</code></td><td>Advanced compression parameters for server operators (if separate from <code>server_config.toml</code>)</td><td>D063</td></tr>
 <tr><td>Editor preferences</td><td><code>editor_prefs.toml</code> — SDK window layout, recent files, panel state</td><td>D038, D040</td></tr>
+<tr><td><code>mod.toml</code></td><td>IC-native mod manifest: name, version, dependencies, engine pin, asset listings</td><td>D026</td></tr>
+<tr><td>Mod profiles</td><td><code>profiles/*.toml</code> — named mod set + experience settings + conflict resolutions</td><td>D062</td></tr>
 </tbody>
 </table>
 </div>
@@ -222,14 +224,12 @@
 <tr><th>File</th><th>Purpose</th><th>Decision Reference</th></tr>
 </thead>
 <tbody>
-<tr><td><code>mod.yaml</code></td><td>Mod manifest: name, version, dependencies, assets, game module</td><td>D026</td></tr>
 <tr><td>Unit/weapon/building definitions</td><td><code>units/*.yaml</code>, <code>weapons/*.yaml</code>, <code>buildings/*.yaml</code></td><td>D003, Tier 1 modding</td></tr>
 <tr><td><code>campaign.yaml</code></td><td>Campaign graph, mission sequence, persistent state</td><td>D021</td></tr>
 <tr><td><code>theme.yaml</code></td><td>UI theme definition: sprite sheets, 9-slice coordinates, colors</td><td>D032</td></tr>
 <tr><td><code>ranked-tiers.yaml</code></td><td>Competitive rank names, thresholds, icons per game module</td><td>D055</td></tr>
 <tr><td>Balance presets</td><td><code>presets/balance/*.yaml</code> — Classic/OpenRA/Remastered values</td><td>D019</td></tr>
 <tr><td>QoL presets</td><td><code>presets/qol/*.yaml</code> — behavior toggle configurations</td><td>D033</td></tr>
-<tr><td>Experience profiles</td><td><code>profiles/*.yaml</code> — named mod set + settings + conflict resolutions</td><td>D062</td></tr>
 <tr><td>Map files</td><td>IC map format (terrain, actors, triggers, metadata)</td><td>D025</td></tr>
 <tr><td>Scenario triggers/modules</td><td>Trigger definitions, waypoints, compositions</td><td>D038</td></tr>
 <tr><td>String tables / localization</td><td>Translatable game text</td><td>—</td></tr>
@@ -239,7 +239,7 @@
 <tr><td><code>loading_tips.yaml</code></td><td>Loading screen tips</td><td>D038</td></tr>
 <tr><td>Tutorial definitions</td><td>Hint triggers, tutorial step sequences</td><td>D065</td></tr>
 <tr><td>AI personality definitions</td><td>Build orders, aggression curves, expansion strategies</td><td>D043</td></tr>
-<tr><td>Achievement definitions</td><td>In <code>mod.yaml</code> or separate achievement YAML files</td><td>D036</td></tr>
+<tr><td>Achievement definitions</td><td>In <code>mod.toml</code> or separate achievement YAML files</td><td>D036</td></tr>
 </tbody>
 </table>
 </div>
@@ -258,7 +258,8 @@
 <tr><th>File</th><th>Classification</th><th>Reasoning</th></tr>
 </thead>
 <tbody>
-<tr><td><code>mod.yaml</code> (mod manifest)</td><td><strong>YAML</strong></td><td>It’s a content declaration — what the mod IS, not how the engine runs. Even though it has configuration-like fields (<code>engine.version</code>, <code>dependencies</code>), it flows through the mod pipeline, not the engine config pipeline.</td></tr>
+<tr><td><code>mod.toml</code> (mod manifest)</td><td><strong>TOML</strong></td><td>It’s infrastructure about a mod — identity, version, engine pin, dependencies, file listings. These are flat key-value fields, the same shape as <code>Cargo.toml</code>. Every comparable package ecosystem uses TOML/JSON for manifests. OpenRA’s <code>mod.yaml</code> is still READ for compatibility (D026), but IC-native manifests use TOML.</td></tr>
+<tr><td>Mod profiles (D062)</td><td><strong>TOML</strong></td><td>Infrastructure about which mods to load, in what order, with what conflict resolutions. Flat structure, no inheritance chains. Same rationale as server deployment profiles.</td></tr>
 <tr><td>Server deployment profiles</td><td><strong>TOML</strong></td><td>They’re server configuration variants, not game content. The relay reads them the same way it reads <code>server_config.toml</code>.</td></tr>
 <tr><td><code>export_config.yaml</code></td><td><strong>YAML</strong></td><td>Export configuration is part of the content creation workflow — it describes what to export (content), not how the engine operates. It travels alongside the scenario/mod it targets.</td></tr>
 <tr><td><code>ic.lock</code></td><td><strong>TOML</strong></td><td>Lockfiles are infrastructure (dependency resolution state). Follows <code>Cargo.lock</code> convention.</td></tr>

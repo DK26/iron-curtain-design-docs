@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-9adfe301.js"></script>
@@ -388,9 +388,9 @@ pub enum KeyRotationReason {
 <p><strong>Capability-gated cross-module calls:</strong> Cross-module communication is only possible through a host-mediated message-passing API. Modules declare <code>exports</code> and <code>imports</code> in their manifest. The host validates that import/export pairs match before linking.</p>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>// In mod manifest (mod.yaml)
-// exports: ["custom_unit_stats"]
-// imports: ["base_game.terrain_query"]
+</span>// In mod manifest (mod.toml)
+// exports = ["custom_unit_stats"]
+// imports = ["base_game.terrain_query"]
 <span class="boring">}</span></code></pre>
 <p><strong>Resource pool isolation:</strong> Each module gets its own memory allocation pool. Host-imposed limits (memory, CPU ticks, entity count) are per-module, not shared. A module exhausting its allocation cannot starve other modules.</p>
 <p><strong>Audit logging:</strong> All cross-module calls are logged with caller/callee module IDs, capability tokens, and call arguments. Suspicious patterns (high-frequency probing, unauthorized access attempts) trigger rate limiting and are reported to the anti-cheat system.</p>

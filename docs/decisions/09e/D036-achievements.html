@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -228,22 +228,24 @@ CREATE TABLE achievement_progress (
 );
 </code></pre>
 <h3 id="mod-defined-achievements"><a class="header" href="#mod-defined-achievements">Mod-Defined Achievements</a></h3>
-<p>Mod authors define achievements in their <code>mod.yaml</code>, which register when the mod is installed:</p>
-<pre><code class="language-yaml"># mod.yaml (achievement definition in a mod)
-achievements:
-  - id: "my_mod.survive_the_storm"
-    title: "Eye of the Storm"
-    description: "Survive a blizzard event without losing any buildings"
-    category: skirmish
-    icon: "assets/achievements/storm.png"
-    hidden: false
-    trigger: "lua"                     # unlock logic in Lua script
-  - id: "my_mod.build_all_units"
-    title: "Full Arsenal"
-    description: "Build every unit type in a single match"
-    category: skirmish
-    icon: "assets/achievements/arsenal.png"
-    trigger: "lua"
+<p>Mod authors define achievements in their <code>mod.toml</code>, which register when the mod is installed:</p>
+<pre><code class="language-toml"># mod.toml (achievement definition section in a mod)
+[[achievements]]
+id = "my_mod.survive_the_storm"
+title = "Eye of the Storm"
+description = "Survive a blizzard event without losing any buildings"
+category = "skirmish"
+icon = "assets/achievements/storm.png"
+hidden = false
+trigger = "lua"    # unlock logic in Lua script
+
+[[achievements]]
+id = "my_mod.build_all_units"
+title = "Full Arsenal"
+description = "Build every unit type in a single match"
+category = "skirmish"
+icon = "assets/achievements/arsenal.png"
+trigger = "lua"
 </code></pre>
 <p>Lua scripts call <code>Achievement.unlock("my_mod.survive_the_storm")</code> when conditions are met. The achievement API is part of the Lua globals (alongside <code>Actor</code>, <code>Trigger</code>, <code>Map</code>, etc.).</p>
 <h3 id="design-constraints"><a class="header" href="#design-constraints">Design Constraints</a></h3>

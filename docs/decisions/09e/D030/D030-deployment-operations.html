@@ -36,7 +36,7 @@
             const path_to_root = "../../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../../../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc-9adfe301.js"></script>
@@ -194,17 +194,14 @@
 <h3 id="script-libraries--sharing"><a class="header" href="#script-libraries--sharing">Script Libraries &amp; Sharing</a></h3>
 <p><strong>Lesson from ArmA/OFP:</strong> ArmA’s modding ecosystem thrives partly because the community developed shared script libraries (CBA — Community Base Addons, ACE3’s interaction framework, ACRE radio system) that became foundational infrastructure. Mods built on shared libraries instead of reimplementing common patterns. IC makes this a first-class Workshop category.</p>
 <p>A Script Library is a Workshop resource containing reusable Lua modules that other mods can depend on:</p>
-<pre><code class="language-yaml"># mod.yaml for a script library resource
-mod:
-  name: "rts-ai-behaviors"
-  category: script-library
-  version: "1.0.0"
-  license: "MIT"
-  description: "Reusable AI behavior patterns for mission scripting"
-  exports:
-    - "patrol_routes"        # Lua module names available to dependents
-    - "guard_behaviors"
-    - "retreat_logic"
+<pre><code class="language-toml"># mod.toml for a script library resource
+[mod]
+name = "rts-ai-behaviors"
+category = "script-library"
+version = "1.0.0"
+license = "MIT"
+description = "Reusable AI behavior patterns for mission scripting"
+exports = ["patrol_routes", "guard_behaviors", "retreat_logic"]
 </code></pre>
 <p>Dependent mods declare the library as a dependency and import its modules:</p>
 <pre><code class="language-lua">-- In a mission script that depends on rts-ai-behaviors
@@ -225,9 +222,9 @@ guard.assign_area(squad, Region.Get("base_perimeter"))
 <p>This turns the Lua tier from “every mod reimplements common patterns” into a composable ecosystem — the same shift that made npm/crates.io transformative for their respective communities.</p>
 <h3 id="license-system"><a class="header" href="#license-system">License System</a></h3>
 <p><strong>Every published Workshop resource MUST have a <code>license</code> field.</strong> Publishing without one is rejected.</p>
-<pre><code class="language-yaml"># In mod.yaml or resource manifest
-mod:
-  license: "CC-BY-SA-4.0"             # SPDX identifier (required for publishing)
+<pre><code class="language-toml"># In mod.toml or resource manifest
+[mod]
+license = "CC-BY-SA-4.0"    # SPDX identifier (required for publishing)
 </code></pre>
 <ul>
 <li>Uses <a href="https://spdx.org/licenses/">SPDX identifiers</a> for machine-readable license classification</li>
@@ -251,7 +248,7 @@ mod:
   4. Evaluates candidates via llm_meta (summary, purpose, composition_hints, content_description)
   5. Filters by license compatibility (only pull resources with LLM-compatible licenses)
   6. Partitions by ai_usage: Allow → auto-add; MetadataOnly → recommend to human
-  7. Adds discovered resources as dependencies in generated mod.yaml
+  7. Adds discovered resources as dependencies in generated mod.toml
   8. Generated mission references assets by resource ID — resolved at install time
 </code></pre>
 <p>This turns the Workshop into a composable asset library that both humans and AI agents can draw from.</p>

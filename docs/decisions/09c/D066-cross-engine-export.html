@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -223,7 +223,7 @@
 <tr><td><strong>Audio</strong></td><td>.wav / .ogg</td><td>.wav / .ogg (OpenRA native) or .aud</td><td>OpenRA loads modern formats natively. .aud export for backwards-compatible mods</td></tr>
 <tr><td><strong>UI themes</strong></td><td>IC theme YAML + sprite sheets</td><td>OpenRA chrome YAML + sprite sheets</td><td>IC theme properties (D032) mapped to OpenRA’s chrome system. IC-only theme features stripped</td></tr>
 <tr><td><strong>String tables</strong></td><td>IC YAML localization</td><td>OpenRA <code>.ftl</code> (Fluent) localization files</td><td>IC string keys mapped to OpenRA Fluent message IDs</td></tr>
-<tr><td><strong>Mod manifest</strong></td><td>IC mod.yaml</td><td>OpenRA <code>mod.yaml</code> (D026 reverse)</td><td>IC mod manifest → OpenRA mod manifest. Dependency declarations, sprite sequences, rule file lists, chrome layout references</td></tr>
+<tr><td><strong>Mod manifest</strong></td><td>IC mod.toml</td><td>OpenRA <code>mod.yaml</code> (D026 reverse)</td><td>IC mod manifest → OpenRA mod manifest. Dependency declarations, sprite sequences, rule file lists, chrome layout references</td></tr>
 </tbody>
 </table>
 </div>
@@ -486,7 +486,7 @@ ic export --target openra --version release-20240315 mission.yaml -o ./openra-ou
 ic export --target ra1 campaign.yaml -o ./ra1-output/ --fidelity-report report.json
 
 # Export all sprites in a mod to .shp+.pal for RA1 compatibility
-ic export --target ra1 --content sprites mod.yaml -o ./sprites-output/
+ic export --target ra1 --content sprites mod.toml -o ./sprites-output/
 
 # Validate export without writing files (dry run)
 ic export --target openra --dry-run mission.yaml

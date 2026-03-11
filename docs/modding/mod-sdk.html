@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-9adfe301.js"></script>
@@ -192,13 +192,13 @@
 </thead>
 <tbody>
 <tr><td>Fork-the-repo template</td><td>Zero-config starting point</td><td><code>cargo-generate</code> template — same UX, better tooling</td></tr>
-<tr><td><code>mod.config</code> (engine version pin)</td><td>Reproducible builds</td><td><code>mod.yaml</code> manifest with typed schema + semver</td></tr>
+<tr><td><code>mod.config</code> (engine version pin)</td><td>Reproducible builds</td><td><code>mod.toml</code> manifest with typed schema + semver</td></tr>
 <tr><td><code>fetch-engine.sh</code> (auto-download engine)</td><td>Modders never touch engine source</td><td>Engine ships as a binary crate, not compiled from source</td></tr>
 <tr><td><code>Makefile</code> / <code>make.cmd</code></td><td>Cross-platform build</td><td><code>ic</code> CLI tool — Rust binary, works everywhere</td></tr>
 <tr><td><code>packaging/</code> (Win/Mac/Linux installers)</td><td>Full distribution pipeline</td><td>Workshop publish + <code>cargo-dist</code> for standalone</td></tr>
 <tr><td><code>utility.sh --check-yaml</code></td><td>Catches YAML errors</td><td><code>ic mod check</code> — validates YAML, Lua syntax, WASM integrity</td></tr>
 <tr><td><code>launch-dedicated.sh</code></td><td>Dedicated server for mods</td><td><code>ic mod server</code> — first-class CLI command</td></tr>
-<tr><td><code>mod.yaml</code> manifest</td><td>Single entry point for mod composition</td><td>Real YAML manifest with typed <code>serde</code> deserialization</td></tr>
+<tr><td><code>mod.yaml</code> manifest</td><td>Single entry point for mod composition</td><td>Real TOML manifest with typed <code>serde</code> deserialization (D067)</td></tr>
 <tr><td>Standardized directory layout</td><td>Convention-based — chrome/, rules/, maps/</td><td>Adapted for our three-tier model</td></tr>
 <tr><td><code>.vscode/</code> included</td><td>IDE support out of the box</td><td>Full VS Code extension with YAML schema + Lua LSP</td></tr>
 <tr><td>C# DLL for custom traits</td><td><strong>Pain point:</strong> requires .NET toolchain, IDE, compilation</td><td>Our YAML/Lua/WASM tiers eliminate this entirely</td></tr>
@@ -218,7 +218,7 @@ ic mod run                 # launch game with this mod loaded
 ic mod server              # launch dedicated server for this mod
 ic mod package             # build distributable packages (workshop or standalone)
 ic mod publish             # publish to workshop
-ic mod update-engine       # update engine version in mod.yaml
+ic mod update-engine       # update engine version in mod.toml
 ic mod lint                # style/convention checks + llm: metadata completeness
 ic mod watch               # hot-reload mode: watches files, reloads YAML/Lua on change
 ic git setup               # install repo-local .gitattributes and IC diff/merge helper hints (Git-first workflow)
@@ -349,46 +349,45 @@ jobs:
 <p><strong>Self-hosted Workshop servers</strong> accept the same tokens and API — authors publishing to a community Workshop server use the same CI workflow, just pointed at a different <code>--server</code> URL:</p>
 <pre><code>ic mod publish --server https://mods.myclan.com/workshop --channel release
 </code></pre>
-<h3 id="mod-manifest-modyaml"><a class="header" href="#mod-manifest-modyaml">Mod Manifest (<code>mod.yaml</code>)</a></h3>
-<p>Every mod has a <code>mod.yaml</code> at its root — the single source of truth for mod identity and composition. Inspired by OpenRA’s <code>mod.yaml</code> but using real YAML with typed deserialization:</p>
-<pre><code class="language-yaml"># mod.yaml
-mod:
-  id: my-total-conversion
-  title: "Red Apocalypse"
-  version: "1.2.0"
-  authors: ["ModderName"]
-  description: "A total conversion set in an alternate timeline"
-  website: "https://example.com/red-apocalypse"
-  license: "CC-BY-SA-4.0"            # modder's choice — no GPL requirement
+<h3 id="mod-manifest-modtoml"><a class="header" href="#mod-manifest-modtoml">Mod Manifest (<code>mod.toml</code>)</a></h3>
+<p>Every mod has a <code>mod.toml</code> at its root — the single source of truth for mod identity and composition. IC-native manifests use TOML (D067: infrastructure about a mod, not game content). OpenRA’s <code>mod.yaml</code> is still read for compatibility (D026), but IC mods author <code>mod.toml</code>:</p>
+<pre><code class="language-toml"># mod.toml
+[mod]
+id = "my-total-conversion"
+title = "Red Apocalypse"
+version = "1.2.0"
+authors = ["ModderName"]
+description = "A total conversion set in an alternate timeline"
+website = "https://example.com/red-apocalypse"
+license = "CC-BY-SA-4.0"            # modder's choice — no GPL requirement
 
-engine:
-  version: "^0.3.0"                  # semver — compatible with 0.3.x
-  game_module: "ra1"                 # which GameModule this mod targets
+[engine]
+version = "^0.3.0"                  # semver — compatible with 0.3.x
+game_module = "ra1"                 # which GameModule this mod targets
 
-assets:
-  rules: ["rules/**/*.yaml"]
-  maps: ["maps/"]
-  missions: ["missions/"]
-  scripts: ["scripts/**/*.lua"]
-  wasm_modules: ["wasm/*.wasm"]
-  media: ["media/"]
-  chrome: ["chrome/**/*.yaml"]
-  sequences: ["sequences/**/*.yaml"]
+[assets]
+rules = ["rules/**/*.yaml"]
+maps = ["maps/"]
+missions = ["missions/"]
+scripts = ["scripts/**/*.lua"]
+wasm_modules = ["wasm/*.wasm"]
+media = ["media/"]
+chrome = ["chrome/**/*.yaml"]
+sequences = ["sequences/**/*.yaml"]
 
-dependencies:                        # other mods/workshop items required
-  - id: "community-hd-sprites"
-    version: "^2.0"
-    source: workshop
+[defaults]
+balance_preset = "classic"           # default balance preset for this mod
 
-balance_preset: classic              # default balance preset for this mod
+[dependencies]                      # other mods/workshop items required
+"community-hd-sprites" = { version = "^2.0", source = "workshop" }
 
-llm:
-  summary: "Alternate-timeline total conversion with new factions and units"
-  gameplay_tags: [total_conversion, alternate_history, new_factions]
+[llm]
+summary = "Alternate-timeline total conversion with new factions and units"
+gameplay_tags = ["total_conversion", "alternate_history", "new_factions"]
 </code></pre>
 <h3 id="standardized-mod-directory-layout"><a class="header" href="#standardized-mod-directory-layout">Standardized Mod Directory Layout</a></h3>
 <pre><code>my-mod/
-├── mod.yaml                  # manifest (required)
+├── mod.toml                  # manifest (required)
 ├── rules/                    # Tier 1: YAML data
 │   ├── units/
 │   │   ├── infantry.yaml
@@ -431,11 +430,11 @@ llm:
 <tr><th>Template</th><th>Creates</th><th>For</th></tr>
 </thead>
 <tbody>
-<tr><td><code>data-mod</code></td><td>mod.yaml + rules/ + empty maps/</td><td>Simple balance/cosmetic mods (Tier 1 only)</td></tr>
+<tr><td><code>data-mod</code></td><td>mod.toml + rules/ + empty maps/</td><td>Simple balance/cosmetic mods (Tier 1 only)</td></tr>
 <tr><td><code>scripted-mod</code></td><td>Above + scripts/ + missions/</td><td>Mission packs, custom game modes (Tier 1+2)</td></tr>
 <tr><td><code>total-conversion</code></td><td>Full directory layout including wasm/</td><td>Total conversions (all tiers)</td></tr>
-<tr><td><code>map-pack</code></td><td>mod.yaml + maps/</td><td>Map collections</td></tr>
-<tr><td><code>asset-pack</code></td><td>mod.yaml + media/ + sequences/</td><td>Sprite/sound/video packs</td></tr>
+<tr><td><code>map-pack</code></td><td>mod.toml + maps/</td><td>Map collections</td></tr>
+<tr><td><code>asset-pack</code></td><td>mod.toml + media/ + sequences/</td><td>Sprite/sound/video packs</td></tr>
 </tbody>
 </table>
 </div>

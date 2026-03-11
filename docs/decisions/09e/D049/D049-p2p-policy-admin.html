@@ -36,7 +36,7 @@
             const path_to_root = "../../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../../../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc-9adfe301.js"></script>
@@ -355,7 +355,7 @@ priority = 2
 <ol>
 <li><code>ic mod publish</code> packages content into <code>.icpkg</code>, computes SHA-256</li>
 <li>Uploads <code>.icpkg</code> to GitHub Releases (via GitHub API, using a personal access token configured in <code>ic auth</code>)</li>
-<li>Generates the index manifest YAML from <code>mod.yaml</code> metadata</li>
+<li>Generates the index manifest YAML from <code>mod.toml</code> metadata</li>
 <li>Opens a PR to <code>workshop-index</code> with the manifest file</li>
 <li>Modder reviews the PR and confirms; GitHub Actions validates; maintainers merge</li>
 </ol>

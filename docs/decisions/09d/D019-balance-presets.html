@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -292,10 +292,10 @@
 </thead>
 <tbody>
 <tr><td>Starting point</td><td>Fork a template repo</td><td><code>ic mod init [template]</code> via <code>cargo-generate</code></td></tr>
-<tr><td>Engine version pin</td><td><code>ENGINE_VERSION</code> in <code>mod.config</code></td><td><code>engine.version</code> in <code>mod.yaml</code> with semver</td></tr>
+<tr><td>Engine version pin</td><td><code>ENGINE_VERSION</code> in <code>mod.config</code></td><td><code>engine.version</code> in <code>mod.toml</code> with semver</td></tr>
 <tr><td>Engine management</td><td><code>fetch-engine.sh</code> downloads + compiles from source</td><td>Engine ships as binary crate, auto-resolved</td></tr>
 <tr><td>Build/run</td><td><code>Makefile</code> + shell scripts (requires Python, .NET)</td><td><code>ic</code> CLI — single Rust binary, zero dependencies</td></tr>
-<tr><td>Mod manifest</td><td><code>mod.yaml</code> in MiniYAML</td><td><code>mod.yaml</code> in real YAML with typed serde schema</td></tr>
+<tr><td>Mod manifest</td><td><code>mod.yaml</code> in MiniYAML</td><td><code>mod.toml</code> with typed serde schema (D067)</td></tr>
 <tr><td>Validation</td><td><code>utility.sh --check-yaml</code></td><td><code>ic mod check</code> — YAML + Lua + WASM validation</td></tr>
 <tr><td>Packaging</td><td><code>packaging/</code> shell scripts → .exe/.app/.AppImage</td><td><code>ic mod package</code> + workshop publish</td></tr>
 <tr><td>Dedicated server</td><td><code>launch-dedicated.sh</code></td><td><code>ic mod server</code></td></tr>
@@ -475,7 +475,7 @@ ic replay verify [file]    # verify relay signature chain + integrity (see 06-SE
 <ol>
 <li><strong>Alias registry:</strong> <code>ra-formats</code> maintains a compile-time map of OpenRA trait names to IC component names. <code>Armament</code> → <code>combat</code>, <code>Valued</code> → <code>buildable.cost</code>, <code>AttackOmni</code> → <code>combat.mode: omni</code>, etc.</li>
 <li><strong>Bi-directional:</strong> The alias registry is used during YAML parsing (OpenRA names accepted) and by the <code>miniyaml2yaml</code> converter (produces IC-native names). Both representations are valid.</li>
-<li><strong>Deprecation warnings:</strong> When an OpenRA alias is used, the parser emits a warning: <code>"Armament" is accepted but deprecated; prefer "combat"</code>. Warnings can be suppressed per-mod via <code>mod.yaml</code> setting.</li>
+<li><strong>Deprecation warnings:</strong> When an OpenRA alias is used, the parser emits a warning: <code>"Armament" is accepted but deprecated; prefer "combat"</code>. Warnings can be suppressed per-mod via <code>mod.toml</code> setting.</li>
 <li><strong>No runtime cost:</strong> Aliases resolve during YAML deserialization (load time only). The ECS never sees alias names — only canonical IC component types.</li>
 </ol>
 <p><strong>Rationale:</strong></p>
@@ -492,7 +492,7 @@ ic replay verify [file]    # verify relay signature chain + integrity (see 06-SE
 <li>Adopt OpenRA’s names wholesale (rejected — some OpenRA names are poorly chosen or C#-specific; IC benefits from cleaner naming)</li>
 <li>Converter handles everything (rejected — modders still need to re-learn names for new content; aliases let them use familiar names forever)</li>
 </ul>
-<p><strong>Phase:</strong> Phase 0 (alias registry built alongside <code>ra-formats</code> YAML parser). Phase 6a (deprecation warnings configurable in <code>mod.yaml</code>).</p>
+<p><strong>Phase:</strong> Phase 0 (alias registry built alongside <code>ra-formats</code> YAML parser). Phase 6a (deprecation warnings configurable in <code>mod.toml</code>).</p>
 <hr>
 <hr>
 <h2 id="sub-pages"><a class="header" href="#sub-pages">Sub-Pages</a></h2>

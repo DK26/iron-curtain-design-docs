@@ -36,7 +36,7 @@
             const path_to_root = "../../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../../../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc-9adfe301.js"></script>
@@ -356,7 +356,7 @@ pub enum PlayerOrder {
 </div>
 <p><strong>Why meta-references are <code>COSMETIC</code>:</strong> They have zero game effect. The reconnaissance value of knowing “<code>black sheep wall</code> doesn’t work but <code>perestroika</code> does” is part of the discovery fun — the game is training you to find the real cheats. The last two entries deliberately point players toward IC’s actual cheat codes, rewarding cross-game knowledge with a hint.</p>
 <p><strong>Mod-defined cheats:</strong> Game modules register their own cheat code tables — the engine provides the <code>CheatCodeHandler</code> infrastructure, the game module supplies the phrase hashes and effect implementations. A Tiberian Dawn module would have different themed phrases than RA1. Total conversion mods can define entirely custom cheat tables via YAML:</p>
-<pre><code class="language-yaml"># Custom cheat codes (mod.yaml)
+<pre><code class="language-yaml"># Custom cheat codes (in game content YAML, referenced from mod.toml)
 cheat_codes:
   - phrase_hash: 0x7a3f2e1d   # hash of the phrase — not the phrase itself
     effect: give_credits

@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-9adfe301.js"></script>
@@ -186,7 +186,7 @@
 <h3 id="design-principles"><a class="header" href="#design-principles">Design Principles</a></h3>
 <ol>
 <li>
-<p><strong>Game modules are mods.</strong> Built-in game modules (<code>mods/ra/</code>, <code>mods/td/</code>) use the exact same directory layout, <code>mod.yaml</code> manifest, and YAML rule schema as community-created mods. No internal-only APIs, no special paths. If a modder can edit <code>mods/ra/rules/units/vehicles.yaml</code>, anyone can see how the game’s own data is structured. Directly inspired by Factorio’s “game is a mod” principle (validated in D018).</p>
+<p><strong>Game modules are mods.</strong> Built-in game modules (<code>mods/ra/</code>, <code>mods/td/</code>) use the exact same directory layout, <code>mod.toml</code> manifest, and YAML rule schema as community-created mods. No internal-only APIs, no special paths. If a modder can edit <code>mods/ra/rules/units/vehicles.yaml</code>, anyone can see how the game’s own data is structured. Directly inspired by Factorio’s “game is a mod” principle (validated in D018).</p>
 </li>
 <li>
 <p><strong>Same vocabulary, same directories.</strong> OpenRA uses <code>rules/</code>, <code>sequences/</code>, <code>chrome/</code>, <code>maps/</code>, <code>audio/</code>, <code>scripts/</code>. IC uses the same directory names for the same purposes. An OpenRA modder opening IC’s <code>mods/ra/</code> directory knows where everything is.</p>
@@ -210,12 +210,12 @@
 ├── ic-editor[.exe]                 # SDK — GUI application: scenario editor, asset studio (D038+D040)
 ├── mods/                           # Game modules + content — the heart of the project
 │   ├── common/                     # Shared resources used by all C&amp;C-family modules
-│   │   ├── mod.yaml                #   manifest (declares shared chrome, cursors, etc.)
+│   │   ├── mod.toml                #   manifest (declares shared chrome, cursors, etc.)
 │   │   ├── chrome/                 #   shared UI layout definitions
 │   │   ├── cursors/                #   shared cursor definitions
 │   │   └── translations/           #   shared localization strings
 │   ├── ra/                         # Red Alert game module (ships Phase 2)
-│   │   ├── mod.yaml                #   manifest — same schema as any community mod
+│   │   ├── mod.toml                #   manifest — same schema as any community mod
 │   │   ├── rules/                  #   unit, structure, weapon, terrain definitions
 │   │   │   ├── units/              #     infantry.yaml, vehicles.yaml, naval.yaml, aircraft.yaml
 │   │   │   ├── structures/         #     allied-structures.yaml, soviet-structures.yaml
@@ -231,7 +231,7 @@
 │   │   ├── scripts/                #   Lua scripts (shared triggers, ability definitions)
 │   │   └── themes/                 #   UI theme overrides: classic.yaml, modern.yaml (D032)
 │   └── td/                         # Tiberian Dawn game module (ships Phase 3–4)
-│       ├── mod.yaml
+│       ├── mod.toml
 │       ├── rules/
 │       ├── maps/
 │       ├── missions/
@@ -242,7 +242,7 @@
 <p><strong>Key features of the install layout:</strong></p>
 <ul>
 <li><strong><code>mods/common/</code></strong> is directly analogous to OpenRA’s <code>mods/common/</code>. Shared assets, chrome, and cursor definitions used across all C&amp;C-family game modules. Community game modules (Dune 2000, RA2) can depend on it or provide their own.</li>
-<li><strong><code>mods/ra/</code></strong> is a mod. It uses the same <code>mod.yaml</code> schema, the same <code>rules/</code> structure, and the same <code>sequences/</code> format as a community mod. There is no “privileged” version of this directory — the engine treats it identically to <code>&lt;data_dir&gt;/mods/my-total-conversion/</code>. This means every modder can read the game’s own data as a working example.</li>
+<li><strong><code>mods/ra/</code></strong> is a mod. It uses the same <code>mod.toml</code> schema, the same <code>rules/</code> structure, and the same <code>sequences/</code> format as a community mod. There is no “privileged” version of this directory — the engine treats it identically to <code>&lt;data_dir&gt;/mods/my-total-conversion/</code>. This means every modder can read the game’s own data as a working example.</li>
 <li><strong>Every YAML file in <code>mods/ra/rules/</code> is editable.</strong> Want to change tank cost? Open <code>rules/units/vehicles.yaml</code>, find <code>medium_tank</code>, change <code>cost: 800</code> to <code>cost: 750</code>. The same workflow as OpenRA — except the YAML is standard-compliant and serde-typed.</li>
 <li><strong>The CLI (<code>ic</code>) is the modder/operator Swiss Army knife.</strong> <code>ic mod init</code>, <code>ic mod check</code>, <code>ic mod test</code>, <code>ic mod publish</code>, <code>ic backup create</code>, <code>ic export</code>, <code>ic server validate-config</code>. One binary, consistent subcommands — aimed at modders, server operators, and CI/CD pipelines. Players never need it — every player-facing action has a GUI equivalent in the game client or SDK editor.</li>
 </ul>
@@ -371,7 +371,7 @@
 <tr><td>Edit sprite sequences</td><td><code>mods/ra/sequences/*.yaml</code></td><td><code>mods/ra/sequences/*.yaml</code></td><td>Identical location</td></tr>
 <tr><td>Write Lua mission scripts</td><td><code>mods/ra/maps/*/script.lua</code></td><td><code>mods/ra/missions/*.lua</code></td><td>Same API (D024), dedicated directory</td></tr>
 <tr><td>Edit UI layout (chrome)</td><td><code>mods/ra/chrome/*.yaml</code></td><td><code>mods/ra/chrome/*.yaml</code></td><td>Identical location</td></tr>
-<tr><td>Edit balance/speed/settings</td><td><code>mods/ra/mod.yaml</code></td><td><code>mods/ra/rules/presets/*.yaml</code></td><td>Separated into named presets (D019)</td></tr>
+<tr><td>Edit balance/speed/settings</td><td><code>mods/ra/mod.yaml</code></td><td><code>mods/ra/rules/presets/*.yaml</code></td><td>Separated into named presets (D019); IC uses <code>mod.toml</code></td></tr>
 <tr><td>Add a new C# trait (component)</td><td><code>OpenRA.Mods.RA/Traits/*.cs</code></td><td><code>crates/ic-sim/src/components/*.rs</code></td><td>Rust struct + derive instead of C# class</td></tr>
 <tr><td>Add a new activity (behavior)</td><td><code>OpenRA.Mods.Common/Activities/*.cs</code></td><td><code>crates/ic-sim/src/systems/*.rs</code></td><td>ECS system instead of activity object</td></tr>
 <tr><td>Add a new warhead type</td><td><code>OpenRA.Mods.Common/Warheads/*.cs</code></td><td><code>crates/ic-sim/src/components/combat.rs</code></td><td>Warheads are component data + system logic</td></tr>
@@ -410,7 +410,7 @@
 <p><strong>For data modders (80% of mods):</strong> Never leave <code>mods/</code>. Edit YAML, run <code>ic mod check</code>, see results. The built-in game modules serve as always-available, documented examples of every YAML feature. No need to read Rust code to understand what fields a unit definition supports — look at <code>mods/ra/rules/units/infantry.yaml</code>.</p>
 <p><strong>For Lua scripters (missions, game modes):</strong> Write <code>scripts/*.lua</code> in your mod directory. The API is a superset of OpenRA’s (D024) — same 16 globals, same function signatures. Existing OpenRA missions run unmodified. Test with <code>ic mod test</code>.</p>
 <p><strong>For engine contributors:</strong> Clone the repo. <code>crates/</code> holds all Rust code. Each crate has a single responsibility and clear boundaries. The naming (<code>ic-sim</code>, <code>ic-net</code>, <code>ic-render</code>) tells you what it does. Within <code>ic-sim</code>, <code>components/</code> holds data, <code>systems/</code> holds logic, <code>traits/</code> holds the pluggable abstractions — the ECS split is consistent and predictable.</p>
-<p><strong>For total-conversion modders:</strong> The <code>ic-sim/src/traits/</code> directory defines every pluggable seam — custom pathfinder, custom AI, custom fog of war, custom damage resolution. Implement a trait as a WASM module (Tier 3), register it in your <code>mod.yaml</code>, and the engine uses your implementation. No forking, no C# DLL stacking.</p>
+<p><strong>For total-conversion modders:</strong> The <code>ic-sim/src/traits/</code> directory defines every pluggable seam — custom pathfinder, custom AI, custom fog of war, custom damage resolution. Implement a trait as a WASM module (Tier 3), register it in your <code>mod.toml</code>, and the engine uses your implementation. No forking, no C# DLL stacking.</p>
 <h3 id="development-asset-strategy"><a class="header" href="#development-asset-strategy">Development Asset Strategy</a></h3>
 <p>A clean-sheet engine needs art for editor chrome, UI menus, CI testing, and developer workflows — but it cannot ship or commit copyrighted game content. This subsection documents how reference projects host their game resources, what IC can freely use, and what belongs (or doesn’t belong) in the repository.</p>
 <h4 id="how-reference-projects-host-game-resources"><a class="header" href="#how-reference-projects-host-game-resources">How Reference Projects Host Game Resources</a></h4>

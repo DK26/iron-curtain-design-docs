@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -409,7 +409,7 @@ qol:
 <p><strong>D032 (UI Themes):</strong> QoL and themes are also independent. The “Classic” theme changes chrome appearance; the “Vanilla” QoL preset changes gameplay behavior. They’re separate settings that happen to compose well.</p>
 <p><strong>D065 (Tutorial &amp; New Player Experience):</strong> The tutorial system uses D033 for per-player hint frequency, category toggles, controls walkthrough visibility, and touch comfort guidance. The same mission/tutorial content is shared across platforms; D033 preferences control how aggressively the UI teaches and warns, not what the simulation does.</p>
 <p><strong>Experience Profiles:</strong> The meta-layer above all of these. Selecting “Vanilla RA” experience profile sets D019=classic, D032=classic, D033=vanilla, D043=classic-ra, D045=classic-ra, D048=classic in one click. Selecting “Iron Curtain” sets D019=classic, D032=modern, D033=iron_curtain, D043=ic-default, D045=ic-default, D048=hd. After selecting a profile, any individual setting can still be overridden.</p>
-<p><strong>Modding (Tier 1):</strong> QoL presets are just YAML files in <code>presets/qol/</code>. Modders can create custom QoL presets — a total conversion mod ships its own preset tuned for its gameplay. The <code>mod.yaml</code> manifest can specify a default QoL preset.</p>
+<p><strong>Modding (Tier 1):</strong> QoL presets are just YAML files in <code>presets/qol/</code>. Modders can create custom QoL presets — a total conversion mod ships its own preset tuned for its gameplay. The <code>mod.toml</code> manifest can specify a default QoL preset.</p>
 <h3 id="rationale"><a class="header" href="#rationale">Rationale</a></h3>
 <ul>
 <li><strong>Respect for all eras.</strong> Each version of Red Alert — original, OpenRA, Remastered — has a community that loves it. Forcing one set of behaviors on everyone loses part of the audience.</li>

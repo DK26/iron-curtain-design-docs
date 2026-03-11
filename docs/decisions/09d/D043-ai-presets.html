@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -488,15 +488,14 @@ Balance Preset: Classic RA
 <p>This is different from pathfinders (one axis: which algorithm). AI has two orthogonal axes because <em>how smart the AI plays</em> and <em>what advantages it gets</em> are independent concerns. A “Brutal Classic RA” AI should play with original 1996 patterns but get economic bonuses and instant reactions; an “Easy IC Default” AI should use modern tactics but gather slowly and react late.</p>
 <p><strong>Modder as consumer — selecting an AI:</strong></p>
 <p>A mod’s YAML manifest can declare which <code>AiStrategy</code> implementations it ships with or requires:</p>
-<pre><code class="language-yaml"># mod.yaml — total conversion with custom AI
-mod:
-  name: "Zero Hour Remake"
-  ai_strategies:
-    - goap-planner              # Requires this community AI
-    - personality-driven        # Also supports the built-in default
-  default_ai: goap-planner
-  depends:
-    - community/goap-planner-ai@^2.0
+<pre><code class="language-toml"># mod.toml — total conversion with custom AI
+[mod]
+name = "Zero Hour Remake"
+default_ai = "goap-planner"
+ai_strategies = ["goap-planner", "personality-driven"]
+
+[dependencies]
+"community/goap-planner-ai" = "^2.0"
 </code></pre>
 <p>If the mod doesn’t specify <code>ai_strategies</code>, all registered AI implementations are available.</p>
 <p><strong>Modder as author — providing an AI:</strong></p>
@@ -538,20 +537,22 @@ impl AiStrategy for GoapPlannerAi {
 }
 <span class="boring">}</span></code></pre>
 <p>The mod registers its AI in its manifest:</p>
-<pre><code class="language-yaml"># goap_planner/mod.yaml
-mod:
-  name: "GOAP Planner AI"
-  type: ai_strategy
-  ai_strategy_id: goap-planner
-  display_name: "GOAP Planner"
-  description: "Goal-oriented action planning AI — plans multi-step strategies"
-  wasm_module: goap_planner.wasm
-  capabilities:
-    read_visible_state: true
-    issue_orders: true
-  config:
-    plan_depth: 5
-    replan_interval_ticks: 30
+<pre><code class="language-toml"># goap_planner/mod.toml
+[mod]
+name = "GOAP Planner AI"
+type = "ai_strategy"
+ai_strategy_id = "goap-planner"
+display_name = "GOAP Planner"
+description = "Goal-oriented action planning AI — plans multi-step strategies"
+wasm_module = "goap_planner.wasm"
+
+[capabilities]
+read_visible_state = true
+issue_orders = true
+
+[config]
+plan_depth = 5
+replan_interval_ticks = 30
 </code></pre>
 <p><strong>Workshop distribution:</strong> Community AI implementations are Workshop resources (D030). They can be rated, reviewed, and depended upon — same as pathfinder mods. The Workshop can host AI tournament leaderboards: automated matches between community AI submissions, ranked by Elo/TrueSkill (inspired by BWAPI’s SSCAIT and AoE2’s AI ladder communities, see <code>research/rts-ai-extensibility-survey.md</code>).</p>
 <p><strong>Multiplayer implications:</strong> AI selection is NOT sim-affecting in the same way pathfinding is. In a human-vs-AI game, each AI player can run a different <code>AiStrategy</code> — they’re independent agents. In AI-vs-AI tournaments, all AI players can be different. The engine doesn’t need to validate that all clients have the same AI WASM module (unlike pathfinding). However, for determinism, the AI’s <code>decide()</code> output must be identical on all clients — so the WASM binary hash IS validated per AI player slot.</p>

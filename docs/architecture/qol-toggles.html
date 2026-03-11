@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-9adfe301.js"></script>
@@ -199,7 +199,7 @@
 <p>Toggles are categorized as <strong>sim-affecting</strong> (production rules, unit commands — synced in lobby) or <strong>client-only</strong> (health bars, range circles — per-player preference). This split preserves determinism (invariant #1) while giving each player visual/UX freedom.</p>
 <h3 id="experience-profiles"><a class="header" href="#experience-profiles">Experience Profiles</a></h3>
 <p>D019 (balance), D032 (theme), D033 (behavior), D043 (AI behavior), D045 (pathfinding feel), and D048 (render mode) are six independent axes that compose into <strong>experience profiles</strong>. Selecting “Vanilla RA” sets all six to classic in one click. Selecting “Iron Curtain” sets classic balance + modern theme + best QoL + enhanced AI + modern movement + HD graphics. After selecting a profile, any individual setting can still be overridden.</p>
-<p><strong>Mod profiles (D062)</strong> are a superset of experience profiles: they bundle the six experience axes WITH the active mod set and conflict resolutions into a single named, hashable object. A mod profile answers “what mods am I running AND how is the game configured?” in one saved YAML file. The profile’s fingerprint (SHA-256 of the resolved virtual asset namespace) enables single-hash compatibility checking in multiplayer lobbies. Switching profiles reconfigures both the mod set and experience settings in one action. Publishing a local mod profile via <code>ic mod publish-profile</code> creates a Workshop modpack (D030). See <code>decisions/09c-modding.md</code> § D062.</p>
+<p><strong>Mod profiles (D062)</strong> are a superset of experience profiles: they bundle the six experience axes WITH the active mod set and conflict resolutions into a single named, hashable object. A mod profile answers “what mods am I running AND how is the game configured?” in one saved TOML file (D067). The profile’s fingerprint (SHA-256 of the resolved virtual asset namespace) enables single-hash compatibility checking in multiplayer lobbies. Switching profiles reconfigures both the mod set and experience settings in one action. Publishing a local mod profile via <code>ic mod publish-profile</code> creates a Workshop modpack (D030). See <code>decisions/09c-modding.md</code> § D062.</p>
 <p>See <code>decisions/09d/D033-qol-presets.md</code> for the full toggle catalog, YAML schema, and sim/client split details. See D043 for AI behavior presets, D045 for pathfinding behavior presets, and D048 for switchable render modes.</p>
 
                     </main>

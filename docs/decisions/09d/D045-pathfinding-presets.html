@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -321,11 +321,11 @@ ic_pathfinder:
 <p>The three built-in presets are the <strong>first-party</strong> <code>Pathfinder</code> implementations. They are not the only ones. The <code>Pathfinder</code> trait (D013) is explicitly open to community implementations.</p>
 <p><strong>Modder as consumer — selecting a pathfinder:</strong></p>
 <p>A mod’s YAML manifest can declare which pathfinder it uses. The modder picks from any available implementation — first-party or community:</p>
-<pre><code class="language-yaml"># mod.yaml — total conversion mod that uses IC's modern pathfinding
-mod:
-  name: "Desert Strike"
-  pathfinder: ic-default            # Use IC's multi-layer hybrid
-  # Or: remastered, openra, layered-grid-generals, community/navmesh-pro, etc.
+<pre><code class="language-toml"># mod.toml — total conversion mod that uses IC's modern pathfinding
+[mod]
+name = "Desert Strike"
+pathfinder = "ic-default"    # Use IC's multi-layer hybrid
+# Or: remastered, openra, layered-grid-generals, community/navmesh-pro, etc.
 </code></pre>
 <p>If the mod doesn’t specify a pathfinder, it inherits whatever the player’s experience profile selects. When specified, it overrides the experience profile’s pathfinding axis — the same way <code>scenario.pathfinding.required</code> works (see “Scenario-Required Pathfinding” above), but at the mod level.</p>
 <p><strong>Modder as author — providing a pathfinder:</strong></p>
@@ -344,19 +344,20 @@ impl Pathfinder for LayeredGridPathfinder {
     fn invalidate_area(&amp;mut self, center: WorldPos, radius: SimCoord) { /* ... */ }
 }
 <span class="boring">}</span></code></pre>
-<p>The mod registers its pathfinder in its manifest with a YAML config block (like the built-in presets):</p>
-<pre><code class="language-yaml"># mod.yaml — community pathfinder distributed via Workshop
-mod:
-  name: "Generals Pathfinder"
-  type: pathfinder                   # declares this mod provides a Pathfinder impl
-  pathfinder_id: layered-grid-generals
-  display_name: "Generals (Layered Grid)"
-  description: "Grid pathfinding with bridge layers and surface bitmasks, inspired by C&amp;C Generals"
-  wasm_module: generals_pathfinder.wasm
-  config:
-    zone_block_size: 10
-    bridge_clearance: 10.0
-    surface_types: [ground, water, cliff, air, rubble]
+<p>The mod registers its pathfinder in its manifest with a config section (like the built-in presets):</p>
+<pre><code class="language-toml"># mod.toml — community pathfinder distributed via Workshop
+[mod]
+name = "Generals Pathfinder"
+type = "pathfinder"                      # declares this mod provides a Pathfinder impl
+pathfinder_id = "layered-grid-generals"
+display_name = "Generals (Layered Grid)"
+description = "Grid pathfinding with bridge layers and surface bitmasks, inspired by C&amp;C Generals"
+wasm_module = "generals_pathfinder.wasm"
+
+[config]
+zone_block_size = 10
+bridge_clearance = 10.0
+surface_types = ["ground", "water", "cliff", "air", "rubble"]
 </code></pre>
 <p>Once installed, the community pathfinder appears alongside first-party presets in the lobby’s Level 2 per-axis override (“Movement: Classic / OpenRA / Modern / Generals”) and is selectable by other mods via <code>pathfinder: layered-grid-generals</code>.</p>
 <p><strong>Workshop distribution:</strong> Community pathfinders are Workshop resources (D030) like any other mod. They can be rated, reviewed, and depended upon. A total conversion mod declares <code>depends: community/generals-pathfinder@^1.0</code> and the engine auto-downloads it on lobby join (same as CS:GO-style auto-download).</p>

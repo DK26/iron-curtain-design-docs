@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-9adfe301.js"></script>
@@ -267,27 +267,30 @@ impl Pathfinder for LayeredGridPathfinder {
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Mod manifest and config:</strong></p>
-<pre><code class="language-yaml"># generals_pathfinder/mod.yaml
-mod:
-  name: "Generals Pathfinder"
-  type: pathfinder
-  pathfinder_id: layered-grid-generals
-  display_name: "Generals (Layered Grid)"
-  version: "1.0.0"
-  capabilities:
-    pathfinding: true
-  config:
-    zone_block_size: 10
-    bridge_clearance: 10.0
-    surface_types: [ground, water, cliff, air, rubble]
+<pre><code class="language-toml"># generals_pathfinder/mod.toml
+[mod]
+name = "Generals Pathfinder"
+type = "pathfinder"
+pathfinder_id = "layered-grid-generals"
+display_name = "Generals (Layered Grid)"
+version = "1.0.0"
+
+[capabilities]
+pathfinding = true
+
+[config]
+zone_block_size = 10
+bridge_clearance = 10.0
+surface_types = ["ground", "water", "cliff", "air", "rubble"]
 </code></pre>
 <p><strong>How other mods use it:</strong></p>
-<pre><code class="language-yaml"># desert_strike_mod/mod.yaml — a total conversion using the Generals pathfinder
-mod:
-  name: "Desert Strike"
-  pathfinder: layered-grid-generals
-  depends:
-    - community/generals-pathfinder@^1.0
+<pre><code class="language-toml"># desert_strike_mod/mod.toml — a total conversion using the Generals pathfinder
+[mod]
+name = "Desert Strike"
+pathfinder = "layered-grid-generals"
+
+[dependencies]
+"community/generals-pathfinder" = "^1.0"
 </code></pre>
 <p><strong>Multiplayer sync:</strong> All players must use the same pathfinder — the WASM binary hash/version/config profile is validated in the lobby, same as any sim-affecting mod. If a player is missing the pathfinder mod, the engine auto-downloads it from the Workshop (CS:GO-style, per D030).</p>
 <p><strong>Performance contract:</strong> Pathfinder mods use a dedicated <code>pathfinder_fuel_per_tick</code> budget (separate from general WASM fuel). The engine monitors per-tick pathfinding time and deferred-request rates. The engine never falls back silently to a different pathfinder — determinism means all clients must agree on every path. If a WASM pathfinder exhausts its pathfinding fuel for the tick, remaining requests return <code>PathResult::Deferred</code> and are re-queued deterministically for subsequent ticks. Community pathfinders targeting ranked certification are expected to pass <code>PathfinderConformanceTest</code> and <code>ic mod perf-test --conformance pathfinder</code> on the baseline hardware tier (D045 policy).</p>
@@ -348,30 +351,33 @@ impl AiStrategy for GoapPlannerAi {
 }
 <span class="boring">}</span></code></pre>
 <p><strong>Mod manifest:</strong></p>
-<pre><code class="language-yaml"># goap_ai/mod.yaml
-mod:
-  name: "GOAP Planner AI"
-  type: ai_strategy
-  ai_strategy_id: goap-planner
-  display_name: "GOAP Planner"
-  description: "Goal-oriented action planning — multi-step strategic reasoning"
-  version: "2.1.0"
-  wasm_module: goap_planner.wasm
-  capabilities:
-    read_visible_state: true
-    issue_orders: true
-    ai_strategy: true
-  config:
-    search_depth: 5
-    replan_interval: 30
+<pre><code class="language-toml"># goap_ai/mod.toml
+[mod]
+name = "GOAP Planner AI"
+type = "ai_strategy"
+ai_strategy_id = "goap-planner"
+display_name = "GOAP Planner"
+description = "Goal-oriented action planning — multi-step strategic reasoning"
+version = "2.1.0"
+wasm_module = "goap_planner.wasm"
+
+[capabilities]
+read_visible_state = true
+issue_orders = true
+ai_strategy = true
+
+[config]
+search_depth = 5
+replan_interval = 30
 </code></pre>
 <p><strong>How other mods use it:</strong></p>
-<pre><code class="language-yaml"># zero_hour_mod/mod.yaml — a total conversion using the GOAP AI
-mod:
-  name: "Zero Hour Remake"
-  default_ai: goap-planner
-  depends:
-    - community/goap-planner-ai@^2.0
+<pre><code class="language-toml"># zero_hour_mod/mod.toml — a total conversion using the GOAP AI
+[mod]
+name = "Zero Hour Remake"
+default_ai = "goap-planner"
+
+[dependencies]
+"community/goap-planner-ai" = "^2.0"
 </code></pre>
 <p><strong>AI tournament community:</strong> Workshop can host AI tournament leaderboards — automated matches between community AI submissions, ranked by Elo/TrueSkill. This is directly inspired by BWAPI’s SSCAIT tournament (15+ years of StarCraft AI competition) and AoE2’s AI ladder (20+ years of community AI development). The <code>ic mod test</code> framework (above) provides headless match execution; the Workshop provides distribution and ranking.</p>
 <p><strong>Phase:</strong> WASM AI mods in Phase 6a. Built-in <code>PersonalityDrivenAi</code> + behavior presets (D043) ship as native Rust in Phase 4.</p>

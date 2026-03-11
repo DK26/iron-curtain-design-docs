@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -198,18 +198,25 @@
 <li><strong>Tip jar on resource pages:</strong> Every Workshop resource page has an optional “Support this creator” button. Clicking shows the creator’s configured payment links.</li>
 <li><strong>Payment links, not payment processing.</strong> IC does not process payments directly. Creators link their own payment platforms:</li>
 </ul>
-<pre><code class="language-yaml"># In mod.yaml or creator profile
-creator:
-  name: "Alice"
-  tip_links:
-    - platform: "ko-fi"
-      url: "https://ko-fi.com/alice"
-    - platform: "github-sponsors"
-      url: "https://github.com/sponsors/alice"
-    - platform: "patreon"
-      url: "https://patreon.com/alice"
-    - platform: "paypal"
-      url: "https://paypal.me/alice"
+<pre><code class="language-toml"># In mod.toml or creator profile
+[creator]
+name = "Alice"
+
+[[creator.tip_links]]
+platform = "ko-fi"
+url = "https://ko-fi.com/alice"
+
+[[creator.tip_links]]
+platform = "github-sponsors"
+url = "https://github.com/sponsors/alice"
+
+[[creator.tip_links]]
+platform = "patreon"
+url = "https://patreon.com/alice"
+
+[[creator.tip_links]]
+platform = "paypal"
+url = "https://paypal.me/alice"
 </code></pre>
 <ul>
 <li><strong>No IC platform fee on tips.</strong> Tips go directly to creators via their chosen platform. IC takes zero cut.</li>

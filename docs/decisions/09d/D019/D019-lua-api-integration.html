@@ -36,7 +36,7 @@
             const path_to_root = "../../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../../../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc-9adfe301.js"></script>
@@ -284,7 +284,7 @@
 <li><strong>Directory convention mapping:</strong> OpenRA mods use <code>rules/</code>, <code>maps/</code>, <code>sequences/</code> etc. IC maps these to its own layout at load time without copying files.</li>
 <li><strong>Unsupported sections flagged:</strong> <code>Assemblies</code> (C# DLLs) cannot load — these are flagged as warnings listing which custom traits are unavailable and what WASM alternatives exist.</li>
 <li><strong>Partial loading:</strong> A mod with unsupported C# traits still loads — units using those traits get a visual placeholder and a “missing trait” debug overlay. The mod is playable with reduced functionality.</li>
-<li><strong><code>ic mod import</code>:</strong> CLI command that reads an OpenRA mod directory and generates an IC-native <code>mod.yaml</code> with proper structure, converting files to standard YAML and flagging C# dependencies for WASM migration.</li>
+<li><strong><code>ic mod import</code>:</strong> CLI command that reads an OpenRA mod directory and generates an IC-native <code>mod.toml</code> with proper structure, converting files to standard YAML and flagging C# dependencies for WASM migration.</li>
 </ol>
 <p><strong>Rationale:</strong></p>
 <ul>

@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-9adfe301.js"></script>
@@ -212,10 +212,10 @@
 </ul>
 <h3 id="versioned-mod-api-independent-of-engine-version"><a class="header" href="#versioned-mod-api-independent-of-engine-version">Versioned Mod API (Independent of Engine Version)</a></h3>
 <p>The mod API version is declared separately from the engine version:</p>
-<pre><code class="language-yaml"># mod.yaml
-engine:
-  version: "^0.5.0"          # engine version (can change rapidly)
-  mod_api: "^1.0"            # mod API version (changes slowly)
+<pre><code class="language-toml"># mod.toml
+[engine]
+version = "^0.5.0"          # engine version (can change rapidly)
+mod_api = "^1.0"            # mod API version (changes slowly)
 </code></pre>
 <p>A mod targeting <code>mod_api: "^1.0"</code> works on any engine version that supports mod API 1.x. The engine can ship 0.5.0 through 0.9.0 without breaking mod API 1.0 compatibility. This decoupling means engine development velocity doesn’t fragment the mod ecosystem.</p>
 <h3 id="compatibility-adapter-layer"><a class="header" href="#compatibility-adapter-layer">Compatibility Adapter Layer</a></h3>

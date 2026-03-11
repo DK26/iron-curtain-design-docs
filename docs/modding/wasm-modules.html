@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4312bfdc.js";
+            window.path_to_searchindex_js = "../searchindex-0335891c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-9adfe301.js"></script>
@@ -412,20 +412,22 @@ pub enum CameraMode {
 <span class="boring">}</span></code></pre>
 <p><strong>Example: Generals-style layered grid pathfinder as a WASM mod</strong></p>
 <p>The C&amp;C Generals source code (GPL v3, <code>electronicarts/CnC_Generals_Zero_Hour</code>) uses a layered grid system with 10-unit cells, surface bitmasks, and bridge layers. A community mod can reimplement this as a WASM pathfinder — see <code>research/pathfinding-ic-default-design.md</code> § “C&amp;C Generals / Zero Hour” for the <code>LayeredGridPathfinder</code> design sketch.</p>
-<pre><code class="language-yaml"># generals_pathfinder/mod.yaml
-mod:
-  name: "Generals Pathfinder"
-  type: pathfinder
-  pathfinder_id: layered-grid-generals
-  display_name: "Generals (Layered Grid)"
-  description: "Grid pathfinding with bridge layers and surface bitmasks, inspired by C&amp;C Generals"
-  wasm_module: generals_pathfinder.wasm
-  capabilities:
-    pathfinding: true
-  config:
-    zone_block_size: 10
-    bridge_clearance: 10.0
-    surface_types: [ground, water, cliff, air, rubble]
+<pre><code class="language-toml"># generals_pathfinder/mod.toml
+[mod]
+name = "Generals Pathfinder"
+type = "pathfinder"
+pathfinder_id = "layered-grid-generals"
+display_name = "Generals (Layered Grid)"
+description = "Grid pathfinding with bridge layers and surface bitmasks, inspired by C&amp;C Generals"
+wasm_module = "generals_pathfinder.wasm"
+
+[capabilities]
+pathfinding = true
+
+[config]
+zone_block_size = 10
+bridge_clearance = 10.0
+surface_types = ["ground", "water", "cliff", "air", "rubble"]
 </code></pre>
 <p><strong>Security:</strong> Pathfinding host functions are gated by <code>ModCapabilities.pathfinding</code>. A pathfinder mod can read terrain and obstacle positions but cannot issue orders, read gameplay state (health, resources, fog), or access render functions. This is a narrower capability than gameplay mods — pathfinders compute routes, nothing else.</p>
 <p><strong>Determinism:</strong> WASM pathfinder mods execute in the deterministic sim context. All clients run the same WASM binary (verified by SHA-256 hash in the lobby) with the same inputs, producing identical path results/deferred requests. Pathfinding uses a dedicated <code>pathfinder_fuel_per_tick</code> budget (see below) because its many-calls-per-tick workload differs from one-shot-per-tick WASM systems.</p>
