@@ -36,10 +36,10 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-8c21bc0f.js";
+            window.path_to_searchindex_js = "../../searchindex-04514734.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-e01a4107.js"></script>
+        <script src="../../toc-9adfe301.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -219,22 +219,22 @@
 <tr><th>Asset Type</th><th>Workshop Format (new content)</th><th>Legacy Support (existing)</th><th>Runtime Decode</th><th>Rationale</th></tr>
 </thead>
 <tbody>
-<tr><td><strong>Music</strong></td><td>OGG Vorbis (128–320kbps)</td><td>.aud (ra-formats decode)</td><td>PCM via rodio</td><td>Bevy default feature, excellent quality/size ratio, open/patent-free, WASM-safe. OGG at 192kbps ≈ 1.4MB/min vs .aud at ~0.5MB/min but dramatically higher quality (stereo, 44.1kHz vs mono 22kHz)</td></tr>
-<tr><td><strong>SFX</strong></td><td>WAV (16-bit PCM) or OGG</td><td>.aud (ra-formats decode)</td><td>PCM via rodio</td><td>WAV = zero decode latency for gameplay-critical sounds (weapon fire, explosions). OGG for larger ambient/UI sounds where decode latency is acceptable</td></tr>
-<tr><td><strong>Voice</strong></td><td>OGG Vorbis (96–128kbps)</td><td>.aud (ra-formats decode)</td><td>PCM via rodio</td><td>Speech compresses well. OGG at 96kbps is transparent for voice. EVA packs with 200+ lines stay under 30MB</td></tr>
-<tr><td><strong>Sprites</strong></td><td>PNG (RGBA, indexed, or truecolor)</td><td>.shp+.pal (ra-formats)</td><td>GPU texture via Bevy</td><td>Bevy-native via <code>image</code> crate. Lossless. Every art tool exports it. Palette-indexed PNG preserves classic aesthetic. HD packs use truecolor RGBA</td></tr>
+<tr><td><strong>Music</strong></td><td>OGG Vorbis (128–320kbps)</td><td>.aud (cnc-formats decode)</td><td>PCM via rodio</td><td>Bevy default feature, excellent quality/size ratio, open/patent-free, WASM-safe. OGG at 192kbps ≈ 1.4MB/min vs .aud at ~0.5MB/min but dramatically higher quality (stereo, 44.1kHz vs mono 22kHz)</td></tr>
+<tr><td><strong>SFX</strong></td><td>WAV (16-bit PCM) or OGG</td><td>.aud (cnc-formats decode)</td><td>PCM via rodio</td><td>WAV = zero decode latency for gameplay-critical sounds (weapon fire, explosions). OGG for larger ambient/UI sounds where decode latency is acceptable</td></tr>
+<tr><td><strong>Voice</strong></td><td>OGG Vorbis (96–128kbps)</td><td>.aud (cnc-formats decode)</td><td>PCM via rodio</td><td>Speech compresses well. OGG at 96kbps is transparent for voice. EVA packs with 200+ lines stay under 30MB</td></tr>
+<tr><td><strong>Sprites</strong></td><td>PNG (RGBA, indexed, or truecolor)</td><td>.shp+.pal (cnc-formats)</td><td>GPU texture via Bevy</td><td>Bevy-native via <code>image</code> crate. Lossless. Every art tool exports it. Palette-indexed PNG preserves classic aesthetic. HD packs use truecolor RGBA</td></tr>
 <tr><td><strong>HD Textures</strong></td><td>KTX2 (GPU-compressed: BC7/ASTC)</td><td>N/A</td><td>Zero-cost GPU upload</td><td>Bevy-native. No decode — GPU reads directly. Best runtime performance. <code>ic mod build</code> can batch-convert PNG→KTX2 for release builds</td></tr>
-<tr><td><strong>Terrain</strong></td><td>PNG tiles (indexed or RGBA)</td><td>.tmp+.pal (ra-formats)</td><td>GPU texture</td><td>Same as sprites. Theater tilesets are sprite sheets</td></tr>
-<tr><td><strong>Cutscenes</strong></td><td>WebM (VP9, 720p–1080p)</td><td>.vqa (ra-formats decode)</td><td>Frame→texture (custom)</td><td>Open, royalty-free, browser-compatible (WASM target). VP9 achieves ~5MB/min at 720p. Neither WebM nor VQA is Bevy-native — both need custom decode, so no advantage to VQA here</td></tr>
+<tr><td><strong>Terrain</strong></td><td>PNG tiles (indexed or RGBA)</td><td>.tmp+.pal (cnc-formats)</td><td>GPU texture</td><td>Same as sprites. Theater tilesets are sprite sheets</td></tr>
+<tr><td><strong>Cutscenes</strong></td><td>WebM (VP9, 720p–1080p)</td><td>.vqa (cnc-formats decode)</td><td>Frame→texture (custom)</td><td>Open, royalty-free, browser-compatible (WASM target). VP9 achieves ~5MB/min at 720p. Neither WebM nor VQA is Bevy-native — both need custom decode, so no advantage to VQA here</td></tr>
 <tr><td><strong>3D Models</strong></td><td>GLTF/GLB</td><td>N/A (future: .vxl)</td><td>Bevy mesh</td><td>Bevy’s native 3D format. Community 3D mods (D048) use this</td></tr>
-<tr><td><strong>Palettes</strong></td><td>.pal (768 bytes) or PNG strip</td><td>.pal (ra-formats)</td><td>Palette texture</td><td>.pal is already tiny and universal in the C&amp;C community. No reason to change. PNG strip is an alternative for tools that don’t understand .pal</td></tr>
+<tr><td><strong>Palettes</strong></td><td>.pal (768 bytes) or PNG strip</td><td>.pal (cnc-formats)</td><td>Palette texture</td><td>.pal is already tiny and universal in the C&amp;C community. No reason to change. PNG strip is an alternative for tools that don’t understand .pal</td></tr>
 <tr><td><strong>Maps</strong></td><td>IC YAML (native)</td><td>.oramap (ZIP+MiniYAML)</td><td>ECS world state</td><td>Already designed (D025, D026)</td></tr>
 </tbody>
 </table>
 </div>
 <h3 id="why-modern-formats-as-default"><a class="header" href="#why-modern-formats-as-default">Why Modern Formats as Default</a></h3>
-<p><strong>Bevy integration:</strong> OGG, WAV, PNG, KTX2, and GLTF load through Bevy’s built-in asset pipeline with zero custom code. Every Bevy feature — hot-reload, asset dependencies, async loading, platform abstraction — works automatically. C&amp;C formats require custom <code>AssetLoader</code> implementations in ra-formats with manual integration into Bevy’s pipeline.</p>
-<p><strong>Security:</strong> OGG (lewton/rodio), PNG (image crate), and WebM decoders in the Rust ecosystem have been fuzz-tested and used in production by thousands of projects. Browser vendors (Chrome, Firefox, Safari) have security-audited these formats for decades. Our .aud/.shp/.vqa parsers in ra-formats are custom code that has never been independently security-audited. For Workshop content downloaded from untrusted sources, mature parsers with established security track records are strictly safer. C&amp;C format parsers use <code>BoundedReader</code> (see <code>06-SECURITY.md</code>), but defense in depth favors formats with deeper audit history.</p>
+<p><strong>Bevy integration:</strong> OGG, WAV, PNG, KTX2, and GLTF load through Bevy’s built-in asset pipeline with zero custom code. Every Bevy feature — hot-reload, asset dependencies, async loading, platform abstraction — works automatically. C&amp;C formats require custom <code>AssetLoader</code> implementations in ra-formats (wrapping cnc-formats parsers) with manual integration into Bevy’s pipeline.</p>
+<p><strong>Security:</strong> OGG (lewton/rodio), PNG (image crate), and WebM decoders in the Rust ecosystem have been fuzz-tested and used in production by thousands of projects. Browser vendors (Chrome, Firefox, Safari) have security-audited these formats for decades. Our .aud/.shp/.vqa parsers in cnc-formats are custom code that has never been independently security-audited. For Workshop content downloaded from untrusted sources, mature parsers with established security track records are strictly safer. C&amp;C format parsers use <code>BoundedReader</code> (see <code>06-SECURITY.md</code>), but defense in depth favors formats with deeper audit history.</p>
 <p><strong>Multi-game:</strong> Non-C&amp;C game modules (D039) won’t use .shp or .aud at all. A tower defense mod, a naval RTS, a Dune-inspired game — these ship PNG sprites and OGG audio. The Workshop serves all game modules, not just the C&amp;C family.</p>
 <p><strong>Tooling:</strong> Every image editor saves PNG. Every DAW exports WAV/OGG. Every video editor exports WebM/MP4. Nobody’s toolchain outputs .aud or .shp. Requiring C&amp;C formats forces creators through a conversion step before they can publish — unnecessary friction.</p>
 <p><strong>WASM/browser:</strong> OGG and PNG work in Bevy’s WASM builds out of the box. C&amp;C formats need custom WASM decoders compiled into the browser bundle.</p>
@@ -261,7 +261,7 @@
 <li><strong>Export:</strong> OGG/PNG/WebM → .aud/.shp/.vqa (for modders targeting OpenRA compatibility or classic aesthetic)</li>
 <li><strong>Batch convert:</strong> <code>ic mod convert --to-modern</code> or <code>ic mod convert --to-classic</code> converts entire mod directories</li>
 </ul>
-<p>The engine loads both format families at runtime. <code>ra-formats</code> decoders handle legacy formats; Bevy’s built-in loaders handle modern formats. No manual conversion is ever required — only recommended for new Workshop publications.</p>
+<p>The engine loads both format families at runtime. <code>cnc-formats</code> parsers (via <code>ra-formats</code> Bevy integration) handle legacy formats; Bevy’s built-in loaders handle modern formats. No manual conversion is ever required — only recommended for new Workshop publications.</p>
 <hr>
 <h2 id="sub-pages"><a class="header" href="#sub-pages">Sub-Pages</a></h2>
 <div class="table-wrapper">
@@ -275,6 +275,7 @@
 <tr><td>P2P Policy &amp; Admin</td><td>P2P continued + freeware/legacy content policy + media language metadata + Workshop operator/admin panel + Rust impl + rationale + alternatives + phase</td><td><a href="D049/D049-p2p-policy-admin.html">D049-p2p-policy-admin.md</a></td></tr>
 <tr><td>Content Channels Integration</td><td>IC-specific content channel usage: balance patches, server config, lobby content pinning, D062 fingerprint integration</td><td><a href="D049/D049-content-channels-integration.html">D049-content-channels-integration.md</a></td></tr>
 <tr><td>Replay Sharing via P2P</td><td>Match ID sharing, Workshop replay collections, .icrep piece alignment, privacy, relay retention</td><td><a href="D049/D049-replay-sharing.html">D049-replay-sharing.md</a></td></tr>
+<tr><td>Web Seeding (BEP 17/19)</td><td>Concurrent HTTP+P2P downloads, HttpSeedPeer virtual peer model, scheduler gates, transport strategy revision, browser CORS, configuration</td><td><a href="D049/D049-web-seeding.html">D049-web-seeding.md</a></td></tr>
 </tbody>
 </table>
 </div>

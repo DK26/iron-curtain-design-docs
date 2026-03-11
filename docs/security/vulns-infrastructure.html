@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8c21bc0f.js";
+            window.path_to_searchindex_js = "../searchindex-04514734.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-e01a4107.js"></script>
+        <script src="../toc-9adfe301.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -432,10 +432,10 @@ min_matches = 10
 <p><code>ra-formats</code> processes untrusted binary data from multiple sources: <code>.mix</code> archives, <code>.oramap</code> ZIP files, Workshop packages, downloaded replays, and shared save games. The current design documents format specifications in detail but do not address defensive parsing:</p>
 <ol>
 <li>
-<p><strong>Decompression bombs:</strong> LCW decompression (used by <code>.shp</code>, <code>.tmp</code>, <code>.vqa</code>) has no decompression ratio cap and no maximum output size. A crafted <code>.shp</code> frame with LCW data claiming a 4 GB output from 100 bytes of compressed input is currently unbounded. The <code>uncompressed_length</code> field in save files (<code>SaveHeader</code>) is trusted for pre-allocation without validation.</p>
+<p><strong>Decompression bombs:</strong> LCW decompression (used by <code>.shp</code>, <code>.tmp</code>, <code>.vqa</code>, <code>.wsa</code>) has no decompression ratio cap and no maximum output size. A crafted <code>.shp</code> frame with LCW data claiming a 4 GB output from 100 bytes of compressed input is currently unbounded. The <code>uncompressed_length</code> field in save files (<code>SaveHeader</code>) is trusted for pre-allocation without validation.</p>
 </li>
 <li>
-<p><strong>No fuzzing strategy:</strong> None of the format parsers (MIX, SHP, TMP, PAL, AUD, VQA, WSA) have documented fuzzing requirements. Binary format parsers are the #1 source of memory safety bugs in Rust projects — even with safe Rust, panics from malformed input cause denial of service.</p>
+<p><strong>No fuzzing strategy:</strong> None of the format parsers (MIX, SHP, TMP, PAL, AUD, VQA, WSA, FNT) have documented fuzzing requirements. Binary format parsers are the #1 source of memory safety bugs in Rust projects — even with safe Rust, panics from malformed input cause denial of service.</p>
 </li>
 <li>
 <p><strong>No per-format resource limits:</strong> VQA frame parsing has no maximum frame count. MIX archives have no maximum entry count. SHP files have no maximum frame count. A crafted file with millions of entries causes unbounded memory allocation during parsing.</p>
@@ -446,11 +446,15 @@ min_matches = 10
 <li>
 <p><strong>Archive path traversal:</strong> <code>.oramap</code> files are ZIP archives. Entries with paths like <code>../../.config/autostart/malware.sh</code> escape the extraction directory (classic Zip Slip). The current design does not specify path validation for archive extraction.</p>
 </li>
+<li>
+<p><strong>Blowfish decryption of untrusted .mix headers:</strong> Some original <code>.mix</code> archives have Blowfish-encrypted header indexes (flag <code>0x0002</code>). Decryption uses a hardcoded key in ECB mode. A crafted <code>.mix</code> can supply ciphertext that decrypts to a <code>FileHeader</code> with an inflated <code>count</code> (billions of entries), triggering unbounded <code>SubBlock</code> allocation. Truncated ciphertext (not a multiple of the 8-byte Blowfish block size) must not cause panics.</p>
+</li>
 </ol>
 <h3 id="mitigation"><a class="header" href="#mitigation">Mitigation</a></h3>
 <p><strong>Decompression ratio cap:</strong> Maximum 256:1 decompression ratio for all codecs (LCW, LZ4). Absolute output size caps per format: SHP frame max 16 MB, VQA frame max 32 MB, save game snapshot max 64 MB. Reject input exceeding these limits before allocation.</p>
 <p><strong>Mandatory fuzzing:</strong> Every format parser in <code>ra-formats</code> must have a <code>cargo-fuzz</code> target as a Phase 0 exit criterion. Fuzz targets accept arbitrary bytes and must not panic. Property-based testing with <code>proptest</code> for round-trip encode/decode where write support exists (Phase 6a).</p>
-<p><strong>Per-format entry caps:</strong> MIX archives: max 16,384 entries (original RA archives contain ~1,500). SHP files: max 65,536 frames. VQA files: max 100,000 frames (~90 minutes at 15 fps). TMP icon sets: max 65,536 tiles. These caps are configurable but have safe defaults.</p>
+<p><strong>Per-format entry caps:</strong> MIX archives: max 16,384 entries (original RA archives contain ~1,500). SHP files: max 65,536 frames. VQA files: max 100,000 frames (~90 minutes at 15 fps). TMP icon sets: max 65,536 tiles. WSA animations: max 10,000 frames. FNT fonts: max 256 characters (one byte index space). These caps are configurable but have safe defaults.</p>
+<p><strong>Blowfish header validation:</strong> After decrypting an encrypted <code>.mix</code> header, validate the decrypted <code>FileHeader.count</code> and <code>FileHeader.size</code> against the same 16,384-entry cap <em>before</em> allocating the <code>SubBlock</code> array. Reject ciphertext whose length is not a multiple of 8 bytes (Blowfish block size). Use the <code>blowfish</code> crate (RustCrypto, MIT/Apache-2.0) — do not reimplement the cipher.</p>
 <p><strong>Iteration counters:</strong> All decompression loops include a maximum iteration counter. LCW decompression terminates after <code>output_size_cap</code> bytes written, regardless of end marker presence. ADPCM decoding terminates after <code>max_samples</code> decoded.</p>
 <p><strong>Path boundary enforcement:</strong> All archive extraction (<code>.oramap</code> ZIP, Workshop <code>.icpkg</code>) uses <code>strict-path</code> <code>PathBoundary</code> to prevent Zip Slip and path traversal. See § Path Security Infrastructure.</p>
 <p><strong>Phase:</strong> Fuzzing infrastructure and decompression caps ship with <code>ra-formats</code> in Phase 0. Entry caps and iteration counters are part of each format parser’s implementation.</p>

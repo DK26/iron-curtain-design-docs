@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8c21bc0f.js";
+            window.path_to_searchindex_js = "../searchindex-04514734.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-e01a4107.js"></script>
+        <script src="../toc-9adfe301.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -230,6 +230,22 @@ struct SubBlock {
 // and the final partial long is added the same way.
 </code></pre>
 <p>The SubBlock array is sorted by CRC to enable binary search lookup at runtime.</p>
+<h4 id="encrypted-header-handling-extended-format"><a class="header" href="#encrypted-header-handling-extended-format">Encrypted Header Handling (Extended Format)</a></h4>
+<p><strong>Source:</strong> <code>REDALERT/MIXFILE.CPP</code> — <code>MixFileClass::Retrieve()</code> and key initialization</p>
+<p>Some original RA <code>.mix</code> files ship with Blowfish-encrypted header indexes (flag <code>0x0002</code>). Notable examples: <code>local.mix</code>, <code>speech.mix</code>. Full resource compatibility (Invariant #8) requires decryption support.</p>
+<p><strong>What is encrypted:</strong> Only the <code>SubBlock</code> index array (the file directory). File data bodies are always plaintext. The Blowfish cipher operates in ECB mode on 8-byte blocks.</p>
+<p><strong>Key source:</strong> Westwood used a hardcoded 56-byte Blowfish key embedded in every game binary. This key is public knowledge — documented by XCC Utilities, OpenRA (<code>MixFile.cs</code>), and numerous community tools since the early 2000s. <code>cnc-formats</code> embeds this key as a constant. The key is not copyrightable (it is a number) and the decrypt algorithm is standard Blowfish — no EA-specific code is needed.</p>
+<p><strong>Decryption steps:</strong></p>
+<ol>
+<li>Read the 2-byte zero marker + 2-byte flags word (4 bytes total)</li>
+<li>If flag <code>0x0002</code> is set, the next N bytes are the Blowfish-encrypted header</li>
+<li>Decrypt using the hardcoded key in ECB mode (8-byte blocks)</li>
+<li>The decrypted output contains the <code>FileHeader</code> (6 bytes) followed by the <code>SubBlock</code> array</li>
+<li>Validate decrypted <code>FileHeader.count</code> and <code>FileHeader.size</code> against sane limits (V38 entry caps) before allocating the <code>SubBlock</code> array</li>
+</ol>
+<p><strong>SHA-1 digest (flag <code>0x0001</code>):</strong> When present, a 20-byte SHA-1 digest follows the file data section. It covers the unencrypted body data. Verification is optional but recommended for integrity checking of original archives.</p>
+<p><strong>Implementation crate:</strong> Use the <code>blowfish</code> crate from RustCrypto (MIT/Apache-2.0) for the Blowfish primitive. Do not reimplement the cipher.</p>
+<p><strong>Security:</strong> Blowfish decryption of untrusted input is a parsing step — see V38 in <code>security/vulns-infrastructure.md</code> for defensive parsing requirements (validate decrypted header values before allocation, reject malformed ciphertext cleanly).</p>
 <hr>
 <h3 id="shp-sprite-format-shp"><a class="header" href="#shp-sprite-format-shp">SHP Sprite Format (.shp)</a></h3>
 <p><strong>Source:</strong> <code>REDALERT/WIN32LIB/SHAPE.H</code>, <code>REDALERT/2KEYFRAM.CPP</code>, <code>TIBERIANDAWN/KEYFRAME.CPP</code></p>
@@ -754,6 +770,64 @@ typedef struct _VQHeader {
 #define VQCM_RGBTRUE   1   // RGB true color
 #define VQCM_YBRTRUE   2   // YBR (luminance-chrominance) true color
 </code></pre>
+<hr>
+<h3 id="wsa-animation-format-wsa"><a class="header" href="#wsa-animation-format-wsa">WSA Animation Format (.wsa)</a></h3>
+<p><strong>Source:</strong> <code>REDALERT/WSA.H</code>, <code>REDALERT/WSA.CPP</code></p>
+<p>WSA (Westwood Studios Animation) files contain LCW-compressed delta animations. Used for menu backgrounds, installation screens, campaign map animations, and some in-game effects in both TD and RA. Each frame is an XOR-delta against the previous frame.</p>
+<h4 id="file-header-1"><a class="header" href="#file-header-1">File Header</a></h4>
+<pre><code class="language-c">// From WSA.H
+typedef struct {
+    unsigned short NumFrames;     // Number of animation frames
+    unsigned short Width;         // Frame width in pixels
+    unsigned short Height;        // Frame height in pixels
+    unsigned short Delta;         // Delta buffer size
+    unsigned short Flags;         // (unused in RA)
+    unsigned long  Offsets[];     // (NumFrames + 2) offsets to frame data
+} WSA_Header;
+</code></pre>
+<p><strong>Frame data layout:</strong></p>
+<ul>
+<li><code>Offsets[0]</code> through <code>Offsets[NumFrames-1]</code> point to each frame’s LCW-compressed XOR-delta data</li>
+<li><code>Offsets[NumFrames]</code> points to a loop-back delta (for seamless looping animations)</li>
+<li><code>Offsets[NumFrames+1]</code> marks end of data (used to compute last frame’s compressed size)</li>
+<li>If an offset is 0, that frame is identical to the previous frame (no delta)</li>
+<li>Palette data (768 bytes, 6-bit VGA) may follow the frame data if the WSA includes its own palette</li>
+</ul>
+<p><strong>Decoding algorithm:</strong></p>
+<ol>
+<li>Allocate a frame buffer (Width × Height bytes, palette-indexed)</li>
+<li>For each frame: LCW-decompress the delta data, then XOR the delta onto the frame buffer</li>
+<li>The frame buffer now contains the current frame’s pixels</li>
+<li>For looping: apply <code>Offsets[NumFrames]</code> delta to return to frame 0</li>
+</ol>
+<p><strong>Security:</strong> Same defensive parsing requirements as other LCW-consuming formats — decompression ratio cap (256:1), output size cap (max 4 MB per frame), iteration counter on LCW decode loop. See V38 in <code>security/vulns-infrastructure.md</code>.</p>
+<hr>
+<h3 id="fnt-bitmap-font-format-fnt"><a class="header" href="#fnt-bitmap-font-format-fnt">FNT Bitmap Font Format (.fnt)</a></h3>
+<p><strong>Source:</strong> <code>REDALERT/WIN32LIB/FONT.H</code>, <code>REDALERT/WIN32LIB/FONT.CPP</code></p>
+<p>FNT files contain bitmap fonts used for in-game text rendering. Each file contains a fixed set of character glyphs as palette-indexed pixel bitmaps.</p>
+<h4 id="file-header-2"><a class="header" href="#file-header-2">File Header</a></h4>
+<pre><code class="language-c">// From FONT.H
+typedef struct {
+    unsigned short InfoBlock;     // Offset to font info block
+    unsigned short OffsetBlock;   // Offset to character offset table
+    unsigned short WidthBlock;    // Offset to character width table
+    unsigned short DataBlock;     // Offset to glyph bitmap data
+    unsigned short HeightBlock;   // Offset to per-character height info
+} FontHeader_Type;
+</code></pre>
+<p><strong>Font info block</strong> (at <code>InfoBlock</code> offset):</p>
+<ul>
+<li><code>MaxHeight</code> (u8) — maximum character height in pixels</li>
+<li><code>MaxWidth</code> (u8) — maximum character width in pixels</li>
+<li><code>NumChars</code> (u16) — number of characters (typically 128 or 256)</li>
+</ul>
+<p><strong>Per-character data:</strong></p>
+<ul>
+<li><strong>Offset table</strong> (at <code>OffsetBlock</code>): <code>NumChars</code> × <code>u16</code> — byte offset from <code>DataBlock</code> to each character’s bitmap</li>
+<li><strong>Width table</strong> (at <code>WidthBlock</code>): <code>NumChars</code> × <code>u8</code> — pixel width of each character</li>
+<li><strong>Glyph data</strong> (at <code>DataBlock</code>): raw palette-indexed pixels, 1 byte per pixel, row-major order. Each glyph is <code>width × height</code> bytes. Index 0 = transparent background.</li>
+</ul>
+<p><strong>IC usage:</strong> IC does not use <code>.fnt</code> for runtime text rendering (Bevy’s font pipeline handles modern TTF/OTF fonts with CJK/RTL support). <code>.fnt</code> parsing is needed for: (1) displaying original game fonts faithfully in Classic render mode (D048), (2) Asset Studio (D040) font preview and export.</p>
 <hr>
 <h2 id="insights-from-eas-original-source-code"><a class="header" href="#insights-from-eas-original-source-code">Insights from EA’s Original Source Code</a></h2>
 <p>Repository: https://github.com/electronicarts/CnC_Red_Alert (GPL v3, archived Feb 2025)</p>

@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8c21bc0f.js";
+            window.path_to_searchindex_js = "../searchindex-04514734.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-e01a4107.js"></script>
+        <script src="../toc-9adfe301.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -322,7 +322,7 @@ ic mod install --include-beta     # pull beta resources
 <li><strong>Offline bundles:</strong> <code>ic workshop export-bundle</code> creates a portable archive of selected resources for LAN parties or airgapped environments. <code>ic workshop import-bundle</code> loads them into a local repository.</li>
 </ul>
 <h4 id="p2p-distribution-bittorrentwebtorrent--d049"><a class="header" href="#p2p-distribution-bittorrentwebtorrent--d049">P2P Distribution (BitTorrent/WebTorrent) — D049</a></h4>
-<p>Workshop delivery uses <strong>peer-to-peer distribution</strong> for large packages, with HTTP direct download as fallback. The Workshop server acts as both metadata registry (SQLite, lightweight) and BitTorrent tracker (peer coordination, lightweight). Actual content transfer happens peer-to-peer between players.</p>
+<p>Workshop delivery uses <strong>peer-to-peer distribution</strong> for large packages, with HTTP as both a <strong>concurrent transport</strong> (BEP 17/19 web seeding — HTTP mirrors participate simultaneously alongside BT peers in the piece scheduler) and a last-resort fallback. See <code>decisions/09e/D049/D049-web-seeding.md</code> for the full web seeding design. The Workshop server acts as both metadata registry (SQLite, lightweight) and BitTorrent tracker (peer coordination, lightweight). Actual content transfer happens peer-to-peer between players.</p>
 <p><strong>Transport strategy by package size:</strong></p>
 <div class="table-wrapper">
 <table>
@@ -331,15 +331,15 @@ ic mod install --include-beta     # pull beta resources
 </thead>
 <tbody>
 <tr><td>&lt; 5MB</td><td>HTTP direct only</td><td>P2P overhead exceeds benefit. Maps, balance presets, palettes.</td></tr>
-<tr><td>5–50MB</td><td>P2P preferred, HTTP fallback</td><td>Sprite packs, sound packs, script libraries.</td></tr>
-<tr><td>&gt; 50MB</td><td>P2P strongly preferred</td><td>HD resource packs, cutscene packs, full mods. Cost advantage is decisive.</td></tr>
+<tr><td>5–50MB</td><td>P2P + HTTP concurrent (web seeding); HTTP-only fallback</td><td>Sprite packs, sound packs, script libraries.</td></tr>
+<tr><td>&gt; 50MB</td><td>P2P + HTTP concurrent (web seeding); P2P strongly preferred</td><td>HD resource packs, cutscene packs, full mods.</td></tr>
 </tbody>
 </table>
 </div>
 <p><strong>How it works:</strong></p>
 <ol>
 <li><code>ic mod publish</code> packages <code>.icpkg</code> and publishes it. Phase 0–3: uploads to GitHub Releases + opens PR to <code>workshop-index</code>. Phase 3+: Workshop server computes BitTorrent info hash and starts seeding.</li>
-<li><code>ic mod install</code> fetches manifest (from git index or Workshop server), downloads content via HTTP or BitTorrent from other players who have it. Falls back to HTTP if no peers available.</li>
+<li><code>ic mod install</code> fetches manifest (from git index or Workshop server), downloads content via BT + HTTP concurrently when web seed URLs exist in torrent metadata. If no BT peers or web seeds are available, falls back to HTTP direct download as a last resort.</li>
 <li>Players who download automatically seed to others (opt-out in settings). Popular resources get faster — the opposite of CDN economics.</li>
 <li>SHA-256 verification on complete package, same as D030’s existing integrity design.</li>
 <li><strong>WebTorrent</strong> extends this to browser builds (WASM) — P2P over WebRTC. Desktop and browser clients interoperate.</li>

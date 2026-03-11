@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8c21bc0f.js";
+            window.path_to_searchindex_js = "../searchindex-04514734.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-e01a4107.js"></script>
+        <script src="../toc-9adfe301.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -231,7 +231,8 @@
   │&lt;─────────────────────────│                             │                          │
 </code></pre>
 <p><strong>Trust model:</strong> Workshop index is the trust anchor. SHA-256 in the manifest is verified against the downloaded <code>.icpkg</code> content. P2P peers are untrusted byte sources — content-addressed integrity makes malicious peers harmless.</p>
-<p><strong>Cross-references:</strong> D030 (registry), D049 § “P2P Distribution”, <code>player-flow/workshop.md</code> § “Install Flow”.</p>
+<p><strong>Web seeding (BEP 17/19):</strong> When the <code>webseed</code> feature is enabled and torrent metadata includes <code>httpseeds</code> or <code>url-list</code> keys, HTTP mirrors participate <strong>concurrently</strong> alongside BT peers in the piece scheduler — downloads aggregate bandwidth from both transports. This is especially valuable during initial swarm bootstrapping for newly published packages. See D049 § “Web Seeding” for the full design.</p>
+<p><strong>Cross-references:</strong> D030 (registry), D049 § “P2P Distribution”, D049 § “Web Seeding”, <code>player-flow/workshop.md</code> § “Install Flow”.</p>
 <hr>
 <h2 id="flow-2--lobby-auto-download"><a class="header" href="#flow-2--lobby-auto-download">Flow 2 — Lobby Auto-Download</a></h2>
 <pre><code>Host                     Relay/Tracker               Joining Player
@@ -258,8 +259,9 @@
   │                          │  "ready" (all verified)     │
   │                          │&lt;────────────────────────────│
 </code></pre>
-<p><strong>Key detail — host-as-tracker:</strong> The relay (or host in listen-server mode) maintains <code>HashMap&lt;ResourceId, Vec&lt;PeerId&gt;&gt;</code> for the room’s lifetime. Ready players join the seeding pool, accelerating downloads for later joiners. Lobby prefetch (seed boxes pre-warmed on room creation) further accelerates first-joiner experience.</p>
-<p><strong>Security:</strong> Only Workshop-published resources can be shared. Client verifies SHA-256 against a known Workshop source before accepting bytes. Unknown resources are refused. See D052 § “In-Lobby P2P Resource Sharing” for the full security model.</p>
+<p><strong>Key detail — host-as-tracker:</strong> The relay (or host in listen-server mode) maintains <code>HashMap&lt;ResourceId, Vec&lt;PeerId&gt;&gt;</code> for the room’s lifetime. Ready players join the seeding pool, accelerating downloads for later joiners. Lobby prefetch (seed boxes pre-warmed on room creation) further accelerates first-joiner experience.
+<strong>Web seeding in lobby context:</strong> When <code>webseed</code> is enabled, HTTP seeds provide immediate bandwidth while lobby BT peers connect. <code>LobbyUrgent</code> pieces bypass the <code>prefer_bt_peers</code> policy, allowing HTTP seeds to serve them even when the BT swarm is healthy.
+<strong>Security:</strong> Only Workshop-published resources can be shared. Client verifies SHA-256 against a known Workshop source before accepting bytes. Unknown resources are refused. See D052 § “In-Lobby P2P Resource Sharing” for the full security model.</p>
 <p><strong>Cross-references:</strong> D052 § “In-Lobby P2P Resource Sharing”, D049 § priority tier <code>lobby-urgent</code>.</p>
 <hr>
 <h2 id="flow-3--first-launch-asset-detection"><a class="header" href="#flow-3--first-launch-asset-detection">Flow 3 — First Launch Asset Detection</a></h2>

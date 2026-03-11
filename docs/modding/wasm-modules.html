@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8c21bc0f.js";
+            window.path_to_searchindex_js = "../searchindex-04514734.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-e01a4107.js"></script>
+        <script src="../toc-9adfe301.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -589,7 +589,7 @@ pub struct AiEventEntry {
 <p>Tier 3 WASM mods can register custom asset format loaders via the <code>FormatRegistry</code>. This is critical for total conversions that use non-C&amp;C asset formats — analysis of OpenRA mods (see <code>research/openra-mod-architecture-analysis.md</code>) shows that non-C&amp;C games on the engine require extensive custom format support:</p>
 <ul>
 <li><strong>OpenKrush (KKnD):</strong> 15+ custom binary format decoders — <code>.blit</code> (sprites), <code>.mobd</code> (animations), <code>.mapd</code> (terrain), <code>.lvl</code> (levels), <code>.son</code>/<code>.soun</code> (audio), <code>.vbc</code> (video). None of these resemble C&amp;C formats.</li>
-<li><strong>d2 (Dune II):</strong> 6 distinct sprite formats (<code>.icn</code>, <code>.cps</code>, <code>.wsa</code>, <code>.shp</code> variant), custom map format, <code>.adl</code> music.</li>
+<li><strong>d2 (Dune II):</strong> 6 distinct sprite formats (<code>.icn</code>, <code>.cps</code>, <code>.shp</code> variant), custom map format, <code>.adl</code> music. Dune II reuses <code>.wsa</code> (same format as C&amp;C — handled by <code>cnc-formats</code>).</li>
 <li><strong>OpenHV:</strong> Uses standard PNG/WAV/OGG — no proprietary binary formats at all.</li>
 </ul>
 <p>The engine provides a <code>FormatLoader</code> WASM API surface that lets mods register custom decoders:</p>

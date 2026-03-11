@@ -36,10 +36,10 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-8c21bc0f.js";
+            window.path_to_searchindex_js = "../../searchindex-04514734.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-e01a4107.js"></script>
+        <script src="../../toc-9adfe301.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -201,7 +201,7 @@
 <li><strong>Keywords:</strong> asset studio, sdk, ra-formats, conversion, vqa aud shp, provenance, ai asset generation, video pipeline, last-mile tooling</li>
 </ul>
 <p><strong>Decision:</strong> Ship an Asset Studio as part of the IC SDK — a visual tool for browsing, viewing, editing, and generating game resources (sprites, palettes, terrain tiles, UI chrome, 3D models). Optionally agentic: modders can describe what they want and an LLM generates or modifies assets, with in-context preview and iterative refinement. The Asset Studio is a tab/mode within the SDK application alongside the scenario editor (D038) — separate from the game binary.</p>
-<p><strong>Context:</strong> The current design covers the full lifecycle <em>around</em> assets — parsing (ra-formats), runtime loading (Bevy pipeline), in-game use (ic-render), mission editing (D038), and distribution (D030 Workshop) — but nothing for the creative work of making or modifying assets. A modder who wants to create a new unit sprite, adjust a palette, or redesign menu chrome has zero tooling in our chain. They use external tools (Photoshop, GIMP, Aseprite) and manually convert. The community’s most-used asset tool is XCC Mixer (a 20-year-old Windows utility for browsing .mix archives). We can do better.</p>
+<p><strong>Context:</strong> The current design covers the full lifecycle <em>around</em> assets — parsing (cnc-formats + ra-formats), runtime loading (Bevy pipeline), in-game use (ic-render), mission editing (D038), and distribution (D030 Workshop) — but nothing for the creative work of making or modifying assets. A modder who wants to create a new unit sprite, adjust a palette, or redesign menu chrome has zero tooling in our chain. They use external tools (Photoshop, GIMP, Aseprite) and manually convert. The community’s most-used asset tool is XCC Mixer (a 20-year-old Windows utility for browsing .mix archives). We can do better.</p>
 <p>Bevy does not fill this gap. Bevy’s asset system handles loading and hot-reloading at runtime. The in-development Bevy Editor is a scene/entity inspector, not an art tool. No Bevy ecosystem crate provides C&amp;C-format-aware asset editing.</p>
 <p><strong>What this is NOT:</strong> A Photoshop competitor. The Asset Studio does not provide pixel-level painting or 3D modeling. Artists use professional external tools for that. The Asset Studio handles the last mile: making assets game-ready, previewing them in context, and bridging the gap between “I have a PNG” and “it works as a unit in the game.”</p>
 <h3 id="sdk-architecture--editorgame-separation"><a class="header" href="#sdk-architecture--editorgame-separation">SDK Architecture — Editor/Game Separation</a></h3>

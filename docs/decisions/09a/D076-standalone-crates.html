@@ -36,10 +36,10 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-8c21bc0f.js";
+            window.path_to_searchindex_js = "../../searchindex-04514734.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-e01a4107.js"></script>
+        <script src="../../toc-9adfe301.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -230,6 +230,9 @@
 <li>
 <p><strong>Contributor attraction.</strong> The Rust ecosystem runs on MIT/Apache-2.0. Developers searching crates.io for fixed-point math or C&amp;C format parsers will find and contribute to permissive crates far more readily than to GPL engine modules.</p>
 </li>
+<li>
+<p><strong>Clean-room feasibility proof.</strong> <code>cnc-formats</code> demonstrates that all C&amp;C binary format parsing works correctly using only community documentation and public specifications — zero EA-derived code. This proves the engine is not <em>technically dependent</em> on GPL code. <code>ra-formats</code> adds EA-derived details for authoritative edge-case correctness (a quality choice), but the engine functions on <code>cnc-formats</code> alone. This gives IC a fallback path: if GPL ever became problematic, the engine crates (which contain no EA code) could be relicensed, and <code>ra-formats</code>’s EA references could be dropped in favor of <code>cnc-formats</code>’s clean-room implementations. See D051 § “GPL Is a Policy Choice, Not a Technical Necessity.”</p>
+</li>
 </ol>
 <hr>
 <h2 id="extraction-tiers-and-timeline"><a class="header" href="#extraction-tiers-and-timeline">Extraction Tiers and Timeline</a></h2>
@@ -241,7 +244,7 @@
 <tr><th>Crate Name</th><th>Purpose</th><th>Why Standalone</th><th>IC Consumer</th></tr>
 </thead>
 <tbody>
-<tr><td><code>cnc-formats</code></td><td>Parse all C&amp;C binary formats: <code>.mix</code>, <code>.shp</code>, <code>.tmp</code>, <code>.pal</code>, <code>.aud</code>, <code>.vqa</code>, <code>.fnt</code>, <code>.ini</code>, MiniYAML</td><td>Every C&amp;C tool, viewer, converter, and modding project needs format parsing. Currently scattered across C/C#/Python community tools with no canonical Rust implementation.</td><td><code>ra-formats</code> (IC’s game-specific layer wraps <code>cnc-formats</code> with IC asset pipeline integration)</td></tr>
+<tr><td><code>cnc-formats</code></td><td>Parse all C&amp;C binary formats: <code>.mix</code>, <code>.shp</code>, <code>.tmp</code>, <code>.pal</code>, <code>.aud</code>, <code>.vqa</code>, <code>.wsa</code>, <code>.fnt</code>, <code>.ini</code>, MiniYAML</td><td>Every C&amp;C tool, viewer, converter, and modding project needs format parsing. Currently scattered across C/C#/Python community tools with no canonical Rust implementation.</td><td><code>ra-formats</code> (IC’s game-specific layer wraps <code>cnc-formats</code> with IC asset pipeline integration)</td></tr>
 <tr><td><code>fixed-game-math</code></td><td>Deterministic fixed-point arithmetic: <code>Fixed&lt;N&gt;</code>, trig tables, CORDIC atan2, Newton sqrt, modifier chains</td><td>Any deterministic game (lockstep RTS, fighting game, physics sim) needs platform-identical math. No good Rust crate exists with game-focused API.</td><td><code>ic-sim</code>, <code>ic-protocol</code></td></tr>
 <tr><td><code>deterministic-rng</code></td><td>Seedable, platform-identical PRNG with game-oriented API: range sampling, weighted selection, shuffle, damage spread</td><td>Same audience as <code>fixed-game-math</code>. Must produce identical sequences on all platforms (x86/ARM/WASM).</td><td><code>ic-sim</code></td></tr>
 </tbody>

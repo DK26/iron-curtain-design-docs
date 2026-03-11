@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-8c21bc0f.js";
+            window.path_to_searchindex_js = "searchindex-04514734.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-e01a4107.js"></script>
+        <script src="toc-9adfe301.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -182,7 +182,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="05--file-formats--original-source-insights"><a class="header" href="#05--file-formats--original-source-insights">05 — File Formats &amp; Original Source Insights</a></h1>
-<h2 id="formats-to-support-ra-formats-crate"><a class="header" href="#formats-to-support-ra-formats-crate">Formats to Support (ra-formats crate)</a></h2>
+<h2 id="formats-to-support-cnc-formats--ra-formats"><a class="header" href="#formats-to-support-cnc-formats--ra-formats">Formats to Support (cnc-formats + ra-formats)</a></h2>
 <h3 id="binary-formats-from-original-game--openra"><a class="header" href="#binary-formats-from-original-game--openra">Binary Formats (from original game / OpenRA)</a></h3>
 <div class="table-wrapper">
 <table>
@@ -190,12 +190,14 @@
 <tr><th>Format</th><th>Purpose</th><th>Notes</th></tr>
 </thead>
 <tbody>
-<tr><td><code>.mix</code></td><td>Archive container</td><td>Flat archive with CRC-based filename hashing (rotate-left-1 + add), 6-byte <code>FileHeader</code> + sorted <code>SubBlock</code> index (12 bytes each). Extended format adds Blowfish encryption + SHA-1 digest. No per-file compression. See § MIX Archive Format for full struct definitions</td></tr>
+<tr><td><code>.mix</code></td><td>Archive container</td><td>Flat archive with CRC-based filename hashing (rotate-left-1 + add), 6-byte <code>FileHeader</code> + sorted <code>SubBlock</code> index (12 bytes each). Extended format adds Blowfish-encrypted header index + SHA-1 body digest (read-only decrypt via hardcoded symmetric key, <code>blowfish</code> RustCrypto crate). No per-file compression. No path traversal risk (files identified by CRC hash, not filenames). See § MIX Archive Format for full struct definitions</td></tr>
 <tr><td><code>.shp</code></td><td>Sprite sheets</td><td>Frame-based, palette-indexed (256 colors). <code>ShapeBlock_Type</code> container with per-frame <code>Shape_Type</code> headers. LCW-compressed frame data (or uncompressed via <code>NOCOMP</code> flag). Supports compact 16-color mode, horizontal/vertical flip, scaling, fading, shadow, ghost, and predator draw modes</td></tr>
 <tr><td><code>.tmp</code></td><td>Terrain tiles</td><td>IFF-format icon sets — collections of 24×24 palette-indexed tiles. Chunks: ICON/SINF/SSET/TRNS/MAP/RPAL/RTBL. SSET data may be LCW-compressed. RA version adds <code>MapWidth</code>/<code>MapHeight</code>/<code>ColorMap</code> for land type lookup. TD and RA <code>IControl_Type</code> structs differ — see § TMP Terrain Tile Format</td></tr>
 <tr><td><code>.pal</code></td><td>Color palettes</td><td>Raw 768 bytes (256 × RGB), no header. Components in 6-bit VGA range (0–63), not 8-bit. Convert to 8-bit via left-shift by 2. Multiple palettes per scenario (temperate, snow, interior, etc.)</td></tr>
 <tr><td><code>.aud</code></td><td>Audio</td><td>Westwood IMA ADPCM compressed. 12-byte <code>AUDHeaderType</code>: sample rate (Hz), compressed/uncompressed sizes, flags (stereo/16-bit), compression ID. Codec uses dual 1424-entry lookup tables (<code>IndexTable</code>/<code>DiffTable</code>) for 4-bit-nibble decoding. Read + write: Asset Studio (D040) converts .aud ↔ .wav/.ogg so modders can extract original sounds for remixing and convert custom recordings to classic AUD format</td></tr>
 <tr><td><code>.vqa</code></td><td>Video</td><td>VQ vector quantization cutscenes. Chunk-based IFF structure (WVQA/VQHD/FINF/VQFR/VQFK). Codebook blocks (4×2 or 4×4 pixels), LCW-compressed frames, interleaved audio (PCM/Westwood ADPCM/IMA ADPCM). Read + write: Asset Studio (D040) converts .vqa ↔ .mp4/.webm for campaign creators</td></tr>
+<tr><td><code>.wsa</code></td><td>Animations</td><td>Westwood Studios Animation. LCW-compressed XOR-delta frames. Used for menu backgrounds, installation screens, campaign map animations. Header with frame offsets, optional embedded palette. Loop-back delta for seamless looping. See § WSA Animation Format</td></tr>
+<tr><td><code>.fnt</code></td><td>Bitmap fonts</td><td>Westwood bitmap font format for in-game text. Header with offset/width/height tables, raw palette-indexed glyph bitmaps (1 byte/pixel, index 0 = transparent). Read-only — IC uses modern TTF/OTF via Bevy for runtime text; <code>.fnt</code> parsed for Classic render mode (D048) fidelity and Asset Studio (D040) preview. See § FNT Bitmap Font Format</td></tr>
 </tbody>
 </table>
 </div>
@@ -213,6 +215,9 @@
 <tr><td><code>.bk2</code></td><td>HD video (Bink2)</td><td>Proprietary RAD Game Tools codec. Cutscenes and briefings. Converted to WebM (VP9) at import time — IC does not ship a Bink2 runtime decoder.</td></tr>
 <tr><td><code>.wav</code> (HD)</td><td>Remixed audio</td><td>Standard WAV containers (Microsoft ADPCM). Plays natively in IC’s Kira audio pipeline. No conversion needed.</td></tr>
 <tr><td><code>.pgm</code></td><td>Map package</td><td>MEG file with different extension. Contains map + preview image + metadata. Reuse <code>MegArchive</code> parser.</td></tr>
+<tr><td><code>.mtd</code></td><td>MegaTexture data</td><td>Petroglyph format for packed UI elements (sidebar icons in <code>MT_COMMANDBAR_COMMON</code> variants). Custom parser in <code>ra-formats</code>. Low priority — only needed for UI chrome import.</td></tr>
+<tr><td><code>.xml</code></td><td>GlyphX config</td><td>Standard XML. Game settings, asset mappings, sequence definitions. Parse with <code>quick-xml</code> crate to extract classic→HD frame correspondence tables for sprite import pipeline.</td></tr>
+<tr><td><code>.dat</code>/<code>.loc</code></td><td>String tables</td><td>Petroglyph localization format. Parse for completeness; IC uses its own localization system. Low priority.</td></tr>
 </tbody>
 </table>
 </div>
@@ -238,33 +243,42 @@
 <tr><th>Asset Type</th><th>Recommended (new content)</th><th>Legacy (existing)</th><th>Why Recommended</th></tr>
 </thead>
 <tbody>
-<tr><td><strong>Music</strong></td><td>OGG Vorbis (128–320kbps)</td><td>.aud (ra-formats)</td><td>Bevy default feature, stereo 44.1kHz, ~1.4MB/min. Open, patent-free, WASM-safe, security-audited by browser vendors</td></tr>
-<tr><td><strong>SFX</strong></td><td>WAV (16-bit PCM) or OGG</td><td>.aud (ra-formats)</td><td>WAV = zero decode latency for gameplay-critical sounds. OGG for larger ambient sounds</td></tr>
-<tr><td><strong>Voice</strong></td><td>OGG Vorbis (96–128kbps)</td><td>.aud (ra-formats)</td><td>Transparent quality for speech. 200+ EVA lines stay under 30MB</td></tr>
-<tr><td><strong>Sprites</strong></td><td>PNG (RGBA or indexed)</td><td>.shp+.pal (ra-formats)</td><td>Bevy-native via <code>image</code> crate. Lossless, universal tooling. Palette-indexed PNG preserves classic aesthetic</td></tr>
+<tr><td><strong>Music</strong></td><td>OGG Vorbis (128–320kbps)</td><td>.aud (cnc-formats)</td><td>Bevy default feature, stereo 44.1kHz, ~1.4MB/min. Open, patent-free, WASM-safe, security-audited by browser vendors</td></tr>
+<tr><td><strong>SFX</strong></td><td>WAV (16-bit PCM) or OGG</td><td>.aud (cnc-formats)</td><td>WAV = zero decode latency for gameplay-critical sounds. OGG for larger ambient sounds</td></tr>
+<tr><td><strong>Voice</strong></td><td>OGG Vorbis (96–128kbps)</td><td>.aud (cnc-formats)</td><td>Transparent quality for speech. 200+ EVA lines stay under 30MB</td></tr>
+<tr><td><strong>Sprites</strong></td><td>PNG (RGBA or indexed)</td><td>.shp+.pal (cnc-formats)</td><td>Bevy-native via <code>image</code> crate. Lossless, universal tooling. Palette-indexed PNG preserves classic aesthetic</td></tr>
 <tr><td><strong>HD Textures</strong></td><td>KTX2 (BC7/ASTC GPU-compressed)</td><td>N/A</td><td>Zero-cost GPU upload, Bevy-native. <code>ic mod build</code> can batch-convert PNG→KTX2</td></tr>
-<tr><td><strong>Terrain</strong></td><td>PNG tiles</td><td>.tmp+.pal (ra-formats)</td><td>Same as sprites — theater tilesets are sprite sheets</td></tr>
-<tr><td><strong>Cutscenes</strong></td><td>WebM (VP9, 720p–1080p)</td><td>.vqa (ra-formats)</td><td>Open, royalty-free, browser-compatible (WASM), ~5MB/min at 720p</td></tr>
+<tr><td><strong>Terrain</strong></td><td>PNG tiles</td><td>.tmp+.pal (cnc-formats)</td><td>Same as sprites — theater tilesets are sprite sheets</td></tr>
+<tr><td><strong>Cutscenes</strong></td><td>WebM (VP9, 720p–1080p)</td><td>.vqa (cnc-formats)</td><td>Open, royalty-free, browser-compatible (WASM), ~5MB/min at 720p</td></tr>
 <tr><td><strong>3D Models</strong></td><td>GLTF/GLB</td><td>N/A</td><td>Bevy’s native 3D format</td></tr>
-<tr><td><strong>Palettes</strong></td><td>.pal (768 bytes)</td><td>.pal (ra-formats)</td><td>Already tiny and universal in the C&amp;C community — no change needed</td></tr>
+<tr><td><strong>Palettes</strong></td><td>.pal (768 bytes)</td><td>.pal (cnc-formats)</td><td>Already tiny and universal in the C&amp;C community — no change needed</td></tr>
 <tr><td><strong>Maps</strong></td><td>IC YAML</td><td>.oramap (ZIP+MiniYAML)</td><td>Already designed (D025, D026)</td></tr>
 </tbody>
 </table>
 </div>
 <p><strong>Why modern formats:</strong> (1) Bevy loads them natively — zero custom code, full hot-reload and async loading. (2) Security — OGG/PNG parsers are fuzz-tested and browser-audited; our custom .aud/.shp parsers are not. (3) Multi-game — non-C&amp;C game modules (D039) won’t use .shp or .aud. (4) Tooling — every editor exports PNG/OGG/WAV/WebM; nobody’s toolchain outputs .aud. (5) WASM — modern formats work in browser builds out of the box.</p>
 <p>The Asset Studio (D040) converts in both directions. See <code>decisions/09e/D049-workshop-assets.md</code> for full rationale, storage comparisons, and distribution strategy.</p>
-<h3 id="ra-formats-crate-goals"><a class="header" href="#ra-formats-crate-goals">ra-formats Crate Goals</a></h3>
+<h3 id="crate-goals-cnc-formats--ra-formats"><a class="header" href="#crate-goals-cnc-formats--ra-formats">Crate Goals (cnc-formats + ra-formats)</a></h3>
+<p>D076 splits format handling into two crates with distinct roles:</p>
+<p><strong>cnc-formats</strong> (MIT OR Apache-2.0, separate repo — Tier 1, Phase 0):</p>
 <ol>
-<li>Parse all above formats reliably</li>
+<li>Clean-room parsers for all C&amp;C binary formats (<code>.mix</code>, <code>.shp</code>, <code>.tmp</code>, <code>.pal</code>, <code>.aud</code>, <code>.vqa</code>, <code>.wsa</code>, <code>.fnt</code>, <code>.ini</code>, MiniYAML)</li>
 <li>Extensive tests against known-good OpenRA data</li>
 <li><code>miniyaml2yaml</code> converter tool</li>
-<li>CLI tool to dump/inspect/validate RA assets</li>
-<li><strong>Write support (Phase 6a):</strong> .shp generation from frames (LCW compression + frame offset tables), .pal writing (trivial — 768 bytes), .aud encoding (IMA ADPCM compression from PCM input), .vqa encoding (VQ codebook generation + frame differencing + audio interleaving), optional .mix packing (CRC hash table generation) — required by Asset Studio (D040). All encoders reference the EA GPL source code implementations directly (see § Binary Format Codec Reference)</li>
-<li>Useful as standalone crate (builds project credibility)</li>
-<li>Released open source early (Phase 0 deliverable, read-only; write support added Phase 6a)</li>
+<li>CLI tool to dump/inspect/validate C&amp;C assets</li>
+<li>No EA-derived code — permissive licensing enables adoption by any C&amp;C tool or modding project</li>
+<li>Released open source as a standalone crate on day one (Phase 0 deliverable, read-only)</li>
+<li>Serves as a <strong>clean-room feasibility proof</strong> that the engine is not technically dependent on EA’s GPL code — all formats parse correctly from community docs alone (see D051 § “GPL Is a Policy Choice” and D076 rationale #6)</li>
+</ol>
+<p><strong>ra-formats</strong> (GPL v3, IC monorepo):</p>
+<ol>
+<li>Thin wrapper over <code>cnc-formats</code> — adds EA-specific details (compression tables, game-specific constants) that reference EA’s GPL-licensed C&amp;C source (D051)</li>
+<li>Bevy <code>AssetSource</code> integration for IC’s asset pipeline</li>
+<li>Remastered Collection format support (<code>.meg</code>, <code>.tga+.meta</code>, <code>.dds</code>, <code>.bk2</code>, <code>.pgm</code>) — formats not in <code>cnc-formats</code>’s scope</li>
+<li><strong>Write support (Phase 6a):</strong> .shp generation from frames (LCW compression + frame offset tables), .pal writing (trivial — 768 bytes), .aud encoding (IMA ADPCM compression from PCM input), .vqa encoding (VQ codebook generation + frame differencing + audio interleaving), optional .mix packing (CRC hash table generation) — required by Asset Studio (D040). Encoders reference the EA GPL source code implementations directly (see § Binary Format Codec Reference)</li>
 </ol>
 <h3 id="non-cc-format-landscape"><a class="header" href="#non-cc-format-landscape">Non-C&amp;C Format Landscape</a></h3>
-<p>The <code>ra-formats</code> crate covers the C&amp;C format family, but the engine (D039) supports non-C&amp;C games via the <code>FormatRegistry</code> and WASM format loaders (see <code>04-MODDING.md</code> § WASM Format Loader API Surface). Analysis of six major OpenRA community mods (see <code>research/openra-mod-architecture-analysis.md</code>) reveals the scope of formats that non-C&amp;C total conversions require:</p>
+<p>The <code>cnc-formats</code> crate provides clean-room parsers for the C&amp;C binary format family; <code>ra-formats</code> wraps it with EA-derived details and IC asset pipeline integration. But the engine (D039) supports non-C&amp;C games via the <code>FormatRegistry</code> and WASM format loaders (see <code>04-MODDING.md</code> § WASM Format Loader API Surface). Analysis of six major OpenRA community mods (see <code>research/openra-mod-architecture-analysis.md</code>) reveals the scope of formats that non-C&amp;C total conversions require:</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -272,14 +286,14 @@
 </thead>
 <tbody>
 <tr><td>KKnD (OpenKrush)</td><td><code>.blit</code>, <code>.mobd</code>, <code>.mapd</code>, <code>.lvl</code>, <code>.son</code>, <code>.soun</code>, <code>.vbc</code> (15+ decoders)</td><td>Entirely proprietary format family; zero overlap with C&amp;C</td></tr>
-<tr><td>Dune II (d2)</td><td><code>.icn</code>, <code>.cps</code>, <code>.wsa</code>, <code>.shp</code> variant, <code>.adl</code>, custom map format (6+)</td><td>Different <code>.shp</code> than C&amp;C; incompatible parsers</td></tr>
+<tr><td>Dune II (d2)</td><td><code>.icn</code>, <code>.cps</code>, <code>.shp</code> variant, <code>.adl</code>, custom map format (6+)</td><td>Different <code>.shp</code> than C&amp;C; incompatible parsers. Dune II reuses <code>.wsa</code> (same format as C&amp;C — handled by <code>cnc-formats</code>)</td></tr>
 <tr><td>Swarm Assault (OpenSA)</td><td>Custom creature sprites, terrain tiles</td><td>Format details vary by content source</td></tr>
 <tr><td>Tiberian Dawn HD</td><td>MegV3 archives, 128×128 HD tiles (<code>RemasterSpriteSequence</code>)</td><td>Different archive format than <code>.mix</code></td></tr>
 <tr><td>OpenHV</td><td>None — uses PNG/WAV/OGG exclusively</td><td>Original game content avoids legacy formats entirely</td></tr>
 </tbody>
 </table>
 </div>
-<p><strong>Key insight:</strong> Non-C&amp;C games on the engine need 0–15+ custom format decoders, and there is zero format overlap with C&amp;C. This validates the <code>FormatRegistry</code> design — the engine cannot hardcode any format assumption. <code>ra-formats</code> is one format loader plugin among potentially many.</p>
+<p><strong>Key insight:</strong> Non-C&amp;C games on the engine need 0–15+ custom format decoders, and there is zero format overlap with C&amp;C. This validates the <code>FormatRegistry</code> design — the engine cannot hardcode any format assumption. <code>ra-formats</code> (wrapping <code>cnc-formats</code>) is one format loader plugin among potentially many.</p>
 <p><strong>Cross-engine validation:</strong> Godot’s <code>ResourceFormatLoader</code> follows the same pattern — a pluggable interface where any module registers format handlers (recognized extensions, type specializations, caching modes) and the engine dispatches to the correct loader at runtime. Godot’s implementation includes threaded loading, load caching (reuse/ignore/replace), and recursive dependency resolution for complex assets. IC’s <code>FormatRegistry</code> via Bevy’s asset system should support the same capabilities: threaded background loading, per-format caching policy, and declared dependencies between assets (e.g., a sprite sheet depends on a palette). See <code>research/godot-o3de-engine-analysis.md</code> § Asset Pipeline.</p>
 <h3 id="content-source-detection"><a class="header" href="#content-source-detection">Content Source Detection</a></h3>
 <p>Games use different distribution platforms, and each stores assets in different locations. Analysis of TiberianDawnHD (see <code>research/openra-mod-architecture-analysis.md</code>) shows a robust pattern for detecting installed game content:</p>
@@ -295,7 +309,7 @@ pub enum ContentSource {
 }
 <span class="boring">}</span></code></pre>
 <p>TiberianDawnHD detects Steam via AppId, Origin via Windows registry key, and GOG via standard install paths. IC should implement a <code>ContentDetector</code> that probes all known sources for each supported game and presents the user with detected installations at first run. This handles the critical UX question “where are your game assets?” without requiring manual path entry — the same approach used by OpenRA, CorsixTH, and other reimplementation projects.</p>
-<p><strong>Phase:</strong> Content detection ships in Phase 0 as part of <code>ra-formats</code> (for C&amp;C assets). Game module content detection in Phase 1.</p>
+<p><strong>Phase:</strong> Content detection ships in Phase 0 — format parsing in <code>cnc-formats</code>, IC-specific asset pipeline integration (including content source probing) in <code>ra-formats</code>. Game module content detection in Phase 1.</p>
 <h3 id="browser-asset-storage"><a class="header" href="#browser-asset-storage">Browser Asset Storage</a></h3>
 <p>The <code>ContentDetector</code> pattern above assumes filesystem access — probing Steam, Origin, GOG, and directory paths. None of this works in a browser build (WASM target). Browsers have no access to the user’s real filesystem. IC needs a dedicated browser asset storage strategy.</p>
 <p><strong>Browser storage APIs</strong> (in order of preference):</p>
@@ -342,7 +356,7 @@ pub struct BrowserStore { /* OPFS primary, IndexedDB fallback */ }
 <tr><th>Section</th><th>Topic</th><th>File</th></tr>
 </thead>
 <tbody>
-<tr><td>Binary Codecs</td><td>MIX, SHP, LCW, TMP, PAL, AUD, VQA codec specs + EA source insights + coordinate system translation</td><td><a href="formats/binary-codecs.html">binary-codecs.md</a></td></tr>
+<tr><td>Binary Codecs</td><td>MIX, SHP, LCW, TMP, PAL, AUD, VQA, WSA, FNT codec specs + EA source insights + coordinate system translation</td><td><a href="formats/binary-codecs.html">binary-codecs.md</a></td></tr>
 <tr><td>Save &amp; Replay Formats</td><td>Save game format (.icsave) + replay file format (.icrep)</td><td><a href="formats/save-replay-formats.html">save-replay-formats.md</a></td></tr>
 <tr><td>— Keyframes &amp; Analysis</td><td>Keyframe snapshot types, delta structs, seeking algorithm, analysis event taxonomy</td><td><a href="formats/replay-keyframes-analysis.html">replay-keyframes-analysis.md</a></td></tr>
 <tr><td>Backup, Screenshot &amp; Import</td><td>Backup archive format (D061) + screenshot format + owned-source import/extraction pipeline</td><td><a href="formats/backup-screenshot-import.html">backup-screenshot-import.md</a></td></tr>
