@@ -17,19 +17,26 @@
 - **Tip jar on resource pages:** Every Workshop resource page has an optional "Support this creator" button. Clicking shows the creator's configured payment links.
 - **Payment links, not payment processing.** IC does not process payments directly. Creators link their own payment platforms:
 
-```yaml
-# In mod.yaml or creator profile
-creator:
-  name: "Alice"
-  tip_links:
-    - platform: "ko-fi"
-      url: "https://ko-fi.com/alice"
-    - platform: "github-sponsors"
-      url: "https://github.com/sponsors/alice"
-    - platform: "patreon"
-      url: "https://patreon.com/alice"
-    - platform: "paypal"
-      url: "https://paypal.me/alice"
+```toml
+# In mod.toml or creator profile
+[creator]
+name = "Alice"
+
+[[creator.tip_links]]
+platform = "ko-fi"
+url = "https://ko-fi.com/alice"
+
+[[creator.tip_links]]
+platform = "github-sponsors"
+url = "https://github.com/sponsors/alice"
+
+[[creator.tip_links]]
+platform = "patreon"
+url = "https://patreon.com/alice"
+
+[[creator.tip_links]]
+platform = "paypal"
+url = "https://paypal.me/alice"
 ```
 
 - **No IC platform fee on tips.** Tips go directly to creators via their chosen platform. IC takes zero cut.

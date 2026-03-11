@@ -185,7 +185,7 @@ IC's Workshop is designed as part of the Iron Curtain engine. Extracting it as a
 | `ResourceCategory` (Music, Sprites, Map...) | Configurable categories per deployment | No hardcoded categories — each deployment defines its own                                                         |
 | `ic mod publish`                            | `<platform> publish`                   | Rename CLI, remove game-specific flags                                                                            |
 | `.icpkg` format                             | `.pkg` or configurable extension       | Same format (ZIP + manifest.yaml), different extension                                                            |
-| `mod.yaml`                                  | `manifest.yaml` or `package.yaml`      | Same schema, different name                                                                                       |
+| `mod.toml`                                  | `manifest.yaml` or `package.yaml`      | Same schema, different name                                                                                       |
 | Workshop browser (Bevy UI)                  | Client library + reference web UI      | Platform provides REST API + embeddable Rust client. Reference web frontend (HTML/JS) included.                   |
 | `ic-game` integration                       | SDK/library integration                | Platform ships as a Rust crate, not a Bevy plugin                                                                 |
 | Lobby auto-download                         | Application-defined triggers           | Platform provides "download these packages" API. Application decides when to call it.                             |

@@ -216,7 +216,7 @@ These settings are client-only for the same reason as subtitles or UI scale: the
 
 **Experience Profiles:** The meta-layer above all of these. Selecting "Vanilla RA" experience profile sets D019=classic, D032=classic, D033=vanilla, D043=classic-ra, D045=classic-ra, D048=classic in one click. Selecting "Iron Curtain" sets D019=classic, D032=modern, D033=iron_curtain, D043=ic-default, D045=ic-default, D048=hd. After selecting a profile, any individual setting can still be overridden.
 
-**Modding (Tier 1):** QoL presets are just YAML files in `presets/qol/`. Modders can create custom QoL presets — a total conversion mod ships its own preset tuned for its gameplay. The `mod.yaml` manifest can specify a default QoL preset.
+**Modding (Tier 1):** QoL presets are just YAML files in `presets/qol/`. Modders can create custom QoL presets — a total conversion mod ships its own preset tuned for its gameplay. The `mod.toml` manifest can specify a default QoL preset.
 
 ### Rationale
 

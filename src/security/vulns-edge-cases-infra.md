@@ -336,7 +336,7 @@ The [`strict-path`](https://github.com/iron-curtain-engine/strict-path-rs) crate
 | Backup restore (ZIP extraction)        | Sandbox backup extraction to `<data_dir>` (D061)       | `PathBoundary`     |
 | Replay resource extraction             | Sandbox embedded resources to cache (V41)              | `PathBoundary`     |
 | WASM `ic_format_read_bytes`            | Enforce mod's allowed file read scope                  | `PathBoundary`     |
-| Mod file references (`mod.yaml`)       | Ensure mod paths don't escape mod root                 | `PathBoundary`     |
+| Mod file references (`mod.toml`)       | Ensure mod paths don't escape mod root                 | `PathBoundary`     |
 | YAML asset paths (icon, sprite refs)   | Validate asset paths within content directory (V33)    | `PathBoundary`     |
 
 This supersedes naive string-based checks like `path.contains("..")` (see V33) which miss symlinks, Windows 8.3 short names, NTFS ADS, encoding tricks, and race conditions. `strict-path`'s compile-time marker types (`PathBoundary` vs `VirtualRoot`) provide domain separation — a path validated for one boundary cannot be accidentally used for another.

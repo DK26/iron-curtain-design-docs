@@ -100,7 +100,7 @@
 2. **Directory convention mapping:** OpenRA mods use `rules/`, `maps/`, `sequences/` etc. IC maps these to its own layout at load time without copying files.
 3. **Unsupported sections flagged:** `Assemblies` (C# DLLs) cannot load — these are flagged as warnings listing which custom traits are unavailable and what WASM alternatives exist.
 4. **Partial loading:** A mod with unsupported C# traits still loads — units using those traits get a visual placeholder and a "missing trait" debug overlay. The mod is playable with reduced functionality.
-5. **`ic mod import`:** CLI command that reads an OpenRA mod directory and generates an IC-native `mod.yaml` with proper structure, converting files to standard YAML and flagging C# dependencies for WASM migration.
+5. **`ic mod import`:** CLI command that reads an OpenRA mod directory and generates an IC-native `mod.toml` with proper structure, converting files to standard YAML and flagging C# dependencies for WASM migration.
 
 **Rationale:**
 - Combined with D023/D024/D025, this completes the "zero-friction import" pipeline

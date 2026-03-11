@@ -33,11 +33,11 @@ When a breaking change is unavoidable (major version bump):
 
 The mod API version is declared separately from the engine version:
 
-```yaml
-# mod.yaml
-engine:
-  version: "^0.5.0"          # engine version (can change rapidly)
-  mod_api: "^1.0"            # mod API version (changes slowly)
+```toml
+# mod.toml
+[engine]
+version = "^0.5.0"          # engine version (can change rapidly)
+mod_api = "^1.0"            # mod API version (changes slowly)
 ```
 
 A mod targeting `mod_api: "^1.0"` works on any engine version that supports mod API 1.x. The engine can ship 0.5.0 through 0.9.0 without breaking mod API 1.0 compatibility. This decoupling means engine development velocity doesn't fragment the mod ecosystem.

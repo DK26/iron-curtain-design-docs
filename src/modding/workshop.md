@@ -202,23 +202,16 @@ Example: alice/soviet-march-music@1.2.0
 - **Name** = resource name, lowercase with hyphens
 - **Version** = semantic versioning (semver)
 
-#### Dependency Declaration in `mod.yaml`
+#### Dependency Declaration in `mod.toml`
 
 Mods and resources declare dependencies on other Workshop resources:
 
-```yaml
-# mod.yaml
-dependencies:
-  - id: "community-project/hd-infantry-sprites"
-    version: "^2.0"                    # semver range (cargo-style)
-    source: workshop                   # workshop | local | url
-  - id: "alice/soviet-march-music"
-    version: ">=1.0, <3.0"
-    source: workshop
-    optional: true                     # soft dependency — mod works without it
-  - id: "bob/desert-terrain-textures"
-    version: "~1.4"                    # compatible with 1.4.x
-    source: workshop
+```toml
+# mod.toml
+[dependencies]
+"community-project/hd-infantry-sprites" = { version = "^2.0", source = "workshop" }
+"alice/soviet-march-music" = { version = ">=1.0, <3.0", source = "workshop", optional = true }
+"bob/desert-terrain-textures" = { version = "~1.4", source = "workshop" }
 ```
 
 Dependencies are **transitive** — if resource A depends on B, and B depends on C, installing A pulls all three.
@@ -246,7 +239,7 @@ ic mod resolve         # compute dependency graph, report conflicts
 ic mod install         # download all dependencies to local cache (verifies SHA-256)
 ic mod update          # update deps to latest compatible versions (respects semver)
 ic mod tree            # display dependency tree (like `cargo tree`)
-ic mod lock            # regenerate ic.lock from current mod.yaml
+ic mod lock            # regenerate ic.lock from current mod.toml
 ic mod audit           # check dependency licenses for compatibility
 ic mod promote         # promote resource to a higher channel (beta → release)
 ic workshop export-bundle  # export selected resources as portable offline archive
@@ -283,10 +276,10 @@ $ ic mod audit
 
 **Every published Workshop resource MUST have a `license` field.** Publishing without one is rejected by the Workshop server and by `ic mod publish`.
 
-```yaml
-# In mod.yaml
-mod:
-  license: "CC-BY-SA-4.0"             # SPDX identifier (required for publishing)
+```toml
+# In mod.toml
+[mod]
+license = "CC-BY-SA-4.0"             # SPDX identifier (required for publishing)
 ```
 
 - Uses [SPDX identifiers](https://spdx.org/licenses/) for machine-readable classification
@@ -403,32 +396,32 @@ The command is the same in both phases — the backend is transparent to the mod
 ```
 # Publish a single music track
 ic mod init asset-pack
-# Edit mod.yaml: set category to "Music", add license, add llm_meta
+# Edit mod.toml: set category to "Music", add license, add llm_meta
 # Add audio files
 ic mod check                   # validates license present, llm_meta recommended
 ic mod publish                 # Phase 0-3: uploads to GitHub Releases + opens PR to index
                                # Phase 5+:  uploads directly to Workshop server
 ```
 
-```yaml
+```toml
 # Example: publishing a music pack
-mod:
-  id: alice/soviet-march-music
-  title: "Soviet March — Original Composition"
-  version: "1.2.0"
-  authors: ["alice"]
-  description: "An original military march composition for Soviet faction missions"
-  license: "CC-BY-4.0"
-  category: Music
+[mod]
+id = "alice/soviet-march-music"
+title = "Soviet March — Original Composition"
+version = "1.2.0"
+authors = ["alice"]
+description = "An original military march composition for Soviet faction missions"
+license = "CC-BY-4.0"
+category = "Music"
 
-assets:
-  media: ["audio/soviet-march.ogg"]
+[assets]
+media = ["audio/soviet-march.ogg"]
 
-llm:
-  summary: "Military march music, Soviet theme, 2:30 duration, orchestral"
-  purpose: "Background music for Soviet mission briefings or victory screens"
-  gameplay_tags: [soviet, military, march, orchestral, briefing]
-  composition_hints: "Pairs well with Soviet faction voice lines for immersive briefings"
+[llm]
+summary = "Military march music, Soviet theme, 2:30 duration, orchestral"
+purpose = "Background music for Soviet mission briefings or victory screens"
+gameplay_tags = ["soviet", "military", "march", "orchestral", "briefing"]
+composition_hints = "Pairs well with Soviet faction voice lines for immersive briefings"
 ```
 
 #### Moderation & Publisher Trust (D030)
@@ -453,7 +446,7 @@ Publisher trust tiers (Unverified→Verified→Trusted→Featured), asymmetric n
 
 - **Scoped API tokens:** `ic auth create-token --scope publish` generates a token limited to publish operations. Separate scopes: `publish`, `admin`, `readonly`. Tokens stored in `~/.ic/credentials.yaml` locally, or `IC_AUTH_TOKEN` env var in CI.
 - **Non-interactive mode:** `--non-interactive` flag skips all prompts (required for CI). `--json` flag returns structured output for pipeline parsing.
-- **Lockfile verification in CI:** `ic mod install --locked` fails if `ic.lock` doesn't match `mod.yaml` — ensures reproducible builds.
+- **Lockfile verification in CI:** `ic mod install --locked` fails if `ic.lock` doesn't match `mod.toml` — ensures reproducible builds.
 - **Pre-publish validation:** `ic mod check --strict` validates manifest, license, dependencies, SHA-256 integrity, and file format compliance before upload. Catch errors before hitting the server.
 
 #### Platform-Targeted Releases

@@ -16,18 +16,15 @@ Works with GitHub Actions, GitLab CI, Gitea Actions, or any CI system — the CL
 
 A Script Library is a Workshop resource containing reusable Lua modules that other mods can depend on:
 
-```yaml
-# mod.yaml for a script library resource
-mod:
-  name: "rts-ai-behaviors"
-  category: script-library
-  version: "1.0.0"
-  license: "MIT"
-  description: "Reusable AI behavior patterns for mission scripting"
-  exports:
-    - "patrol_routes"        # Lua module names available to dependents
-    - "guard_behaviors"
-    - "retreat_logic"
+```toml
+# mod.toml for a script library resource
+[mod]
+name = "rts-ai-behaviors"
+category = "script-library"
+version = "1.0.0"
+license = "MIT"
+description = "Reusable AI behavior patterns for mission scripting"
+exports = ["patrol_routes", "guard_behaviors", "retreat_logic"]
 ```
 
 Dependent mods declare the library as a dependency and import its modules:
@@ -54,10 +51,10 @@ This turns the Lua tier from "every mod reimplements common patterns" into a com
 
 **Every published Workshop resource MUST have a `license` field.** Publishing without one is rejected.
 
-```yaml
-# In mod.yaml or resource manifest
-mod:
-  license: "CC-BY-SA-4.0"             # SPDX identifier (required for publishing)
+```toml
+# In mod.toml or resource manifest
+[mod]
+license = "CC-BY-SA-4.0"    # SPDX identifier (required for publishing)
 ```
 
 - Uses [SPDX identifiers](https://spdx.org/licenses/) for machine-readable license classification
@@ -84,7 +81,7 @@ Pipeline:
   4. Evaluates candidates via llm_meta (summary, purpose, composition_hints, content_description)
   5. Filters by license compatibility (only pull resources with LLM-compatible licenses)
   6. Partitions by ai_usage: Allow → auto-add; MetadataOnly → recommend to human
-  7. Adds discovered resources as dependencies in generated mod.yaml
+  7. Adds discovered resources as dependencies in generated mod.toml
   8. Generated mission references assets by resource ID — resolved at install time
 ```
 

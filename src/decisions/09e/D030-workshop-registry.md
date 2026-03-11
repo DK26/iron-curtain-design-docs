@@ -14,7 +14,7 @@
 - **Compatibility / Export impact:** Resource registry supports both IC-native and compatibility-oriented content; D049 defines canonical format recommendations and P2P delivery details.
 - **Security / Trust impact:** License metadata and `ai_usage` permissions are first-class; supports automated policy checks and creator consent for agentic tooling.
 - **Performance / Ops impact:** Phased rollout starts with a low-cost Git index and grows toward full infrastructure only as needed.
-- **Public interfaces / types / commands:** `publisher/name@version` IDs, semver dependency ranges in `mod.yaml`, `.icpkg` packages, `ic mod publish/install/init`
+- **Public interfaces / types / commands:** `publisher/name@version` IDs, semver dependency ranges in `mod.toml`, `.icpkg` packages, `ic mod publish/install/init`
 - **Affected docs:** `src/04-MODDING.md`, `src/decisions/09e-community.md` (D049/D050/D061), `src/decisions/09c-modding.md`, `src/17-PLAYER-FLOW.md`
 - **Revision note summary:** None
 - **Keywords:** workshop registry, dependencies, semver, icpkg, federated workshop, reusable resources, ai_usage permissions, mod publish
@@ -89,21 +89,14 @@ A published resource is just a `ResourcePackage` with the appropriate `ResourceC
 
 ### Dependency Declaration
 
-`mod.yaml` already has a `dependencies:` section. D030 formalizes the resolution semantics:
+`mod.toml` already has a `[dependencies]` section. D030 formalizes the resolution semantics:
 
-```yaml
-# mod.yaml
-dependencies:
-  - id: "community-project/hd-infantry-sprites"
-    version: "^2.0"                    # semver range (cargo-style)
-    source: workshop                   # workshop | local | url
-  - id: "alice/soviet-march-music"
-    version: ">=1.0, <3.0"
-    source: workshop
-    optional: true                     # soft dependency — mod works without it
-  - id: "bob/desert-terrain-textures"
-    version: "~1.4"                    # compatible with 1.4.x
-    source: workshop
+```toml
+# mod.toml
+[dependencies]
+"community-project/hd-infantry-sprites" = { version = "^2.0", source = "workshop" }
+"alice/soviet-march-music" = { version = ">=1.0, <3.0", source = "workshop", optional = true }
+"bob/desert-terrain-textures" = { version = "~1.4", source = "workshop" }
 ```
 
 Resource packages can also declare dependencies on other resources (transitive):
@@ -212,11 +205,11 @@ Resources can be published to maturity channels, allowing staged releases:
 | `beta`    | Pre-release, community testing  | Opt-in (users enable beta flag) |
 | `release` | Stable, production-ready        | Default (everyone sees these)   |
 
-```yaml
-# mod.yaml
-mod:
-  version: "1.3.0-beta.1"            # semver pre-release tag
-  channel: beta                       # publish to beta channel
+```toml
+# mod.toml
+[mod]
+version = "1.3.0-beta.1"    # semver pre-release tag
+channel = "beta"             # publish to beta channel
 ```
 
 - `ic mod publish --channel beta` → visible only to users who opt in to beta resources
@@ -252,7 +245,7 @@ ic mod resolve         # compute dependency graph, report conflicts
 ic mod install         # download all dependencies to local cache
 ic mod update          # update deps to latest compatible versions (respects semver)
 ic mod tree            # display dependency tree (like `cargo tree`)
-ic mod lock            # regenerate ic.lock from current mod.yaml
+ic mod lock            # regenerate ic.lock from current mod.toml
 ic mod audit           # check dependency licenses for compatibility + source confusion detection
 ic mod list             # list all local resources (state, size, last used, source)
 ic mod remove <pkg>     # remove resource from disk (dependency-aware, prompts for cascade)

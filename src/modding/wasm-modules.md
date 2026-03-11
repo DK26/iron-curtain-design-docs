@@ -251,21 +251,23 @@ Tier 3 WASM mods can provide custom `Pathfinder` trait implementations (D013, D0
 
 The C&C Generals source code (GPL v3, `electronicarts/CnC_Generals_Zero_Hour`) uses a layered grid system with 10-unit cells, surface bitmasks, and bridge layers. A community mod can reimplement this as a WASM pathfinder — see `research/pathfinding-ic-default-design.md` § "C&C Generals / Zero Hour" for the `LayeredGridPathfinder` design sketch.
 
-```yaml
-# generals_pathfinder/mod.yaml
-mod:
-  name: "Generals Pathfinder"
-  type: pathfinder
-  pathfinder_id: layered-grid-generals
-  display_name: "Generals (Layered Grid)"
-  description: "Grid pathfinding with bridge layers and surface bitmasks, inspired by C&C Generals"
-  wasm_module: generals_pathfinder.wasm
-  capabilities:
-    pathfinding: true
-  config:
-    zone_block_size: 10
-    bridge_clearance: 10.0
-    surface_types: [ground, water, cliff, air, rubble]
+```toml
+# generals_pathfinder/mod.toml
+[mod]
+name = "Generals Pathfinder"
+type = "pathfinder"
+pathfinder_id = "layered-grid-generals"
+display_name = "Generals (Layered Grid)"
+description = "Grid pathfinding with bridge layers and surface bitmasks, inspired by C&C Generals"
+wasm_module = "generals_pathfinder.wasm"
+
+[capabilities]
+pathfinding = true
+
+[config]
+zone_block_size = 10
+bridge_clearance = 10.0
+surface_types = ["ground", "water", "cliff", "air", "rubble"]
 ```
 
 **Security:** Pathfinding host functions are gated by `ModCapabilities.pathfinding`. A pathfinder mod can read terrain and obstacle positions but cannot issue orders, read gameplay state (health, resources, fog), or access render functions. This is a narrower capability than gameplay mods — pathfinders compute routes, nothing else.

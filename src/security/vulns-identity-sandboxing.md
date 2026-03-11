@@ -255,9 +255,9 @@ The tiered modding system (Invariant #3) sandboxes individual WASM modules, but 
 **Capability-gated cross-module calls:** Cross-module communication is only possible through a host-mediated message-passing API. Modules declare `exports` and `imports` in their manifest. The host validates that import/export pairs match before linking.
 
 ```rust
-// In mod manifest (mod.yaml)
-// exports: ["custom_unit_stats"]
-// imports: ["base_game.terrain_query"]
+// In mod manifest (mod.toml)
+// exports = ["custom_unit_stats"]
+// imports = ["base_game.terrain_query"]
 ```
 
 **Resource pool isolation:** Each module gets its own memory allocation pool. Host-imposed limits (memory, CPU ticks, entity count) are per-module, not shared. A module exhausting its allocation cannot starve other modules.

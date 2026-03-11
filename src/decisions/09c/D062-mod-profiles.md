@@ -11,54 +11,58 @@ The model separates mod loading into three explicit phases, inspired by LVM's ph
 | Layer              | LVM Analog      | IC Concept                       | What It Is                                                                                                                                                                               |
 | ------------------ | --------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Source** (PV)    | Physical Volume | Registered mod/package/base game | A validated, installed content source — its files exist, its manifest is parsed, its dependencies are resolved. Immutable once registered.                                               |
-| **Profile** (VG)   | Volume Group    | Mod profile                      | A named composition: which sources, in what priority order, with what conflict resolutions and experience settings. Saved as a YAML file. Hashable.                                      |
+| **Profile** (VG)   | Volume Group    | Mod profile                      | A named composition: which sources, in what priority order, with what conflict resolutions and experience settings. Saved as a TOML file (D067 — infrastructure, not content). Hashable. |
 | **Namespace** (LV) | Logical Volume  | Virtual asset namespace          | The resolved lookup table: for every logical asset path, which blob (from which source) answers the query. Built from a profile at activation time. What the engine actually loads from. |
 
 **The model does NOT replace three-phase data loading.** Three-phase loading (Define → Modify → Final-fixes) organizes *when* modifications apply during profile activation. The profile organizes *which* sources participate. They're orthogonal — the profile says "use mods A, B, C in this order" and three-phase loading says "first all Define phases, then all Modify phases, then all Final-fixes phases."
 
 ### Mod Profiles
 
-A mod profile is a YAML file in the player's configuration directory that captures a complete, reproducible mod setup:
+A mod profile is a TOML file in the player's configuration directory that captures a complete, reproducible mod setup:
 
-```yaml
-# <data_dir>/profiles/tournament-s5.yaml
-profile:
-  name: "Tournament Season 5"
-  game_module: ra1
+```toml
+# <data_dir>/profiles/tournament-s5.toml
+
+[profile]
+name = "Tournament Season 5"
+game_module = "ra1"
 
 # Which mods participate, in priority order (later overrides earlier)
-sources:
-  # Engine defaults and base game assets are always implicitly first
-  - id: "official/tournament-balance"
-    version: "=1.3.0"
-  - id: "official/hd-sprites"
-    version: "=2.0.1"
-  - id: "community/improved-explosions"
-    version: "^1.0.0"
+# Engine defaults and base game assets are always implicitly first
+
+[[sources]]
+id = "official/tournament-balance"
+version = "=1.3.0"
+
+[[sources]]
+id = "official/hd-sprites"
+version = "=2.0.1"
+
+[[sources]]
+id = "community/improved-explosions"
+version = "^1.0.0"
 
 # Explicit conflict resolutions (same role as conflicts.yaml, but profile-scoped)
-conflicts:
-  - unit: heavy_tank
-    field: health.max
-    use_source: "official/tournament-balance"
+
+[[conflicts]]
+unit = "heavy_tank"
+field = "health.max"
+use_source = "official/tournament-balance"
 
 # Experience profile axes (D033) — bundled with the mod set
-experience:
-  balance: classic           # D019
-  theme: remastered          # D032
-  behavior: iron_curtain     # D033
-  ai_behavior: enhanced      # D043
-  pathfinding: ic_default    # D045
-  render_mode: hd_sprites    # D048
-
-# Computed at activation time, not authored
-fingerprint: null  # sha256 of the resolved namespace — set by engine
+[experience]
+balance = "classic"           # D019
+theme = "remastered"          # D032
+behavior = "iron_curtain"     # D033
+ai_behavior = "enhanced"      # D043
+pathfinding = "ic_default"    # D045
+render_mode = "hd_sprites"    # D048
 ```
 
 **Relationship to existing concepts:**
 
 - **Experience profiles (D033)** set 6 switchable axes (balance, theme, behavior, AI, pathfinding, render mode) but don't specify *which community mods* are active. A mod profile bundles experience settings WITH the mod set — one object captures the full player experience.
-- **Modpacks (D030)** are published, versioned Workshop resources. A mod profile is a local, personal composition. **Publishing a mod profile creates a modpack** — `ic mod publish-profile` snapshots the profile into a `mod.yaml` modpack manifest for Workshop distribution. This makes mod profiles the local precursor to modpacks: curators build and test profiles locally, then publish the working result.
+- **Modpacks (D030)** are published, versioned Workshop resources. A mod profile is a local, personal composition. **Publishing a mod profile creates a modpack** — `ic mod publish-profile` snapshots the profile into a `mod.toml` modpack manifest for Workshop distribution. This makes mod profiles the local precursor to modpacks: curators build and test profiles locally, then publish the working result.
 - **`conflicts.yaml` (existing)** is a global conflict override file. Profile-scoped conflicts apply only when that profile is active. Both mechanisms coexist — profile conflicts take precedence, then global `conflicts.yaml`, then default last-wins behavior.
 
 **Profile operations:**

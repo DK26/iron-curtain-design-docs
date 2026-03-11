@@ -179,7 +179,7 @@ The `ic mod publish` command works against the git-index backend in Phase 0–3:
 
 1. `ic mod publish` packages content into `.icpkg`, computes SHA-256
 2. Uploads `.icpkg` to GitHub Releases (via GitHub API, using a personal access token configured in `ic auth`)
-3. Generates the index manifest YAML from `mod.yaml` metadata
+3. Generates the index manifest YAML from `mod.toml` metadata
 4. Opens a PR to `workshop-index` with the manifest file
 5. Modder reviews the PR and confirms; GitHub Actions validates; maintainers merge
 

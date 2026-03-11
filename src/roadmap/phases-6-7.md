@@ -12,7 +12,7 @@
 - Tera templating for YAML generation (nice-to-have)
 - **`ic` CLI tool (full release):** `ic mod init/check/test/run/server/package/publish/watch/lint` plus Git-first helpers (`ic git setup`, `ic content diff`) — complete mod development workflow (D020)
 - **Mod templates:** `data-mod`, `scripted-mod`, `total-conversion`, `map-pack`, `asset-pack` via `ic mod init`
-- **`mod.yaml` manifest** with typed schema, semver engine version pinning, dependency declarations
+- **`mod.toml` manifest** with typed schema, semver engine version pinning, dependency declarations
 - **VS Code extension** for mod development: YAML schema validation, Lua LSP, `ic` integration
 
 ### Deliverables — Scenario Editor (D038 Core)

@@ -630,7 +630,7 @@ parallels are striking:
 | Lua prototypes                     | YAML definitions              | D003        |
 | `data-updates.lua` (modifications) | Lua scripting                 | D004        |
 | `data-final-fixes.lua`             | WASM power mods               | D005        |
-| `info.json` (mod metadata)         | `mod.yaml`                    | D026        |
+| `info.json` (mod metadata)         | `mod.toml`                    | D026/D067   |
 | JSON rename migrations             | SnapshotCodec dispatch        | D054        |
 | Lua script migrations              | Lua migration scripts         | D054        |
 | `core/`                            | Engine core (`ic-*`)          | D039        |

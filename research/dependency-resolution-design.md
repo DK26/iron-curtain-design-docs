@@ -20,12 +20,12 @@ IC Workshop's dependency resolver uses the **PubGrub** algorithm — the same al
 
 ### Why Not Other Algorithms
 
-| Algorithm | How it works | Why IC rejects it |
-|---|---|---|
-| **SAT Solver** (e.g., libsolv/Zypper, older pip) | Encodes all version constraints as boolean satisfiability clauses, runs DPLL/CDCL | Error messages are UNSAT cores — opaque to non-experts. Encoding overhead is unnecessary for Workshop-scale registries. Debugging resolution failures requires expertise in SAT semantics. |
-| **MVS (Go-style Minimal Version Selection)** | Always picks the minimum version satisfying all constraints | Always selects oldest compatible version — surprising for users who expect latest compatible. Cannot express exclusion ranges (e.g., "any 1.x except 1.3.0 which is buggy"). Forces ecosystem to always bump minimums manually. |
-| **"Newest Wins" greedy** | Pick newest version of each package, hope for the best | Breaks immediately on diamond dependencies with conflicting transitive requirements. No backtracking means no recovery from conflicts. Nondeterministic in edge cases. |
-| **Backtracking without learning** | Try combinations, backtrack on conflict | Exponential worst case — no clause learning means re-exploring failed combinations. Slow on deep dependency graphs. |
+| Algorithm                                        | How it works                                                                      | Why IC rejects it                                                                                                                                                                                                               |
+| ------------------------------------------------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **SAT Solver** (e.g., libsolv/Zypper, older pip) | Encodes all version constraints as boolean satisfiability clauses, runs DPLL/CDCL | Error messages are UNSAT cores — opaque to non-experts. Encoding overhead is unnecessary for Workshop-scale registries. Debugging resolution failures requires expertise in SAT semantics.                                      |
+| **MVS (Go-style Minimal Version Selection)**     | Always picks the minimum version satisfying all constraints                       | Always selects oldest compatible version — surprising for users who expect latest compatible. Cannot express exclusion ranges (e.g., "any 1.x except 1.3.0 which is buggy"). Forces ecosystem to always bump minimums manually. |
+| **"Newest Wins" greedy**                         | Pick newest version of each package, hope for the best                            | Breaks immediately on diamond dependencies with conflicting transitive requirements. No backtracking means no recovery from conflicts. Nondeterministic in edge cases.                                                          |
+| **Backtracking without learning**                | Try combinations, backtrack on conflict                                           | Exponential worst case — no clause learning means re-exploring failed combinations. Slow on deep dependency graphs.                                                                                                             |
 
 ### Rust Implementation
 
@@ -51,18 +51,18 @@ IC follows Cargo's semver range conventions exactly. This is a deliberate choice
 
 ### Range Operators
 
-| Syntax | Name | Expands to | Example |
-|---|---|---|---|
-| `^1.2.3` | Caret (compatible) | `>=1.2.3, <2.0.0` | `^1.2.3` matches `1.2.3`, `1.9.99`, not `2.0.0` |
-| `^0.2.3` | Caret (0.x special) | `>=0.2.3, <0.3.0` | Minor is treated as breaking when major=0 |
-| `^0.0.3` | Caret (0.0.x special) | `>=0.0.3, <0.0.4` | Patch is treated as breaking when major=0, minor=0 |
-| `~1.2.3` | Tilde (patch only) | `>=1.2.3, <1.3.0` | `~1.2.3` matches `1.2.3`, `1.2.99`, not `1.3.0` |
-| `~1.2` | Tilde (minor only) | `>=1.2.0, <1.3.0` | Same as `~1.2.0` |
-| `>=1.0, <2.0` | Explicit range | Literal | Intersection of both bounds |
-| `=1.2.3` | Exact pin | `>=1.2.3, <1.2.4` | Only `1.2.3` matches |
-| `*` | Wildcard | `>=0.0.0` | Any version (use sparingly) |
-| `>=1.0` | Lower bound | `>=1.0.0` | Open-ended (dangerous for forward compat) |
-| `<2.0` | Upper bound | `<2.0.0` | Anything below 2.0.0 |
+| Syntax        | Name                  | Expands to        | Example                                            |
+| ------------- | --------------------- | ----------------- | -------------------------------------------------- |
+| `^1.2.3`      | Caret (compatible)    | `>=1.2.3, <2.0.0` | `^1.2.3` matches `1.2.3`, `1.9.99`, not `2.0.0`    |
+| `^0.2.3`      | Caret (0.x special)   | `>=0.2.3, <0.3.0` | Minor is treated as breaking when major=0          |
+| `^0.0.3`      | Caret (0.0.x special) | `>=0.0.3, <0.0.4` | Patch is treated as breaking when major=0, minor=0 |
+| `~1.2.3`      | Tilde (patch only)    | `>=1.2.3, <1.3.0` | `~1.2.3` matches `1.2.3`, `1.2.99`, not `1.3.0`    |
+| `~1.2`        | Tilde (minor only)    | `>=1.2.0, <1.3.0` | Same as `~1.2.0`                                   |
+| `>=1.0, <2.0` | Explicit range        | Literal           | Intersection of both bounds                        |
+| `=1.2.3`      | Exact pin             | `>=1.2.3, <1.2.4` | Only `1.2.3` matches                               |
+| `*`           | Wildcard              | `>=0.0.0`         | Any version (use sparingly)                        |
+| `>=1.0`       | Lower bound           | `>=1.0.0`         | Open-ended (dangerous for forward compat)          |
+| `<2.0`        | Upper bound           | `<2.0.0`          | Anything below 2.0.0                               |
 
 ### Pre-release Ordering
 
@@ -82,11 +82,11 @@ This prevents modders from accidentally pulling unstable pre-release versions.
 
 ### Compatibility Rules
 
-| Bump type | What changed | Example | Meaning |
-|---|---|---|---|
-| **Major** (X.0.0) | Breaking API/behavior change | `1.0.0` -> `2.0.0` | Removed assets, renamed YAML keys, changed behavior |
+| Bump type         | What changed                      | Example            | Meaning                                                 |
+| ----------------- | --------------------------------- | ------------------ | ------------------------------------------------------- |
+| **Major** (X.0.0) | Breaking API/behavior change      | `1.0.0` -> `2.0.0` | Removed assets, renamed YAML keys, changed behavior     |
 | **Minor** (0.X.0) | New features, backward-compatible | `1.0.0` -> `1.1.0` | Added new sprites, new map variants, new config options |
-| **Patch** (0.0.X) | Bug fixes only | `1.0.0` -> `1.0.1` | Fixed corrupted texture, corrected balance typo |
+| **Patch** (0.0.X) | Bug fixes only                    | `1.0.0` -> `1.0.1` | Fixed corrupted texture, corrected balance typo         |
 
 ### Version Parsing
 
@@ -120,14 +120,18 @@ Build metadata (the `+xyz` suffix) is stored but **ignored** for version compari
 
 ---
 
-## 3. Package Manifest (`ic-mod.yaml` Dependency Section)
+## 3. Package Manifest (`mod.toml` Dependency Section)
 
-The Workshop uses `ic-mod.yaml` (also accepts `mod.yaml` for backward compatibility with D030 examples) as the package manifest. The dependency section declares what a package needs.
+The Workshop uses `mod.toml` (D067) as the package manifest. IC also reads OpenRA's `mod.yaml` for import compatibility (D026). The dependency section declares what a package needs.
 
-### Full Annotated Example
+> **Note:** The code examples in this section use YAML syntax from the original design study.
+> IC-native manifests use TOML (D067); the dependency *semantics* are identical.
+> See `src/modding/mod-sdk.md` for the canonical `mod.toml` shape.
+
+### Full Annotated Example (Original Study — YAML)
 
 ```yaml
-# ic-mod.yaml — full example for a total conversion mod
+# Original design study example (YAML syntax — see note above)
 mod:
   # Identity (matches Workshop registry: publisher/name@version)
   publisher: "steel-legion"
@@ -200,12 +204,12 @@ target:
 
 ### Dependency Source Types
 
-| Source | Description | Resolution |
-|---|---|---|
-| `workshop` | IC Workshop registry (official or federated) | Resolved via git-index or Workshop API |
-| `local` | Path on disk | `path: "../my-local-sprites"` — not published, dev only |
-| `git` | Git repository URL | `git: "https://github.com/user/repo"`, optional `branch`/`tag`/`rev` |
-| `url` | Direct download URL | `url: "https://example.com/pkg.icpkg"` — pinned by checksum |
+| Source     | Description                                  | Resolution                                                           |
+| ---------- | -------------------------------------------- | -------------------------------------------------------------------- |
+| `workshop` | IC Workshop registry (official or federated) | Resolved via git-index or Workshop API                               |
+| `local`    | Path on disk                                 | `path: "../my-local-sprites"` — not published, dev only              |
+| `git`      | Git repository URL                           | `git: "https://github.com/user/repo"`, optional `branch`/`tag`/`rev` |
+| `url`      | Direct download URL                          | `url: "https://example.com/pkg.icpkg"` — pinned by checksum          |
 
 ### Manifest Validation Rules
 
@@ -273,17 +277,17 @@ One JSON line per published version (append-only, newline-delimited JSON):
 
 ### Index Entry Fields
 
-| Field | Type | Description |
-|---|---|---|
-| `name` | string | Package name (without publisher scope) |
-| `vers` | string | Semver version |
-| `publisher` | string | Publisher scope |
-| `deps` | array | Dependency list (name, publisher, req, source, optional, features) |
-| `cksum` | string | `sha256:` prefixed hex digest of the `.icpkg` file |
-| `manifest_hash` | string | `sha256:` of the `manifest.yaml` inside the `.icpkg` (D030 manifest confusion prevention) |
-| `features` | object | Feature name -> list of enabled optional dependencies |
-| `yanked` | bool | If true, excluded from new resolutions (existing lock files still work) |
-| `links` | string or null | Sys-package link (prevents multiple packages linking same native lib) |
+| Field           | Type           | Description                                                                               |
+| --------------- | -------------- | ----------------------------------------------------------------------------------------- |
+| `name`          | string         | Package name (without publisher scope)                                                    |
+| `vers`          | string         | Semver version                                                                            |
+| `publisher`     | string         | Publisher scope                                                                           |
+| `deps`          | array          | Dependency list (name, publisher, req, source, optional, features)                        |
+| `cksum`         | string         | `sha256:` prefixed hex digest of the `.icpkg` file                                        |
+| `manifest_hash` | string         | `sha256:` of the `manifest.yaml` inside the `.icpkg` (D030 manifest confusion prevention) |
+| `features`      | object         | Feature name -> list of enabled optional dependencies                                     |
+| `yanked`        | bool           | If true, excluded from new resolutions (existing lock files still work)                   |
+| `links`         | string or null | Sys-package link (prevents multiple packages linking same native lib)                     |
 
 ---
 
@@ -478,12 +482,12 @@ FUNCTION resolve_workshop(manifest, index, lock_file) -> Result<LockFile, Resolu
 
 ### Caching Strategy
 
-| Data | Cache location | Refresh trigger |
-|---|---|---|
-| Git index (all package metadata) | `~/.ic/cache/workshop-index/` (bare git clone) | `ic mod update` runs `git fetch` |
-| Individual `.icpkg` archives | `~/.ic/cache/packages/{publisher}/{name}/{version}/` | Never expires — immutable by D030 rules |
-| Extracted package contents | `~/.ic/mods/{publisher}/{name}/{version}/` | Reinstall or version change |
-| Resolution result | In-memory only (fast enough to recompute) | Every `ic mod install` / `ic mod update` |
+| Data                             | Cache location                                       | Refresh trigger                          |
+| -------------------------------- | ---------------------------------------------------- | ---------------------------------------- |
+| Git index (all package metadata) | `~/.ic/cache/workshop-index/` (bare git clone)       | `ic mod update` runs `git fetch`         |
+| Individual `.icpkg` archives     | `~/.ic/cache/packages/{publisher}/{name}/{version}/` | Never expires — immutable by D030 rules  |
+| Extracted package contents       | `~/.ic/mods/{publisher}/{name}/{version}/`           | Reinstall or version change              |
+| Resolution result                | In-memory only (fast enough to recompute)            | Every `ic mod install` / `ic mod update` |
 
 The git-index is cloned as a bare repository. On `ic mod update`, IC runs `git fetch origin` and reads updated package files. Delta compression keeps incremental fetches small — typically a few KB even for registries with thousands of packages.
 
@@ -613,28 +617,28 @@ dependencies = [
 
 ### Lock File Fields
 
-| Field | Type | Description |
-|---|---|---|
-| `ic_lock_version` | int | Lock file format version (currently `1`). Allows future format migrations. |
-| `generated_by` | string | IC CLI version that generated this lock file. |
-| `generated_at` | string | ISO 8601 timestamp of generation. |
-| `index_commit` | string | Git commit hash of the workshop-index at resolution time. |
-| `index_url` | string | URL of the git-index repository used. |
-| `name` | string | Full `publisher/name` package identity. |
-| `version` | string | Exact resolved semver version. |
-| `source` | string | Source URL with scheme prefix (`workshop+`, `git+`, `path+`). Prevents dependency confusion across federated sources (D030 / `06-SECURITY.md` Vuln 22). |
-| `checksum` | string | `sha256:` prefixed hex digest of the `.icpkg` archive. |
-| `dependencies` | array of string | List of `publisher/name` identities this package depends on. Versions are not repeated here — they are resolved by looking up each name in the `[[package]]` entries. |
+| Field             | Type            | Description                                                                                                                                                           |
+| ----------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ic_lock_version` | int             | Lock file format version (currently `1`). Allows future format migrations.                                                                                            |
+| `generated_by`    | string          | IC CLI version that generated this lock file.                                                                                                                         |
+| `generated_at`    | string          | ISO 8601 timestamp of generation.                                                                                                                                     |
+| `index_commit`    | string          | Git commit hash of the workshop-index at resolution time.                                                                                                             |
+| `index_url`       | string          | URL of the git-index repository used.                                                                                                                                 |
+| `name`            | string          | Full `publisher/name` package identity.                                                                                                                               |
+| `version`         | string          | Exact resolved semver version.                                                                                                                                        |
+| `source`          | string          | Source URL with scheme prefix (`workshop+`, `git+`, `path+`). Prevents dependency confusion across federated sources (D030 / `06-SECURITY.md` Vuln 22).               |
+| `checksum`        | string          | `sha256:` prefixed hex digest of the `.icpkg` archive.                                                                                                                |
+| `dependencies`    | array of string | List of `publisher/name` identities this package depends on. Versions are not repeated here — they are resolved by looking up each name in the `[[package]]` entries. |
 
 ### Lock File Commands
 
-| Command | Behavior |
-|---|---|
-| `ic mod install` | Reads `ic.lock`, downloads exact versions listed. If `ic.lock` does not exist, resolves from `ic-mod.yaml` and creates it. |
-| `ic mod install --locked` | Reads `ic.lock` and installs exactly what it specifies. Fails if `ic-mod.yaml` has changed since `ic.lock` was generated (new deps, changed version ranges). Used in CI to guarantee reproducibility. |
-| `ic mod update` | Re-resolves all dependencies from `ic-mod.yaml` against the latest registry state. Overwrites `ic.lock`. |
-| `ic mod update alice/soviet-march-music` | Re-resolves only `alice/soviet-march-music` and its transitive dependencies. Other packages stay at their locked versions. Useful for targeted updates without churn. |
-| `ic mod lock` | Alias for `ic mod update` — regenerates `ic.lock` without installing. |
+| Command                                  | Behavior                                                                                                                                                                                           |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ic mod install`                         | Reads `ic.lock`, downloads exact versions listed. If `ic.lock` does not exist, resolves from `mod.toml` and creates it.                                                                            |
+| `ic mod install --locked`                | Reads `ic.lock` and installs exactly what it specifies. Fails if `mod.toml` has changed since `ic.lock` was generated (new deps, changed version ranges). Used in CI to guarantee reproducibility. |
+| `ic mod update`                          | Re-resolves all dependencies from `mod.toml` against the latest registry state. Overwrites `ic.lock`.                                                                                              |
+| `ic mod update alice/soviet-march-music` | Re-resolves only `alice/soviet-march-music` and its transitive dependencies. Other packages stay at their locked versions. Useful for targeted updates without churn.                              |
+| `ic mod lock`                            | Alias for `ic mod update` — regenerates `ic.lock` without installing.                                                                                                                              |
 
 ### Merge Conflict Resolution
 
@@ -644,7 +648,7 @@ When two branches modify `ic.lock` and conflict on merge, IC provides:
 ic mod lock --resolve-conflicts
 ```
 
-This re-resolves from the merged `ic-mod.yaml`, producing a clean `ic.lock`. The command is safe because `ic.lock` is always derivable from `ic-mod.yaml` + registry state.
+This re-resolves from the merged `mod.toml`, producing a clean `ic.lock`. The command is safe because `ic.lock` is always derivable from `mod.toml` + registry state.
 
 ---
 
@@ -654,7 +658,7 @@ IC Workshop guarantees **deterministic resolution**: the same inputs always prod
 
 ### What Counts as "Same Inputs"
 
-1. **Root manifest (`ic-mod.yaml`):** The dependency declarations and version ranges.
+1. **Root manifest (`mod.toml`):** The dependency declarations and version ranges.
 2. **Registry state:** The contents of the git-index at a specific commit hash.
 3. **PubGrub algorithm version:** The resolver's version selection heuristics.
 
@@ -665,18 +669,18 @@ If all three are identical, the resolution output is byte-identical.
 1. **PubGrub is inherently deterministic.** Given the same set of available packages and constraints, it always produces the same solution. There is no randomness in version selection — the `choose_package_version` heuristic is deterministic (smallest-domain-first, then newest version).
 
 2. **Registry state is pinned.** The `ic.lock` metadata section records `index_commit` — the exact git commit hash of the workshop-index at resolution time. This means:
-   - Two developers with the same `ic-mod.yaml` and the same index commit will always get identical lock files.
+   - Two developers with the same `mod.toml` and the same index commit will always get identical lock files.
    - `ic mod install` uses the locked index commit, not the latest.
    - `ic mod update` fetches the latest index and records the new commit hash.
 
 3. **No floating resolution.** The lock file is the source of truth for installs. `ic mod install` never re-resolves — it reads `ic.lock` and downloads exactly those versions. Only `ic mod update` triggers re-resolution.
 
-4. **`--locked` mode for CI.** `ic mod install --locked` verifies that `ic-mod.yaml` is consistent with `ic.lock` and fails if they diverge:
+4. **`--locked` mode for CI.** `ic mod install --locked` verifies that `mod.toml` is consistent with `ic.lock` and fails if they diverge:
 
 ```
 error: lock file out of date
 
-  The following dependencies in ic-mod.yaml are not reflected in ic.lock:
+  The following dependencies in mod.toml are not reflected in ic.lock:
     + carol/hd-explosion-effects ^1.0  (added)
     ~ alice/soviet-march-music ">=1.0, <3.0" -> ">=2.0, <3.0"  (changed)
 
@@ -725,7 +729,7 @@ error: failed to resolve dependencies
 ```
 error: failed to resolve dependencies
 
-  x community-project/hd-infantry-sprites ^3.0 is required by ic-mod.yaml
+  x community-project/hd-infantry-sprites ^3.0 is required by mod.toml
   |
   +-- no version of community-project/hd-infantry-sprites matches ^3.0
       (available versions: 1.0.0, 1.1.0, 2.0.0, 2.1.0, 2.1.1)
@@ -826,35 +830,35 @@ In practice, PubGrub is much faster than worst case because conflict-driven clau
 
 ### Workshop Scale Estimates
 
-| Metric | IC Workshop (Year 1) | IC Workshop (Year 5) | crates.io (for reference) |
-|---|---|---|---|
-| Total packages | ~100 | ~5,000 | ~150,000 |
-| Max versions per package | ~20 | ~100 | ~500 |
-| Typical dependency depth | 2-3 | 3-5 | 5-15 |
-| Typical dependency breadth | 3-5 | 5-15 | 10-50 |
+| Metric                     | IC Workshop (Year 1) | IC Workshop (Year 5) | crates.io (for reference) |
+| -------------------------- | -------------------- | -------------------- | ------------------------- |
+| Total packages             | ~100                 | ~5,000               | ~150,000                  |
+| Max versions per package   | ~20                  | ~100                 | ~500                      |
+| Typical dependency depth   | 2-3                  | 3-5                  | 5-15                      |
+| Typical dependency breadth | 3-5                  | 5-15                 | 10-50                     |
 
 ### Expected Resolution Times
 
 Benchmarks measured on a mid-range machine (Ryzen 5, 16 GB RAM). All times are wall-clock for the resolution step only (not download/install):
 
-| Dependency graph size | Packages in solution | Expected resolution time |
-|---|---|---|
-| Simple mod (3-5 deps) | 5-10 | <1 ms |
-| Medium mod (10-20 deps) | 15-40 | 1-5 ms |
-| Large total conversion (30-50 deps) | 50-100 | 5-20 ms |
-| Pathological stress test (200 deps, deep diamonds) | 200-500 | 20-80 ms |
-| Extreme stress test (500 packages, many conflicts) | 500+ | 50-200 ms |
+| Dependency graph size                              | Packages in solution | Expected resolution time |
+| -------------------------------------------------- | -------------------- | ------------------------ |
+| Simple mod (3-5 deps)                              | 5-10                 | <1 ms                    |
+| Medium mod (10-20 deps)                            | 15-40                | 1-5 ms                   |
+| Large total conversion (30-50 deps)                | 50-100               | 5-20 ms                  |
+| Pathological stress test (200 deps, deep diamonds) | 200-500              | 20-80 ms                 |
+| Extreme stress test (500 packages, many conflicts) | 500+                 | 50-200 ms                |
 
 Resolution will always complete in <100 ms for any realistic IC Workshop dependency graph. This is effectively instant from a user-experience perspective.
 
 ### Index Caching Performance
 
-| Operation | Time | Data transferred |
-|---|---|---|
-| First index clone (empty cache) | 1-5 s | 1-10 MB (depends on registry size) |
-| Incremental `git fetch` (daily update) | 0.1-1 s | 1-100 KB (delta compressed) |
-| Read package metadata from local index | <1 ms | Local disk I/O only |
-| Full re-resolution from cached index | <100 ms | No network |
+| Operation                              | Time    | Data transferred                   |
+| -------------------------------------- | ------- | ---------------------------------- |
+| First index clone (empty cache)        | 1-5 s   | 1-10 MB (depends on registry size) |
+| Incremental `git fetch` (daily update) | 0.1-1 s | 1-100 KB (delta compressed)        |
+| Read package metadata from local index | <1 ms   | Local disk I/O only                |
+| Full re-resolution from cached index   | <100 ms | No network                         |
 
 ### Optimization Strategies
 
@@ -879,12 +883,12 @@ A yanked version is a version that the publisher has retracted — typically bec
 
 **Yank semantics:**
 
-| Context | Yanked version behavior |
-|---|---|
-| New resolution (no lock file) | **Excluded.** PubGrub treats yanked versions as non-existent. |
+| Context                          | Yanked version behavior                                                              |
+| -------------------------------- | ------------------------------------------------------------------------------------ |
+| New resolution (no lock file)    | **Excluded.** PubGrub treats yanked versions as non-existent.                        |
 | Existing lock file references it | **Allowed.** `ic mod install` still downloads and installs it. A warning is printed. |
-| `ic mod update` | **Excluded.** Re-resolution picks a non-yanked replacement. |
-| `--locked` mode | **Allowed.** Lock file is authoritative. Warning printed. |
+| `ic mod update`                  | **Excluded.** Re-resolution picks a non-yanked replacement.                          |
+| `--locked` mode                  | **Allowed.** Lock file is authoritative. Warning printed.                            |
 
 **Yank/unyank commands:**
 
@@ -999,7 +1003,7 @@ pub type SemVer = Version;
 /// A parsed version requirement (range expression).
 pub type VersionRange = VersionReq;
 
-/// Dependency specification as declared in ic-mod.yaml.
+/// Dependency specification as declared in mod.toml.
 #[derive(Debug, Clone)]
 pub struct DependencySpec {
     pub package: PackageName,

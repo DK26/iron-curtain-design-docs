@@ -124,10 +124,10 @@ These metrics feed into balance discussions (D037 competitive committee) alongsi
 | Concept            | OpenRA SDK                                         | Iron Curtain                                     |
 | ------------------ | -------------------------------------------------- | ------------------------------------------------ |
 | Starting point     | Fork a template repo                               | `ic mod init [template]` via `cargo-generate`    |
-| Engine version pin | `ENGINE_VERSION` in `mod.config`                   | `engine.version` in `mod.yaml` with semver       |
+| Engine version pin | `ENGINE_VERSION` in `mod.config`                   | `engine.version` in `mod.toml` with semver       |
 | Engine management  | `fetch-engine.sh` downloads + compiles from source | Engine ships as binary crate, auto-resolved      |
 | Build/run          | `Makefile` + shell scripts (requires Python, .NET) | `ic` CLI — single Rust binary, zero dependencies |
-| Mod manifest       | `mod.yaml` in MiniYAML                             | `mod.yaml` in real YAML with typed serde schema  |
+| Mod manifest       | `mod.yaml` in MiniYAML                             | `mod.toml` with typed serde schema (D067)        |
 | Validation         | `utility.sh --check-yaml`                          | `ic mod check` — YAML + Lua + WASM validation    |
 | Packaging          | `packaging/` shell scripts → .exe/.app/.AppImage   | `ic mod package` + workshop publish              |
 | Dedicated server   | `launch-dedicated.sh`                              | `ic mod server`                                  |
@@ -294,7 +294,7 @@ ic replay verify [file]    # verify relay signature chain + integrity (see 06-SE
 
 1. **Alias registry:** `ra-formats` maintains a compile-time map of OpenRA trait names to IC component names. `Armament` → `combat`, `Valued` → `buildable.cost`, `AttackOmni` → `combat.mode: omni`, etc.
 2. **Bi-directional:** The alias registry is used during YAML parsing (OpenRA names accepted) and by the `miniyaml2yaml` converter (produces IC-native names). Both representations are valid.
-3. **Deprecation warnings:** When an OpenRA alias is used, the parser emits a warning: `"Armament" is accepted but deprecated; prefer "combat"`. Warnings can be suppressed per-mod via `mod.yaml` setting.
+3. **Deprecation warnings:** When an OpenRA alias is used, the parser emits a warning: `"Armament" is accepted but deprecated; prefer "combat"`. Warnings can be suppressed per-mod via `mod.toml` setting.
 4. **No runtime cost:** Aliases resolve during YAML deserialization (load time only). The ECS never sees alias names — only canonical IC component types.
 
 **Rationale:**
@@ -309,7 +309,7 @@ ic replay verify [file]    # verify relay signature chain + integrity (see 06-SE
 - Adopt OpenRA's names wholesale (rejected — some OpenRA names are poorly chosen or C#-specific; IC benefits from cleaner naming)
 - Converter handles everything (rejected — modders still need to re-learn names for new content; aliases let them use familiar names forever)
 
-**Phase:** Phase 0 (alias registry built alongside `ra-formats` YAML parser). Phase 6a (deprecation warnings configurable in `mod.yaml`).
+**Phase:** Phase 0 (alias registry built alongside `ra-formats` YAML parser). Phase 6a (deprecation warnings configurable in `mod.toml`).
 
 ---
 
@@ -318,6 +318,6 @@ ic replay verify [file]    # verify relay signature chain + integrity (see 06-SE
 
 ## Sub-Pages
 
-| Section | Topic | File |
-| --- | --- | --- |
+| Section               | Topic                                                                                                                                                                                                   | File                                                            |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | Lua API & Integration | D024 Lua API superset of OpenRA, D023 OpenRA vocabulary compatibility, D027 canonical enum compat, D028 condition/multiplier systems, D029 cross-game component library, rationale, alternatives, phase | [D019-lua-api-integration.md](D019/D019-lua-api-integration.md) |

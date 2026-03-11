@@ -172,12 +172,12 @@ The three built-in presets are the **first-party** `Pathfinder` implementations.
 
 A mod's YAML manifest can declare which pathfinder it uses. The modder picks from any available implementation — first-party or community:
 
-```yaml
-# mod.yaml — total conversion mod that uses IC's modern pathfinding
-mod:
-  name: "Desert Strike"
-  pathfinder: ic-default            # Use IC's multi-layer hybrid
-  # Or: remastered, openra, layered-grid-generals, community/navmesh-pro, etc.
+```toml
+# mod.toml — total conversion mod that uses IC's modern pathfinding
+[mod]
+name = "Desert Strike"
+pathfinder = "ic-default"    # Use IC's multi-layer hybrid
+# Or: remastered, openra, layered-grid-generals, community/navmesh-pro, etc.
 ```
 
 If the mod doesn't specify a pathfinder, it inherits whatever the player's experience profile selects. When specified, it overrides the experience profile's pathfinding axis — the same way `scenario.pathfinding.required` works (see "Scenario-Required Pathfinding" above), but at the mod level.
@@ -201,21 +201,22 @@ impl Pathfinder for LayeredGridPathfinder {
 }
 ```
 
-The mod registers its pathfinder in its manifest with a YAML config block (like the built-in presets):
+The mod registers its pathfinder in its manifest with a config section (like the built-in presets):
 
-```yaml
-# mod.yaml — community pathfinder distributed via Workshop
-mod:
-  name: "Generals Pathfinder"
-  type: pathfinder                   # declares this mod provides a Pathfinder impl
-  pathfinder_id: layered-grid-generals
-  display_name: "Generals (Layered Grid)"
-  description: "Grid pathfinding with bridge layers and surface bitmasks, inspired by C&C Generals"
-  wasm_module: generals_pathfinder.wasm
-  config:
-    zone_block_size: 10
-    bridge_clearance: 10.0
-    surface_types: [ground, water, cliff, air, rubble]
+```toml
+# mod.toml — community pathfinder distributed via Workshop
+[mod]
+name = "Generals Pathfinder"
+type = "pathfinder"                      # declares this mod provides a Pathfinder impl
+pathfinder_id = "layered-grid-generals"
+display_name = "Generals (Layered Grid)"
+description = "Grid pathfinding with bridge layers and surface bitmasks, inspired by C&C Generals"
+wasm_module = "generals_pathfinder.wasm"
+
+[config]
+zone_block_size = 10
+bridge_clearance = 10.0
+surface_types = ["ground", "water", "cliff", "air", "rubble"]
 ```
 
 Once installed, the community pathfinder appears alongside first-party presets in the lobby's Level 2 per-axis override ("Movement: Classic / OpenRA / Modern / Generals") and is selectable by other mods via `pathfinder: layered-grid-generals`.

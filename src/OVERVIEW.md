@@ -56,7 +56,7 @@ Iron Curtain is a new open-source RTS engine built for the Command & Conquer com
 - **Creator tools.** Reputation scores, badges (Verified, Prolific, Foundation), download analytics, collections, ratings & reviews, DMCA process with due process. LLM agents can discover and pull resources with author consent (`ai_usage` permission per resource).
 - **Hot-reload.** Change YAML or Lua, see it in-game immediately. No restart.
 - **Console command extensibility.** Register custom `/` commands via Lua or WASM — with typed arguments, tab completion, and permission levels. Publish reusable `.iccmd` command scripts to the Workshop.
-- **Mod profiles.** Save a named set of mods + experience settings as a shareable YAML file. One SHA-256 fingerprint replaces per-mod version checking in lobbies. `ic profile save/activate/inspect/diff` CLI. Publish profiles to the Workshop as modpacks.
+- **Mod profiles.** Save a named set of mods + experience settings as a shareable TOML file (D067). One SHA-256 fingerprint replaces per-mod version checking in lobbies. `ic profile save/activate/inspect/diff` CLI. Publish profiles to the Workshop as modpacks.
 
 ---
 

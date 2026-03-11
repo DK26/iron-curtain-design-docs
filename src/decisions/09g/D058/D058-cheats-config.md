@@ -163,7 +163,7 @@ These recognize cheat codes from other iconic games and respond with in-characte
 **Mod-defined cheats:** Game modules register their own cheat code tables — the engine provides the `CheatCodeHandler` infrastructure, the game module supplies the phrase hashes and effect implementations. A Tiberian Dawn module would have different themed phrases than RA1. Total conversion mods can define entirely custom cheat tables via YAML:
 
 ```yaml
-# Custom cheat codes (mod.yaml)
+# Custom cheat codes (in game content YAML, referenced from mod.toml)
 cheat_codes:
   - phrase_hash: 0x7a3f2e1d   # hash of the phrase — not the phrase itself
     effect: give_credits

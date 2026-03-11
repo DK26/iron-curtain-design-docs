@@ -4,7 +4,7 @@ The directory structure — both the shipped product and the source repository �
 
 ### Design Principles
 
-1. **Game modules are mods.** Built-in game modules (`mods/ra/`, `mods/td/`) use the exact same directory layout, `mod.yaml` manifest, and YAML rule schema as community-created mods. No internal-only APIs, no special paths. If a modder can edit `mods/ra/rules/units/vehicles.yaml`, anyone can see how the game's own data is structured. Directly inspired by Factorio's "game is a mod" principle (validated in D018).
+1. **Game modules are mods.** Built-in game modules (`mods/ra/`, `mods/td/`) use the exact same directory layout, `mod.toml` manifest, and YAML rule schema as community-created mods. No internal-only APIs, no special paths. If a modder can edit `mods/ra/rules/units/vehicles.yaml`, anyone can see how the game's own data is structured. Directly inspired by Factorio's "game is a mod" principle (validated in D018).
 
 2. **Same vocabulary, same directories.** OpenRA uses `rules/`, `sequences/`, `chrome/`, `maps/`, `audio/`, `scripts/`. IC uses the same directory names for the same purposes. An OpenRA modder opening IC's `mods/ra/` directory knows where everything is.
 
@@ -26,12 +26,12 @@ iron-curtain/
 ├── ic-editor[.exe]                 # SDK — GUI application: scenario editor, asset studio (D038+D040)
 ├── mods/                           # Game modules + content — the heart of the project
 │   ├── common/                     # Shared resources used by all C&C-family modules
-│   │   ├── mod.yaml                #   manifest (declares shared chrome, cursors, etc.)
+│   │   ├── mod.toml                #   manifest (declares shared chrome, cursors, etc.)
 │   │   ├── chrome/                 #   shared UI layout definitions
 │   │   ├── cursors/                #   shared cursor definitions
 │   │   └── translations/           #   shared localization strings
 │   ├── ra/                         # Red Alert game module (ships Phase 2)
-│   │   ├── mod.yaml                #   manifest — same schema as any community mod
+│   │   ├── mod.toml                #   manifest — same schema as any community mod
 │   │   ├── rules/                  #   unit, structure, weapon, terrain definitions
 │   │   │   ├── units/              #     infantry.yaml, vehicles.yaml, naval.yaml, aircraft.yaml
 │   │   │   ├── structures/         #     allied-structures.yaml, soviet-structures.yaml
@@ -47,7 +47,7 @@ iron-curtain/
 │   │   ├── scripts/                #   Lua scripts (shared triggers, ability definitions)
 │   │   └── themes/                 #   UI theme overrides: classic.yaml, modern.yaml (D032)
 │   └── td/                         # Tiberian Dawn game module (ships Phase 3–4)
-│       ├── mod.yaml
+│       ├── mod.toml
 │       ├── rules/
 │       ├── maps/
 │       ├── missions/
@@ -59,7 +59,7 @@ iron-curtain/
 **Key features of the install layout:**
 
 - **`mods/common/`** is directly analogous to OpenRA's `mods/common/`. Shared assets, chrome, and cursor definitions used across all C&C-family game modules. Community game modules (Dune 2000, RA2) can depend on it or provide their own.
-- **`mods/ra/`** is a mod. It uses the same `mod.yaml` schema, the same `rules/` structure, and the same `sequences/` format as a community mod. There is no "privileged" version of this directory — the engine treats it identically to `<data_dir>/mods/my-total-conversion/`. This means every modder can read the game's own data as a working example.
+- **`mods/ra/`** is a mod. It uses the same `mod.toml` schema, the same `rules/` structure, and the same `sequences/` format as a community mod. There is no "privileged" version of this directory — the engine treats it identically to `<data_dir>/mods/my-total-conversion/`. This means every modder can read the game's own data as a working example.
 - **Every YAML file in `mods/ra/rules/` is editable.** Want to change tank cost? Open `rules/units/vehicles.yaml`, find `medium_tank`, change `cost: 800` to `cost: 750`. The same workflow as OpenRA — except the YAML is standard-compliant and serde-typed.
 - **The CLI (`ic`) is the modder/operator Swiss Army knife.** `ic mod init`, `ic mod check`, `ic mod test`, `ic mod publish`, `ic backup create`, `ic export`, `ic server validate-config`. One binary, consistent subcommands — aimed at modders, server operators, and CI/CD pipelines. Players never need it — every player-facing action has a GUI equivalent in the game client or SDK editor.
 
@@ -183,24 +183,24 @@ iron-curtain/                       # Cargo workspace root
 
 An OpenRA contributor's first question is "where does this live in IC?" This table maps OpenRA's C# project structure to IC's Rust workspace:
 
-| What you did in OpenRA            | Where in OpenRA                      | Where in IC                              | Notes                                        |
-| --------------------------------- | ------------------------------------ | ---------------------------------------- | -------------------------------------------- |
-| Edit unit stats (cost, HP, speed) | `mods/ra/rules/*.yaml`               | `mods/ra/rules/units/*.yaml`             | Same workflow, real YAML instead of MiniYAML |
-| Edit weapon definitions           | `mods/ra/weapons/*.yaml`             | `mods/ra/rules/weapons/*.yaml`           | Nested under `rules/` for discoverability    |
-| Edit sprite sequences             | `mods/ra/sequences/*.yaml`           | `mods/ra/sequences/*.yaml`               | Identical location                           |
-| Write Lua mission scripts         | `mods/ra/maps/*/script.lua`          | `mods/ra/missions/*.lua`                 | Same API (D024), dedicated directory         |
-| Edit UI layout (chrome)           | `mods/ra/chrome/*.yaml`              | `mods/ra/chrome/*.yaml`                  | Identical location                           |
-| Edit balance/speed/settings       | `mods/ra/mod.yaml`                   | `mods/ra/rules/presets/*.yaml`           | Separated into named presets (D019)          |
-| Add a new C# trait (component)    | `OpenRA.Mods.RA/Traits/*.cs`         | `crates/ic-sim/src/components/*.rs`      | Rust struct + derive instead of C# class     |
-| Add a new activity (behavior)     | `OpenRA.Mods.Common/Activities/*.cs` | `crates/ic-sim/src/systems/*.rs`         | ECS system instead of activity object        |
-| Add a new warhead type            | `OpenRA.Mods.Common/Warheads/*.cs`   | `crates/ic-sim/src/components/combat.rs` | Warheads are component data + system logic   |
-| Add a format parser               | `OpenRA.Game/FileFormats/*.cs`       | `crates/ra-formats/src/*.rs`             | One file per format, same as OpenRA          |
-| Add a Lua scripting global        | `OpenRA.Mods.Common/Scripting/*.cs`  | `crates/ic-script/src/*.rs`              | D024 API surface                             |
-| Edit AI behavior                  | `OpenRA.Mods.Common/AI/*.cs`         | `crates/ic-ai/src/*.rs`                  | Priority-manager hierarchy                   |
-| Edit rendering                    | `OpenRA.Game/Graphics/*.cs`          | `crates/ic-render/src/*.rs`              | Bevy render plugin                           |
-| Edit server/network code          | `OpenRA.Server/*.cs`                 | `crates/ic-net/src/*.rs`                 | Never touches ic-sim                         |
-| Run the utility CLI               | `OpenRA.Utility.exe`                 | `ic[.exe]`                               | `ic mod check`, `ic export`, etc.            |
-| Run a dedicated server            | `OpenRA.Server.exe`                  | `ic-server[.exe]`                        | Or `ic server run` via CLI                   |
+| What you did in OpenRA            | Where in OpenRA                      | Where in IC                              | Notes                                                   |
+| --------------------------------- | ------------------------------------ | ---------------------------------------- | ------------------------------------------------------- |
+| Edit unit stats (cost, HP, speed) | `mods/ra/rules/*.yaml`               | `mods/ra/rules/units/*.yaml`             | Same workflow, real YAML instead of MiniYAML            |
+| Edit weapon definitions           | `mods/ra/weapons/*.yaml`             | `mods/ra/rules/weapons/*.yaml`           | Nested under `rules/` for discoverability               |
+| Edit sprite sequences             | `mods/ra/sequences/*.yaml`           | `mods/ra/sequences/*.yaml`               | Identical location                                      |
+| Write Lua mission scripts         | `mods/ra/maps/*/script.lua`          | `mods/ra/missions/*.lua`                 | Same API (D024), dedicated directory                    |
+| Edit UI layout (chrome)           | `mods/ra/chrome/*.yaml`              | `mods/ra/chrome/*.yaml`                  | Identical location                                      |
+| Edit balance/speed/settings       | `mods/ra/mod.yaml`                   | `mods/ra/rules/presets/*.yaml`           | Separated into named presets (D019); IC uses `mod.toml` |
+| Add a new C# trait (component)    | `OpenRA.Mods.RA/Traits/*.cs`         | `crates/ic-sim/src/components/*.rs`      | Rust struct + derive instead of C# class                |
+| Add a new activity (behavior)     | `OpenRA.Mods.Common/Activities/*.cs` | `crates/ic-sim/src/systems/*.rs`         | ECS system instead of activity object                   |
+| Add a new warhead type            | `OpenRA.Mods.Common/Warheads/*.cs`   | `crates/ic-sim/src/components/combat.rs` | Warheads are component data + system logic              |
+| Add a format parser               | `OpenRA.Game/FileFormats/*.cs`       | `crates/ra-formats/src/*.rs`             | One file per format, same as OpenRA                     |
+| Add a Lua scripting global        | `OpenRA.Mods.Common/Scripting/*.cs`  | `crates/ic-script/src/*.rs`              | D024 API surface                                        |
+| Edit AI behavior                  | `OpenRA.Mods.Common/AI/*.cs`         | `crates/ic-ai/src/*.rs`                  | Priority-manager hierarchy                              |
+| Edit rendering                    | `OpenRA.Game/Graphics/*.cs`          | `crates/ic-render/src/*.rs`              | Bevy render plugin                                      |
+| Edit server/network code          | `OpenRA.Server/*.cs`                 | `crates/ic-net/src/*.rs`                 | Never touches ic-sim                                    |
+| Run the utility CLI               | `OpenRA.Utility.exe`                 | `ic[.exe]`                               | `ic mod check`, `ic export`, etc.                       |
+| Run a dedicated server            | `OpenRA.Server.exe`                  | `ic-server[.exe]`                        | Or `ic server run` via CLI                              |
 
 ### ECS Translation: OpenRA Traits → IC Components + Systems
 
@@ -228,7 +228,7 @@ The naming convention follows Rust idioms (`snake_case` files, `PascalCase` type
 
 **For engine contributors:** Clone the repo. `crates/` holds all Rust code. Each crate has a single responsibility and clear boundaries. The naming (`ic-sim`, `ic-net`, `ic-render`) tells you what it does. Within `ic-sim`, `components/` holds data, `systems/` holds logic, `traits/` holds the pluggable abstractions — the ECS split is consistent and predictable.
 
-**For total-conversion modders:** The `ic-sim/src/traits/` directory defines every pluggable seam — custom pathfinder, custom AI, custom fog of war, custom damage resolution. Implement a trait as a WASM module (Tier 3), register it in your `mod.yaml`, and the engine uses your implementation. No forking, no C# DLL stacking.
+**For total-conversion modders:** The `ic-sim/src/traits/` directory defines every pluggable seam — custom pathfinder, custom AI, custom fog of war, custom damage resolution. Implement a trait as a WASM module (Tier 3), register it in your `mod.toml`, and the engine uses your implementation. No forking, no C# DLL stacking.
 
 ### Development Asset Strategy
 

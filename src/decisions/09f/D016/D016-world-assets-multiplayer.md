@@ -129,7 +129,7 @@ The LLM doesn't generate everything from scratch. It draws on the player's confi
 4. If no map exists → generate the map from scratch (YAML terrain definition).
 5. Music, ambient audio, and voice packs from Workshop enhance the atmosphere — the LLM selects thematically appropriate resources from those available.
 
-This makes generative campaigns richer in communities with active Workshop content creators. A well-stocked Workshop full of diverse maps and assets becomes a palette the LLM paints from. Resource attribution is tracked: the campaign's `mod.yaml` lists all Workshop dependencies, crediting the original creators.
+This makes generative campaigns richer in communities with active Workshop content creators. A well-stocked Workshop full of diverse maps and assets becomes a palette the LLM paints from. Resource attribution is tracked: the campaign's `mod.toml` lists all Workshop dependencies, crediting the original creators.
 
 #### No LLM? Campaign Still Works
 

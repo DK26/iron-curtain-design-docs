@@ -153,14 +153,15 @@ Beyond individual resource metadata, the Workshop itself is organized to support
 
 Resources can declare relationships to other resources beyond simple dependencies:
 
-```yaml
-# In mod.yaml
-relationships:
-  variant_of: "community/standard-soviet-sprites"  # this is an HD variant
-  works_with:                                         # bidirectional composition hints
-    - "alice/soviet-march-music"
-    - "community/snow-terrain-textures"
-  supersedes: "bob/old-soviet-sprites@1.x"            # migration path from older resource
+```toml
+# In mod.toml
+[relationships]
+variant_of = "community/standard-soviet-sprites"    # this is an HD variant
+works_with = [                                       # bidirectional composition hints
+    "alice/soviet-march-music",
+    "community/snow-terrain-textures",
+]
+supersedes = "bob/old-soviet-sprites@1.x"           # migration path from older resource
 ```
 
 These relationships are indexed by the Workshop server and exposed to LLM queries. An LLM searching for "Soviet sprites" finds the standard version and is told "alice/hd-soviet-sprites is an HD variant." An LLM building a winter mission finds snow terrain and is told "works well with alice/soviet-march-music." This is structured composition knowledge that tags alone can't express.

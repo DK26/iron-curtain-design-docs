@@ -101,31 +101,34 @@ impl Pathfinder for LayeredGridPathfinder {
 
 **Mod manifest and config:**
 
-```yaml
-# generals_pathfinder/mod.yaml
-mod:
-  name: "Generals Pathfinder"
-  type: pathfinder
-  pathfinder_id: layered-grid-generals
-  display_name: "Generals (Layered Grid)"
-  version: "1.0.0"
-  capabilities:
-    pathfinding: true
-  config:
-    zone_block_size: 10
-    bridge_clearance: 10.0
-    surface_types: [ground, water, cliff, air, rubble]
+```toml
+# generals_pathfinder/mod.toml
+[mod]
+name = "Generals Pathfinder"
+type = "pathfinder"
+pathfinder_id = "layered-grid-generals"
+display_name = "Generals (Layered Grid)"
+version = "1.0.0"
+
+[capabilities]
+pathfinding = true
+
+[config]
+zone_block_size = 10
+bridge_clearance = 10.0
+surface_types = ["ground", "water", "cliff", "air", "rubble"]
 ```
 
 **How other mods use it:**
 
-```yaml
-# desert_strike_mod/mod.yaml — a total conversion using the Generals pathfinder
-mod:
-  name: "Desert Strike"
-  pathfinder: layered-grid-generals
-  depends:
-    - community/generals-pathfinder@^1.0
+```toml
+# desert_strike_mod/mod.toml — a total conversion using the Generals pathfinder
+[mod]
+name = "Desert Strike"
+pathfinder = "layered-grid-generals"
+
+[dependencies]
+"community/generals-pathfinder" = "^1.0"
 ```
 
 **Multiplayer sync:** All players must use the same pathfinder — the WASM binary hash/version/config profile is validated in the lobby, same as any sim-affecting mod. If a player is missing the pathfinder mod, the engine auto-downloads it from the Workshop (CS:GO-style, per D030).
@@ -196,34 +199,37 @@ impl AiStrategy for GoapPlannerAi {
 
 **Mod manifest:**
 
-```yaml
-# goap_ai/mod.yaml
-mod:
-  name: "GOAP Planner AI"
-  type: ai_strategy
-  ai_strategy_id: goap-planner
-  display_name: "GOAP Planner"
-  description: "Goal-oriented action planning — multi-step strategic reasoning"
-  version: "2.1.0"
-  wasm_module: goap_planner.wasm
-  capabilities:
-    read_visible_state: true
-    issue_orders: true
-    ai_strategy: true
-  config:
-    search_depth: 5
-    replan_interval: 30
+```toml
+# goap_ai/mod.toml
+[mod]
+name = "GOAP Planner AI"
+type = "ai_strategy"
+ai_strategy_id = "goap-planner"
+display_name = "GOAP Planner"
+description = "Goal-oriented action planning — multi-step strategic reasoning"
+version = "2.1.0"
+wasm_module = "goap_planner.wasm"
+
+[capabilities]
+read_visible_state = true
+issue_orders = true
+ai_strategy = true
+
+[config]
+search_depth = 5
+replan_interval = 30
 ```
 
 **How other mods use it:**
 
-```yaml
-# zero_hour_mod/mod.yaml — a total conversion using the GOAP AI
-mod:
-  name: "Zero Hour Remake"
-  default_ai: goap-planner
-  depends:
-    - community/goap-planner-ai@^2.0
+```toml
+# zero_hour_mod/mod.toml — a total conversion using the GOAP AI
+[mod]
+name = "Zero Hour Remake"
+default_ai = "goap-planner"
+
+[dependencies]
+"community/goap-planner-ai" = "^2.0"
 ```
 
 **AI tournament community:** Workshop can host AI tournament leaderboards — automated matches between community AI submissions, ranked by Elo/TrueSkill. This is directly inspired by BWAPI's SSCAIT tournament (15+ years of StarCraft AI competition) and AoE2's AI ladder (20+ years of community AI development). The `ic mod test` framework (above) provides headless match execution; the Workshop provides distribution and ranking.

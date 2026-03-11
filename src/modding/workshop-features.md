@@ -47,7 +47,7 @@ The `ic-llm` crate can search the Workshop programmatically and incorporate disc
                  │
                  ▼
   ┌─────────────────────────────────────────────────────────────────┐
-  │ Add discovered resources as dependencies in generated mod.yaml │
+  │ Add discovered resources as dependencies in generated mod.toml │
   │ → Allow resources added directly                                │
   │ → MetadataOnly resources shown as suggestions in editor UI     │
   │ → Dependencies resolved at install time via `ic mod install`   │
@@ -106,43 +106,48 @@ A **modpack** is a Workshop resource that bundles a curated set of mods with pin
 
 **Modpacks are published snapshots of mod profiles (D062).** Curators build and test mod profiles locally (`ic profile save`, `ic profile inspect`, `ic profile diff`), then publish the working result via `ic mod publish-profile`. Workshop modpacks import as local profiles via `ic profile import`. This makes the curator workflow reproducible — no manual reconstruction of the mod configuration each session.
 
-```yaml
-# mod.yaml for a modpack
-mod:
-  id: alice/red-apocalypse-pack
-  title: "Red Apocalypse Complete Experience"
-  version: "2.1.0"
-  authors: ["alice"]
-  description: "A curated collection of 12 mods for an enhanced RA1 experience"
-  license: "CC0-1.0"
-  category: Modpack                    # distinct category from Mod
+```toml
+# mod.toml for a modpack
+[mod]
+id = "alice/red-apocalypse-pack"
+title = "Red Apocalypse Complete Experience"
+version = "2.1.0"
+authors = ["alice"]
+description = "A curated collection of 12 mods for an enhanced RA1 experience"
+license = "CC0-1.0"
+category = "Modpack"    # distinct category from Mod
 
-engine:
-  version: "^0.5.0"
-  game_module: "ra1"
+[engine]
+version = "^0.5.0"
+game_module = "ra1"
 
 # Modpack-specific: list of mods with pinned versions and load order
-modpack:
-  mods:
-    - id: "bob/hd-sprites"
-      version: "=2.1.0"               # exact pin — tested with this version
-    - id: "carol/economy-overhaul"
-      version: "=1.4.2"
-    - id: "dave/ai-improvements"
-      version: "=3.0.1"
-    - id: "alice/tank-rebalance"
-      version: "=1.1.0"
+[[modpack.mods]]
+id = "bob/hd-sprites"
+version = "=2.1.0"    # exact pin — tested with this version
 
-  # Explicit conflict resolutions (if any)
-  conflicts:
-    - unit: heavy_tank
-      field: health.max
-      use_mod: "alice/tank-rebalance"
+[[modpack.mods]]
+id = "carol/economy-overhaul"
+version = "=1.4.2"
 
-  # Configuration overrides applied after all mods load
-  config:
-    balance_preset: classic
-    qol_preset: iron_curtain
+[[modpack.mods]]
+id = "dave/ai-improvements"
+version = "=3.0.1"
+
+[[modpack.mods]]
+id = "alice/tank-rebalance"
+version = "=1.1.0"
+
+# Explicit conflict resolutions (if any)
+[[modpack.conflicts]]
+unit = "heavy_tank"
+field = "health.max"
+use_mod = "alice/tank-rebalance"
+
+# Configuration overrides applied after all mods load
+[modpack.config]
+balance_preset = "classic"
+qol_preset = "iron_curtain"
 ```
 
 **Why modpacks matter:**

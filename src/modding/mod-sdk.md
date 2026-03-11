@@ -6,23 +6,23 @@
 
 The OpenRA Mod SDK is a template repository that modders fork. It includes:
 
-| OpenRA SDK Feature                       | What's Good                                               | Our Improvement                                             |
-| ---------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------- |
-| Fork-the-repo template                   | Zero-config starting point                                | `cargo-generate` template — same UX, better tooling         |
-| `mod.config` (engine version pin)        | Reproducible builds                                       | `mod.yaml` manifest with typed schema + semver              |
-| `fetch-engine.sh` (auto-download engine) | Modders never touch engine source                         | Engine ships as a binary crate, not compiled from source    |
-| `Makefile` / `make.cmd`                  | Cross-platform build                                      | `ic` CLI tool — Rust binary, works everywhere               |
-| `packaging/` (Win/Mac/Linux installers)  | Full distribution pipeline                                | Workshop publish + `cargo-dist` for standalone              |
-| `utility.sh --check-yaml`                | Catches YAML errors                                       | `ic mod check` — validates YAML, Lua syntax, WASM integrity |
-| `launch-dedicated.sh`                    | Dedicated server for mods                                 | `ic mod server` — first-class CLI command                   |
-| `mod.yaml` manifest                      | Single entry point for mod composition                    | Real YAML manifest with typed `serde` deserialization       |
-| Standardized directory layout            | Convention-based — chrome/, rules/, maps/                 | Adapted for our three-tier model                            |
-| `.vscode/` included                      | IDE support out of the box                                | Full VS Code extension with YAML schema + Lua LSP           |
-| C# DLL for custom traits                 | **Pain point:** requires .NET toolchain, IDE, compilation | Our YAML/Lua/WASM tiers eliminate this entirely             |
-| GPL license on mod code                  | **Pain point:** all mod code must be GPL-compatible       | WASM sandbox + permissive engine license = modder's choice  |
-| MiniYAML format                          | **Pain point:** no tooling, no validation                 | Real YAML with JSON Schema, serde, linting                  |
-| No workshop/distribution                 | **Pain point:** manual file sharing, forum posts          | Built-in workshop with `ic mod publish`                     |
-| No hot-reload                            | **Pain point:** recompile engine+mod for every change     | Lua + YAML hot-reload during development                    |
+| OpenRA SDK Feature                       | What's Good                                               | Our Improvement                                              |
+| ---------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------ |
+| Fork-the-repo template                   | Zero-config starting point                                | `cargo-generate` template — same UX, better tooling          |
+| `mod.config` (engine version pin)        | Reproducible builds                                       | `mod.toml` manifest with typed schema + semver               |
+| `fetch-engine.sh` (auto-download engine) | Modders never touch engine source                         | Engine ships as a binary crate, not compiled from source     |
+| `Makefile` / `make.cmd`                  | Cross-platform build                                      | `ic` CLI tool — Rust binary, works everywhere                |
+| `packaging/` (Win/Mac/Linux installers)  | Full distribution pipeline                                | Workshop publish + `cargo-dist` for standalone               |
+| `utility.sh --check-yaml`                | Catches YAML errors                                       | `ic mod check` — validates YAML, Lua syntax, WASM integrity  |
+| `launch-dedicated.sh`                    | Dedicated server for mods                                 | `ic mod server` — first-class CLI command                    |
+| `mod.yaml` manifest                      | Single entry point for mod composition                    | Real TOML manifest with typed `serde` deserialization (D067) |
+| Standardized directory layout            | Convention-based — chrome/, rules/, maps/                 | Adapted for our three-tier model                             |
+| `.vscode/` included                      | IDE support out of the box                                | Full VS Code extension with YAML schema + Lua LSP            |
+| C# DLL for custom traits                 | **Pain point:** requires .NET toolchain, IDE, compilation | Our YAML/Lua/WASM tiers eliminate this entirely              |
+| GPL license on mod code                  | **Pain point:** all mod code must be GPL-compatible       | WASM sandbox + permissive engine license = modder's choice   |
+| MiniYAML format                          | **Pain point:** no tooling, no validation                 | Real YAML with JSON Schema, serde, linting                   |
+| No workshop/distribution                 | **Pain point:** manual file sharing, forum posts          | Built-in workshop with `ic mod publish`                      |
+| No hot-reload                            | **Pain point:** recompile engine+mod for every change     | Lua + YAML hot-reload during development                     |
 
 ### The `ic` CLI Tool
 
@@ -36,7 +36,7 @@ ic mod run                 # launch game with this mod loaded
 ic mod server              # launch dedicated server for this mod
 ic mod package             # build distributable packages (workshop or standalone)
 ic mod publish             # publish to workshop
-ic mod update-engine       # update engine version in mod.yaml
+ic mod update-engine       # update engine version in mod.toml
 ic mod lint                # style/convention checks + llm: metadata completeness
 ic mod watch               # hot-reload mode: watches files, reloads YAML/Lua on change
 ic git setup               # install repo-local .gitattributes and IC diff/merge helper hints (Git-first workflow)
@@ -169,52 +169,51 @@ jobs:
 ic mod publish --server https://mods.myclan.com/workshop --channel release
 ```
 
-### Mod Manifest (`mod.yaml`)
+### Mod Manifest (`mod.toml`)
 
-Every mod has a `mod.yaml` at its root — the single source of truth for mod identity and composition. Inspired by OpenRA's `mod.yaml` but using real YAML with typed deserialization:
+Every mod has a `mod.toml` at its root — the single source of truth for mod identity and composition. IC-native manifests use TOML (D067: infrastructure about a mod, not game content). OpenRA's `mod.yaml` is still read for compatibility (D026), but IC mods author `mod.toml`:
 
-```yaml
-# mod.yaml
-mod:
-  id: my-total-conversion
-  title: "Red Apocalypse"
-  version: "1.2.0"
-  authors: ["ModderName"]
-  description: "A total conversion set in an alternate timeline"
-  website: "https://example.com/red-apocalypse"
-  license: "CC-BY-SA-4.0"            # modder's choice — no GPL requirement
+```toml
+# mod.toml
+[mod]
+id = "my-total-conversion"
+title = "Red Apocalypse"
+version = "1.2.0"
+authors = ["ModderName"]
+description = "A total conversion set in an alternate timeline"
+website = "https://example.com/red-apocalypse"
+license = "CC-BY-SA-4.0"            # modder's choice — no GPL requirement
 
-engine:
-  version: "^0.3.0"                  # semver — compatible with 0.3.x
-  game_module: "ra1"                 # which GameModule this mod targets
+[engine]
+version = "^0.3.0"                  # semver — compatible with 0.3.x
+game_module = "ra1"                 # which GameModule this mod targets
 
-assets:
-  rules: ["rules/**/*.yaml"]
-  maps: ["maps/"]
-  missions: ["missions/"]
-  scripts: ["scripts/**/*.lua"]
-  wasm_modules: ["wasm/*.wasm"]
-  media: ["media/"]
-  chrome: ["chrome/**/*.yaml"]
-  sequences: ["sequences/**/*.yaml"]
+[assets]
+rules = ["rules/**/*.yaml"]
+maps = ["maps/"]
+missions = ["missions/"]
+scripts = ["scripts/**/*.lua"]
+wasm_modules = ["wasm/*.wasm"]
+media = ["media/"]
+chrome = ["chrome/**/*.yaml"]
+sequences = ["sequences/**/*.yaml"]
 
-dependencies:                        # other mods/workshop items required
-  - id: "community-hd-sprites"
-    version: "^2.0"
-    source: workshop
+[defaults]
+balance_preset = "classic"           # default balance preset for this mod
 
-balance_preset: classic              # default balance preset for this mod
+[dependencies]                      # other mods/workshop items required
+"community-hd-sprites" = { version = "^2.0", source = "workshop" }
 
-llm:
-  summary: "Alternate-timeline total conversion with new factions and units"
-  gameplay_tags: [total_conversion, alternate_history, new_factions]
+[llm]
+summary = "Alternate-timeline total conversion with new factions and units"
+gameplay_tags = ["total_conversion", "alternate_history", "new_factions"]
 ```
 
 ### Standardized Mod Directory Layout
 
 ```
 my-mod/
-├── mod.yaml                  # manifest (required)
+├── mod.toml                  # manifest (required)
 ├── rules/                    # Tier 1: YAML data
 │   ├── units/
 │   │   ├── infantry.yaml
@@ -258,11 +257,11 @@ my-mod/
 
 | Template           | Creates                               | For                                         |
 | ------------------ | ------------------------------------- | ------------------------------------------- |
-| `data-mod`         | mod.yaml + rules/ + empty maps/       | Simple balance/cosmetic mods (Tier 1 only)  |
+| `data-mod`         | mod.toml + rules/ + empty maps/       | Simple balance/cosmetic mods (Tier 1 only)  |
 | `scripted-mod`     | Above + scripts/ + missions/          | Mission packs, custom game modes (Tier 1+2) |
 | `total-conversion` | Full directory layout including wasm/ | Total conversions (all tiers)               |
-| `map-pack`         | mod.yaml + maps/                      | Map collections                             |
-| `asset-pack`       | mod.yaml + media/ + sequences/        | Sprite/sound/video packs                    |
+| `map-pack`         | mod.toml + maps/                      | Map collections                             |
+| `asset-pack`       | mod.toml + media/ + sequences/        | Sprite/sound/video packs                    |
 
 Community can publish custom templates to the workshop.
 

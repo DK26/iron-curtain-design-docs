@@ -350,16 +350,15 @@ This is different from pathfinders (one axis: which algorithm). AI has two ortho
 
 A mod's YAML manifest can declare which `AiStrategy` implementations it ships with or requires:
 
-```yaml
-# mod.yaml — total conversion with custom AI
-mod:
-  name: "Zero Hour Remake"
-  ai_strategies:
-    - goap-planner              # Requires this community AI
-    - personality-driven        # Also supports the built-in default
-  default_ai: goap-planner
-  depends:
-    - community/goap-planner-ai@^2.0
+```toml
+# mod.toml — total conversion with custom AI
+[mod]
+name = "Zero Hour Remake"
+default_ai = "goap-planner"
+ai_strategies = ["goap-planner", "personality-driven"]
+
+[dependencies]
+"community/goap-planner-ai" = "^2.0"
 ```
 
 If the mod doesn't specify `ai_strategies`, all registered AI implementations are available.
@@ -406,21 +405,23 @@ impl AiStrategy for GoapPlannerAi {
 
 The mod registers its AI in its manifest:
 
-```yaml
-# goap_planner/mod.yaml
-mod:
-  name: "GOAP Planner AI"
-  type: ai_strategy
-  ai_strategy_id: goap-planner
-  display_name: "GOAP Planner"
-  description: "Goal-oriented action planning AI — plans multi-step strategies"
-  wasm_module: goap_planner.wasm
-  capabilities:
-    read_visible_state: true
-    issue_orders: true
-  config:
-    plan_depth: 5
-    replan_interval_ticks: 30
+```toml
+# goap_planner/mod.toml
+[mod]
+name = "GOAP Planner AI"
+type = "ai_strategy"
+ai_strategy_id = "goap-planner"
+display_name = "GOAP Planner"
+description = "Goal-oriented action planning AI — plans multi-step strategies"
+wasm_module = "goap_planner.wasm"
+
+[capabilities]
+read_visible_state = true
+issue_orders = true
+
+[config]
+plan_depth = 5
+replan_interval_ticks = 30
 ```
 
 **Workshop distribution:** Community AI implementations are Workshop resources (D030). They can be rated, reviewed, and depended upon — same as pathfinder mods. The Workshop can host AI tournament leaderboards: automated matches between community AI submissions, ranked by Elo/TrueSkill (inspired by BWAPI's SSCAIT and AoE2's AI ladder communities, see `research/rts-ai-extensibility-survey.md`).

@@ -427,27 +427,32 @@ This is the manual equivalent of Bethesda's Bashed Patches — but declarative, 
 
 ### Mod Profiles & Virtual Asset Namespace (D062)
 
-The load order, active mod set, conflict resolutions, and experience settings (D033) compose into a **mod profile** — a named, hashable, switchable YAML file that captures a complete mod configuration:
+The load order, active mod set, conflict resolutions, and experience settings (D033) compose into a **mod profile** — a named, hashable, switchable TOML file (D067: infrastructure, not content) that captures a complete mod configuration:
 
-```yaml
-# <data_dir>/profiles/tournament-s5.yaml
-profile:
-  name: "Tournament Season 5"
-  game_module: ra1
-sources:
-  - id: "official/tournament-balance"
-    version: "=1.3.0"
-  - id: "official/hd-sprites"
-    version: "=2.0.1"
-conflicts:
-  - unit: heavy_tank
-    field: health.max
-    use_source: "official/tournament-balance"
-experience:
-  balance: classic
-  theme: remastered
-  pathfinding: ic_default
-fingerprint: null  # computed at activation
+```toml
+# <data_dir>/profiles/tournament-s5.toml
+
+[profile]
+name = "Tournament Season 5"
+game_module = "ra1"
+
+[[sources]]
+id = "official/tournament-balance"
+version = "=1.3.0"
+
+[[sources]]
+id = "official/hd-sprites"
+version = "=2.0.1"
+
+[[conflicts]]
+unit = "heavy_tank"
+field = "health.max"
+use_source = "official/tournament-balance"
+
+[experience]
+balance = "classic"
+theme = "remastered"
+pathfinding = "ic_default"
 ```
 
 When a profile is activated, the engine builds a **virtual asset namespace** — a resolved lookup table mapping every logical asset path to a content-addressed blob (D049 local CAS) and every YAML rule to its merged value. The namespace fingerprint (SHA-256 of sorted entries) serves as a single-value compatibility check in multiplayer lobbies and replay playback. See `decisions/09c-modding.md` § D062 for the full design: namespace struct, Bevy `AssetSource` integration, lobby fingerprint verification, editor hot-swap, and the relationship between local profiles and published modpacks (D030).

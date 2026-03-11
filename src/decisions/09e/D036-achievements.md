@@ -46,24 +46,26 @@ CREATE TABLE achievement_progress (
 
 ### Mod-Defined Achievements
 
-Mod authors define achievements in their `mod.yaml`, which register when the mod is installed:
+Mod authors define achievements in their `mod.toml`, which register when the mod is installed:
 
-```yaml
-# mod.yaml (achievement definition in a mod)
-achievements:
-  - id: "my_mod.survive_the_storm"
-    title: "Eye of the Storm"
-    description: "Survive a blizzard event without losing any buildings"
-    category: skirmish
-    icon: "assets/achievements/storm.png"
-    hidden: false
-    trigger: "lua"                     # unlock logic in Lua script
-  - id: "my_mod.build_all_units"
-    title: "Full Arsenal"
-    description: "Build every unit type in a single match"
-    category: skirmish
-    icon: "assets/achievements/arsenal.png"
-    trigger: "lua"
+```toml
+# mod.toml (achievement definition section in a mod)
+[[achievements]]
+id = "my_mod.survive_the_storm"
+title = "Eye of the Storm"
+description = "Survive a blizzard event without losing any buildings"
+category = "skirmish"
+icon = "assets/achievements/storm.png"
+hidden = false
+trigger = "lua"    # unlock logic in Lua script
+
+[[achievements]]
+id = "my_mod.build_all_units"
+title = "Full Arsenal"
+description = "Build every unit type in a single match"
+category = "skirmish"
+icon = "assets/achievements/arsenal.png"
+trigger = "lua"
 ```
 
 Lua scripts call `Achievement.unlock("my_mod.survive_the_storm")` when conditions are met. The achievement API is part of the Lua globals (alongside `Actor`, `Trigger`, `Map`, etc.).

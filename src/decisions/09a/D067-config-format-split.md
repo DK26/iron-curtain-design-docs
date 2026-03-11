@@ -23,6 +23,8 @@ TOML is already present in the Rust ecosystem (`Cargo.toml`, `deny.toml`, `rustf
 | Server deployment profiles  | `profiles/tournament-lan.toml`, `profiles/casual-community.toml`, etc.                       | D064, 15-SERVER-GUIDE |
 | `compression.advanced.toml` | Advanced compression parameters for server operators (if separate from `server_config.toml`) | D063                  |
 | Editor preferences          | `editor_prefs.toml` — SDK window layout, recent files, panel state                           | D038, D040            |
+| `mod.toml`                  | IC-native mod manifest: name, version, dependencies, engine pin, asset listings              | D026                  |
+| Mod profiles                | `profiles/*.toml` — named mod set + experience settings + conflict resolutions               | D062                  |
 
 **Why TOML for configuration:**
 - **Flat and explicit.** TOML doesn't allow the deeply nested structures that make YAML configs hard to scan. `[render]` / `shadows = true` is immediately readable. Configuration *should* be flat — if your config file needs 6 levels of nesting, it's probably content.
@@ -34,26 +36,24 @@ TOML is already present in the Rust ecosystem (`Cargo.toml`, `deny.toml`, `rustf
 
 #### YAML — Game Content & Mod Data
 
-| File                             | Purpose                                                             | Decision Reference   |
-| -------------------------------- | ------------------------------------------------------------------- | -------------------- |
-| `mod.yaml`                       | Mod manifest: name, version, dependencies, assets, game module      | D026                 |
-| Unit/weapon/building definitions | `units/*.yaml`, `weapons/*.yaml`, `buildings/*.yaml`                | D003, Tier 1 modding |
-| `campaign.yaml`                  | Campaign graph, mission sequence, persistent state                  | D021                 |
-| `theme.yaml`                     | UI theme definition: sprite sheets, 9-slice coordinates, colors     | D032                 |
-| `ranked-tiers.yaml`              | Competitive rank names, thresholds, icons per game module           | D055                 |
-| Balance presets                  | `presets/balance/*.yaml` — Classic/OpenRA/Remastered values         | D019                 |
-| QoL presets                      | `presets/qol/*.yaml` — behavior toggle configurations               | D033                 |
-| Experience profiles              | `profiles/*.yaml` — named mod set + settings + conflict resolutions | D062                 |
-| Map files                        | IC map format (terrain, actors, triggers, metadata)                 | D025                 |
-| Scenario triggers/modules        | Trigger definitions, waypoints, compositions                        | D038                 |
-| String tables / localization     | Translatable game text                                              | —                    |
-| Editor extensions                | `editor_extension.yaml` — custom palettes, panels, brushes          | D066                 |
-| Export config                    | `export_config.yaml` — target engine, version, content selection    | D066                 |
-| `credits.yaml`                   | Campaign credits sequence                                           | D038                 |
-| `loading_tips.yaml`              | Loading screen tips                                                 | D038                 |
-| Tutorial definitions             | Hint triggers, tutorial step sequences                              | D065                 |
-| AI personality definitions       | Build orders, aggression curves, expansion strategies               | D043                 |
-| Achievement definitions          | In `mod.yaml` or separate achievement YAML files                    | D036                 |
+| File                             | Purpose                                                          | Decision Reference   |
+| -------------------------------- | ---------------------------------------------------------------- | -------------------- |
+| Unit/weapon/building definitions | `units/*.yaml`, `weapons/*.yaml`, `buildings/*.yaml`             | D003, Tier 1 modding |
+| `campaign.yaml`                  | Campaign graph, mission sequence, persistent state               | D021                 |
+| `theme.yaml`                     | UI theme definition: sprite sheets, 9-slice coordinates, colors  | D032                 |
+| `ranked-tiers.yaml`              | Competitive rank names, thresholds, icons per game module        | D055                 |
+| Balance presets                  | `presets/balance/*.yaml` — Classic/OpenRA/Remastered values      | D019                 |
+| QoL presets                      | `presets/qol/*.yaml` — behavior toggle configurations            | D033                 |
+| Map files                        | IC map format (terrain, actors, triggers, metadata)              | D025                 |
+| Scenario triggers/modules        | Trigger definitions, waypoints, compositions                     | D038                 |
+| String tables / localization     | Translatable game text                                           | —                    |
+| Editor extensions                | `editor_extension.yaml` — custom palettes, panels, brushes       | D066                 |
+| Export config                    | `export_config.yaml` — target engine, version, content selection | D066                 |
+| `credits.yaml`                   | Campaign credits sequence                                        | D038                 |
+| `loading_tips.yaml`              | Loading screen tips                                              | D038                 |
+| Tutorial definitions             | Hint triggers, tutorial step sequences                           | D065                 |
+| AI personality definitions       | Build orders, aggression curves, expansion strategies            | D043                 |
+| Achievement definitions          | In `mod.toml` or separate achievement YAML files                 | D036                 |
 
 **Why YAML stays for content:**
 - **Deep nesting is natural.** Unit definitions have `combat.weapons[0].turret.target_filter` — content IS hierarchical. YAML handles this ergonomically. TOML's `[[combat.weapons]]` tables are awkward for deeply nested game data.
@@ -64,13 +64,14 @@ TOML is already present in the Rust ecosystem (`Cargo.toml`, `deny.toml`, `rustf
 
 ### Edge Cases & Boundary Rules
 
-| File                       | Classification | Reasoning                                                                                                                                                                                                                  |
-| -------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `mod.yaml` (mod manifest)  | **YAML**       | It's a content declaration — what the mod IS, not how the engine runs. Even though it has configuration-like fields (`engine.version`, `dependencies`), it flows through the mod pipeline, not the engine config pipeline. |
-| Server deployment profiles | **TOML**       | They're server configuration variants, not game content. The relay reads them the same way it reads `server_config.toml`.                                                                                                  |
-| `export_config.yaml`       | **YAML**       | Export configuration is part of the content creation workflow — it describes what to export (content), not how the engine operates. It travels alongside the scenario/mod it targets.                                      |
-| `ic.lock`                  | **TOML**       | Lockfiles are infrastructure (dependency resolution state). Follows `Cargo.lock` convention.                                                                                                                               |
-| `.iccmd` console scripts   | **Neither**    | These are script files, not configuration or content. Keep as-is.                                                                                                                                                          |
+| File                       | Classification | Reasoning                                                                                                                                                                                                                                                                                                                     |
+| -------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mod.toml` (mod manifest)  | **TOML**       | It's infrastructure about a mod — identity, version, engine pin, dependencies, file listings. These are flat key-value fields, the same shape as `Cargo.toml`. Every comparable package ecosystem uses TOML/JSON for manifests. OpenRA's `mod.yaml` is still READ for compatibility (D026), but IC-native manifests use TOML. |
+| Mod profiles (D062)        | **TOML**       | Infrastructure about which mods to load, in what order, with what conflict resolutions. Flat structure, no inheritance chains. Same rationale as server deployment profiles.                                                                                                                                                  |
+| Server deployment profiles | **TOML**       | They're server configuration variants, not game content. The relay reads them the same way it reads `server_config.toml`.                                                                                                                                                                                                     |
+| `export_config.yaml`       | **YAML**       | Export configuration is part of the content creation workflow — it describes what to export (content), not how the engine operates. It travels alongside the scenario/mod it targets.                                                                                                                                         |
+| `ic.lock`                  | **TOML**       | Lockfiles are infrastructure (dependency resolution state). Follows `Cargo.lock` convention.                                                                                                                                                                                                                                  |
+| `.iccmd` console scripts   | **Neither**    | These are script files, not configuration or content. Keep as-is.                                                                                                                                                                                                                                                             |
 
 **The boundary test:** Ask "does this file affect the simulation or define game content?" If yes → YAML. "Does this file configure how the engine, server, or toolchain operates?" If yes → TOML. If genuinely ambiguous, prefer YAML (content is the larger set and the default assumption).
 

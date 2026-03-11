@@ -40,7 +40,7 @@ Export produces content loadable by the current OpenRA release:
 | **Audio**         | .wav / .ogg                     | .wav / .ogg (OpenRA native) or .aud                      | OpenRA loads modern formats natively. .aud export for backwards-compatible mods                                                                                                                                                                                                                                                                                                                      |
 | **UI themes**     | IC theme YAML + sprite sheets   | OpenRA chrome YAML + sprite sheets                       | IC theme properties (D032) mapped to OpenRA's chrome system. IC-only theme features stripped                                                                                                                                                                                                                                                                                                         |
 | **String tables** | IC YAML localization            | OpenRA `.ftl` (Fluent) localization files                | IC string keys mapped to OpenRA Fluent message IDs                                                                                                                                                                                                                                                                                                                                                   |
-| **Mod manifest**  | IC mod.yaml                     | OpenRA `mod.yaml` (D026 reverse)                         | IC mod manifest → OpenRA mod manifest. Dependency declarations, sprite sequences, rule file lists, chrome layout references                                                                                                                                                                                                                                                                          |
+| **Mod manifest**  | IC mod.toml                     | OpenRA `mod.yaml` (D026 reverse)                         | IC mod manifest → OpenRA mod manifest. Dependency declarations, sprite sequences, rule file lists, chrome layout references                                                                                                                                                                                                                                                                          |
 
 **OpenRA version targeting:** OpenRA's modding API changes between releases. The exporter targets a configurable OpenRA version (default: latest stable). A `target_openra_version` field in the export config selects which trait names, Lua API surface, and manifest schema to use. The D023 alias table is version-aware — it knows which OpenRA release introduced or deprecated each trait name.
 
@@ -326,7 +326,7 @@ ic export --target openra --version release-20240315 mission.yaml -o ./openra-ou
 ic export --target ra1 campaign.yaml -o ./ra1-output/ --fidelity-report report.json
 
 # Export all sprites in a mod to .shp+.pal for RA1 compatibility
-ic export --target ra1 --content sprites mod.yaml -o ./sprites-output/
+ic export --target ra1 --content sprites mod.toml -o ./sprites-output/
 
 # Validate export without writing files (dry run)
 ic export --target openra --dry-run mission.yaml
