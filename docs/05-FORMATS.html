@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-93a3da36.js";
+            window.path_to_searchindex_js = "searchindex-c80260ed.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9adfe301.js"></script>
@@ -209,12 +209,12 @@
 <tr><th>Format</th><th>Purpose</th><th>Notes</th></tr>
 </thead>
 <tbody>
-<tr><td><code>.meg</code></td><td>Archive container</td><td>Petroglyph archive format (from Empire at War lineage). Header + file table + packed data. Read-only in <code>ra-formats</code>. Community tools: OS Big Editor, OpenSage.</td></tr>
+<tr><td><code>.meg</code></td><td>Archive container</td><td>Petroglyph archive format (from Empire at War lineage). Header + file table + packed data. Clean-room read-only <code>MegArchive</code> parser in <code>cnc-formats</code> (Phase 2, behind <code>meg</code> feature flag). Community tools: OS Big Editor, OpenSage. <code>ra-formats</code> depends on <code>cnc-formats</code> with <code>meg</code> enabled.</td></tr>
 <tr><td><code>.tga+.meta</code></td><td>HD sprite sheets</td><td>32-bit RGBA TGA “megasheets” — all frames of a unit/building composited into one large atlas. Paired <code>.meta</code> JSON file provides per-frame geometry: <code>{"size":[w,h],"crop":[x,y,w,h]}</code>. Player colors use chroma-key green (HSV hue ~110) instead of palette indices.</td></tr>
 <tr><td><code>.dds</code></td><td>GPU textures</td><td>DirectDraw Surface (BC1/BC3/BC7). Terrain, UI chrome, effects. Convert to KTX2 or PNG at import time.</td></tr>
 <tr><td><code>.bk2</code></td><td>HD video (Bink2)</td><td>Proprietary RAD Game Tools codec. Cutscenes and briefings. Converted to WebM (VP9) at import time — IC does not ship a Bink2 runtime decoder.</td></tr>
 <tr><td><code>.wav</code> (HD)</td><td>Remixed audio</td><td>Standard WAV containers (Microsoft ADPCM). Plays natively in IC’s Kira audio pipeline. No conversion needed.</td></tr>
-<tr><td><code>.pgm</code></td><td>Map package</td><td>MEG file with different extension. Contains map + preview image + metadata. Reuse <code>MegArchive</code> parser.</td></tr>
+<tr><td><code>.pgm</code></td><td>Map package</td><td>MEG file with different extension. Contains map + preview image + metadata. Reuses <code>MegArchive</code> parser from <code>cnc-formats</code> (<code>meg</code> feature flag).</td></tr>
 <tr><td><code>.mtd</code></td><td>MegaTexture data</td><td>Petroglyph format for packed UI elements (sidebar icons in <code>MT_COMMANDBAR_COMMON</code> variants). Custom parser in <code>ra-formats</code>. Low priority — only needed for UI chrome import.</td></tr>
 <tr><td><code>.xml</code></td><td>GlyphX config</td><td>Standard XML. Game settings, asset mappings, sequence definitions. Parse with <code>quick-xml</code> crate to extract classic→HD frame correspondence tables for sprite import pipeline.</td></tr>
 <tr><td><code>.dat</code>/<code>.loc</code></td><td>String tables</td><td>Petroglyph localization format. Parse for completeness; IC uses its own localization system. Low priority.</td></tr>
@@ -229,7 +229,7 @@
 </thead>
 <tbody>
 <tr><td><code>.ini</code> (original)</td><td>Game rules</td><td>Original Red Alert format</td></tr>
-<tr><td>MiniYAML (OpenRA)</td><td>Game rules, maps, manifests</td><td>Custom dialect, needs converter</td></tr>
+<tr><td>MiniYAML (OpenRA)</td><td>Game rules, maps, manifests</td><td>Custom dialect, loads at runtime via auto-detection (D025); <code>cnc-formats convert</code> available for permanent on-disk migration</td></tr>
 <tr><td>YAML (ours)</td><td>Game rules, maps, manifests</td><td>Standard spec-compliant YAML</td></tr>
 <tr><td><code>.oramap</code></td><td>OpenRA map package</td><td>ZIP archive containing map.yaml + terrain + actors</td></tr>
 </tbody>
@@ -262,21 +262,85 @@
 <p>D076 splits format handling into two crates with distinct roles:</p>
 <p><strong>cnc-formats</strong> (MIT OR Apache-2.0, separate repo — Tier 1, Phase 0):</p>
 <ol>
-<li>Clean-room parsers for all C&amp;C binary formats (<code>.mix</code>, <code>.shp</code>, <code>.tmp</code>, <code>.pal</code>, <code>.aud</code>, <code>.vqa</code>, <code>.wsa</code>, <code>.fnt</code>)</li>
-<li>Clean-room parsers for C&amp;C text configuration formats: <code>.ini</code> (classic C&amp;C rules, always enabled) and MiniYAML (OpenRA rules, behind <code>miniyaml</code> feature flag)</li>
-<li>CLI tool with <code>validate</code>, <code>inspect</code>, and <code>convert</code> subcommands — validates file structure, dumps contents, and converts MiniYAML to standard YAML (MiniYAML features behind <code>miniyaml</code> feature flag)</li>
-<li>Extensive tests against known-good OpenRA data</li>
-<li>No EA-derived code — permissive licensing enables adoption by any C&amp;C tool or modding project</li>
-<li>Released open source as a standalone crate on day one (Phase 0 deliverable, read-only)</li>
-<li>Uses <code>std</code> — enables <code>std::io::Read</code> streaming for large files (<code>.mix</code> archives, <code>.vqa</code> video), <code>std::error::Error</code> ergonomics, and <code>HashMap</code> without extra dependencies. The <code>&amp;[u8]</code> parsing API remains the primary interface; streaming is an additional option.</li>
-<li>Serves as a <strong>clean-room feasibility proof</strong> that the engine is not technically dependent on EA’s GPL code — all formats parse correctly from community docs alone (see D051 § “GPL Is a Policy Choice” and D076 rationale #6)</li>
+<li>
+<p>Clean-room parsers for all C&amp;C binary formats (<code>.mix</code>, <code>.shp</code>, <code>.tmp</code>, <code>.pal</code>, <code>.aud</code>, <code>.vqa</code>, <code>.wsa</code>, <code>.fnt</code>) and Petroglyph <code>.meg</code>/<code>.pgm</code> archives (Phase 2, behind <code>meg</code> feature flag — clean-room from OS Big Editor/OpenSage community docs)</p>
+</li>
+<li>
+<p>Clean-room parsers for C&amp;C text configuration formats: <code>.ini</code> (classic C&amp;C rules, always enabled) and MiniYAML (OpenRA rules, behind <code>miniyaml</code> feature flag)</p>
+</li>
+<li>
+<p>CLI tool with phased subcommand rollout:</p>
+<ul>
+<li><strong>Phase 0:</strong> <code>validate</code> (structural correctness), <code>inspect</code> (dump contents/metadata, <code>--json</code> for machine-readable output), <code>convert</code> (extensible <code>--from</code>/<code>--to</code> format conversion — <code>--to</code> required, <code>--from</code> auto-detected from extension; current conversion: <code>--from miniyaml --to yaml</code>, behind <code>miniyaml</code> feature flag)</li>
+<li><strong>Phase 1:</strong> <code>extract</code> (decompose <code>.mix</code> archives to individual files; <code>.meg</code>/<code>.pgm</code> support added Phase 2 via <code>meg</code> feature), <code>list</code> (quick archive inventory — filenames, sizes, types; <code>.meg</code>/<code>.pgm</code> support added Phase 2)</li>
+<li><strong>Phase 2:</strong> <code>check</code> (deep integrity verification — CRC validation, truncation detection, <code>validate --strict</code> equivalent), <code>diff</code> (format-aware structural comparison of two files of the same type), <code>fingerprint</code> (SHA-256 canonical content hash for integrity/deduplication)</li>
+<li><strong>Phase 6a:</strong> <code>pack</code> (create <code>.mix</code> archives from directory — inverse of <code>extract</code>)</li>
+</ul>
+<p><strong>CLI usage examples:</strong></p>
+<pre><code class="language-bash"># Convert MiniYAML rules to standard YAML (explicit --from because .yaml is ambiguous)
+cnc-formats convert --from miniyaml --to yaml rules.yaml
+
+# Auto-detection works when extension is unambiguous
+cnc-formats convert --to yaml openra-rules.miniyaml
+
+# Explicit --from required for pipe/stdin usage
+cat rules.yaml | cnc-formats convert --from miniyaml --to yaml -o rules-converted.yaml
+
+# Validate any supported format
+cnc-formats validate main.mix
+cnc-formats validate rules.yaml
+
+# Inspect archive contents (human-readable)
+cnc-formats inspect main.mix
+
+# Machine-readable JSON output for tooling
+cnc-formats inspect --json conquer.mix
+
+# Extract archive to directory (Phase 1)
+cnc-formats extract main.mix -o assets/
+
+# Quick archive inventory (Phase 1)
+cnc-formats list main.mix
+
+# Deep integrity check (Phase 2)
+cnc-formats check main.mix
+
+# Format-aware diff between two MIX archives (Phase 2)
+cnc-formats diff original.mix modded.mix
+
+# Content-hash for deduplication (Phase 2)
+cnc-formats fingerprint infantry.shp
+
+# MEG archive support (Phase 2, requires `meg` feature)
+cnc-formats list data.meg
+cnc-formats extract data.meg -o remastered-assets/
+
+# Create MIX archive from directory (Phase 6a)
+cnc-formats pack assets/ -o custom.mix
+</code></pre>
+</li>
+<li>
+<p>Extensive tests against known-good OpenRA data</p>
+</li>
+<li>
+<p>No EA-derived code — permissive licensing enables adoption by any C&amp;C tool or modding project</p>
+</li>
+<li>
+<p>Released open source as a standalone crate on day one (Phase 0 deliverable, read-only)</p>
+</li>
+<li>
+<p>Uses <code>std</code> — enables <code>std::io::Read</code> streaming for large files (<code>.mix</code> archives, <code>.vqa</code> video), <code>std::error::Error</code> ergonomics, and <code>HashMap</code> without extra dependencies. The <code>&amp;[u8]</code> parsing API remains the primary interface; streaming is an additional option.</p>
+</li>
+<li>
+<p>Serves as a <strong>clean-room feasibility proof</strong> that the engine is not technically dependent on EA’s GPL code — all formats parse correctly from community docs alone (see D051 § “GPL Is a Policy Choice” and D076 rationale #6)</p>
+</li>
 </ol>
 <p><strong>ra-formats</strong> (GPL v3, IC monorepo):</p>
 <ol>
 <li>Thin wrapper over <code>cnc-formats</code> (with <code>miniyaml</code> feature enabled) — adds EA-specific details (compression tables, game-specific constants) that reference EA’s GPL-licensed C&amp;C source (D051)</li>
 <li>Bevy <code>AssetSource</code> integration for IC’s asset pipeline</li>
-<li>Remastered Collection format support (<code>.meg</code>, <code>.tga+.meta</code>, <code>.dds</code>, <code>.bk2</code>, <code>.pgm</code>) — formats not in <code>cnc-formats</code>’s scope</li>
-<li><strong>Write support (Phase 6a):</strong> .shp generation from frames (LCW compression + frame offset tables), .pal writing (trivial — 768 bytes), .aud encoding (IMA ADPCM compression from PCM input), .vqa encoding (VQ codebook generation + frame differencing + audio interleaving), optional .mix packing (CRC hash table generation) — required by Asset Studio (D040). Encoders reference the EA GPL source code implementations directly (see § Binary Format Codec Reference)</li>
+<li>Remastered-specific format support (<code>.tga+.meta</code> megasheet splitting, <code>.dds</code> terrain import, <code>.bk2</code> video conversion, <code>.mtd</code> MegaTexture) — GPL-derived or proprietary formats that stay in <code>ra-formats</code> (see D076 § Remastered format split). Note: <code>.meg</code>/<code>.pgm</code> archive parsing is in <code>cnc-formats</code> (Phase 2, <code>meg</code> feature flag) — <code>ra-formats</code> depends on it</li>
+<li><strong>Write support (Phase 6a):</strong> .shp generation from frames (LCW compression + frame offset tables), .pal writing (trivial — 768 bytes), .aud encoding (IMA ADPCM compression from PCM input), .vqa encoding (VQ codebook generation + frame differencing + audio interleaving), encrypted .mix packing (Blowfish key derivation + SHA-1 body digest — extends <code>cnc-formats pack</code>’s unencrypted archives) — required by Asset Studio (D040). Encoders reference the EA GPL source code implementations directly (see § Binary Format Codec Reference)</li>
 </ol>
 <h3 id="non-cc-format-landscape"><a class="header" href="#non-cc-format-landscape">Non-C&amp;C Format Landscape</a></h3>
 <p>The <code>cnc-formats</code> crate provides clean-room parsers for the entire C&amp;C format family (binary codecs, <code>.ini</code>, and feature-gated MiniYAML); <code>ra-formats</code> wraps it with EA-derived details and IC asset pipeline integration. But the engine (D039) supports non-C&amp;C games via the <code>FormatRegistry</code> and WASM format loaders (see <code>04-MODDING.md</code> § WASM Format Loader API Surface). Analysis of six major OpenRA community mods (see <code>research/openra-mod-architecture-analysis.md</code>) reveals the scope of formats that non-C&amp;C total conversions require:</p>

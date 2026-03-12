@@ -36,7 +36,7 @@
             const path_to_root = "../../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-93a3da36.js";
+            window.path_to_searchindex_js = "../../../searchindex-c80260ed.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc-9adfe301.js"></script>
@@ -255,10 +255,10 @@
 <p><strong>Key design points:</strong></p>
 <ol>
 <li><strong>Format detection:</strong> <code>ra-formats</code> checks the first few lines of each file. Tab-indented content with no YAML indicators triggers the MiniYAML path, which calls <code>cnc-formats::miniyaml::parse()</code>.</li>
-<li><strong>In-memory conversion:</strong> MiniYAML is parsed to an intermediate tree, then resolved to standard YAML structs. <code>cnc-formats convert</code> performs only the structural MiniYAML→YAML conversion (schema-neutral, standalone crate — D076). The runtime path in <code>ra-formats</code> goes further: it also applies alias resolution (D023).</li>
+<li><strong>In-memory conversion:</strong> MiniYAML is parsed to an intermediate tree, then resolved to standard YAML structs. <code>cnc-formats convert --from miniyaml --to yaml</code> performs only the structural MiniYAML→YAML conversion (schema-neutral, standalone crate — D076). The runtime path in <code>ra-formats</code> goes further: it also applies alias resolution (D023).</li>
 <li><strong>Combined with D023:</strong> OpenRA trait name aliases (D023) apply after MiniYAML parsing — so the full runtime chain is: MiniYAML → intermediate tree (via <code>cnc-formats</code>) → alias resolution (via <code>ra-formats</code>) → typed Rust structs.</li>
 <li><strong>Performance:</strong> Conversion adds ~10-50ms per mod at load time (one-time cost). Cached after first load.</li>
-<li><strong>Warning output:</strong> Console logs <code>"Loaded MiniYAML file rules.yaml — consider converting to standard YAML with 'cnc-formats convert'"</code>.</li>
+<li><strong>Warning output:</strong> Console logs `“Loaded MiniYAML file rules.yaml — consider converting to standard YAML with ‘cnc-formats convert –from miniyaml –to yaml rules.yaml’”.</li>
 </ol>
 <p><strong>Rationale:</strong></p>
 <ul>

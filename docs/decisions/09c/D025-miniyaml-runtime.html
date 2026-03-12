@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-93a3da36.js";
+            window.path_to_searchindex_js = "../../searchindex-c80260ed.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -190,7 +190,7 @@
 <li><strong>Deferred features / extensions:</strong> none</li>
 <li><strong>Canonical for:</strong> MiniYAML auto-detection, runtime conversion, and the <code>cnc-formats convert</code> CLI subcommand</li>
 <li><strong>Scope:</strong> <code>ra-formats</code> crate (runtime auto-conversion), <code>cnc-formats</code> crate (CLI <code>convert</code> subcommand)</li>
-<li><strong>Decision:</strong> MiniYAML files load directly at runtime via auto-detection and in-memory conversion. No pre-conversion step is required. The <code>cnc-formats convert</code> CLI subcommand is also provided for permanent on-disk migration.</li>
+<li><strong>Decision:</strong> MiniYAML files load directly at runtime via auto-detection and in-memory conversion. No pre-conversion step is required. The <code>cnc-formats convert --from miniyaml --to yaml</code> CLI subcommand is also provided for permanent on-disk migration (<code>--from</code> auto-detected from extension when unambiguous; <code>--to</code> always required).</li>
 <li><strong>Why:</strong>
 <ul>
 <li>Zero-friction import of existing OpenRA mods (drop a mod folder in, play immediately)</li>
@@ -226,6 +226,47 @@
                    └─ Rust structs (identical output)
 </code></pre>
 <p>Both paths produce identical output. The runtime conversion adds ~10–50ms per mod file on first load; results are cached for the remainder of the session.</p>
+<h4 id="rust-api"><a class="header" href="#rust-api">Rust API</a></h4>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// cnc-formats (MIT/Apache-2.0) — clean-room MiniYAML parser (behind `miniyaml` feature flag)
+#[cfg(feature = "miniyaml")]
+pub mod miniyaml {
+    /// Parse MiniYAML text into a format-agnostic node tree.
+    pub fn parse(input: &amp;str) -&gt; Result&lt;Vec&lt;MiniYamlNode&gt;, ParseError&gt;;
+
+    /// Convert a MiniYAML node tree to standard YAML string.
+    pub fn to_yaml(nodes: &amp;[MiniYamlNode]) -&gt; String;
+
+    pub struct MiniYamlNode {
+        pub key: String,
+        pub value: Option&lt;String&gt;,
+        pub children: Vec&lt;MiniYamlNode&gt;,
+        pub comment: Option&lt;String&gt;,
+    }
+}
+
+// ra-formats (GPL v3) — IC integration layer for runtime auto-detection
+/// Detect whether a `.yaml` file contains standard YAML or MiniYAML.
+/// Returns the detected format for routing to the correct parser.
+pub fn detect_format(content: &amp;str) -&gt; DetectedFormat;
+
+pub enum DetectedFormat {
+    /// Standard YAML — route to `serde_yaml`.
+    StandardYaml,
+    /// MiniYAML — route through `cnc_formats::miniyaml::parse()` + alias resolution (D023).
+    MiniYaml {
+        /// Which markers triggered detection (for diagnostics).
+        markers: Vec&lt;MiniYamlMarker&gt;,
+    },
+}
+
+pub enum MiniYamlMarker {
+    TabIndentation,       // MiniYAML uses tabs; standard YAML uses spaces
+    InheritancePrefix,    // `^` prefix on keys
+    MergeSuffix,          // `@` suffix on keys
+}
+<span class="boring">}</span></code></pre>
 <h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
 <div class="table-wrapper">
 <table>

@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-93a3da36.js";
+            window.path_to_searchindex_js = "../../searchindex-c80260ed.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -187,14 +187,14 @@
 <li><strong>Status:</strong> Accepted</li>
 <li><strong>Phase:</strong> Phase 2 (format parsers), Phase 6a (Asset Studio import wizard)</li>
 <li><strong>Canonical for:</strong> Loading and converting assets from the C&amp;C Remastered Collection (EA, 2020) into IC’s native pipeline</li>
-<li><strong>Scope:</strong> <code>ra-formats</code> (parsers), <code>ic-editor</code> (Asset Studio import wizard), <code>05-FORMATS.md</code></li>
+<li><strong>Scope:</strong> <code>cnc-formats</code> (MEG/PGM archive parser, clean-room, <code>meg</code> feature flag), <code>ra-formats</code> (TGA+META, DDS, MTD, BK2 parsers + Bevy integration), <code>ic-editor</code> (Asset Studio import wizard), <code>05-FORMATS.md</code></li>
 <li><strong>Decision:</strong> IC reads all Remastered Collection asset formats natively — MEG archives, TGA+META sprite sheets, BK2 video, WAV audio, XML config — enabling users who own the Remastered Collection to use those assets directly. HD sprite import splits megasheets into IC’s per-frame sprite representation using the META JSON geometry. No Remastered assets are redistributed.</li>
 <li><strong>Why:</strong> (1) The Remastered Collection’s C++ DLL source is GPL v3 — format definitions are legally referenceable. (2) Players who own the Remastered Collection expect their HD assets to work. (3) The Remastered formats are well-documented by the modding community (PPM, CnCNet). (4) IC already supports the classic formats these are derived from — HD support is an incremental extension.</li>
 <li><strong>Non-goals:</strong> Binary compatibility with Petroglyph’s C# GlyphX layer; redistributing EA’s proprietary HD art, music, or video; running Remastered mods that depend on GlyphX-specific APIs; replacing the Remastered Collection as a product.</li>
 <li><strong>Invariants preserved:</strong> <code>ra-formats</code> remains a pure parsing library with no I/O side effects. All imported assets convert to IC-native representations (PNG sprites, OGG/WAV audio, WebM video). Sim determinism unaffected — asset formats are presentation-only.</li>
 <li><strong>Defaults / UX behavior:</strong> “Import Remastered Installation” wizard in Asset Studio auto-detects a Remastered install folder, inventories available assets, and offers selective import. Users choose which asset categories to import. Imported assets land in a mod-ready directory structure.</li>
 <li><strong>Compatibility / Export impact:</strong> Imported Remastered assets are usable in IC mods but NOT publishable to Workshop (proprietary EA content). Asset Studio marks provenance as <code>source: remastered_collection</code> and Publish Readiness (D038) blocks Workshop upload of EA-sourced assets.</li>
-<li><strong>Security / Trust impact:</strong> MEG archive parser must handle malformed archives safely (fuzzing required). MEG entry extraction uses <code>strict-path</code> <code>PathBoundary</code> to sandbox output to the mod directory — same Zip Slip defense as <code>.oramap</code> and <code>.icpkg</code> (see <code>06-SECURITY.md</code> § Path Security Infrastructure). TGA/DDS parsers use established Rust crates (<code>image</code>, <code>ddsfile</code>) — no custom decoder needed.</li>
+<li><strong>Security / Trust impact:</strong> MEG archive parser in <code>cnc-formats</code> must handle malformed archives safely (fuzzing required). MEG entry extraction uses <code>strict-path</code> <code>PathBoundary</code> to sandbox output to the mod directory — same Zip Slip defense as <code>.oramap</code> and <code>.icpkg</code> (see <code>06-SECURITY.md</code> § Path Security Infrastructure). TGA/DDS parsers use established Rust crates (<code>image</code>, <code>ddsfile</code>) — no custom decoder needed.</li>
 <li><strong>Public interfaces / types / commands:</strong> <code>MegArchive</code>, <code>MegEntry</code>, <code>RemasteredSpriteSheet</code>, <code>MetaFrame</code>, <code>RemasteredImportManifest</code>, <code>ic asset import-remastered</code></li>
 <li><strong>Affected docs:</strong> <code>src/05-FORMATS.md</code>, <code>src/decisions/09f/D040-asset-studio.md</code>, <code>src/architecture/ra-experience.md</code>, <code>src/decisions/09c-modding.md</code></li>
 <li><strong>Keywords:</strong> remastered, remaster, MEG, TGA, META, BK2, Bink2, HD sprites, megasheet, GlyphX, Petroglyph, EA GPL, import wizard</li>
@@ -212,8 +212,8 @@
 <tr><th>Format</th><th>Purpose</th><th>Structure</th><th>IC Strategy</th></tr>
 </thead>
 <tbody>
-<tr><td><code>.meg</code></td><td>Primary archive container</td><td>Petroglyph archive format. Header + file table + packed data. Openable by community tools (OS Big Editor, OpenSage).</td><td>New <code>MegArchive</code> parser in <code>ra-formats</code>. Read-only (no write support needed — IC doesn’t produce MEG files).</td></tr>
-<tr><td><code>.pgm</code></td><td>Map package archive</td><td>MEG file with different extension. Contains map file + related data (preview image, metadata).</td><td>Reuse <code>MegArchive</code> parser. Map data extracted and converted to IC YAML map format.</td></tr>
+<tr><td><code>.meg</code></td><td>Primary archive container</td><td>Petroglyph archive format. Header + file table + packed data. Openable by community tools (OS Big Editor, OpenSage).</td><td>Clean-room <code>MegArchive</code> parser in <code>cnc-formats</code> (Phase 2, behind <code>meg</code> feature flag). Community documentation (OS Big Editor, OpenSage) is sufficient — no EA-derived code needed. <code>ra-formats</code> depends on <code>cnc-formats</code> with <code>meg</code> enabled. Read-only (IC doesn’t produce MEG files). CLI <code>extract</code>/<code>list</code>/<code>check</code> support MEG archives.</td></tr>
+<tr><td><code>.pgm</code></td><td>Map package archive</td><td>MEG file with different extension. Contains map file + related data (preview image, metadata).</td><td>Reuse <code>MegArchive</code> parser from <code>cnc-formats</code>. Map data extracted and converted to IC YAML map format.</td></tr>
 </tbody>
 </table>
 </div>
@@ -441,7 +441,7 @@ pub enum ImportedAssetType {
 <tr><th>What</th><th>Legal Status</th><th>IC Policy</th></tr>
 </thead>
 <tbody>
-<tr><td><strong>Format definitions</strong> (how to read MEG, TGA+META, etc.)</td><td>GPL v3 (from EA DLL source) + community documentation</td><td>Freely implement parsers in <code>ra-formats</code></td></tr>
+<tr><td><strong>Format definitions</strong> (how to read MEG, TGA+META, etc.)</td><td>GPL v3 (from EA DLL source) + community documentation</td><td>MEG/PGM: clean-room parser in <code>cnc-formats</code> (<code>meg</code> feature flag) — community docs sufficient, no GPL needed. TGA+META, DDS, MTD, BK2: parsers in <code>ra-formats</code> (reference GPL DLL source for edge-case correctness).</td></tr>
 <tr><td><strong>HD art assets</strong> (sprites, textures, UI)</td><td>Proprietary EA content</td><td>Never redistribute. Import from user’s own purchase. Block Workshop upload.</td></tr>
 <tr><td><strong>Remixed audio</strong> (SFX, music, EVA)</td><td>Proprietary EA content</td><td>Same as art — import from user’s purchase only.</td></tr>
 <tr><td><strong>HD cutscenes</strong> (BK2 video)</td><td>Proprietary EA content</td><td>Same — convert from user’s purchase.</td></tr>
@@ -468,7 +468,7 @@ pub enum ImportedAssetType {
 </ol>
 <h3 id="phase"><a class="header" href="#phase">Phase</a></h3>
 <ul>
-<li><strong>Phase 2:</strong> <code>ra-formats</code> gains MEG archive parser, TGA+META sprite sheet splitter, and DDS reader. These are pure parsing — no UI.</li>
+<li><strong>Phase 2:</strong> <code>cnc-formats</code> gains clean-room MEG/PGM archive parser (behind <code>meg</code> feature flag). <code>ra-formats</code> gains TGA+META sprite sheet splitter and DDS reader (these reference GPL DLL source). All are pure parsing — no UI.</li>
 <li><strong>Phase 6a:</strong> Asset Studio “Import Remastered Installation” wizard ships. BK2→WebM conversion pipeline. Full import workflow with provenance tracking.</li>
 <li><strong>CLI fallback (Phase 2):</strong> <code>ic asset import-remastered &lt;path&gt;</code> provides headless import for CI/automation/power users before Asset Studio ships. The output directory (<code>mods/remastered-hd/</code>) is enforced via <code>strict-path</code> <code>PathBoundary</code> — MEG archive entry names (potentially user-modified in modded installs) cannot escape the output mod directory.</li>
 </ul>

@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-93a3da36.js";
+            window.path_to_searchindex_js = "../../searchindex-c80260ed.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -316,6 +316,7 @@
 A single Rust binary replacing OpenRA’s shell scripts + Makefile + Python dependencies:</p>
 <pre><code>ic mod init [template]     # scaffold from template
 ic mod check               # validate all mod content
+ic mod convert             # batch-convert mod assets between legacy/modern formats (D020 § Conversion Command Boundary)
 ic mod test                # headless smoke test
 ic mod run                 # launch game with mod
 ic mod server              # dedicated server
@@ -332,7 +333,7 @@ ic replay inspect [file]   # summary view: players, map, duration, outcome, desy
 ic replay verify [file]    # verify relay signature chain + integrity (see 06-SECURITY.md)
 </code></pre>
 <blockquote>
-<p><strong>CLI design principle (from Fossilize):</strong> Each subcommand does one focused thing well — validate, convert, inspect, verify. Valve’s Fossilize toolchain (<code>fossilize-replay</code>, <code>fossilize-merge</code>, <code>fossilize-convert</code>, <code>fossilize-list</code>) demonstrates that a family of small, composable CLI tools is more useful than a monolithic Swiss Army knife. The <code>ic</code> CLI follows this pattern: <code>ic mod check</code> validates, <code>ic mod convert</code> converts formats, <code>ic replay parse</code> extracts data, <code>ic replay inspect</code> summarizes. Each subcommand is independently useful and composable via shell pipelines. See <code>research/valve-github-analysis.md</code> § 3.3 and § 6.2.</p>
+<p><strong>CLI design principle (from Fossilize):</strong> Each subcommand does one focused thing well — validate, convert, inspect, verify. Valve’s Fossilize toolchain (<code>fossilize-replay</code>, <code>fossilize-merge</code>, <code>fossilize-convert</code>, <code>fossilize-list</code>) demonstrates that a family of small, composable CLI tools is more useful than a monolithic Swiss Army knife. The <code>ic</code> CLI follows this pattern: <code>ic mod check</code> validates, <code>ic mod convert</code> batch-converts mod assets between legacy and modern formats (<code>.shp</code> → PNG, <code>.aud</code> → OGG — see D020 § Conversion Command Boundary), <code>ic replay parse</code> extracts data, <code>ic replay inspect</code> summarizes. Single-file text conversion (MiniYAML → YAML) is a separate tool: <code>cnc-formats convert</code> (game-agnostic, schema-neutral — see D076). Each subcommand is independently useful and composable via shell pipelines. See <code>research/valve-github-analysis.md</code> § 3.3 and § 6.2.</p>
 </blockquote>
 <p><strong>Mod templates (built-in):</strong></p>
 <ul>
@@ -474,7 +475,7 @@ ic replay verify [file]    # verify relay signature chain + integrity (see 06-SE
 <p><strong>Key design points:</strong></p>
 <ol>
 <li><strong>Alias registry:</strong> <code>ra-formats</code> maintains a compile-time map of OpenRA trait names to IC component names. <code>Armament</code> → <code>combat</code>, <code>Valued</code> → <code>buildable.cost</code>, <code>AttackOmni</code> → <code>combat.mode: omni</code>, etc.</li>
-<li><strong>Bi-directional:</strong> The alias registry is used during YAML parsing (OpenRA names accepted, resolved to IC-native names at load time by <code>ra-formats</code>). <code>cnc-formats convert</code> performs schema-neutral MiniYAML→YAML structural conversion only — alias resolution is a separate <code>ra-formats</code> concern. Both OpenRA and IC-native representations are valid input.</li>
+<li><strong>Bi-directional:</strong> The alias registry is used during YAML parsing (OpenRA names accepted, resolved to IC-native names at load time by <code>ra-formats</code>). <code>cnc-formats convert --from miniyaml --to yaml</code> performs schema-neutral MiniYAML→YAML structural conversion only — alias resolution is a separate <code>ra-formats</code> concern. Both OpenRA and IC-native representations are valid input.</li>
 <li><strong>Deprecation warnings:</strong> When an OpenRA alias is used, the parser emits a warning: <code>"Armament" is accepted but deprecated; prefer "combat"</code>. Warnings can be suppressed per-mod via <code>mod.toml</code> setting.</li>
 <li><strong>No runtime cost:</strong> Aliases resolve during YAML deserialization (load time only). The ECS never sees alias names — only canonical IC component types.</li>
 </ol>

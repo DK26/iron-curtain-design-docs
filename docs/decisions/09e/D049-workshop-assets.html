@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-93a3da36.js";
+            window.path_to_searchindex_js = "../../searchindex-c80260ed.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -259,7 +259,7 @@
 <ul>
 <li><strong>Import:</strong> .aud/.shp/.vqa/.pal → OGG/PNG/WebM/.pal (for modders working with legacy assets)</li>
 <li><strong>Export:</strong> OGG/PNG/WebM → .aud/.shp/.vqa (for modders targeting OpenRA compatibility or classic aesthetic)</li>
-<li><strong>Batch convert:</strong> <code>ic mod convert --to-modern</code> or <code>ic mod convert --to-classic</code> converts entire mod directories</li>
+<li><strong>Batch convert:</strong> <code>ic mod convert --to-modern</code> or <code>ic mod convert --to-classic</code> converts entire mod directories (binary asset conversion: <code>.shp</code> → PNG, <code>.aud</code> → OGG, <code>.vqa</code> → WebM, and reverse). This is distinct from <code>cnc-formats convert</code> which handles single-file text format conversion (MiniYAML → YAML) — see D020 § Conversion Command Boundary for the canonical split.</li>
 </ul>
 <p>The engine loads both format families at runtime. <code>cnc-formats</code> parsers (via <code>ra-formats</code> Bevy integration) handle legacy formats; Bevy’s built-in loaders handle modern formats. No manual conversion is ever required — only recommended for new Workshop publications.</p>
 <hr>

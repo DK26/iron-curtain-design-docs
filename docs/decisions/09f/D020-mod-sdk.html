@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-93a3da36.js";
+            window.path_to_searchindex_js = "../../searchindex-c80260ed.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -249,6 +249,22 @@
 <p><strong>Scenario Editor (D038):</strong> Isometric viewport with 8 editing modes (Terrain, Entities, Triggers, Waypoints, Modules, Regions, Scripts, Layers). Simple/Advanced toggle. Trigger-driven camera scenes. 30+ drag-and-drop modules. Context-sensitive help (<code>F1</code>). See D038 for full specification.</p>
 <p><strong>Asset Studio (D040):</strong> XCC Mixer replacement with visual editing. Supports SHP, PAL, AUD, VQA, MIX, TMP. Bidirectional conversion (SHP↔PNG, AUD↔WAV). Chrome/theme designer with 9-slice editor. See D040 for full specification.</p>
 <p><strong>Campaign Editor:</strong> Node-and-edge graph editor in a 2D Bevy viewport. Missions are nodes (linked to scenario files), outcomes are labeled edges. Supports branching campaigns (D021), hero progression, and validation. Advanced mode adds localization workbench and migration/export readiness checks.</p>
+<h3 id="conversion-command-boundary"><a class="header" href="#conversion-command-boundary">Conversion Command Boundary</a></h3>
+<p>Two separate tools handle format conversion at different levels:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tool</th><th>Scope</th><th>Granularity</th><th>Crate</th><th>License</th></tr>
+</thead>
+<tbody>
+<tr><td><code>cnc-formats convert</code></td><td>Single-file structural text conversion</td><td><code>--from miniyaml --to yaml</code> on one file</td><td><code>cnc-formats</code></td><td>MIT/Apache-2.0</td></tr>
+<tr><td><code>ic mod convert</code></td><td>Mod-directory batch asset conversion</td><td><code>--to-modern</code> / <code>--to-classic</code> across all files in a mod</td><td><code>ic-game</code> (uses <code>ra-formats</code> encoders)</td><td>GPL v3</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong><code>cnc-formats convert</code></strong> is game-agnostic and schema-neutral — it converts MiniYAML syntax to standard YAML syntax without understanding what the fields mean. It operates on individual files. It knows nothing about mod directories, asset types, or game-specific formats like <code>.shp</code> or <code>.aud</code>.</p>
+<p><strong><code>ic mod convert</code></strong> is game-aware and operates on entire mod directories. It converts between legacy C&amp;C asset formats (<code>.shp</code>, <code>.aud</code>, <code>.vqa</code>) and modern Bevy-native formats (PNG, OGG, WebM) using <code>ra-formats</code> encoders/decoders. It understands mod structure (<code>mod.toml</code>, directory conventions) and can batch-process all assets in a mod. The Asset Studio (D040) provides the same conversions via GUI.</p>
+<p>They do not overlap: <code>cnc-formats convert</code> handles text format conversion (MiniYAML → YAML); <code>ic mod convert</code> handles binary asset conversion (.shp → PNG, .aud → OGG, etc.).</p>
 <h3 id="tool-phase-schedule"><a class="header" href="#tool-phase-schedule">Tool Phase Schedule</a></h3>
 <div class="table-wrapper">
 <table>
@@ -256,8 +272,11 @@
 <tr><th>Tool</th><th>Phase</th><th>Notes</th></tr>
 </thead>
 <tbody>
-<tr><td><code>ic</code> CLI (validate, import, run)</td><td>Phase 2</td><td>Ships with core engine</td></tr>
-<tr><td><code>cnc-formats</code> CLI (validate, inspect, convert)</td><td>Phase 0</td><td>Format validation + inspection + MiniYAML conversion (D025)</td></tr>
+<tr><td><code>ic</code> CLI (validate, import, convert, run)</td><td>Phase 2</td><td>Ships with core engine; <code>ic mod convert</code> = mod-directory batch asset conversion</td></tr>
+<tr><td><code>cnc-formats</code> CLI (validate, inspect, convert)</td><td>Phase 0</td><td>Format validation + inspection + single-file <code>--from</code>/<code>--to</code> text conversion (D025)</td></tr>
+<tr><td><code>cnc-formats</code> CLI (extract, list)</td><td>Phase 1</td><td><code>.mix</code> archive decomposition and inventory</td></tr>
+<tr><td><code>cnc-formats</code> CLI (check, diff, fingerprint)</td><td>Phase 2</td><td>Deep integrity, structural comparison, canonical hashing</td></tr>
+<tr><td><code>cnc-formats</code> CLI (pack)</td><td>Phase 6a</td><td><code>.mix</code> archive creation (inverse of extract)</td></tr>
 <tr><td>Scenario Editor (D038)</td><td>Phase 6a</td><td>Primary SDK editor</td></tr>
 <tr><td>Asset Studio (D040)</td><td>Phase 6a</td><td>Format conversion + visual editing</td></tr>
 <tr><td>Campaign Editor</td><td>Phase 6a</td><td>Graph editor for D021 campaigns</td></tr>
