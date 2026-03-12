@@ -22,11 +22,10 @@ Phase 0 (Foundation)
 ### Deliverables
 - `ra-formats` crate: parse `.mix` archives, SHP/TMP sprites, `.aud` audio, `.pal` palettes, `.vqa` video
 - Parse OpenRA YAML manifests, map format, rule definitions
-- `miniyaml2yaml` converter tool
+- `cnc-formats` CLI tool (`validate`, `inspect`, `convert` subcommands) — validates file structure, dumps archive contents, converts MiniYAML to standard YAML
 - **Runtime MiniYAML loading (D025):** MiniYAML files load directly at runtime — auto-converts in memory, no pre-conversion required
 - **OpenRA vocabulary alias registry (D023):** Accept OpenRA trait names (`Armament`, `Valued`, etc.) as YAML key aliases alongside IC-native names
 - **OpenRA mod manifest parser (D026):** Parse OpenRA `mod.yaml` manifests, map directory layout to IC equivalents
-- CLI tool to dump/inspect/validate RA assets
 - Extensive tests against known-good OpenRA data
 
 ### Key Architecture Work

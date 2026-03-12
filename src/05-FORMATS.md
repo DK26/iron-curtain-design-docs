@@ -68,9 +68,8 @@ D076 splits format handling into two crates with distinct roles:
 **cnc-formats** (MIT OR Apache-2.0, separate repo — Tier 1, Phase 0):
 1. Clean-room parsers for all C&C binary formats (`.mix`, `.shp`, `.tmp`, `.pal`, `.aud`, `.vqa`, `.wsa`, `.fnt`)
 2. Clean-room parsers for C&C text configuration formats: `.ini` (classic C&C rules, always enabled) and MiniYAML (OpenRA rules, behind `miniyaml` feature flag)
-3. `miniyaml2yaml` converter tool (behind `miniyaml` feature flag)
+3. CLI tool with `validate`, `inspect`, and `convert` subcommands — validates file structure, dumps contents, and converts MiniYAML to standard YAML (MiniYAML features behind `miniyaml` feature flag)
 4. Extensive tests against known-good OpenRA data
-5. CLI tool to dump/inspect/validate C&C assets (binary and text)
 6. No EA-derived code — permissive licensing enables adoption by any C&C tool or modding project
 7. Released open source as a standalone crate on day one (Phase 0 deliverable, read-only)
 8. Uses `std` — enables `std::io::Read` streaming for large files (`.mix` archives, `.vqa` video), `std::error::Error` ergonomics, and `HashMap` without extra dependencies. The `&[u8]` parsing API remains the primary interface; streaming is an additional option.

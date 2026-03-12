@@ -65,7 +65,7 @@ These crates are the first things built. They have zero IC-specific dependencies
 
 **Naming note:** The IC crate currently called `ra-formats` stays in the IC monorepo as GPL code because it references EA's GPL-licensed C&C source for struct definitions and lookup tables (D051 rationale #2). `cnc-formats` is the *new* permissive crate containing only clean-room format parsing with no EA-derived code. `ra-formats` becomes a thin wrapper that adds EA-specific details (compression tables, game-specific constants) on top.
 
-**Feature-gated MiniYAML:** `.ini` parsing is always available (it's a classic C&C format). MiniYAML parsing is behind `features = { miniyaml = [] }` because it's OpenRA-specific — a `.mix` extractor tool or asset viewer doesn't need it. The `miniyaml2yaml` converter ships as a binary in the `cnc-formats` repo, gated behind the same feature. `ra-formats` depends on `cnc-formats` with `miniyaml` enabled.
+**Feature-gated MiniYAML:** `.ini` parsing is always available (it's a classic C&C format). MiniYAML parsing is behind `features = { miniyaml = [] }` because it's OpenRA-specific — a `.mix` extractor tool or asset viewer doesn't need it. The `cnc-formats` CLI binary ships in the same repo; its `convert` subcommand (MiniYAML → YAML) is gated behind the same feature, while `validate` and `inspect` work on all formats unconditionally. `ra-formats` depends on `cnc-formats` with `miniyaml` enabled.
 
 ### Tier 2a — Phase 2 (Simulation)
 

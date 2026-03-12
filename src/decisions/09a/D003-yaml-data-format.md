@@ -15,4 +15,4 @@
 - RON (rejected — modders won't know it, thin editor support)
 - JSON (rejected — too verbose, no comments)
 
-**Migration:** `miniyaml2yaml` converter tool in `cnc-formats` crate (behind `miniyaml` feature flag, MIT/Apache-2.0). `ra-formats` wraps this for IC's runtime auto-conversion pipeline (D025).
+**Migration:** `cnc-formats convert` CLI subcommand (behind `miniyaml` feature flag, MIT/Apache-2.0) converts MiniYAML files to standard YAML on disk. `ra-formats` wraps the same parser for IC's runtime auto-conversion pipeline (D025).

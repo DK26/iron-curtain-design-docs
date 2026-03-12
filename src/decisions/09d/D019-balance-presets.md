@@ -1,6 +1,6 @@
-﻿## D019: Switchable Balance Presets (Classic RA vs OpenRA)
+﻿## D019: Switchable Balance Presets
 
-**Decision:** Ship multiple balance presets as first-class YAML rule sets. Default to classic Red Alert values from the EA source code. OpenRA balance available as an alternative preset. Selectable per-game in lobby.
+**Decision:** Ship five balance presets as first-class YAML rule sets: Classic (EA source values, default), OpenRA (competitive rebalance), Remastered (Petroglyph's 2020 tweaks), IC Default (spectacle + competitive viability, patched per-season), and Custom (modder-created via Workshop). Selectable per-game in lobby.
 
 **Rationale:**
 - Original Red Alert's balance makes units feel **powerful and iconic** — Tanya, MiGs, Tesla Coils, V2 rockets are devastating. This is what made the game memorable.
@@ -293,7 +293,7 @@ ic replay verify [file]    # verify relay signature chain + integrity (see 06-SE
 **Key design points:**
 
 1. **Alias registry:** `ra-formats` maintains a compile-time map of OpenRA trait names to IC component names. `Armament` → `combat`, `Valued` → `buildable.cost`, `AttackOmni` → `combat.mode: omni`, etc.
-2. **Bi-directional:** The alias registry is used during YAML parsing (OpenRA names accepted) and by the `miniyaml2yaml` converter (produces IC-native names). Both representations are valid.
+2. **Bi-directional:** The alias registry is used during YAML parsing (OpenRA names accepted, resolved to IC-native names at load time by `ra-formats`). `cnc-formats convert` performs schema-neutral MiniYAML→YAML structural conversion only — alias resolution is a separate `ra-formats` concern. Both OpenRA and IC-native representations are valid input.
 3. **Deprecation warnings:** When an OpenRA alias is used, the parser emits a warning: `"Armament" is accepted but deprecated; prefer "combat"`. Warnings can be suppressed per-mod via `mod.toml` setting.
 4. **No runtime cost:** Aliases resolve during YAML deserialization (load time only). The ECS never sees alias names — only canonical IC component types.
 
@@ -301,7 +301,7 @@ ic replay verify [file]    # verify relay signature chain + integrity (see 06-SE
 - Reduces the YAML migration from "convert everything" to "drop in and play, clean up later"
 - Respects invariant #8 ("the community's existing work is sacred") at the data vocabulary layer, not just binary formats
 - Zero runtime cost — purely a deserialization convenience
-- Makes `miniyaml2yaml` output immediately usable even without manual cleanup
+- Runtime alias resolution means dropped-in OpenRA mods work immediately — no manual renaming or pre-conversion step required
 - Modders can learn IC-native names gradually as they edit files
 
 **Alternatives considered:**

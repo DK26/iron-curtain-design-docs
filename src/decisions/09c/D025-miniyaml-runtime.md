@@ -6,9 +6,9 @@
 - **Phase:** Phase 0 (format loading foundation)
 - **Execution overlay mapping:** `M0.CORE.FORMAT_FOUNDATION` (P-Core); `M1.CORE.FORMAT_LOADING` (runtime path)
 - **Deferred features / extensions:** none
-- **Canonical for:** MiniYAML auto-detection, runtime conversion, and the `miniyaml2yaml` CLI tool
-- **Scope:** `ra-formats` crate, `ic` CLI
-- **Decision:** MiniYAML files load directly at runtime via auto-detection and in-memory conversion. No pre-conversion step is required. A `miniyaml2yaml` CLI tool is also provided for permanent migration.
+- **Canonical for:** MiniYAML auto-detection, runtime conversion, and the `cnc-formats convert` CLI subcommand
+- **Scope:** `ra-formats` crate (runtime auto-conversion), `cnc-formats` crate (CLI `convert` subcommand)
+- **Decision:** MiniYAML files load directly at runtime via auto-detection and in-memory conversion. No pre-conversion step is required. The `cnc-formats convert` CLI subcommand is also provided for permanent on-disk migration.
 - **Why:**
   - Zero-friction import of existing OpenRA mods (drop a mod folder in, play immediately)
   - Pre-conversion would add a mandatory setup step that deters casual modders
@@ -17,9 +17,9 @@
 - **Non-goals:** Maintaining MiniYAML as a first-class authoring format. IC-native content uses standard YAML. MiniYAML is a compatibility input, not an output.
 - **Invariants preserved:** Deterministic sim (parsing produces identical output regardless of input format). No network or I/O in `ic-sim`.
 - **Performance impact:** ~10–50ms per mod file on first load; result cached for session. Negligible for gameplay.
-- **Public interfaces / types / commands:** `miniyaml2yaml` CLI (ships with `cnc-formats`), `cnc_formats::miniyaml::parse()` (clean-room parser, MIT/Apache-2.0), `ra_formats::detect_format()` (IC integration layer)
+- **Public interfaces / types / commands:** `cnc-formats` CLI (`validate`/`inspect`/`convert` subcommands, ships with crate), `cnc_formats::miniyaml::parse()` (clean-room parser, MIT/Apache-2.0), `ra_formats::detect_format()` (IC integration layer)
 - **Affected docs:** `02-ARCHITECTURE.md` § Data Format, `04-MODDING.md` § MiniYAML Migration, `05-FORMATS.md`
-- **Keywords:** MiniYAML, runtime loading, auto-conversion, format detection, miniyaml2yaml, OpenRA compatibility
+- **Keywords:** MiniYAML, runtime loading, auto-conversion, format detection, cnc-formats CLI, OpenRA compatibility
 
 ---
 

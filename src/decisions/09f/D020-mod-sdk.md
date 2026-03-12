@@ -45,7 +45,7 @@
 ┌─────────────────────────────────────────────────┐
 │               ic CLI (headless)                 │
 │  ic mod validate | ic mod import | ic mod run   │
-│  ic mod publish  | miniyaml2yaml               │
+│  ic mod publish  | cnc-formats (validate/inspect/convert) │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -76,16 +76,16 @@ Preview → Test → Validate → Publish
 
 ### Tool Phase Schedule
 
-| Tool | Phase | Notes |
-|------|-------|-------|
-| `ic` CLI (validate, import, run) | Phase 2 | Ships with core engine |
-| `miniyaml2yaml` converter | Phase 0 | Part of format foundation (D025) |
-| Scenario Editor (D038) | Phase 6a | Primary SDK editor |
-| Asset Studio (D040) | Phase 6a | Format conversion + visual editing |
-| Campaign Editor | Phase 6a | Graph editor for D021 campaigns |
-| SDK binary (unified launcher) | Phase 6a | Bundles all editors |
-| Migration Workbench | Phase 6b | Project upgrade tooling |
-| LLM generation features | Phase 7 | D016, D047, D057 integration |
+| Tool                                           | Phase    | Notes                                                       |
+| ---------------------------------------------- | -------- | ----------------------------------------------------------- |
+| `ic` CLI (validate, import, run)               | Phase 2  | Ships with core engine                                      |
+| `cnc-formats` CLI (validate, inspect, convert) | Phase 0  | Format validation + inspection + MiniYAML conversion (D025) |
+| Scenario Editor (D038)                         | Phase 6a | Primary SDK editor                                          |
+| Asset Studio (D040)                            | Phase 6a | Format conversion + visual editing                          |
+| Campaign Editor                                | Phase 6a | Graph editor for D021 campaigns                             |
+| SDK binary (unified launcher)                  | Phase 6a | Bundles all editors                                         |
+| Migration Workbench                            | Phase 6b | Project upgrade tooling                                     |
+| LLM generation features                        | Phase 7  | D016, D047, D057 integration                                |
 
 ### Project Structure (Git-First)
 
@@ -108,9 +108,9 @@ my-mod/
 
 ### Alternatives Considered
 
-| Alternative | Verdict | Reason |
-|-------------|---------|--------|
-| Embedded editor in game | Rejected | Bloats game binary; modders are a minority of players |
-| Web-based editor | Rejected | Cannot share rendering code with game; offline-first is a requirement |
-| CLI-only (no GUI) | Rejected | Visual editing is essential for map/scenario/campaign authoring; CLI is complementary, not sufficient |
-| Separate tools (no unified SDK) | Rejected | Unified launcher with shared project context is more discoverable and consistent |
+| Alternative                     | Verdict  | Reason                                                                                                |
+| ------------------------------- | -------- | ----------------------------------------------------------------------------------------------------- |
+| Embedded editor in game         | Rejected | Bloats game binary; modders are a minority of players                                                 |
+| Web-based editor                | Rejected | Cannot share rendering code with game; offline-first is a requirement                                 |
+| CLI-only (no GUI)               | Rejected | Visual editing is essential for map/scenario/campaign authoring; CLI is complementary, not sufficient |
+| Separate tools (no unified SDK) | Rejected | Unified launcher with shared project context is more discoverable and consistent                      |
