@@ -36,7 +36,7 @@
             const path_to_root = "../../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-56dc9c19.js";
+            window.path_to_searchindex_js = "../../../searchindex-93a3da36.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc-9adfe301.js"></script>
@@ -250,15 +250,15 @@
 <p><strong>Phase:</strong> Phase 4 (Lua scripting implementation). API surface documented during Phase 2 planning.</p>
 <hr>
 <h3 id="d025--runtime-miniyaml-loading"><a class="header" href="#d025--runtime-miniyaml-loading">D025 — Runtime MiniYAML Loading</a></h3>
-<p><strong>Decision:</strong> Support loading MiniYAML directly at runtime as a fallback format in <code>ra-formats</code>. When the engine encounters tab-indented files with <code>^</code> inheritance or <code>@</code> suffixes, it auto-converts in memory using <code>cnc-formats</code>’s clean-room MiniYAML parser (D076, MIT/Apache-2.0). The <code>miniyaml2yaml</code> CLI converter (also in <code>cnc-formats</code>) still exists for permanent migration, but is no longer a prerequisite for loading mods.</p>
+<p><strong>Decision:</strong> Support loading MiniYAML directly at runtime as a fallback format in <code>ra-formats</code>. When the engine encounters tab-indented files with <code>^</code> inheritance or <code>@</code> suffixes, it auto-converts in memory using <code>cnc-formats</code>’s clean-room MiniYAML parser (D076, MIT/Apache-2.0). The <code>cnc-formats convert</code> CLI subcommand still exists for permanent on-disk migration, but is no longer a prerequisite for loading mods.</p>
 <p><strong>Revision of D003:</strong> D003 (“Real YAML, not MiniYAML”) remains the canonical format. All IC-native content uses standard YAML. D025 adds a compatibility loader — it does not change what IC produces, only what it accepts.</p>
 <p><strong>Key design points:</strong></p>
 <ol>
 <li><strong>Format detection:</strong> <code>ra-formats</code> checks the first few lines of each file. Tab-indented content with no YAML indicators triggers the MiniYAML path, which calls <code>cnc-formats::miniyaml::parse()</code>.</li>
-<li><strong>In-memory conversion:</strong> MiniYAML is parsed to an intermediate tree, then resolved to standard YAML structs. The result is identical to what <code>miniyaml2yaml</code> would produce.</li>
-<li><strong>Combined with D023:</strong> OpenRA trait name aliases (D023) apply after MiniYAML parsing — so the full chain is: MiniYAML → intermediate tree → alias resolution → typed Rust structs.</li>
+<li><strong>In-memory conversion:</strong> MiniYAML is parsed to an intermediate tree, then resolved to standard YAML structs. <code>cnc-formats convert</code> performs only the structural MiniYAML→YAML conversion (schema-neutral, standalone crate — D076). The runtime path in <code>ra-formats</code> goes further: it also applies alias resolution (D023).</li>
+<li><strong>Combined with D023:</strong> OpenRA trait name aliases (D023) apply after MiniYAML parsing — so the full runtime chain is: MiniYAML → intermediate tree (via <code>cnc-formats</code>) → alias resolution (via <code>ra-formats</code>) → typed Rust structs.</li>
 <li><strong>Performance:</strong> Conversion adds ~10-50ms per mod at load time (one-time cost). Cached after first load.</li>
-<li><strong>Warning output:</strong> Console logs <code>"Loaded MiniYAML file rules.yaml — consider converting to standard YAML with 'ic mod convert'"</code>.</li>
+<li><strong>Warning output:</strong> Console logs <code>"Loaded MiniYAML file rules.yaml — consider converting to standard YAML with 'cnc-formats convert'"</code>.</li>
 </ol>
 <p><strong>Rationale:</strong></p>
 <ul>
@@ -274,7 +274,7 @@
 <li>Support MiniYAML as a first-class format permanently (rejected — standard YAML is strictly better for tooling, validation, and editor support)</li>
 <li>Only support converted files (rejected — blocks quick experimentation and casual mod testing)</li>
 </ul>
-<p><strong>Phase:</strong> Phase 0 (MiniYAML parser already needed for <code>miniyaml2yaml</code>; making it a runtime loader is minimal additional work).</p>
+<p><strong>Phase:</strong> Phase 0 (MiniYAML parser already needed for the <code>cnc-formats</code> CLI; making it a runtime loader is minimal additional work).</p>
 <hr>
 <h3 id="d026--openra-mod-manifest-compatibility"><a class="header" href="#d026--openra-mod-manifest-compatibility">D026 — OpenRA Mod Manifest Compatibility</a></h3>
 <p><strong>Decision:</strong> <code>ra-formats</code> can parse OpenRA’s <code>mod.yaml</code> manifest format and auto-map it to IC’s mod structure at load time. Combined with D023 (aliases), D024 (Lua API), and D025 (MiniYAML loading), this means a modder can point IC at an existing OpenRA mod directory and it loads — no restructuring needed.</p>

@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-56dc9c19.js";
+            window.path_to_searchindex_js = "../searchindex-93a3da36.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-9adfe301.js"></script>
@@ -439,7 +439,7 @@ fn spawn_unit(world: &amp;mut World, def: &amp;UnitDef, pos: WorldPos) -&gt; Uni
 <p>The hydration function is game-module-specific — RA1’s module maps <code>UnitDef.combat</code> to RA1 combat components, while an RA2 module would additionally map shield and garrison fields to their respective components. The <code>GameModule::register_components()</code> method (see <code>architecture/multi-game.md</code>) ensures all required component types are registered in the ECS <code>World</code> before hydration occurs.</p>
 <p><strong>Full pipeline:</strong> YAML file → <code>serde_yaml</code> / MiniYAML auto-convert → <code>UnitDef</code> struct → inheritance resolution → rule hydration → ECS entity with components. The first three steps are documented above; inheritance resolution is load-time (see § Inheritance below); rule hydration is the bridge from data to simulation.</p>
 <h3 id="miniyaml-migration--runtime-loading"><a class="header" href="#miniyaml-migration--runtime-loading">MiniYAML Migration &amp; Runtime Loading</a></h3>
-<p><strong>Converter tool:</strong> <code>cnc-formats</code> includes a <code>miniyaml2yaml</code> CLI converter (behind the <code>miniyaml</code> feature flag) that translates existing OpenRA mod data to standard YAML. Available for permanent, clean migration.</p>
+<p><strong>Converter tool:</strong> The <code>cnc-formats</code> CLI includes a <code>convert</code> subcommand (behind the <code>miniyaml</code> feature flag) that translates existing OpenRA MiniYAML mod data to standard YAML on disk. Available for permanent, clean migration. The same CLI also provides <code>validate</code> (structural correctness check) and <code>inspect</code> (dump archive contents, frame counts, palette info) for all supported C&amp;C formats.</p>
 <p><strong>Runtime loading (D025):</strong> MiniYAML files also load directly at runtime — no pre-conversion required. When <code>ra-formats</code> detects tab-indented content with <code>^</code> inheritance or <code>@</code> suffixes, it calls <code>cnc-formats</code>’s clean-room MiniYAML parser and auto-converts in memory. The result is identical to what the converter would produce. This means existing OpenRA mods can be dropped into IC and played immediately.</p>
 <pre><code>┌─────────────────────────────────────────────────────────┐
 │           MiniYAML Loading Pipeline                     │

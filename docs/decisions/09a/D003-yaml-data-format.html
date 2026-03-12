@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-56dc9c19.js";
+            window.path_to_searchindex_js = "../../searchindex-93a3da36.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -198,7 +198,7 @@
 <li>RON (rejected — modders won’t know it, thin editor support)</li>
 <li>JSON (rejected — too verbose, no comments)</li>
 </ul>
-<p><strong>Migration:</strong> <code>miniyaml2yaml</code> converter tool in <code>cnc-formats</code> crate (behind <code>miniyaml</code> feature flag, MIT/Apache-2.0). <code>ra-formats</code> wraps this for IC’s runtime auto-conversion pipeline (D025).</p>
+<p><strong>Migration:</strong> <code>cnc-formats convert</code> CLI subcommand (behind <code>miniyaml</code> feature flag, MIT/Apache-2.0) converts MiniYAML files to standard YAML on disk. <code>ra-formats</code> wraps the same parser for IC’s runtime auto-conversion pipeline (D025).</p>
 
                     </main>
 

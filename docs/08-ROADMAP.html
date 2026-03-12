@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-56dc9c19.js";
+            window.path_to_searchindex_js = "searchindex-93a3da36.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9adfe301.js"></script>
@@ -200,11 +200,10 @@
 <ul>
 <li><code>ra-formats</code> crate: parse <code>.mix</code> archives, SHP/TMP sprites, <code>.aud</code> audio, <code>.pal</code> palettes, <code>.vqa</code> video</li>
 <li>Parse OpenRA YAML manifests, map format, rule definitions</li>
-<li><code>miniyaml2yaml</code> converter tool</li>
+<li><code>cnc-formats</code> CLI tool (<code>validate</code>, <code>inspect</code>, <code>convert</code> subcommands) — validates file structure, dumps archive contents, converts MiniYAML to standard YAML</li>
 <li><strong>Runtime MiniYAML loading (D025):</strong> MiniYAML files load directly at runtime — auto-converts in memory, no pre-conversion required</li>
 <li><strong>OpenRA vocabulary alias registry (D023):</strong> Accept OpenRA trait names (<code>Armament</code>, <code>Valued</code>, etc.) as YAML key aliases alongside IC-native names</li>
 <li><strong>OpenRA mod manifest parser (D026):</strong> Parse OpenRA <code>mod.yaml</code> manifests, map directory layout to IC equivalents</li>
-<li>CLI tool to dump/inspect/validate RA assets</li>
 <li>Extensive tests against known-good OpenRA data</li>
 </ul>
 <h3 id="key-architecture-work"><a class="header" href="#key-architecture-work">Key Architecture Work</a></h3>

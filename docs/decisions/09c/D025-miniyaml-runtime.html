@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-56dc9c19.js";
+            window.path_to_searchindex_js = "../../searchindex-93a3da36.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -188,9 +188,9 @@
 <li><strong>Phase:</strong> Phase 0 (format loading foundation)</li>
 <li><strong>Execution overlay mapping:</strong> <code>M0.CORE.FORMAT_FOUNDATION</code> (P-Core); <code>M1.CORE.FORMAT_LOADING</code> (runtime path)</li>
 <li><strong>Deferred features / extensions:</strong> none</li>
-<li><strong>Canonical for:</strong> MiniYAML auto-detection, runtime conversion, and the <code>miniyaml2yaml</code> CLI tool</li>
-<li><strong>Scope:</strong> <code>ra-formats</code> crate, <code>ic</code> CLI</li>
-<li><strong>Decision:</strong> MiniYAML files load directly at runtime via auto-detection and in-memory conversion. No pre-conversion step is required. A <code>miniyaml2yaml</code> CLI tool is also provided for permanent migration.</li>
+<li><strong>Canonical for:</strong> MiniYAML auto-detection, runtime conversion, and the <code>cnc-formats convert</code> CLI subcommand</li>
+<li><strong>Scope:</strong> <code>ra-formats</code> crate (runtime auto-conversion), <code>cnc-formats</code> crate (CLI <code>convert</code> subcommand)</li>
+<li><strong>Decision:</strong> MiniYAML files load directly at runtime via auto-detection and in-memory conversion. No pre-conversion step is required. The <code>cnc-formats convert</code> CLI subcommand is also provided for permanent on-disk migration.</li>
 <li><strong>Why:</strong>
 <ul>
 <li>Zero-friction import of existing OpenRA mods (drop a mod folder in, play immediately)</li>
@@ -202,9 +202,9 @@
 <li><strong>Non-goals:</strong> Maintaining MiniYAML as a first-class authoring format. IC-native content uses standard YAML. MiniYAML is a compatibility input, not an output.</li>
 <li><strong>Invariants preserved:</strong> Deterministic sim (parsing produces identical output regardless of input format). No network or I/O in <code>ic-sim</code>.</li>
 <li><strong>Performance impact:</strong> ~10–50ms per mod file on first load; result cached for session. Negligible for gameplay.</li>
-<li><strong>Public interfaces / types / commands:</strong> <code>miniyaml2yaml</code> CLI (ships with <code>cnc-formats</code>), <code>cnc_formats::miniyaml::parse()</code> (clean-room parser, MIT/Apache-2.0), <code>ra_formats::detect_format()</code> (IC integration layer)</li>
+<li><strong>Public interfaces / types / commands:</strong> <code>cnc-formats</code> CLI (<code>validate</code>/<code>inspect</code>/<code>convert</code> subcommands, ships with crate), <code>cnc_formats::miniyaml::parse()</code> (clean-room parser, MIT/Apache-2.0), <code>ra_formats::detect_format()</code> (IC integration layer)</li>
 <li><strong>Affected docs:</strong> <code>02-ARCHITECTURE.md</code> § Data Format, <code>04-MODDING.md</code> § MiniYAML Migration, <code>05-FORMATS.md</code></li>
-<li><strong>Keywords:</strong> MiniYAML, runtime loading, auto-conversion, format detection, miniyaml2yaml, OpenRA compatibility</li>
+<li><strong>Keywords:</strong> MiniYAML, runtime loading, auto-conversion, format detection, cnc-formats CLI, OpenRA compatibility</li>
 </ul>
 <hr>
 <h3 id="auto-detection-algorithm"><a class="header" href="#auto-detection-algorithm">Auto-Detection Algorithm</a></h3>

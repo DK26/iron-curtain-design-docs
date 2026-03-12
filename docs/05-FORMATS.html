@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-56dc9c19.js";
+            window.path_to_searchindex_js = "searchindex-93a3da36.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9adfe301.js"></script>
@@ -264,9 +264,8 @@
 <ol>
 <li>Clean-room parsers for all C&amp;C binary formats (<code>.mix</code>, <code>.shp</code>, <code>.tmp</code>, <code>.pal</code>, <code>.aud</code>, <code>.vqa</code>, <code>.wsa</code>, <code>.fnt</code>)</li>
 <li>Clean-room parsers for C&amp;C text configuration formats: <code>.ini</code> (classic C&amp;C rules, always enabled) and MiniYAML (OpenRA rules, behind <code>miniyaml</code> feature flag)</li>
-<li><code>miniyaml2yaml</code> converter tool (behind <code>miniyaml</code> feature flag)</li>
+<li>CLI tool with <code>validate</code>, <code>inspect</code>, and <code>convert</code> subcommands — validates file structure, dumps contents, and converts MiniYAML to standard YAML (MiniYAML features behind <code>miniyaml</code> feature flag)</li>
 <li>Extensive tests against known-good OpenRA data</li>
-<li>CLI tool to dump/inspect/validate C&amp;C assets (binary and text)</li>
 <li>No EA-derived code — permissive licensing enables adoption by any C&amp;C tool or modding project</li>
 <li>Released open source as a standalone crate on day one (Phase 0 deliverable, read-only)</li>
 <li>Uses <code>std</code> — enables <code>std::io::Read</code> streaming for large files (<code>.mix</code> archives, <code>.vqa</code> video), <code>std::error::Error</code> ergonomics, and <code>HashMap</code> without extra dependencies. The <code>&amp;[u8]</code> parsing API remains the primary interface; streaming is an additional option.</li>

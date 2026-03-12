@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-56dc9c19.js";
+            window.path_to_searchindex_js = "../../searchindex-93a3da36.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -251,7 +251,7 @@
 </table>
 </div>
 <p><strong>Naming note:</strong> The IC crate currently called <code>ra-formats</code> stays in the IC monorepo as GPL code because it references EA’s GPL-licensed C&amp;C source for struct definitions and lookup tables (D051 rationale #2). <code>cnc-formats</code> is the <em>new</em> permissive crate containing only clean-room format parsing with no EA-derived code. <code>ra-formats</code> becomes a thin wrapper that adds EA-specific details (compression tables, game-specific constants) on top.</p>
-<p><strong>Feature-gated MiniYAML:</strong> <code>.ini</code> parsing is always available (it’s a classic C&amp;C format). MiniYAML parsing is behind <code>features = { miniyaml = [] }</code> because it’s OpenRA-specific — a <code>.mix</code> extractor tool or asset viewer doesn’t need it. The <code>miniyaml2yaml</code> converter ships as a binary in the <code>cnc-formats</code> repo, gated behind the same feature. <code>ra-formats</code> depends on <code>cnc-formats</code> with <code>miniyaml</code> enabled.</p>
+<p><strong>Feature-gated MiniYAML:</strong> <code>.ini</code> parsing is always available (it’s a classic C&amp;C format). MiniYAML parsing is behind <code>features = { miniyaml = [] }</code> because it’s OpenRA-specific — a <code>.mix</code> extractor tool or asset viewer doesn’t need it. The <code>cnc-formats</code> CLI binary ships in the same repo; its <code>convert</code> subcommand (MiniYAML → YAML) is gated behind the same feature, while <code>validate</code> and <code>inspect</code> work on all formats unconditionally. <code>ra-formats</code> depends on <code>cnc-formats</code> with <code>miniyaml</code> enabled.</p>
 <h3 id="tier-2a--phase-2-simulation"><a class="header" href="#tier-2a--phase-2-simulation">Tier 2a — Phase 2 (Simulation)</a></h3>
 <p>These crates emerge naturally during simulation development. Extract when the API stabilizes.</p>
 <div class="table-wrapper">
