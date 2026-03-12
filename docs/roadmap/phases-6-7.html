@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0335891c.js";
+            window.path_to_searchindex_js = "../searchindex-56dc9c19.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-9adfe301.js"></script>
@@ -331,7 +331,7 @@
 <li><strong>LLM-driven Workshop resource discovery (D030):</strong> When LLM provider is configured, LLM can search Workshop by <code>llm_meta</code> tags, evaluate fitness, auto-pull resources as dependencies for generated content; license-aware filtering</li>
 <li><strong>LLM player-aware generation (D034):</strong> When LLM provider is configured, <code>ic-llm</code> reads local SQLite for player context — faction preferences, unit usage patterns, win/loss streaks, campaign roster state; generates personalized missions, adaptive briefings, post-match commentary, coaching suggestions, rivalry narratives</li>
 <li><strong>LLM coaching loop (D042):</strong> When LLM provider is configured, <code>ic-llm</code> reads <code>training_sessions</code> + <code>player_profiles</code> for structured training plans (“Week 1: expansion timing”), post-session natural language coaching, multi-session arc tracking, and contextual tips during weakness review; builds on Phase 4–5 rule-based training system</li>
-<li><strong>AI training data pipeline (D031):</strong> gameplay event stream → OTEL collector → Parquet/Arrow columnar format → ML training; build order learning, engagement patterns, balance analysis from aggregated match telemetry</li>
+<li><strong>AI training data pipeline (D031):</strong> replay-first extraction — deterministic replay files → fog-filtered TrainingPair conversion → Parquet export; telemetry enrichment (gameplay events, input patterns, pacing snapshots) as secondary signals; build order learning, engagement patterns, balance analysis; see <code>research/ml-training-pipeline-design.md</code></li>
 </ul>
 <h3 id="deliverables--wasm-editor-plugins--community-export-targets-d066"><a class="header" href="#deliverables--wasm-editor-plugins--community-export-targets-d066">Deliverables — WASM Editor Plugins &amp; Community Export Targets (D066)</a></h3>
 <ul>

@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0335891c.js";
+            window.path_to_searchindex_js = "../searchindex-56dc9c19.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-9adfe301.js"></script>
@@ -209,14 +209,17 @@ fn calculate_effective_damage(raw: i32, armor: &amp;Armor) -&gt; i32 {
 }
 <span class="boring">}</span></code></pre>
 <h3 id="file-size-guideline"><a class="header" href="#file-size-guideline">File Size Guideline</a></h3>
-<p><strong>Target:</strong> Most files should be <strong>under 500 lines</strong> (including comments and tests). If a file exceeds 800 lines, it likely contains multiple concepts and should be split. The <code>mod.rs</code> barrel file pattern keeps the public API clean while allowing internal splits:</p>
+<blockquote>
+<p><strong>LLM/RAG rationale:</strong> A 500-line Rust file ≈ 1,500–2,500 tokens. An LLM agent can load 3–5 related files within a single retrieval window and still have room to reason. An 1,800-line file ≈ 6,000 tokens — it crowds out everything else. These limits serve human readability <em>and</em> efficient RAG chunking. See <code>AGENTS.md</code> § Code Module Structure — LLM/RAG Efficiency.</p>
+</blockquote>
+<p><strong>Hard rule:</strong> Logic files must be <strong>under 500 lines</strong> (including comments and tests). Over 800 lines is a split trigger — the file almost certainly contains multiple concepts. Data definition files (struct-heavy YAML deserialization, exhaustive test suites) may exceed this; logic files may not. The <code>mod.rs</code> barrel file pattern keeps the public API clean while allowing internal splits:</p>
 <pre><code>components/
 ├── mod.rs           # pub use health::*; pub use combat::*; etc.
 ├── health.rs        # Health, Armor, DamageState — ~200 lines
 ├── combat.rs        # Armament, AmmoPool, Projectile — ~400 lines
 └── economy.rs       # Harvester, ResourceStorage, OreField — ~350 lines
 </code></pre>
-<p><strong>Exception:</strong> Some files are naturally large (YAML rule deserialization structs, comprehensive test suites). That’s fine — the 500-line guideline is for logic files, not data definition files.</p>
+<p><strong>Exception:</strong> Some files are naturally large (YAML rule deserialization structs, comprehensive test suites). That’s fine — the 500-line limit is for logic files, not data definition files.</p>
 <hr>
 <h2 id="isolation-and-context-independence"><a class="header" href="#isolation-and-context-independence">Isolation and Context Independence</a></h2>
 <h3 id="every-module-tells-its-own-story"><a class="header" href="#every-module-tells-its-own-story">Every Module Tells Its Own Story</a></h3>
@@ -250,6 +253,9 @@ fn calculate_effective_damage(raw: i32, armor: &amp;Armor) -&gt; i32 {
 <h3 id="the-dropped-in-test"><a class="header" href="#the-dropped-in-test">The “Dropped In” Test</a></h3>
 <p>Before merging any file, apply this test: <em>Could a developer who has never seen this codebase read this file — and only this file — and understand what it does, why it exists, and how to modify it?</em></p>
 <p>If the answer is no, add more context. Module docs, architecture context comments, cross-reference links — whatever it takes for the file to stand on its own.</p>
+<blockquote>
+<p><strong>LLM/RAG note:</strong> This test is the code-module equivalent of the design-doc hub-and-sub-file pattern. When a RAG system retrieves a single file, the module doc comment serves as the routing header — it tells the agent what this file covers without reading the code body. A module that fails the “Dropped In” test also fails RAG retrieval: the agent loads the file, can’t make sense of it in isolation, and wastes tokens loading siblings to build context.</p>
+</blockquote>
 <hr>
 <h2 id="testing-philosophy-every-piece-in-isolation"><a class="header" href="#testing-philosophy-every-piece-in-isolation">Testing Philosophy: Every Piece in Isolation</a></h2>
 <h3 id="test-structure"><a class="header" href="#test-structure">Test Structure</a></h3>

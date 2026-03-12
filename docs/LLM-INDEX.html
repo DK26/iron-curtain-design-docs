@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0335891c.js";
+            window.path_to_searchindex_js = "searchindex-56dc9c19.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9adfe301.js"></script>
@@ -259,6 +259,7 @@
 <tr><td>Ticket breakdown / work-package template for <code>G*</code> steps</td><td><code>src/tracking/implementation-ticket-template.md</code></td><td><code>src/18-PROJECT-TRACKER.md</code>, <code>src/tracking/milestone-dependency-map.md</code></td><td>Use for implementation handoff/work packages after features are mapped into the overlay</td></tr>
 <tr><td>Bootstrapping an external implementation repo to follow IC design docs</td><td><code>src/tracking/external-code-project-bootstrap.md</code>, <code>src/tracking/external-project-agents-template.md</code></td><td><code>src/tracking/source-code-index-template.md</code>, <code>src/18-PROJECT-TRACKER.md</code>, <code>AGENTS.md</code></td><td>Use when starting a separate code repo; includes no-silent-divergence and design-gap escalation workflow</td></tr>
 <tr><td>Source code navigation index (<code>CODE-INDEX.md</code>) template for humans + LLMs</td><td><code>src/tracking/source-code-index-template.md</code></td><td><code>src/tracking/external-code-project-bootstrap.md</code>, <code>src/tracking/implementation-ticket-template.md</code></td><td>Use to create/maintain a codebase map with ownership, hot paths, boundaries, and task routing</td></tr>
+<tr><td>ML training data / dataset collection / custom model training</td><td><code>research/ml-training-pipeline-design.md</code></td><td><code>src/decisions/09d/D044-llm-ai.md</code>, <code>src/decisions/09f/D057-llm-skill-library.md</code>, <code>src/decisions/09e/D031/D031-analytics.md</code>, <code>src/architecture/state-recording.md</code></td><td>Research doc has TrainingPair schema, Parquet export, SQLite training index, headless self-play, custom model integration paths (WASM/Tier 4/native); D044 §Custom Trained Models for integration; D057 §Skills as Training Data; D031 §AI Training Data Export</td></tr>
 <tr><td>Testing strategy, CI/CD pipeline, automated verification</td><td><code>src/tracking/testing-strategy.md</code></td><td><code>src/06-SECURITY.md</code>, <code>src/10-PERFORMANCE.md</code>, <code>src/16-CODING-STANDARDS.md</code></td><td>Use for “how is X tested?”, CI gate definitions, fuzz targets, performance benchmarks, release criteria</td></tr>
 <tr><td>Type-safety invariants, newtype policy, deterministic collections</td><td><code>src/architecture/type-safety.md</code>, <code>src/16-CODING-STANDARDS.md</code> (§ Type-Safety Coding Standards)</td><td><code>src/06-SECURITY.md</code></td><td>Use for “what types enforce X?”, clippy config, code review checklists for type safety</td></tr>
 <tr><td>Future/deferral wording audit / “is this planned or vague?”</td><td><code>src/tracking/future-language-audit.md</code>, <code>src/tracking/deferral-wording-patterns.md</code></td><td><code>src/18-PROJECT-TRACKER.md</code>, <code>src/14-METHODOLOGY.md</code>, <code>AGENTS.md</code></td><td>Use for classifying future-facing wording and converting vague prose into planned deferrals / North Star claims</td></tr>

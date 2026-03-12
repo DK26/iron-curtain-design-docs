@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-0335891c.js";
+            window.path_to_searchindex_js = "../../searchindex-56dc9c19.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -508,6 +508,17 @@ pub struct LlmPlayerAi {
 </tbody>
 </table>
 </div>
+<h3 id="custom-trained-models--beyond-text-based-llms"><a class="header" href="#custom-trained-models--beyond-text-based-llms">Custom Trained Models — Beyond Text-Based LLMs</a></h3>
+<p>The orchestrator and player architectures above use text-based LLMs (natural language in, structured plan out). For users who want to train their own models on gameplay data — whether neural networks, reinforcement learning agents, or custom “pseudo-LLMs” optimized for RTS decision-making — IC provides three integration paths, all using the same <code>AiStrategy</code> trait:</p>
+<p><strong>Path A: WASM <code>AiStrategy</code> (recommended for gameplay-optimized models)</strong></p>
+<p>A trained neural network compiled to WASM and distributed via Workshop (D043). The model receives <code>FogFilteredView</code> as structured data and emits <code>Vec&lt;PlayerOrder&gt;</code> directly — no text serialization, no prompt engineering. Inference frameworks like <code>candle</code> (MIT, pure Rust) compile to WASM. Target inference latency: &lt; 5ms per <code>decide()</code> call.</p>
+<p><strong>Path B: <code>LlmProvider</code> Tier 4 — Local External (D047)</strong></p>
+<p>A custom model runs as a local HTTP server and receives fog-filtered state as JSON, returning orders as JSON. Supports any model framework (PyTorch, ONNX Runtime, TensorFlow Serving) without WASM compilation. Higher latency (~10-100ms per call) but maximum framework flexibility.</p>
+<p><strong>Path C: Native Rust <code>AiStrategy</code> (maximum performance)</strong></p>
+<p>A custom model compiled directly as a Rust <code>AiStrategy</code> implementation in <code>ic-ai</code>. Bypasses both WASM overhead and HTTP latency — native speed alongside the sim. Suitable for first-party or deeply integrated community models.</p>
+<p>All three paths receive the same <code>FogFilteredView</code> and produce the same <code>Vec&lt;PlayerOrder&gt;</code>. The choice depends on distribution model (Workshop WASM vs. local server vs. source integration) and latency requirements.</p>
+<p><strong>Training data pipeline:</strong> See <code>research/ml-training-pipeline-design.md</code> for the complete spec on converting replay files (<code>.icrep</code>) into training-ready datasets — including the <code>TrainingPair</code> schema, Parquet export format, fog-filtered state encoding, headless self-play generation, and the <code>ic training generate</code> / <code>ic training export</code> CLI tools. The pipeline extracts (observation, action, outcome) tuples from replay keyframes and order streams, producing datasets compatible with any ML framework.</p>
+<p><strong>Relationship to D057 Skill Library:</strong> Custom models and the skill library serve complementary roles. The skill library provides few-shot context for text-based LLMs without model modification. Custom trained models use gradient-based learning on replay-derived training pairs. Both consume the same underlying data (replays, telemetry, behavioral profiles) through different pathways — retrieval-augmented generation vs. supervised learning.</p>
 <h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
 <ul>
 <li>LLM replaces inner AI entirely in orchestrator mode (rejected — latency makes tick-level LLM control impractical; hybrid is better)</li>

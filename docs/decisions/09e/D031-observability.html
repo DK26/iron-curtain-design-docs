@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-0335891c.js";
+            window.path_to_searchindex_js = "../../searchindex-56dc9c19.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -407,15 +407,15 @@ pub enum GameplayEvent {
 </ul>
 <p>This is the “game engine equivalent of a Kubernetes dashboard” — operators of tournament servers or mod developers can inspect the engine’s internal state in real-time.</p>
 <h3 id="ai--llm-training-data-pipeline"><a class="header" href="#ai--llm-training-data-pipeline">AI / LLM Training Data Pipeline</a></h3>
-<p>The gameplay event stream is the foundation for AI development:</p>
+<p>The primary ML training pipeline is <strong>replay-first</strong> — deterministic replay files are the source of truth. Telemetry enriches replay-derived data with contextual signals not present in the order stream (see <code>research/ml-training-pipeline-design.md</code>):</p>
 <div class="table-wrapper">
 <table>
 <thead>
 <tr><th>Consumer</th><th>Data Source</th><th>Purpose</th></tr>
 </thead>
 <tbody>
-<tr><td><code>ic-ai</code> (skirmish AI)</td><td>Gameplay events from human games</td><td>Learn build orders, engagement timing, micro patterns</td></tr>
-<tr><td><code>ic-llm</code> (missions)</td><td>Gameplay events + enriched replays</td><td>Learn what makes missions fun (engagement density, pacing, flow)</td></tr>
+<tr><td><code>ic-ai</code> (skirmish AI)</td><td>Replay-derived training pairs + telemetry enrichment</td><td>Learn build orders, engagement timing, micro patterns</td></tr>
+<tr><td><code>ic-llm</code> (missions)</td><td>Replay-derived training pairs + telemetry enrichment</td><td>Learn what makes missions fun (engagement density, pacing, flow)</td></tr>
 <tr><td><code>ic-editor</code> (replay→scenario)</td><td>Replay event log (SQLite)</td><td>Direct extraction of waypoints, combat zones, build timelines into editor</td></tr>
 <tr><td><code>ic-llm</code> (replay→scenario)</td><td>Replay event log + context</td><td>Generate narrative, briefings, dialogue for replay-to-scenario pipeline</td></tr>
 <tr><td>Behavioral analysis</td><td>Relay-side player profiles</td><td>APM, reaction time, input entropy → suspicion scoring (V12)</td></tr>
@@ -426,7 +426,7 @@ pub enum GameplayEvent {
 </table>
 </div>
 <p><strong>Privacy:</strong> Gameplay events are associated with anonymized player IDs (hashed). No PII in telemetry. Players opt in to telemetry export (default: local-only for debugging). Tournament/ranked play may require telemetry for anti-cheat and certified results. See <code>06-SECURITY.md</code>.</p>
-<p><strong>Data format:</strong> Gameplay events export as structured OTEL log records → can be collected into Parquet/Arrow columnar format for batch ML training. The LLM training pipeline reads events, not raw replay bytes.</p>
+<p><strong>Data format:</strong> Gameplay events export as structured OTEL log records → can be collected into Parquet/Arrow columnar format for operational analytics and balance analysis. The primary ML training pipeline is <strong>replay-first</strong> — deterministic replay files are the source of truth for training pairs (fog-filtered state + orders + outcome labels). Telemetry enriches replay-derived training data with contextual signals (camera attention, input habits, pacing snapshots) not present in the order stream. See <code>research/ml-training-pipeline-design.md</code> and <code>D031/D031-analytics.md</code> § “AI Training Data Export.”</p>
 <hr>
 <h2 id="sub-pages"><a class="header" href="#sub-pages">Sub-Pages</a></h2>
 <div class="table-wrapper">

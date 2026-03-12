@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-0335891c.js";
+            window.path_to_searchindex_js = "../../searchindex-56dc9c19.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -218,6 +218,7 @@
 ├── achievements.db                     # Achievement collection (D036)
 ├── gameplay.db                         # Event log, replay catalog, save game index, map catalog, asset index (D034)
 ├── telemetry.db                        # Unified telemetry events (D031) — pruned at 100 MB
+├── training_index.db                   # ML training data catalog (D044) — optional, only created by `ic training` commands
 ├── keys/                               # Player Ed25519 keypair (D052) — THE critical file
 │   └── identity.key                    # Private key — recoverable via mnemonic seed phrase
 ├── communities/                        # Per-community credential stores (D052)
@@ -300,12 +301,13 @@ ic backup verify ic-backup-2027-03-15.zip     # Verify archive integrity without
 <tr><td><code>screenshots</code></td><td><code>screenshots/*.png</code></td><td>10 MB – 5 GB</td><td>Low — sentimental, not functional</td></tr>
 <tr><td><code>workshop</code></td><td><code>workshop/</code> (cache + packages)</td><td>100 MB – 50 GB</td><td>None — re-downloadable</td></tr>
 <tr><td><code>gameplay</code></td><td><code>gameplay.db</code></td><td>10–100 MB</td><td>Medium — event log, catalogs (rebuildable)</td></tr>
+<tr><td><code>training</code></td><td><code>training_index.db</code></td><td>1–100 MB</td><td>None — AI training catalog, fully rebuildable from replays</td></tr>
 <tr><td><code>mods</code></td><td><code>mods/</code></td><td>Variable</td><td>Low — re-downloadable or re-installable</td></tr>
 <tr><td><code>maps</code></td><td><code>maps/</code></td><td>Variable</td><td>Low — re-downloadable</td></tr>
 </tbody>
 </table>
 </div>
-<p><strong>Default <code>ic backup create</code></strong> includes: <code>keys</code>, <code>profile</code>, <code>communities</code>, <code>achievements</code>, <code>config</code>, <code>saves</code>, <code>replays</code>, <code>screenshots</code>, <code>gameplay</code>. Excludes <code>workshop</code>, <code>mods</code>, <code>maps</code> (re-downloadable). Total size for a typical player: 200 MB – 2 GB.</p>
+<p><strong>Default <code>ic backup create</code></strong> includes: <code>keys</code>, <code>profile</code>, <code>communities</code>, <code>achievements</code>, <code>config</code>, <code>saves</code>, <code>replays</code>, <code>screenshots</code>, <code>gameplay</code>. Excludes <code>workshop</code>, <code>mods</code>, <code>maps</code> (re-downloadable), <code>training</code> (rebuildable from replays). Total size for a typical player: 200 MB – 2 GB.</p>
 <h3 id="database-query--export-ic-db-cli"><a class="header" href="#database-query--export-ic-db-cli">Database Query &amp; Export: <code>ic db</code> CLI</a></h3>
 <p>Beyond backup/restore, players and community tool developers can query, export, and optimize local SQLite databases directly. See D034 § “User-Facing Database Access” for the full design.</p>
 <pre><code>ic db list                                         # List all local .db files with sizes

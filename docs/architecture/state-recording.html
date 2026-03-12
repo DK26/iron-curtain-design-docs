@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0335891c.js";
+            window.path_to_searchindex_js = "../searchindex-56dc9c19.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-9adfe301.js"></script>
@@ -286,6 +286,16 @@ fn on_desync_detected(
 }
 <span class="boring">}</span></code></pre>
 <p>This ensures desync debugging always has a snapshot at the exact point of divergence — not N ticks later when the developer gets around to analyzing it. The pattern comes from Valve’s Fossilize (crash-safe state capture, see <code>research/valve-github-analysis.md</code> § 3.1) and OpenTTD’s periodic desync snapshot naming convention (<code>desync_{seed}_{tick}.snap</code>).</p>
+<h3 id="ml-training-data-extraction"><a class="header" href="#ml-training-data-extraction">ML Training Data Extraction</a></h3>
+<p>The same keyframe snapshots and order streams that power replay playback also serve as the foundation for AI training data extraction. The <code>StateRecorder</code>’s output (<code>.icrep</code> files with tick-order frames + periodic keyframe snapshots) can be processed offline into structured training datasets:</p>
+<ul>
+<li><strong>Keyframe snapshots → game state observations.</strong> Each <code>SimCoreSnapshot</code> or <code>DeltaSnapshot</code> provides the full game state at a point in time. The extraction pipeline applies fog-of-war filtering (same <code>FogFilteredView</code> as live gameplay) to produce per-player observations.</li>
+<li><strong>Tick-order frames → action labels.</strong> The <code>ReplayTickFrame { tick, state_hash, orders }</code> recorded every tick provides the ground truth for “what the player did at tick T.”</li>
+<li><strong>Analysis events → temporal context.</strong> The optional analysis event stream (HAS_EVENTS flag) provides unit lifecycle, economy snapshots, and camera tracking between keyframes — enriching training samples with recent event history.</li>
+<li><strong>Keyframe seeking → arbitrary tick reconstruction.</strong> The keyframe index enables binary-search seeking to any point in the match, then forward simulation to the exact target tick. This means training data can be extracted at any stride without re-simulating from tick 0.</li>
+</ul>
+<p><strong>Training extraction operates read-only on <code>.icrep</code> files</strong> — no sim modification, no recording changes. The extraction pipeline is a consumer of the same replay format that powers spectator replay, desync debugging, and save games.</p>
+<p>See <code>research/ml-training-pipeline-design.md</code> for the complete training pair schema, Parquet export format, headless self-play generation, and the <code>ic training generate</code> / <code>ic training export</code> CLI specification.</p>
 
                     </main>
 

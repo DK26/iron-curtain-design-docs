@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0335891c.js";
+            window.path_to_searchindex_js = "../searchindex-56dc9c19.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-9adfe301.js"></script>
@@ -339,6 +339,7 @@
 <li>Document public interfaces and trait boundaries</li>
 <li>Link code areas to <code>Dxxx</code> and <code>G*</code> steps</li>
 <li>Add “start here for X” routing entries</li>
+<li><strong>Structure code modules for RAG efficiency</strong> — see the AGENTS template § Code Module Structure for RAG Efficiency (≤ 500 lines per logic file, one concept per module, <code>//!</code> doc routing headers, <code>mod.rs</code> barrel hubs, self-contained “Dropped In” context)</li>
 </ul>
 <p>This prevents agents from wasting tokens or editing the wrong files first.</p>
 <h2 id="suggested-issue-labels-designimplementation-coordination"><a class="header" href="#suggested-issue-labels-designimplementation-coordination">Suggested Issue Labels (Design/Implementation Coordination)</a></h2>
@@ -357,7 +358,7 @@
 <p>For the <strong>IC engine/game repository</strong> (primary Rust codebase), pre-filled versions of both templates are available — all placeholders replaced with IC-specific details:</p>
 <ul>
 <li><strong><code>tracking/ic-engine-agents.md</code></strong> — filled-in <code>AGENTS.md</code> with architectural invariants, crate workspace, build commands, milestone targets, and LLM/agent rules</li>
-<li><strong><code>tracking/ic-engine-code-index.md</code></strong> — filled-in <code>CODE-INDEX.md</code> with task routing table, all 13 crate subsystem entries, cross-cutting boundaries, and evidence paths</li>
+<li><strong><code>tracking/ic-engine-code-index.md</code></strong> — filled-in <code>CODE-INDEX.md</code> with task routing table, all 14 crate subsystem entries, cross-cutting boundaries, and evidence paths</li>
 </ul>
 <p><strong>For the engine repo (iron-curtain):</strong> Copy the pre-filled <code>tracking/ic-engine-agents.md</code> and <code>tracking/ic-engine-code-index.md</code> into the new engine repo, and use the GitHub template repository (<code>iron-curtain/ic-template</code>, described below) as your baseline.</p>
 <p><strong>For non-engine repos (relay server, tools, prototypes):</strong> Use the <strong>generic templates</strong> (<code>tracking/external-project-agents-template.md</code> and <code>tracking/source-code-index-template.md</code>) and fill in the placeholders with your repo’s structure.</p>

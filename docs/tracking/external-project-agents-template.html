@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0335891c.js";
+            window.path_to_searchindex_js = "../searchindex-56dc9c19.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-9adfe301.js"></script>
@@ -243,7 +243,7 @@ Do not implement features out of sequence unless the dependency map says they ca
 
 This repo must maintain a code navigation file for humans and LLMs:
 
-- `CODE-INDEX.md` (recommended filename)
+- `CODE-INDEX.md` (required filename)
 
 It should document:
 
@@ -288,6 +288,21 @@ When you need a design change:
 - Prefer targeted file reads over repo-wide scans once the index points to likely files
 - Use canonical design docs for behavior decisions; use local code/docs for implementation specifics
 - If docs and code conflict, treat this as a design-gap or stale-code-index problem and report it
+
+### Code Module Structure for RAG Efficiency
+
+Source code must be structured so LLM agents and RAG systems can retrieve and reason about modules efficiently — the same principle as the design-doc file size discipline, applied to code.
+
+- **≤ 500 lines per logic file.** Over 800 lines → split. Data-definition files (struct-heavy deserialization, exhaustive tests) may exceed this; logic files may not.
+- **≤ 40 lines per function** (target). Over 60 is a smell. Over 100 requires justification.
+- **One concept per module.** If the filename needs a compound name (`foo_and_bar.rs`), it should be two files.
+- **Module doc comment as routing header.** Every `.rs` file starts (after SPDX) with a `//!` doc comment explaining what the module does, its dependencies, and where it fits — an agent reads this (~50 tokens) to decide whether to load the full file.
+- **`mod.rs` as barrel/hub.** Re-exports + summary doc comment. An agent reads the barrel to route to the right submodule without loading siblings.
+- **Self-contained context ("Dropped In" test).** Each file restates enough context (system ordering, invariants, cross-module interactions) that an agent can reason about it in isolation.
+- **Greppable names.** Same term for the same concept across all files. An agent searching for a concept must find it everywhere it appears.
+- **Trait files are routing indexes.** Trait definition files doc-comment each method with enough context for an agent to decide whether it needs the trait or an implementation.
+
+**Why:** A 500-line Rust file ≈ 1,500–2,500 tokens. An agent can load 3–5 related files and still reason. An 1,800-line file ≈ 6,000 tokens — it crowds out context for everything else. RAG retrieval works best with self-contained, well-labeled, single-topic chunks. See design-doc `AGENTS.md` § Code Module Structure and `src/coding-standards/quality-review.md` § File Size Guideline.
 
 ## Evidence Rule (Implementation Progress Claims)
 

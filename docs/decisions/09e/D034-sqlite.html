@@ -36,7 +36,7 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-0335891c.js";
+            window.path_to_searchindex_js = "../../searchindex-56dc9c19.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-9adfe301.js"></script>
@@ -261,7 +261,7 @@
 <tr><td><strong>Ad-hoc investigation</strong></td><td>Requires OTEL stack running</td><td>Just open the <code>.db</code> file</td></tr>
 <tr><td><strong>Offline operation</strong></td><td>No — needs collector + backends</td><td>Yes — works standalone</td></tr>
 <tr><td><strong>Client-side debugging</strong></td><td>Requires exporting to a collector</td><td>Local <code>.db</code> file, queryable immediately</td></tr>
-<tr><td><strong>AI training pipeline</strong></td><td>Yes — Parquet/Arrow export for ML</td><td>Source data — gameplay events could be exported from SQLite to Parquet</td></tr>
+<tr><td><strong>AI training pipeline</strong></td><td>Enrichment — supplements replay-derived training pairs</td><td>Primary source — replay-derived training pairs enriched by telemetry from SQLite</td></tr>
 </tbody>
 </table>
 </div>

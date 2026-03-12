@@ -36,7 +36,7 @@
             const path_to_root = "../../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-0335891c.js";
+            window.path_to_searchindex_js = "../../../searchindex-56dc9c19.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../../toc-9adfe301.js"></script>
@@ -596,6 +596,33 @@ services:
 <li>Always-on telemetry (violates performance invariant — must be zero-cost when disabled)</li>
 </ul>
 <p><strong>Phase:</strong> Unified <code>telemetry_events</code> SQLite schema + <code>/analytics</code> console commands in Phase 2 (shared across all components from day one). Engine telemetry (per-system timing, <code>GameplayEvent</code> stream) in Phase 2 (sim). Product analytics (GUI interaction, session, settings, onboarding, errors, performance sampling) in Phase 3 (alongside UI chrome). Server-side SQLite telemetry recording (relay, tracking, workshop) in Phase 5 (multiplayer). Optional OTEL export layer for server operators in Phase 5. Pre-built Grafana dashboards in Phase 5. AI training pipeline in Phase 7 (LLM).</p>
+<h3 id="ai-training-data-export"><a class="header" href="#ai-training-data-export">AI Training Data Export</a></h3>
+<p>The telemetry and gameplay event data captured above is a secondary data source for AI model training — enriching the primary source (replay files) with contextual signals not present in the replay order stream.</p>
+<p><strong>What telemetry adds to training data:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Telemetry Event</th><th>Training Data Value</th></tr>
+</thead>
+<tbody>
+<tr><td><code>match.pace</code> (every 60s)</td><td>Economic time-series — credits, power, army value, tech tier over time</td></tr>
+<tr><td><code>input.ctrl_group</code></td><td>Micro skill indicator — control group adoption and reassignment frequency</td></tr>
+<tr><td><code>input.order</code> (method breakdown)</td><td>Input habit fingerprint — right-click vs. hotkey vs. sidebar ordering</td></tr>
+<tr><td><code>match.surrender_point</code></td><td>Reward shaping signal — at what deficit do players perceive the game as lost</td></tr>
+<tr><td><code>input.camera</code></td><td>Attention model — what the player was looking at when making decisions</td></tr>
+<tr><td><code>match.first_build</code>, <code>match.first_combat</code></td><td>Build order and aggression timing markers</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Export for ML:</strong></p>
+<pre><code>ic analytics export-training \
+  --categories match,input,campaign \
+  --from 2026-01-01 \
+  --format parquet \
+  --output ./telemetry_training/
+</code></pre>
+<p>Exports selected telemetry event categories as Parquet files, joined to replay metadata where available. This supplements the replay-derived training pairs (see <code>research/ml-training-pipeline-design.md</code>) with player behavior signals that aren’t captured in the deterministic order stream.</p>
+<p><strong>Privacy boundary:</strong> Training exports apply the same anonymization as <code>/analytics export</code> — hashed session IDs, no PII, no hardware identifiers. Players who disable product analytics (<code>telemetry.product_analytics false</code>) produce no telemetry-enriched training data; replay-derived training pairs remain unaffected.</p>
 <hr>
 <hr>
                     </main>
