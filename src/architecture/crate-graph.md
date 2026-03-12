@@ -3,7 +3,7 @@
 ### External Standalone Crates (D076 Tier 1 — separate repos, MIT OR Apache-2.0)
 
 ```
-cnc-formats         (clean-room C&C format parsing: .mix, .shp, .pal, .aud, .tmp, .vqa, .wsa, .fnt, .ini; MiniYAML behind `miniyaml` feature; CLI: validate/inspect/convert)
+cnc-formats         (clean-room C&C format parsing: .mix, .shp, .pal, .aud, .tmp, .vqa, .wsa, .fnt, .ini; MiniYAML behind `miniyaml` feature; .meg/.pgm behind `meg` feature (Phase 2); CLI: validate/inspect/convert (Phase 0), extract/list (Phase 1, +.meg Phase 2), check/diff/fingerprint (Phase 2), pack (Phase 6a))
 fixed-game-math     (deterministic fixed-point arithmetic: Fixed<N>, trig, CORDIC, Newton sqrt)
 deterministic-rng   (seedable platform-identical PRNG: range sampling, weighted selection, shuffle)
 ```

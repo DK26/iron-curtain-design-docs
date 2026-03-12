@@ -5,14 +5,14 @@
 - **Status:** Accepted
 - **Phase:** Phase 2 (format parsers), Phase 6a (Asset Studio import wizard)
 - **Canonical for:** Loading and converting assets from the C&C Remastered Collection (EA, 2020) into IC's native pipeline
-- **Scope:** `ra-formats` (parsers), `ic-editor` (Asset Studio import wizard), `05-FORMATS.md`
+- **Scope:** `cnc-formats` (MEG/PGM archive parser, clean-room, `meg` feature flag), `ra-formats` (TGA+META, DDS, MTD, BK2 parsers + Bevy integration), `ic-editor` (Asset Studio import wizard), `05-FORMATS.md`
 - **Decision:** IC reads all Remastered Collection asset formats natively — MEG archives, TGA+META sprite sheets, BK2 video, WAV audio, XML config — enabling users who own the Remastered Collection to use those assets directly. HD sprite import splits megasheets into IC's per-frame sprite representation using the META JSON geometry. No Remastered assets are redistributed.
 - **Why:** (1) The Remastered Collection's C++ DLL source is GPL v3 — format definitions are legally referenceable. (2) Players who own the Remastered Collection expect their HD assets to work. (3) The Remastered formats are well-documented by the modding community (PPM, CnCNet). (4) IC already supports the classic formats these are derived from — HD support is an incremental extension.
 - **Non-goals:** Binary compatibility with Petroglyph's C# GlyphX layer; redistributing EA's proprietary HD art, music, or video; running Remastered mods that depend on GlyphX-specific APIs; replacing the Remastered Collection as a product.
 - **Invariants preserved:** `ra-formats` remains a pure parsing library with no I/O side effects. All imported assets convert to IC-native representations (PNG sprites, OGG/WAV audio, WebM video). Sim determinism unaffected — asset formats are presentation-only.
 - **Defaults / UX behavior:** "Import Remastered Installation" wizard in Asset Studio auto-detects a Remastered install folder, inventories available assets, and offers selective import. Users choose which asset categories to import. Imported assets land in a mod-ready directory structure.
 - **Compatibility / Export impact:** Imported Remastered assets are usable in IC mods but NOT publishable to Workshop (proprietary EA content). Asset Studio marks provenance as `source: remastered_collection` and Publish Readiness (D038) blocks Workshop upload of EA-sourced assets.
-- **Security / Trust impact:** MEG archive parser must handle malformed archives safely (fuzzing required). MEG entry extraction uses `strict-path` `PathBoundary` to sandbox output to the mod directory — same Zip Slip defense as `.oramap` and `.icpkg` (see `06-SECURITY.md` § Path Security Infrastructure). TGA/DDS parsers use established Rust crates (`image`, `ddsfile`) — no custom decoder needed.
+- **Security / Trust impact:** MEG archive parser in `cnc-formats` must handle malformed archives safely (fuzzing required). MEG entry extraction uses `strict-path` `PathBoundary` to sandbox output to the mod directory — same Zip Slip defense as `.oramap` and `.icpkg` (see `06-SECURITY.md` § Path Security Infrastructure). TGA/DDS parsers use established Rust crates (`image`, `ddsfile`) — no custom decoder needed.
 - **Public interfaces / types / commands:** `MegArchive`, `MegEntry`, `RemasteredSpriteSheet`, `MetaFrame`, `RemasteredImportManifest`, `ic asset import-remastered`
 - **Affected docs:** `src/05-FORMATS.md`, `src/decisions/09f/D040-asset-studio.md`, `src/architecture/ra-experience.md`, `src/decisions/09c-modding.md`
 - **Keywords:** remastered, remaster, MEG, TGA, META, BK2, Bink2, HD sprites, megasheet, GlyphX, Petroglyph, EA GPL, import wizard
@@ -31,10 +31,10 @@ The Remastered Collection uses Petroglyph's format family (from Empire at War / 
 
 #### Archives
 
-| Format | Purpose                   | Structure                                                                                                            | IC Strategy                                                                                                  |
-| ------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `.meg` | Primary archive container | Petroglyph archive format. Header + file table + packed data. Openable by community tools (OS Big Editor, OpenSage). | New `MegArchive` parser in `ra-formats`. Read-only (no write support needed — IC doesn't produce MEG files). |
-| `.pgm` | Map package archive       | MEG file with different extension. Contains map file + related data (preview image, metadata).                       | Reuse `MegArchive` parser. Map data extracted and converted to IC YAML map format.                           |
+| Format | Purpose                   | Structure                                                                                                            | IC Strategy                                                                                                                                                                                                                                                                                                                               |
+| ------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.meg` | Primary archive container | Petroglyph archive format. Header + file table + packed data. Openable by community tools (OS Big Editor, OpenSage). | Clean-room `MegArchive` parser in `cnc-formats` (Phase 2, behind `meg` feature flag). Community documentation (OS Big Editor, OpenSage) is sufficient — no EA-derived code needed. `ra-formats` depends on `cnc-formats` with `meg` enabled. Read-only (IC doesn't produce MEG files). CLI `extract`/`list`/`check` support MEG archives. |
+| `.pgm` | Map package archive       | MEG file with different extension. Contains map file + related data (preview image, metadata).                       | Reuse `MegArchive` parser from `cnc-formats`. Map data extracted and converted to IC YAML map format.                                                                                                                                                                                                                                     |
 
 #### Sprites & Textures
 
@@ -219,14 +219,14 @@ The Asset Studio (D040) gains a dedicated import workflow for Remastered Collect
 
 ### Legal Model
 
-| What                                                     | Legal Status                                          | IC Policy                                                                   |
-| -------------------------------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------- |
-| **Format definitions** (how to read MEG, TGA+META, etc.) | GPL v3 (from EA DLL source) + community documentation | Freely implement parsers in `ra-formats`                                    |
-| **HD art assets** (sprites, textures, UI)                | Proprietary EA content                                | Never redistribute. Import from user's own purchase. Block Workshop upload. |
-| **Remixed audio** (SFX, music, EVA)                      | Proprietary EA content                                | Same as art — import from user's purchase only.                             |
-| **HD cutscenes** (BK2 video)                             | Proprietary EA content                                | Same — convert from user's purchase.                                        |
-| **Gameplay values** (costs, HP, speeds)                  | GPL v3 (in DLL source)                                | Already captured in D019 `remastered` balance preset.                       |
-| **Pathfinding algorithm**                                | GPL v3 (in DLL source)                                | Already implemented as D045 `RemastersPathfinder` preset.                   |
+| What                                                     | Legal Status                                          | IC Policy                                                                                                                                                                                                           |
+| -------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Format definitions** (how to read MEG, TGA+META, etc.) | GPL v3 (from EA DLL source) + community documentation | MEG/PGM: clean-room parser in `cnc-formats` (`meg` feature flag) — community docs sufficient, no GPL needed. TGA+META, DDS, MTD, BK2: parsers in `ra-formats` (reference GPL DLL source for edge-case correctness). |
+| **HD art assets** (sprites, textures, UI)                | Proprietary EA content                                | Never redistribute. Import from user's own purchase. Block Workshop upload.                                                                                                                                         |
+| **Remixed audio** (SFX, music, EVA)                      | Proprietary EA content                                | Same as art — import from user's purchase only.                                                                                                                                                                     |
+| **HD cutscenes** (BK2 video)                             | Proprietary EA content                                | Same — convert from user's purchase.                                                                                                                                                                                |
+| **Gameplay values** (costs, HP, speeds)                  | GPL v3 (in DLL source)                                | Already captured in D019 `remastered` balance preset.                                                                                                                                                               |
+| **Pathfinding algorithm**                                | GPL v3 (in DLL source)                                | Already implemented as D045 `RemastersPathfinder` preset.                                                                                                                                                           |
 
 This is the same legal model that OpenRA, CnCNet, and every other community project uses: format compatibility is legal; redistributing proprietary assets is not.
 
@@ -242,7 +242,7 @@ This is the same legal model that OpenRA, CnCNet, and every other community proj
 
 ### Phase
 
-- **Phase 2:** `ra-formats` gains MEG archive parser, TGA+META sprite sheet splitter, and DDS reader. These are pure parsing — no UI.
+- **Phase 2:** `cnc-formats` gains clean-room MEG/PGM archive parser (behind `meg` feature flag). `ra-formats` gains TGA+META sprite sheet splitter and DDS reader (these reference GPL DLL source). All are pure parsing — no UI.
 - **Phase 6a:** Asset Studio "Import Remastered Installation" wizard ships. BK2→WebM conversion pipeline. Full import workflow with provenance tracking.
 - **CLI fallback (Phase 2):** `ic asset import-remastered <path>` provides headless import for CI/automation/power users before Asset Studio ships. The output directory (`mods/remastered-hd/`) is enforced via `strict-path` `PathBoundary` — MEG archive entry names (potentially user-modified in modded installs) cannot escape the output mod directory.
 

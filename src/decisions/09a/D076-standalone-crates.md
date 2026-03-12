@@ -57,15 +57,42 @@ IC consumes these crates as normal Cargo dependencies. The extracted crates are 
 
 These crates are the first things built. They have zero IC-specific dependencies by definition because IC doesn't exist yet when they're created. **Separate repos from the start.**
 
-| Crate Name          | Purpose                                                                                                                                    | Why Standalone                                                                                                                                                                                                                                                            | IC Consumer                                                                                    |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `cnc-formats`       | Parse all C&C formats: binary (`.mix`, `.shp`, `.tmp`, `.pal`, `.aud`, `.vqa`, `.wsa`, `.fnt`), `.ini` rules, and MiniYAML (feature-gated) | Every C&C tool, viewer, converter, and modding project needs format parsing. Currently scattered across C/C#/Python community tools with no canonical Rust implementation. `.ini` is a classic C&C format; MiniYAML is OpenRA-originated but de facto community standard. | `ra-formats` (IC's game-specific layer wraps `cnc-formats` with IC asset pipeline integration) |
-| `fixed-game-math`   | Deterministic fixed-point arithmetic: `Fixed<N>`, trig tables, CORDIC atan2, Newton sqrt, modifier chains                                  | Any deterministic game (lockstep RTS, fighting game, physics sim) needs platform-identical math. No good Rust crate exists with game-focused API.                                                                                                                         | `ic-sim`, `ic-protocol`                                                                        |
-| `deterministic-rng` | Seedable, platform-identical PRNG with game-oriented API: range sampling, weighted selection, shuffle, damage spread                       | Same audience as `fixed-game-math`. Must produce identical sequences on all platforms (x86/ARM/WASM).                                                                                                                                                                     | `ic-sim`                                                                                       |
+| Crate Name          | Purpose                                                                                                                                                                                                | Why Standalone                                                                                                                                                                                                                                                                                                                                                                                                           | IC Consumer                                                                                    |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `cnc-formats`       | Parse all C&C formats: binary (`.mix`, `.shp`, `.tmp`, `.pal`, `.aud`, `.vqa`, `.wsa`, `.fnt`), `.ini` rules, MiniYAML (feature-gated), and Petroglyph `.meg`/`.pgm` archives (feature-gated, Phase 2) | Every C&C tool, viewer, converter, and modding project needs format parsing. Currently scattered across C/C#/Python community tools with no canonical Rust implementation. `.ini` is a classic C&C format; MiniYAML is OpenRA-originated but de facto community standard. `.meg` is Petroglyph's archive format (Empire at War / C&C Remastered lineage) — clean-roomable from community docs (OS Big Editor, OpenSage). | `ra-formats` (IC's game-specific layer wraps `cnc-formats` with IC asset pipeline integration) |
+| `fixed-game-math`   | Deterministic fixed-point arithmetic: `Fixed<N>`, trig tables, CORDIC atan2, Newton sqrt, modifier chains                                                                                              | Any deterministic game (lockstep RTS, fighting game, physics sim) needs platform-identical math. No good Rust crate exists with game-focused API.                                                                                                                                                                                                                                                                        | `ic-sim`, `ic-protocol`                                                                        |
+| `deterministic-rng` | Seedable, platform-identical PRNG with game-oriented API: range sampling, weighted selection, shuffle, damage spread                                                                                   | Same audience as `fixed-game-math`. Must produce identical sequences on all platforms (x86/ARM/WASM).                                                                                                                                                                                                                                                                                                                    | `ic-sim`                                                                                       |
 
 **Naming note:** The IC crate currently called `ra-formats` stays in the IC monorepo as GPL code because it references EA's GPL-licensed C&C source for struct definitions and lookup tables (D051 rationale #2). `cnc-formats` is the *new* permissive crate containing only clean-room format parsing with no EA-derived code. `ra-formats` becomes a thin wrapper that adds EA-specific details (compression tables, game-specific constants) on top.
 
-**Feature-gated MiniYAML:** `.ini` parsing is always available (it's a classic C&C format). MiniYAML parsing is behind `features = { miniyaml = [] }` because it's OpenRA-specific — a `.mix` extractor tool or asset viewer doesn't need it. The `cnc-formats` CLI binary ships in the same repo; its `convert` subcommand (MiniYAML → YAML) is gated behind the same feature, while `validate` and `inspect` work on all formats unconditionally. `ra-formats` depends on `cnc-formats` with `miniyaml` enabled.
+**Feature-gated MiniYAML:** `.ini` parsing is always available (it's a classic C&C format). MiniYAML parsing is behind `features = { miniyaml = [] }` because it's OpenRA-specific — a `.mix` extractor tool or asset viewer doesn't need it. The `cnc-formats` CLI binary ships in the same repo; its `convert` subcommand uses `--from`/`--to` flags for extensible format dispatch: `--to` is always required, `--from` is optional (auto-detected from file extension when unambiguous, required when reading from stdin). The `ConvertFormat` enum defines available formats with per-variant `#[cfg]` feature gating — `Miniyaml` requires the `miniyaml` feature, `Yaml` is always available. Unsupported `(from, to)` pairs print available conversions. Current conversion: `--from miniyaml --to yaml`. `validate` and `inspect` work on all formats unconditionally. `ra-formats` depends on `cnc-formats` with `miniyaml` enabled.
+
+**Encrypted `.mix` handling:** Extended `.mix` files use Blowfish-encrypted header indices with a hardcoded symmetric key. Both the Blowfish algorithm (public domain) and the key derivation are publicly documented on ModEnc and implemented in community tools (XCC, OpenRA). This is clean-room knowledge — `cnc-formats` handles encrypted `.mix` archives directly using the `blowfish` RustCrypto crate (MIT/Apache-2.0). No EA-derived code is needed.
+
+**`.mix` write support split:** `cnc-formats pack` (Phase 6a) creates standard `.mix` archives — CRC hash table generation, file offset index, unencrypted format. `ra-formats` extends this with encrypted `.mix` creation (Blowfish key derivation + SHA-1 body digest) for modders who need archives matching the original game's encrypted format. The typical community use case (mod distribution) uses unencrypted `.mix` — only replication of original game archives requires encryption.
+
+**Remastered format split:** Remastered Collection formats divide across the crate boundary by clean-room feasibility:
+
+- **`.meg` / `.pgm` (archive formats) → `cnc-formats` (Phase 2, behind `meg` feature flag).** Petroglyph's MEG archive format is documented by community tools (OS Big Editor, OpenSage) with sufficient detail for clean-room implementation — no EA-derived code needed. `.pgm` is a MEG file with a different extension. `cnc-formats` gains a read-only `MegArchive` parser in Phase 2, at which point the CLI `extract`, `list`, and `check` subcommands support MEG archives alongside `.mix`. This gives the broader Petroglyph/Empire at War modding community a permissively-licensed MEG parser. `ra-formats` depends on `cnc-formats` with the `meg` feature enabled.
+- **`.mtd` (MegaTexture) and `.meta` (megasheet layout) → `ra-formats` only.** `.mtd` is Petroglyph-proprietary with no community documentation outside the GPL DLL source. `.meta` is a simple JSON format (per-frame sprite geometry), parseable with `serde_json`, but its semantics (chroma-key → remap conversion, megasheet splitting pipeline) are C&C-Remastered-specific and defined by the GPL DLL — not general-purpose.
+- **`.tga`, `.dds`, `.wav` → existing Rust crates.** Standard formats handled by `image`, `ddsfile`, and `hound` respectively. No `cnc-formats` involvement needed.
+- **`.bk2` (Bink Video 2) → `ra-formats` / `ic` CLI.** Proprietary RAD Game Tools codec; converted to WebM at import time (see D075). Not a candidate for `cnc-formats`.
+
+**CLI subcommand roadmap:**
+
+| Subcommand    | Phase | Description                                                                                                                                                                                                                                                                                 |
+| ------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `validate`    | 0     | Structural correctness check for any supported format                                                                                                                                                                                                                                       |
+| `inspect`     | 0     | Dump contents and metadata (`--json` for machine-readable output)                                                                                                                                                                                                                           |
+| `convert`     | 0     | Extensible format conversion via `--from`/`--to` flags. `--to` required, `--from` auto-detected from extension. Current: `--from miniyaml --to yaml` (behind `miniyaml` feature). Adding future conversions is a new `ConvertFormat` enum variant + match arm — no subcommand-level change. |
+| `extract`     | 1     | Decompose `.mix` archives to individual files (`.meg`/`.pgm` support added Phase 2 via `meg` feature)                                                                                                                                                                                       |
+| `list`        | 1     | Quick archive inventory — filenames, sizes, types (`.meg`/`.pgm` support added Phase 2 via `meg` feature)                                                                                                                                                                                   |
+| `check`       | 2     | Deep integrity verification — CRC validation, truncation detection                                                                                                                                                                                                                          |
+| `diff`        | 2     | Format-aware structural comparison of two files of the same type                                                                                                                                                                                                                            |
+| `fingerprint` | 2     | SHA-256 canonical content hash (parsed representation, not raw bytes)                                                                                                                                                                                                                       |
+| `pack`        | 6a    | Create `.mix` archives from directory (inverse of `extract`)                                                                                                                                                                                                                                |
+
+All subcommands are game-agnostic. Semantic validation (missing prerequisites, circular inheritance in rule files) belongs in `ic mod lint`, not in `cnc-formats`.
 
 ### Tier 2a — Phase 2 (Simulation)
 
@@ -217,6 +244,60 @@ pub struct VqaFile { /* ... */ }
 pub trait FormatReader: Read + Seek {
     type Output;
     fn read_from(reader: &mut Self) -> Result<Self::Output, FormatError>;
+}
+
+// cnc-formats — MEG/PGM archive parsing (Phase 2, behind `meg` feature flag)
+#[cfg(feature = "meg")]
+pub struct MegArchive {
+    pub entries: Vec<MegEntry>,
+}
+#[cfg(feature = "meg")]
+pub struct MegEntry {
+    pub name: String,
+    pub offset: u64,
+    pub size: u64,
+}
+
+// cnc-formats CLI — extensible format conversion via --from/--to flags
+/// Available conversion formats. Per-variant `#[cfg]` ensures the binary
+/// only includes parsers for enabled features.
+#[derive(Clone, Copy, Debug, clap::ValueEnum)]
+pub enum ConvertFormat {
+    /// Standard YAML (always available)
+    Yaml,
+    /// OpenRA MiniYAML (requires `miniyaml` feature)
+    #[cfg(feature = "miniyaml")]
+    Miniyaml,
+    /// Classic C&C .ini rules (always available)
+    Ini,
+}
+
+/// `cnc-formats convert` subcommand arguments.
+#[derive(clap::Args)]
+pub struct ConvertArgs {
+    /// Source format (auto-detected from file extension when unambiguous;
+    /// required when reading from stdin).
+    #[arg(long)]
+    pub from: Option<ConvertFormat>,
+    /// Target format (always required).
+    #[arg(long)]
+    pub to: ConvertFormat,
+    /// Input file path (omit or use `-` for stdin).
+    pub input: Option<PathBuf>,
+    /// Output file path (omit for stdout).
+    #[arg(short, long)]
+    pub output: Option<PathBuf>,
+}
+
+/// Dispatch: match on `(from, to)` pairs. Unsupported pairs print
+/// available conversions and exit with a non-zero status code.
+fn convert(from: ConvertFormat, to: ConvertFormat, input: &[u8]) -> Result<Vec<u8>> {
+    match (from, to) {
+        #[cfg(feature = "miniyaml")]
+        (ConvertFormat::Miniyaml, ConvertFormat::Yaml) => miniyaml_to_yaml(input),
+        // Future: (ConvertFormat::Ini, ConvertFormat::Yaml) => ini_to_yaml(input),
+        (f, t) => Err(UnsupportedConversion { from: f, to: t }),
+    }
 }
 
 // fixed-game-math — deterministic fixed-point arithmetic

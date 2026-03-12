@@ -19,26 +19,26 @@
 
 HD asset formats from the C&C Remastered Collection (EA, 2020). Format definitions derived from the GPL v3 C++ DLL source and community documentation. See [D075](decisions/09c/D075-remastered-format-compat.md) for full import pipeline and legal model.
 
-| Format        | Purpose           | Notes                                                                                                                                                                                                                                                                |
-| ------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.meg`        | Archive container | Petroglyph archive format (from Empire at War lineage). Header + file table + packed data. Read-only in `ra-formats`. Community tools: OS Big Editor, OpenSage.                                                                                                      |
-| `.tga+.meta`  | HD sprite sheets  | 32-bit RGBA TGA "megasheets" — all frames of a unit/building composited into one large atlas. Paired `.meta` JSON file provides per-frame geometry: `{"size":[w,h],"crop":[x,y,w,h]}`. Player colors use chroma-key green (HSV hue ~110) instead of palette indices. |
-| `.dds`        | GPU textures      | DirectDraw Surface (BC1/BC3/BC7). Terrain, UI chrome, effects. Convert to KTX2 or PNG at import time.                                                                                                                                                                |
-| `.bk2`        | HD video (Bink2)  | Proprietary RAD Game Tools codec. Cutscenes and briefings. Converted to WebM (VP9) at import time — IC does not ship a Bink2 runtime decoder.                                                                                                                        |
-| `.wav` (HD)   | Remixed audio     | Standard WAV containers (Microsoft ADPCM). Plays natively in IC's Kira audio pipeline. No conversion needed.                                                                                                                                                         |
-| `.pgm`        | Map package       | MEG file with different extension. Contains map + preview image + metadata. Reuse `MegArchive` parser.                                                                                                                                                               |
-| `.mtd`        | MegaTexture data  | Petroglyph format for packed UI elements (sidebar icons in `MT_COMMANDBAR_COMMON` variants). Custom parser in `ra-formats`. Low priority — only needed for UI chrome import.                                                                                         |
-| `.xml`        | GlyphX config     | Standard XML. Game settings, asset mappings, sequence definitions. Parse with `quick-xml` crate to extract classic→HD frame correspondence tables for sprite import pipeline.                                                                                        |
-| `.dat`/`.loc` | String tables     | Petroglyph localization format. Parse for completeness; IC uses its own localization system. Low priority.                                                                                                                                                           |
+| Format        | Purpose           | Notes                                                                                                                                                                                                                                                                                          |
+| ------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.meg`        | Archive container | Petroglyph archive format (from Empire at War lineage). Header + file table + packed data. Clean-room read-only `MegArchive` parser in `cnc-formats` (Phase 2, behind `meg` feature flag). Community tools: OS Big Editor, OpenSage. `ra-formats` depends on `cnc-formats` with `meg` enabled. |
+| `.tga+.meta`  | HD sprite sheets  | 32-bit RGBA TGA "megasheets" — all frames of a unit/building composited into one large atlas. Paired `.meta` JSON file provides per-frame geometry: `{"size":[w,h],"crop":[x,y,w,h]}`. Player colors use chroma-key green (HSV hue ~110) instead of palette indices.                           |
+| `.dds`        | GPU textures      | DirectDraw Surface (BC1/BC3/BC7). Terrain, UI chrome, effects. Convert to KTX2 or PNG at import time.                                                                                                                                                                                          |
+| `.bk2`        | HD video (Bink2)  | Proprietary RAD Game Tools codec. Cutscenes and briefings. Converted to WebM (VP9) at import time — IC does not ship a Bink2 runtime decoder.                                                                                                                                                  |
+| `.wav` (HD)   | Remixed audio     | Standard WAV containers (Microsoft ADPCM). Plays natively in IC's Kira audio pipeline. No conversion needed.                                                                                                                                                                                   |
+| `.pgm`        | Map package       | MEG file with different extension. Contains map + preview image + metadata. Reuses `MegArchive` parser from `cnc-formats` (`meg` feature flag).                                                                                                                                                |
+| `.mtd`        | MegaTexture data  | Petroglyph format for packed UI elements (sidebar icons in `MT_COMMANDBAR_COMMON` variants). Custom parser in `ra-formats`. Low priority — only needed for UI chrome import.                                                                                                                   |
+| `.xml`        | GlyphX config     | Standard XML. Game settings, asset mappings, sequence definitions. Parse with `quick-xml` crate to extract classic→HD frame correspondence tables for sprite import pipeline.                                                                                                                  |
+| `.dat`/`.loc` | String tables     | Petroglyph localization format. Parse for completeness; IC uses its own localization system. Low priority.                                                                                                                                                                                     |
 
 ### Text Formats
 
-| Format            | Purpose                     | Notes                                              |
-| ----------------- | --------------------------- | -------------------------------------------------- |
-| `.ini` (original) | Game rules                  | Original Red Alert format                          |
-| MiniYAML (OpenRA) | Game rules, maps, manifests | Custom dialect, needs converter                    |
-| YAML (ours)       | Game rules, maps, manifests | Standard spec-compliant YAML                       |
-| `.oramap`         | OpenRA map package          | ZIP archive containing map.yaml + terrain + actors |
+| Format            | Purpose                     | Notes                                                                                                                       |
+| ----------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `.ini` (original) | Game rules                  | Original Red Alert format                                                                                                   |
+| MiniYAML (OpenRA) | Game rules, maps, manifests | Custom dialect, loads at runtime via auto-detection (D025); `cnc-formats convert` available for permanent on-disk migration |
+| YAML (ours)       | Game rules, maps, manifests | Standard spec-compliant YAML                                                                                                |
+| `.oramap`         | OpenRA map package          | ZIP archive containing map.yaml + terrain + actors                                                                          |
 
 ### Canonical Asset Format Recommendations (D049)
 
@@ -66,9 +66,57 @@ The Asset Studio (D040) converts in both directions. See `decisions/09e/D049-wor
 D076 splits format handling into two crates with distinct roles:
 
 **cnc-formats** (MIT OR Apache-2.0, separate repo — Tier 1, Phase 0):
-1. Clean-room parsers for all C&C binary formats (`.mix`, `.shp`, `.tmp`, `.pal`, `.aud`, `.vqa`, `.wsa`, `.fnt`)
+1. Clean-room parsers for all C&C binary formats (`.mix`, `.shp`, `.tmp`, `.pal`, `.aud`, `.vqa`, `.wsa`, `.fnt`) and Petroglyph `.meg`/`.pgm` archives (Phase 2, behind `meg` feature flag — clean-room from OS Big Editor/OpenSage community docs)
 2. Clean-room parsers for C&C text configuration formats: `.ini` (classic C&C rules, always enabled) and MiniYAML (OpenRA rules, behind `miniyaml` feature flag)
-3. CLI tool with `validate`, `inspect`, and `convert` subcommands — validates file structure, dumps contents, and converts MiniYAML to standard YAML (MiniYAML features behind `miniyaml` feature flag)
+3. CLI tool with phased subcommand rollout:
+   - **Phase 0:** `validate` (structural correctness), `inspect` (dump contents/metadata, `--json` for machine-readable output), `convert` (extensible `--from`/`--to` format conversion — `--to` required, `--from` auto-detected from extension; current conversion: `--from miniyaml --to yaml`, behind `miniyaml` feature flag)
+   - **Phase 1:** `extract` (decompose `.mix` archives to individual files; `.meg`/`.pgm` support added Phase 2 via `meg` feature), `list` (quick archive inventory — filenames, sizes, types; `.meg`/`.pgm` support added Phase 2)
+   - **Phase 2:** `check` (deep integrity verification — CRC validation, truncation detection, `validate --strict` equivalent), `diff` (format-aware structural comparison of two files of the same type), `fingerprint` (SHA-256 canonical content hash for integrity/deduplication)
+   - **Phase 6a:** `pack` (create `.mix` archives from directory — inverse of `extract`)
+
+   **CLI usage examples:**
+   ```bash
+   # Convert MiniYAML rules to standard YAML (explicit --from because .yaml is ambiguous)
+   cnc-formats convert --from miniyaml --to yaml rules.yaml
+
+   # Auto-detection works when extension is unambiguous
+   cnc-formats convert --to yaml openra-rules.miniyaml
+
+   # Explicit --from required for pipe/stdin usage
+   cat rules.yaml | cnc-formats convert --from miniyaml --to yaml -o rules-converted.yaml
+
+   # Validate any supported format
+   cnc-formats validate main.mix
+   cnc-formats validate rules.yaml
+
+   # Inspect archive contents (human-readable)
+   cnc-formats inspect main.mix
+
+   # Machine-readable JSON output for tooling
+   cnc-formats inspect --json conquer.mix
+
+   # Extract archive to directory (Phase 1)
+   cnc-formats extract main.mix -o assets/
+
+   # Quick archive inventory (Phase 1)
+   cnc-formats list main.mix
+
+   # Deep integrity check (Phase 2)
+   cnc-formats check main.mix
+
+   # Format-aware diff between two MIX archives (Phase 2)
+   cnc-formats diff original.mix modded.mix
+
+   # Content-hash for deduplication (Phase 2)
+   cnc-formats fingerprint infantry.shp
+
+   # MEG archive support (Phase 2, requires `meg` feature)
+   cnc-formats list data.meg
+   cnc-formats extract data.meg -o remastered-assets/
+
+   # Create MIX archive from directory (Phase 6a)
+   cnc-formats pack assets/ -o custom.mix
+   ```
 4. Extensive tests against known-good OpenRA data
 6. No EA-derived code — permissive licensing enables adoption by any C&C tool or modding project
 7. Released open source as a standalone crate on day one (Phase 0 deliverable, read-only)
@@ -78,8 +126,8 @@ D076 splits format handling into two crates with distinct roles:
 **ra-formats** (GPL v3, IC monorepo):
 1. Thin wrapper over `cnc-formats` (with `miniyaml` feature enabled) — adds EA-specific details (compression tables, game-specific constants) that reference EA's GPL-licensed C&C source (D051)
 2. Bevy `AssetSource` integration for IC's asset pipeline
-3. Remastered Collection format support (`.meg`, `.tga+.meta`, `.dds`, `.bk2`, `.pgm`) — formats not in `cnc-formats`'s scope
-4. **Write support (Phase 6a):** .shp generation from frames (LCW compression + frame offset tables), .pal writing (trivial — 768 bytes), .aud encoding (IMA ADPCM compression from PCM input), .vqa encoding (VQ codebook generation + frame differencing + audio interleaving), optional .mix packing (CRC hash table generation) — required by Asset Studio (D040). Encoders reference the EA GPL source code implementations directly (see § Binary Format Codec Reference)
+3. Remastered-specific format support (`.tga+.meta` megasheet splitting, `.dds` terrain import, `.bk2` video conversion, `.mtd` MegaTexture) — GPL-derived or proprietary formats that stay in `ra-formats` (see D076 § Remastered format split). Note: `.meg`/`.pgm` archive parsing is in `cnc-formats` (Phase 2, `meg` feature flag) — `ra-formats` depends on it
+4. **Write support (Phase 6a):** .shp generation from frames (LCW compression + frame offset tables), .pal writing (trivial — 768 bytes), .aud encoding (IMA ADPCM compression from PCM input), .vqa encoding (VQ codebook generation + frame differencing + audio interleaving), encrypted .mix packing (Blowfish key derivation + SHA-1 body digest — extends `cnc-formats pack`'s unencrypted archives) — required by Asset Studio (D040). Encoders reference the EA GPL source code implementations directly (see § Binary Format Codec Reference)
 
 ### Non-C&C Format Landscape
 

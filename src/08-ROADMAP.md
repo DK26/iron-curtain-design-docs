@@ -22,7 +22,7 @@ Phase 0 (Foundation)
 ### Deliverables
 - `ra-formats` crate: parse `.mix` archives, SHP/TMP sprites, `.aud` audio, `.pal` palettes, `.vqa` video
 - Parse OpenRA YAML manifests, map format, rule definitions
-- `cnc-formats` CLI tool (`validate`, `inspect`, `convert` subcommands) — validates file structure, dumps archive contents, converts MiniYAML to standard YAML
+- `cnc-formats` CLI tool — Phase 0 subcommands: `validate` (structural correctness check), `inspect` (dump archive contents and format metadata, `--json` for machine-readable output), `convert` (extensible `--from`/`--to` format conversion; current: `--from miniyaml --to yaml`)
 - **Runtime MiniYAML loading (D025):** MiniYAML files load directly at runtime — auto-converts in memory, no pre-conversion required
 - **OpenRA vocabulary alias registry (D023):** Accept OpenRA trait names (`Armament`, `Valued`, etc.) as YAML key aliases alongside IC-native names
 - **OpenRA mod manifest parser (D026):** Parse OpenRA `mod.yaml` manifests, map directory layout to IC equivalents
@@ -81,6 +81,7 @@ Open source `cnc-formats` (MIT/Apache-2.0) early. Useful standalone for any C&C 
 - Camera: smooth scroll, zoom, minimap
 - Load OpenRA map, render correctly
 - Render quality tier auto-detection (see `10-PERFORMANCE.md` § "Render Quality Tiers")
+- `cnc-formats` CLI expansion: `extract` (decompose `.mix` archives) and `list` (quick archive inventory)
 - Optional visual showcase: basic post-processing (bloom, color grading) and shader prototypes (chrono-shift shimmer, tesla coil glow) to demonstrate modding possibilities
 
 ### Key Architecture Work

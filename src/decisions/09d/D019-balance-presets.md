@@ -147,6 +147,7 @@ A single Rust binary replacing OpenRA's shell scripts + Makefile + Python depend
 ```
 ic mod init [template]     # scaffold from template
 ic mod check               # validate all mod content
+ic mod convert             # batch-convert mod assets between legacy/modern formats (D020 § Conversion Command Boundary)
 ic mod test                # headless smoke test
 ic mod run                 # launch game with mod
 ic mod server              # dedicated server
@@ -163,7 +164,7 @@ ic replay inspect [file]   # summary view: players, map, duration, outcome, desy
 ic replay verify [file]    # verify relay signature chain + integrity (see 06-SECURITY.md)
 ```
 
-> **CLI design principle (from Fossilize):** Each subcommand does one focused thing well — validate, convert, inspect, verify. Valve's Fossilize toolchain (`fossilize-replay`, `fossilize-merge`, `fossilize-convert`, `fossilize-list`) demonstrates that a family of small, composable CLI tools is more useful than a monolithic Swiss Army knife. The `ic` CLI follows this pattern: `ic mod check` validates, `ic mod convert` converts formats, `ic replay parse` extracts data, `ic replay inspect` summarizes. Each subcommand is independently useful and composable via shell pipelines. See `research/valve-github-analysis.md` § 3.3 and § 6.2.
+> **CLI design principle (from Fossilize):** Each subcommand does one focused thing well — validate, convert, inspect, verify. Valve's Fossilize toolchain (`fossilize-replay`, `fossilize-merge`, `fossilize-convert`, `fossilize-list`) demonstrates that a family of small, composable CLI tools is more useful than a monolithic Swiss Army knife. The `ic` CLI follows this pattern: `ic mod check` validates, `ic mod convert` batch-converts mod assets between legacy and modern formats (`.shp` → PNG, `.aud` → OGG — see D020 § Conversion Command Boundary), `ic replay parse` extracts data, `ic replay inspect` summarizes. Single-file text conversion (MiniYAML → YAML) is a separate tool: `cnc-formats convert` (game-agnostic, schema-neutral — see D076). Each subcommand is independently useful and composable via shell pipelines. See `research/valve-github-analysis.md` § 3.3 and § 6.2.
 
 **Mod templates (built-in):**
 - `data-mod` — YAML-only balance/cosmetic mods
@@ -293,7 +294,7 @@ ic replay verify [file]    # verify relay signature chain + integrity (see 06-SE
 **Key design points:**
 
 1. **Alias registry:** `ra-formats` maintains a compile-time map of OpenRA trait names to IC component names. `Armament` → `combat`, `Valued` → `buildable.cost`, `AttackOmni` → `combat.mode: omni`, etc.
-2. **Bi-directional:** The alias registry is used during YAML parsing (OpenRA names accepted, resolved to IC-native names at load time by `ra-formats`). `cnc-formats convert` performs schema-neutral MiniYAML→YAML structural conversion only — alias resolution is a separate `ra-formats` concern. Both OpenRA and IC-native representations are valid input.
+2. **Bi-directional:** The alias registry is used during YAML parsing (OpenRA names accepted, resolved to IC-native names at load time by `ra-formats`). `cnc-formats convert --from miniyaml --to yaml` performs schema-neutral MiniYAML→YAML structural conversion only — alias resolution is a separate `ra-formats` concern. Both OpenRA and IC-native representations are valid input.
 3. **Deprecation warnings:** When an OpenRA alias is used, the parser emits a warning: `"Armament" is accepted but deprecated; prefer "combat"`. Warnings can be suppressed per-mod via `mod.toml` setting.
 4. **No runtime cost:** Aliases resolve during YAML deserialization (load time only). The ECS never sees alias names — only canonical IC component types.
 

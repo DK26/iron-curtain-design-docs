@@ -15,4 +15,4 @@
 - RON (rejected — modders won't know it, thin editor support)
 - JSON (rejected — too verbose, no comments)
 
-**Migration:** `cnc-formats convert` CLI subcommand (behind `miniyaml` feature flag, MIT/Apache-2.0) converts MiniYAML files to standard YAML on disk. `ra-formats` wraps the same parser for IC's runtime auto-conversion pipeline (D025).
+**Migration:** `cnc-formats convert --from miniyaml --to yaml` CLI subcommand (behind `miniyaml` feature flag, MIT/Apache-2.0) converts MiniYAML files to standard YAML on disk (`--from` auto-detected from extension when unambiguous; `--to` always required). `ra-formats` wraps the same parser for IC's runtime auto-conversion pipeline (D025).

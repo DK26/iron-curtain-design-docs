@@ -8,7 +8,7 @@
 - **Deferred features / extensions:** none
 - **Canonical for:** MiniYAML auto-detection, runtime conversion, and the `cnc-formats convert` CLI subcommand
 - **Scope:** `ra-formats` crate (runtime auto-conversion), `cnc-formats` crate (CLI `convert` subcommand)
-- **Decision:** MiniYAML files load directly at runtime via auto-detection and in-memory conversion. No pre-conversion step is required. The `cnc-formats convert` CLI subcommand is also provided for permanent on-disk migration.
+- **Decision:** MiniYAML files load directly at runtime via auto-detection and in-memory conversion. No pre-conversion step is required. The `cnc-formats convert --from miniyaml --to yaml` CLI subcommand is also provided for permanent on-disk migration (`--from` auto-detected from extension when unambiguous; `--to` always required).
 - **Why:**
   - Zero-friction import of existing OpenRA mods (drop a mod folder in, play immediately)
   - Pre-conversion would add a mandatory setup step that deters casual modders
@@ -46,6 +46,48 @@ If any of these markers are detected, the file routes through the MiniYAML parse
 ```
 
 Both paths produce identical output. The runtime conversion adds ~10–50ms per mod file on first load; results are cached for the remainder of the session.
+
+#### Rust API
+
+```rust
+// cnc-formats (MIT/Apache-2.0) — clean-room MiniYAML parser (behind `miniyaml` feature flag)
+#[cfg(feature = "miniyaml")]
+pub mod miniyaml {
+    /// Parse MiniYAML text into a format-agnostic node tree.
+    pub fn parse(input: &str) -> Result<Vec<MiniYamlNode>, ParseError>;
+
+    /// Convert a MiniYAML node tree to standard YAML string.
+    pub fn to_yaml(nodes: &[MiniYamlNode]) -> String;
+
+    pub struct MiniYamlNode {
+        pub key: String,
+        pub value: Option<String>,
+        pub children: Vec<MiniYamlNode>,
+        pub comment: Option<String>,
+    }
+}
+
+// ra-formats (GPL v3) — IC integration layer for runtime auto-detection
+/// Detect whether a `.yaml` file contains standard YAML or MiniYAML.
+/// Returns the detected format for routing to the correct parser.
+pub fn detect_format(content: &str) -> DetectedFormat;
+
+pub enum DetectedFormat {
+    /// Standard YAML — route to `serde_yaml`.
+    StandardYaml,
+    /// MiniYAML — route through `cnc_formats::miniyaml::parse()` + alias resolution (D023).
+    MiniYaml {
+        /// Which markers triggered detection (for diagnostics).
+        markers: Vec<MiniYamlMarker>,
+    },
+}
+
+pub enum MiniYamlMarker {
+    TabIndentation,       // MiniYAML uses tabs; standard YAML uses spaces
+    InheritancePrefix,    // `^` prefix on keys
+    MergeSuffix,          // `@` suffix on keys
+}
+```
 
 ### Alternatives Considered
 

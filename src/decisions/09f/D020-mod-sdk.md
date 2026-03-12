@@ -74,18 +74,36 @@ Preview → Test → Validate → Publish
 
 **Campaign Editor:** Node-and-edge graph editor in a 2D Bevy viewport. Missions are nodes (linked to scenario files), outcomes are labeled edges. Supports branching campaigns (D021), hero progression, and validation. Advanced mode adds localization workbench and migration/export readiness checks.
 
+### Conversion Command Boundary
+
+Two separate tools handle format conversion at different levels:
+
+| Tool                  | Scope                                  | Granularity                                              | Crate                                  | License        |
+| --------------------- | -------------------------------------- | -------------------------------------------------------- | -------------------------------------- | -------------- |
+| `cnc-formats convert` | Single-file structural text conversion | `--from miniyaml --to yaml` on one file                  | `cnc-formats`                          | MIT/Apache-2.0 |
+| `ic mod convert`      | Mod-directory batch asset conversion   | `--to-modern` / `--to-classic` across all files in a mod | `ic-game` (uses `ra-formats` encoders) | GPL v3         |
+
+**`cnc-formats convert`** is game-agnostic and schema-neutral — it converts MiniYAML syntax to standard YAML syntax without understanding what the fields mean. It operates on individual files. It knows nothing about mod directories, asset types, or game-specific formats like `.shp` or `.aud`.
+
+**`ic mod convert`** is game-aware and operates on entire mod directories. It converts between legacy C&C asset formats (`.shp`, `.aud`, `.vqa`) and modern Bevy-native formats (PNG, OGG, WebM) using `ra-formats` encoders/decoders. It understands mod structure (`mod.toml`, directory conventions) and can batch-process all assets in a mod. The Asset Studio (D040) provides the same conversions via GUI.
+
+They do not overlap: `cnc-formats convert` handles text format conversion (MiniYAML → YAML); `ic mod convert` handles binary asset conversion (.shp → PNG, .aud → OGG, etc.).
+
 ### Tool Phase Schedule
 
-| Tool                                           | Phase    | Notes                                                       |
-| ---------------------------------------------- | -------- | ----------------------------------------------------------- |
-| `ic` CLI (validate, import, run)               | Phase 2  | Ships with core engine                                      |
-| `cnc-formats` CLI (validate, inspect, convert) | Phase 0  | Format validation + inspection + MiniYAML conversion (D025) |
-| Scenario Editor (D038)                         | Phase 6a | Primary SDK editor                                          |
-| Asset Studio (D040)                            | Phase 6a | Format conversion + visual editing                          |
-| Campaign Editor                                | Phase 6a | Graph editor for D021 campaigns                             |
-| SDK binary (unified launcher)                  | Phase 6a | Bundles all editors                                         |
-| Migration Workbench                            | Phase 6b | Project upgrade tooling                                     |
-| LLM generation features                        | Phase 7  | D016, D047, D057 integration                                |
+| Tool                                           | Phase    | Notes                                                                               |
+| ---------------------------------------------- | -------- | ----------------------------------------------------------------------------------- |
+| `ic` CLI (validate, import, convert, run)      | Phase 2  | Ships with core engine; `ic mod convert` = mod-directory batch asset conversion     |
+| `cnc-formats` CLI (validate, inspect, convert) | Phase 0  | Format validation + inspection + single-file `--from`/`--to` text conversion (D025) |
+| `cnc-formats` CLI (extract, list)              | Phase 1  | `.mix` archive decomposition and inventory                                          |
+| `cnc-formats` CLI (check, diff, fingerprint)   | Phase 2  | Deep integrity, structural comparison, canonical hashing                            |
+| `cnc-formats` CLI (pack)                       | Phase 6a | `.mix` archive creation (inverse of extract)                                        |
+| Scenario Editor (D038)                         | Phase 6a | Primary SDK editor                                                                  |
+| Asset Studio (D040)                            | Phase 6a | Format conversion + visual editing                                                  |
+| Campaign Editor                                | Phase 6a | Graph editor for D021 campaigns                                                     |
+| SDK binary (unified launcher)                  | Phase 6a | Bundles all editors                                                                 |
+| Migration Workbench                            | Phase 6b | Project upgrade tooling                                                             |
+| LLM generation features                        | Phase 7  | D016, D047, D057 integration                                                        |
 
 ### Project Structure (Git-First)
 
