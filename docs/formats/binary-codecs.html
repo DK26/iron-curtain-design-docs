@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-ebe5ef16.js";
+            window.path_to_searchindex_js = "../searchindex-50eef387.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-5aa22486.js"></script>
+        <script src="../toc-f491df3e.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -792,6 +792,47 @@ typedef struct _VQHeader {
 #define VQCM_RGBTRUE   1   // RGB true color
 #define VQCM_YBRTRUE   2   // YBR (luminance-chrominance) true color
 </code></pre>
+<hr>
+<h3 id="vqp-palette-interpolation-tables-vqp"><a class="header" href="#vqp-palette-interpolation-tables-vqp">VQP Palette Interpolation Tables (.vqp)</a></h3>
+<p><strong>Source:</strong> <code>REDALERT/CODE/CONQUER.CPP</code> (CnC_Red_Alert repo), Gordan Ugarkovic’s <code>vqp_info.txt</code></p>
+<p>VQP (VQ Palette) files are precomputed 256x256 color interpolation lookup tables that enable smooth 2x horizontal stretching of paletted VQA video at SVGA resolution. Each VQP file is a companion sidecar to a VQA file (e.g., <code>SIZZLE.VQA</code> + <code>SIZZLE.VQP</code>).</p>
+<h4 id="file-structure"><a class="header" href="#file-structure">File Structure</a></h4>
+<pre><code class="language-c">// Pseudocode from CONQUER.CPP: Load_Interpolated_Palettes()
+struct VQPFile {
+    uint32_t num_palettes;     // Number of interpolation tables (LE)
+    // Followed by num_palettes tables, each 32,896 bytes:
+    // Lower triangle of a symmetric 256x256 matrix.
+    // (256 * 257) / 2 = 32,896 unique entries.
+};
+</code></pre>
+<h4 id="loading-algorithm"><a class="header" href="#loading-algorithm">Loading Algorithm</a></h4>
+<p>Each table is stored as the lower triangle of a symmetric 256x256 matrix (since <code>table[A][B] == table[B][A]</code>):</p>
+<pre><code class="language-c">// From CONQUER.CPP
+file.Read(&amp;num_palettes, 4);
+for (i = 0; i &lt; num_palettes; i++) {
+    table = calloc(65536, 1);  // Full 256x256 table
+    for (y = 0; y &lt; 256; y++) {
+        file.Read(table + y * 256, y + 1);  // Read row 0..y (triangle)
+    }
+    Rebuild_Interpolated_Palette(table);  // Mirror triangle
+}
+
+// Rebuild_Interpolated_Palette mirrors lower triangle to upper:
+for (y = 0; y &lt; 255; y++)
+    for (x = y + 1; x &lt; 256; x++)
+        table[y * 256 + x] = table[x * 256 + y];
+</code></pre>
+<h4 id="usage"><a class="header" href="#usage">Usage</a></h4>
+<p>When stretching a 320-pixel-wide VQA frame to 640 pixels, each pair of adjacent palette-indexed pixels is interpolated by inserting a middle pixel:</p>
+<pre><code>interpolated_pixel = table[left_pixel][right_pixel]
+</code></pre>
+<p>The lookup returns a palette index that is the visual average of the two source colors. One table per palette change in the VQA — a movie with 52 palette changes has 52 tables.</p>
+<h4 id="size-validation"><a class="header" href="#size-validation">Size Validation</a></h4>
+<ul>
+<li><code>SIZZLE.VQP</code>: first 4 bytes = <code>0x34</code> (52 tables). <code>4 + (52 * 32,896) = 1,710,596</code> bytes. Matches file size exactly.</li>
+<li><code>SIZZLE2.VQP</code>: first 4 bytes = <code>0x07</code> (7 tables). <code>4 + (7 * 32,896) = 230,276</code> bytes. Matches file size exactly.</li>
+</ul>
+<p><strong>IC relevance:</strong> Read-only. No modern use case — GPU scaling replaces palette-based pixel interpolation. Parsed for format completeness and potential Classic render mode (D048) fidelity. VQP tables may also be embedded inside <code>MAIN.MIX</code> for videos stored within archives.</p>
 <hr>
 <h3 id="wsa-animation-format-wsa"><a class="header" href="#wsa-animation-format-wsa">WSA Animation Format (.wsa)</a></h3>
 <p><strong>Source:</strong> <code>TIBERIANDAWN/WIN32LIB/WSA.CPP</code> (struct <code>WSA_FileHeaderType</code>), <code>REDALERT/WSA.H</code></p>
