@@ -1,4 +1,4 @@
-﻿## API Misuse Analysis & Type-System Defenses
+## API Misuse Analysis & Type-System Defenses
 
 This document systematically analyzes every public API boundary in Iron Curtain, identifies how each can be misused (by callers, mods, network peers, or contributors making honest mistakes), and maps each misuse vector to a concrete type-system defense. It complements [type-safety.md](type-safety.md), which defines the policies — this document applies them to every API surface.
 

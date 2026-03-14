@@ -1,4 +1,4 @@
-﻿## Property-Based Testing Specifications (proptest)
+## Property-Based Testing Specifications (proptest)
 
 Each property is a formal invariant verified across thousands of randomly generated inputs. Properties that fail produce a minimal counterexample for debugging.
 

@@ -2,7 +2,7 @@
 
 Comprehensive verification of anti-cheat logic and security across the Iron Curtain design documentation. This audit cross-references `06-SECURITY.md` (56 vulnerabilities), `architecture/api-misuse-defense.md` (88 misuse vectors), `tracking/testing-strategy.md`, `03-NETCODE.md`, `04-MODDING.md`, `07-CROSS-ENGINE.md`, `architecture/type-safety.md`, `decisions/09b/D052-community-servers.md`, `decisions/09f/D071-external-tool-api.md`, and `decisions/09g/D058-command-console.md` / `D059-communication.md`.
 
-**Audit date:** 2025-06  
+**Audit date:** 2025-06
 **Scope:** Design-phase verification — no implementation code exists. Findings target design gaps, inconsistencies, missing threat coverage, and specification ambiguities.
 
 **Resolution status:** All 18 findings **CLOSED** in design docs (2025-06). See cross-references below.
@@ -55,7 +55,7 @@ The security architecture is **comprehensive and well-structured** for a design-
 
 ### Finding 1: NaN Propagation Chain in Anti-Cheat Scoring Pipeline
 
-**Severity: HIGH**  
+**Severity: HIGH**
 **Affected:** V12, V34, V36 (06-SECURITY.md)
 
 V34 adds NaN guards to `EwmaTrafficMonitor`, but the broader anti-cheat scoring pipeline has multiple `f64` stages without documented NaN guards:
@@ -81,7 +81,7 @@ A NaN at any stage propagates to all downstream threshold comparisons. Since `Na
 
 ### Finding 2: ICRP Local WebSocket — Cross-Site WebSocket Hijacking (CSWSH)
 
-**Severity: HIGH**  
+**Severity: HIGH**
 **Affected:** D071 (09f/D071-external-tool-api.md)
 
 ICRP exposes a local JSON-RPC 2.0 WebSocket server. This opens a Cross-Site WebSocket Hijacking attack: a malicious webpage loaded in any browser can connect to `ws://localhost:PORT` and issue ICRP commands. The SHA-256 challenge auth partially mitigates this, but:
@@ -91,7 +91,7 @@ ICRP exposes a local JSON-RPC 2.0 WebSocket server. This opens a Cross-Site WebS
 3. No CORS restrictions are documented for the HTTP fallback endpoint.
 4. Browser-based attacks from `http://evil.com` could connect if no Origin check exists.
 
-**Recommendation:** 
+**Recommendation:**
 - Mandate `Origin` header validation: accept only `null` (local file) and `http://localhost:*` / `http://127.0.0.1:*`
 - Require CORS whitelist for HTTP fallback endpoint (no `Access-Control-Allow-Origin: *`)
 - Document the challenge secret storage location and file permissions (e.g., `0600` / user-only read)
@@ -103,7 +103,7 @@ ICRP exposes a local JSON-RPC 2.0 WebSocket server. This opens a Cross-Site WebS
 
 ### Finding 3: V47 Key Rotation — Dual-Signature Race Condition
 
-**Severity: HIGH**  
+**Severity: HIGH**
 **Affected:** V47 (06-SECURITY.md), D052 (09b/D052-community-servers.md)
 
 The `KeyRotation` struct requires signatures from both old and new keys. If the old key is compromised, the attacker possesses it. Both the legitimate user and attacker can simultaneously issue valid `KeyRotation` messages:
@@ -130,7 +130,7 @@ The BIP-39 emergency rotation (immediate, bypass old key) is the correct recover
 
 ### Finding 4: V48 Server Trust Model — Resolved by TOFU Canonicalization
 
-**Severity: HIGH**  
+**Severity: HIGH**
 **Affected:** V48 (06-SECURITY.md)
 
 **Original finding:** V48 specified a CRL/OCSP certificate revocation model without defining unknown-status behavior (soft-fail vs hard-fail). This was a genuine gap.
@@ -145,7 +145,7 @@ The equivalent ambiguity in the TOFU model ("what happens when key state is ambi
 
 ### Finding 5: WASM Timing Side-Channel Maphack
 
-**Severity: MEDIUM**  
+**Severity: MEDIUM**
 **Affected:** V5 (06-SECURITY.md), 04-MODDING.md WASM Sandbox
 
 The WASM capability model prevents direct access to fogged state (`no get_all_units()`). However, a malicious WASM mod could infer fogged information via timing side channels:
@@ -166,7 +166,7 @@ The WASM capability model prevents direct access to fogged state (`no get_all_un
 
 ### Finding 6: Replay Viewer External Asset Fetch via Embedded YAML
 
-**Severity: MEDIUM**  
+**Severity: MEDIUM**
 **Affected:** V41 (06-SECURITY.md)
 
 V41 restricts `SelfContained` replays to map data and rule YAML only (no Lua/WASM). However, embedded YAML rules could contain external asset references:
@@ -193,7 +193,7 @@ If the replay viewer loads these YAML rules and the asset loader follows externa
 
 ### Finding 7: Missing Spectator Delay in Ranked Security Policy
 
-**Severity: MEDIUM**  
+**Severity: MEDIUM**
 **Affected:** D071, 06-SECURITY.md Competitive Integrity Summary
 
 D071 mentions "ranked mode restricts to observer-with-delay" but neither `06-SECURITY.md` nor D071 specifies:
@@ -216,7 +216,7 @@ In fog-authoritative mode, spectators see the full game state. Without a mandato
 
 ### Finding 8: Console Script `.iccmd` Supply Chain Not in Workshop Security Model
 
-**Severity: MEDIUM**  
+**Severity: MEDIUM**
 **Affected:** D058 (09g/D058-command-console.md), V18 (06-SECURITY.md)
 
 D058 describes Workshop-shareable `.iccmd` console scripts that are lobby-visible and loadable. These scripts are executable content distributed through the Workshop, but V18's supply chain security model (anomaly detection, author signing, quarantine) doesn't explicitly cover `.iccmd` files.
@@ -237,7 +237,7 @@ Console scripts could:
 
 ### Finding 9: CertifiedMatchResult Integrity When Replay Has Frame Loss
 
-**Severity: MEDIUM**  
+**Severity: MEDIUM**
 **Affected:** V13, V45 (06-SECURITY.md)
 
 `CertifiedMatchResult.replay_hash` is SHA-256 of the full replay data. V45 documents that `BackgroundReplayWriter` can lose frames during I/O spikes. If frames are lost:
@@ -259,7 +259,7 @@ This means CertifiedMatchResult cross-verification is fragile — it can only su
 
 ### Finding 10: V43 WASM Network Access — Raw Socket Ambiguity
 
-**Severity: MEDIUM**  
+**Severity: MEDIUM**
 **Affected:** V43 (06-SECURITY.md), 04-MODDING.md
 
 V43's DNS rebinding mitigation assumes the host mediates all network access. But the doc doesn't explicitly state that WASM mods **cannot** perform raw socket operations. The WASM capability model (`ModCapabilities.network`) defines `AllowList(Vec<String>)` but the host API surface for network access isn't fully enumerated.
@@ -277,7 +277,7 @@ If a WASM mod has access to a general-purpose HTTP function that accepts arbitra
 
 ### Finding 11: TrustScore Computation Algorithm Unspecified
 
-**Severity: MEDIUM**  
+**Severity: MEDIUM**
 **Affected:** V12 (06-SECURITY.md)
 
 `TrustScore.score` is `u16` (0–12000) and `TrustFactors` contains 7 `f64`/`u32`/`u8` fields, but:
@@ -301,7 +301,7 @@ Without a specified algorithm, implementations could create vastly different tru
 
 ### Finding 12: Lobby Host Configuration Manipulation
 
-**Severity: MEDIUM**  
+**Severity: MEDIUM**
 **Affected:** Not covered in 06-SECURITY.md
 
 The security document doesn't address malicious lobby hosts. In IC's relay architecture, the lobby host sets game parameters (map, rules, balance preset, game speed). A malicious host could:
@@ -325,7 +325,7 @@ The relay server validates orders during gameplay but the lobby configuration it
 
 ### Finding 13: Cross-Reference Inconsistency — V15 ProtocolLimits Field Duplication
 
-**Severity: LOW**  
+**Severity: LOW**
 **Affected:** V15, V17 (06-SECURITY.md), 03-NETCODE.md
 
 `ProtocolLimits` is fully defined in V15 with all fields (including D059 voice/coordination limits). V17 references it but says `// ... fields defined in V15 above`. However, `03-NETCODE.md` § Order Rate Control also references `ProtocolLimits` but only links to `06-SECURITY.md` without defining which fields exist.
@@ -342,7 +342,7 @@ The D059 voice limits (`max_voice_packets_per_second: 50`, `max_pings_per_interv
 
 ### Finding 14: V35 SimReconciler Constants — Deferral Risk
 
-**Severity: LOW**  
+**Severity: LOW**
 **Affected:** V35 (06-SECURITY.md), 07-CROSS-ENGINE.md
 
 V35 defines `MAX_TICKS_SINCE_SYNC = 300`, `MAX_CREDIT_DELTA = 5000`, health cap at 1000 — but explicitly states these are "deferred to M7" and "not part of M4 exit criteria." This creates a risk: if cross-engine reconciliation is implemented before M7 (even experimentally), the bounds enforcement may be forgotten since it's explicitly deferred.
@@ -357,7 +357,7 @@ V35 defines `MAX_TICKS_SINCE_SYNC = 300`, `MAX_CREDIT_DELTA = 5000`, health cap 
 
 ### Finding 15: V34 EWMA NaN Guard — Alpha Validation Timing
 
-**Severity: LOW**  
+**Severity: LOW**
 **Affected:** V34 (06-SECURITY.md)
 
 V34 says "`alpha` is validated at construction to be in `(0.0, 1.0)` exclusive." However, the `EwmaTrafficMonitor` struct has `pub alpha: f64` — a public field that can be modified after construction, bypassing the construction-time validation.
@@ -372,7 +372,7 @@ V34 says "`alpha` is validated at construction to be in `(0.0, 1.0)` exclusive."
 
 ### Finding 16: Missing Threat — Observer Mode RNG State Leak
 
-**Severity: LOW**  
+**Severity: LOW**
 **Affected:** 06-SECURITY.md, 03-NETCODE.md
 
 In lockstep mode, all clients share the same deterministic RNG state. Observers receive all orders and run the full simulation. If an observer has access to the RNG state (which they must, to run the sim), they can predict:
@@ -393,7 +393,7 @@ Combined with out-of-band communication, this enables prediction-based advantage
 
 ### Finding 17: V26 Win-Trading — Storage Cost of Per-Pair Match History
 
-**Severity: LOW**  
+**Severity: LOW**
 **Affected:** V26 (06-SECURITY.md)
 
 The diminishing returns formula (`0.5^(n-1)`) requires tracking per-opponent-pair match counts within a rolling 30-day window. For a community with P players, the worst-case storage is O(P²) opponent pairs. The doc doesn't address:
@@ -414,7 +414,7 @@ For 10,000 active players, worst-case is ~100M pair entries (though typically mu
 
 ### Finding 18: V44 Developer Mode — Single-Player Toggle vs Replay Determinism
 
-**Severity: LOW**  
+**Severity: LOW**
 **Affected:** V44 (06-SECURITY.md)
 
 V44 states "In single-player and replays, dev mode can be toggled freely." But dev mode is a sim `Resource` in `ic-sim` (part of deterministic state). If a player toggles dev mode mid-game in single-player, the replay records this toggle. If someone views the replay without knowing dev mode was used, the replay's behavior may be confusing (e.g., instant builds happening with no visible explanation).

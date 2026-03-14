@@ -1,4 +1,4 @@
-﻿## Decision Tracker - D001-D020 (Foundation / Early)
+## Decision Tracker - D001-D020 (Foundation / Early)
 
 > See [decision-tracker.md](decision-tracker.md) for overview.
 

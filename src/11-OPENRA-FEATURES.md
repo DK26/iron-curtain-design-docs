@@ -1,4 +1,4 @@
-﻿# OpenRA Engine — Feature Reference & Gap Analysis
+# OpenRA Engine — Feature Reference & Gap Analysis
 
 Exhaustive catalog of every OpenRA engine feature (~700+ traits) with Iron Curtain gap analysis, mapping table, and action plan.
 

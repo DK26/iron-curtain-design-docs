@@ -1,4 +1,4 @@
-﻿#### Classic Cheat Codes (Single-Player Easter Egg)
+#### Classic Cheat Codes (Single-Player Easter Egg)
 
 **Phase:** Phase 3+ (requires command system; trivial to implement once `CheatCodeHandler` and `PlayerOrder::CheatCode` exist — each cheat reuses existing dev command effects).
 

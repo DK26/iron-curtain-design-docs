@@ -276,7 +276,7 @@ While the game also includes proper Blowfish, RSA (PKey), and RC4 implementation
 
 **Exploitability:** High — reliable remote crash/DoS against any player in a game lobby or match.
 
-**Iron Curtain mitigation:** Hard limits on all size fields. 
+**Iron Curtain mitigation:** Hard limits on all size fields.
 ```rust
 const MAX_ORDER_SIZE: usize = 4096;       // Single order
 const MAX_FILE_TRANSFER_SIZE: usize = 65536; // Map file transfer
@@ -303,7 +303,7 @@ while ( (len=m_udpsock->Read(buf, MAX_MESSAGE_LEN, &from)) > 0 ) {
 
 **Exploitability:** Medium — requires ability to send UDP traffic to the game port. Standard UDP amplification attacks apply.
 
-**Iron Curtain mitigation:** 
+**Iron Curtain mitigation:**
 - Rate limiting at the transport layer (max packets per second per source IP)
 - Connection cookie for anti-spoofing (similar to DTLS HelloVerifyRequest)
 - Relay server absorbs and rate-limits before forwarding to clients
@@ -342,7 +342,7 @@ msg->setExecutionFrame(frame);  // NULL dereference if unknown type
 
 **Problem:** All clients have complete game state in memory. Fog of war is a rendering filter only. Any memory reading tool can expose the full map. This affects every lockstep RTS: StarCraft, Age of Empires, OpenRA, and would affect Iron Curtain in its `RelayLockstepNetwork` / `EmbeddedRelayNetwork` modes.
 
-**Iron Curtain mitigation:** 
+**Iron Curtain mitigation:**
 - Default: Memory obfuscation (raises the bar for casual cheats)
 - Competitive: `FogAuthoritativeNetwork` mode where the server runs the sim and sends only visible-to-player state
 - See `06-SECURITY.md` for full design
@@ -360,7 +360,7 @@ Commands include a `playerID` field that is set by the sender. In P2P mode, a ma
 
 **Exploitability:** High in P2P mode. The `ConstructNetCommandMsgFromRawData` parser reads `playerID` from the 'P' tag with no validation against the source address.
 
-**Iron Curtain mitigation:** 
+**Iron Curtain mitigation:**
 - Deterministic order validation inside the sim (D012) — every order is validated for ownership, affordability, prerequisites before execution
 - Relay server stamps commands with the authenticated sender's player slot — forged `playerID` values are replaced with the actual sender
 - Ed25519 signatures on orders (clients can verify other clients' orders)

@@ -1,4 +1,4 @@
-﻿## D019: Switchable Balance Presets
+## D019: Switchable Balance Presets
 
 **Decision:** Ship five balance presets as first-class YAML rule sets: Classic (EA source values, default), OpenRA (competitive rebalance), Remastered (Petroglyph's 2020 tweaks), IC Default (spectacle + competitive viability, patched per-season), and Custom (modder-created via Workshop). Selectable per-game in lobby.
 
@@ -294,7 +294,7 @@ ic replay verify [file]    # verify relay signature chain + integrity (see 06-SE
 **Key design points:**
 
 1. **Alias registry:** `ra-formats` maintains a compile-time map of OpenRA trait names to IC component names. `Armament` → `combat`, `Valued` → `buildable.cost`, `AttackOmni` → `combat.mode: omni`, etc.
-2. **Bi-directional:** The alias registry is used during YAML parsing (OpenRA names accepted, resolved to IC-native names at load time by `ra-formats`). `cnc-formats convert --from miniyaml --to yaml` performs schema-neutral MiniYAML→YAML structural conversion only — alias resolution is a separate `ra-formats` concern. Both OpenRA and IC-native representations are valid input.
+2. **Bi-directional:** The alias registry is used during YAML parsing (OpenRA names accepted, resolved to IC-native names at load time by `ra-formats`). `cnc-formats convert --format miniyaml --to yaml` performs schema-neutral MiniYAML→YAML structural conversion only — alias resolution is a separate `ra-formats` concern. Both OpenRA and IC-native representations are valid input.
 3. **Deprecation warnings:** When an OpenRA alias is used, the parser emits a warning: `"Armament" is accepted but deprecated; prefer "combat"`. Warnings can be suppressed per-mod via `mod.toml` setting.
 4. **No runtime cost:** Aliases resolve during YAML deserialization (load time only). The ECS never sees alias names — only canonical IC component types.
 

@@ -1,4 +1,4 @@
-﻿## D055: Ranked Tiers, Seasons & Matchmaking Queue
+## D055: Ranked Tiers, Seasons & Matchmaking Queue
 
 **Status:** Settled
 **Phase:** Phase 5 (Multiplayer & Competitive)

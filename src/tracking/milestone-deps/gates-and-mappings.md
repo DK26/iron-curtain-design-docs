@@ -1,4 +1,4 @@
-﻿## UX Surface Gate Clusters (Cross-Check for Milestone Completeness)
+## UX Surface Gate Clusters (Cross-Check for Milestone Completeness)
 
 These clusters are used to prevent milestone definitions from becoming backend-only.
 
@@ -87,11 +87,11 @@ Use this workflow whenever a new feature/mode/tooling surface is added to the de
 
 ### Deferred Feature Placement Examples (Canonical Patterns)
 
-- **Good (planned deferral):** "Deferred to `M10` (`P-Creator`) after `M9.SDK.D038_SCENARIO_EDITOR_CORE`; not part of `M9` exit criteria."  
+- **Good (planned deferral):** "Deferred to `M10` (`P-Creator`) after `M9.SDK.D038_SCENARIO_EDITOR_CORE`; not part of `M9` exit criteria."
   Result: add/update an `M10.*` cluster row with hard/soft edges and note the out-of-scope boundary.
-- **Good (north star):** "Long-term vision only; depends on `M7.NET.CROSS_ENGINE_BRIDGE_AND_TRUST` + `M11.VISUAL.D048_AND_RENDER_MOD_INFRA`; trust-labeled and not a ranked promise."  
+- **Good (north star):** "Long-term vision only; depends on `M7.NET.CROSS_ENGINE_BRIDGE_AND_TRUST` + `M11.VISUAL.D048_AND_RENDER_MOD_INFRA`; trust-labeled and not a ranked promise."
   Result: no new cluster if already covered, but add/update tracker risk/trust-label notes.
-- **Bad (ambiguous):** "Could add later if players want it."  
+- **Bad (ambiguous):** "Could add later if players want it."
   Result: rewrite into planned deferral + overlay mapping, or mark proposal-only / `Pxxx`.
 - **Good (external implementation handoff):** "This introduces a new first-class subsystem boundary; update `CODE-INDEX.md` template examples and external `AGENTS.md` guidance in `M0` tooling docs."
   Result: preserve LLM/human navigation quality across implementation repos as the architecture grows.

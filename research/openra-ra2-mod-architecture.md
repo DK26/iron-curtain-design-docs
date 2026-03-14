@@ -723,7 +723,7 @@ ASWLauncher:
     ReloadDelay: 150
     Range: 8c0
     ValidTargets: Underwater
-    
+
 # Osprey child definition
 intosprey:
     CarrierChild:

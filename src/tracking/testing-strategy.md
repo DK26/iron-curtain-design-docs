@@ -1,4 +1,4 @@
-﻿# Testing Strategy & CI/CD Pipeline
+# Testing Strategy & CI/CD Pipeline
 
 This document defines the automated testing infrastructure for Iron Curtain. Every design feature must map to at least one automated verification method. Testing is not an afterthought — it is a design constraint.
 

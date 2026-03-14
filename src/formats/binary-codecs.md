@@ -1,8 +1,9 @@
-﻿## Binary Format Codec Reference (EA Source Code)
+## Binary Format Codec Reference (EA Source Code)
 
-> All struct definitions in this section are taken verbatim from the GPL v3 EA source code repositories:
+> Struct definitions in this section are sourced from the GPL v3 EA source code repositories and, where the original headers use `#define` offsets rather than packed structs (e.g., FNT), from Vanilla-Conquer's reverse-engineered C structs:
 > - [CnC_Remastered_Collection](https://github.com/electronicarts/CnC_Remastered_Collection) — primary source (REDALERT/ and TIBERIANDAWN/ directories)
 > - [CnC_Red_Alert](https://github.com/electronicarts/CnC_Red_Alert) — VQA/VQ video format definitions (VQ/ and WINVQ/ directories)
+> - [Vanilla-Conquer](https://github.com/TheAssemblyArmada/Vanilla-Conquer) — decompiled structs where EA headers use only `#define` offsets (FNT `FontHeader`)
 >
 > These are the authoritative definitions for `ra-formats` crate implementation. Field names, sizes, and types must match exactly for binary compatibility.
 
@@ -131,6 +132,27 @@ typedef struct {
 ```
 
 When `flags & 1`, a 768-byte palette (256 × RGB) follows immediately after the frame offset table. Retrieved via `Get_Build_Frame_Palette()`.
+
+#### Offset-Table Entry Format (Keyframe SHP)
+
+The offset table has `(frames + 2)` entries — one per frame, an EOF sentinel, and a zero-padding entry. Each entry is **8 bytes**:
+
+```text
+Offset  Size  Field
+0       u32   format_and_offset — high byte = ShpFrameFormat, low 24 bits = absolute file offset
+4       u16   ref_offset        — offset to reference frame (for delta formats)
+6       u16   ref_format        — format code of the reference frame
+```
+
+**Frame encoding formats** (high byte of `format_and_offset`, from `common/keyframe.h` `KeyFrameType`):
+
+| Value  | Name     | EA Constant   | Meaning                                 |
+| ------ | -------- | ------------- | --------------------------------------- |
+| `0x80` | LCW      | `KF_KEYFRAME` | Standalone keyframe, LCW-compressed     |
+| `0x40` | XOR+LCW  | `KF_KEYDELTA` | XOR-delta applied to a remote keyframe  |
+| `0x20` | XOR+Prev | `KF_DELTA`    | XOR-delta applied to the previous frame |
+
+To extract the file offset: `offset = format_and_offset & 0x00FFFFFF`. To extract the format: `format = (format_and_offset >> 24) & 0xFF`.
 
 #### Shape Type Flags (MAKESHAPE)
 
@@ -681,36 +703,43 @@ typedef struct _VQHeader {
 
 ### WSA Animation Format (.wsa)
 
-**Source:** `REDALERT/WSA.H`, `REDALERT/WSA.CPP`
+**Source:** `TIBERIANDAWN/WIN32LIB/WSA.CPP` (struct `WSA_FileHeaderType`), `REDALERT/WSA.H`
 
 WSA (Westwood Studios Animation) files contain LCW-compressed delta animations. Used for menu backgrounds, installation screens, campaign map animations, and some in-game effects in both TD and RA. Each frame is an XOR-delta against the previous frame.
 
-#### File Header
+#### File Header (14 bytes)
 
 ```c
-// From WSA.H
+// From WSA.CPP — on-disk header is the first 14 bytes of WSA_FileHeaderType.
+// EA defines: WSA_FILE_HEADER_SIZE = sizeof(WSA_FileHeaderType) - 2*sizeof(unsigned long)
+// The trailing frame0_offset / frame0_end fields in the struct are actually
+// the first two entries of the offset table, included in the struct for convenience.
 typedef struct {
-    unsigned short NumFrames;     // Number of animation frames
-    unsigned short Width;         // Frame width in pixels
-    unsigned short Height;        // Frame height in pixels
-    unsigned short Delta;         // Delta buffer size
-    unsigned short Flags;         // (unused in RA)
-    unsigned long  Offsets[];     // (NumFrames + 2) offsets to frame data
-} WSA_Header;
+    unsigned short total_frames;        // Number of animation frames
+    unsigned short pixel_x;             // X display offset
+    unsigned short pixel_y;             // Y display offset
+    unsigned short pixel_width;         // Frame width in pixels
+    unsigned short pixel_height;        // Frame height in pixels
+    unsigned short largest_frame_size;  // Largest compressed delta (buffer alloc)
+    short          flags;               // Bit 0: embedded palette; Bit 1: frame-0-is-delta
+} WSA_FileHeaderType; // on-disk: first 14 bytes only
 ```
 
+**Offset table:** Immediately after the header — `(total_frames + 2)` × `u32` entries, offsets relative to the start of the data area (after header + offset table + optional palette).
+
 **Frame data layout:**
-- `Offsets[0]` through `Offsets[NumFrames-1]` point to each frame's LCW-compressed XOR-delta data
-- `Offsets[NumFrames]` points to a loop-back delta (for seamless looping animations)
-- `Offsets[NumFrames+1]` marks end of data (used to compute last frame's compressed size)
+- `Offsets[0]` through `Offsets[total_frames-1]` point to each frame's LCW-compressed XOR-delta data
+- `Offsets[total_frames]` is the loop-back delta (transforms last frame back to frame 0 for seamless looping)
+- `Offsets[total_frames+1]` marks end of data (used to compute the loop delta's compressed size; non-zero value indicates looping is available)
 - If an offset is 0, that frame is identical to the previous frame (no delta)
-- Palette data (768 bytes, 6-bit VGA) may follow the frame data if the WSA includes its own palette
+- When `flags & 1`, a 768-byte palette (256 × 6-bit VGA RGB) follows the offset table before the compressed data
+- When `flags & 2`, frame 0 is an XOR-delta against an external picture (not a standalone frame from black)
 
 **Decoding algorithm:**
-1. Allocate a frame buffer (Width × Height bytes, palette-indexed)
+1. Allocate a frame buffer (`pixel_width × pixel_height` bytes, palette-indexed)
 2. For each frame: LCW-decompress the delta data, then XOR the delta onto the frame buffer
 3. The frame buffer now contains the current frame's pixels
-4. For looping: apply `Offsets[NumFrames]` delta to return to frame 0
+4. For looping: apply `Offsets[total_frames]` delta to return to frame 0
 
 **Security:** Same defensive parsing requirements as other LCW-consuming formats — decompression ratio cap (256:1), output size cap (max 4 MB per frame), iteration counter on LCW decode loop. See V38 in `security/vulns-infrastructure.md`.
 
@@ -718,128 +747,45 @@ typedef struct {
 
 ### FNT Bitmap Font Format (.fnt)
 
-**Source:** `REDALERT/WIN32LIB/FONT.H`, `REDALERT/WIN32LIB/FONT.CPP`
+**Source:** `TIBERIANDAWN/WIN32LIB/FONT.H`, `FONT.CPP`, `LOADFONT.CPP`; Vanilla-Conquer `common/font.cpp` (decompiled `FontHeader` + `Buffer_Print`); `TXTPRNT.ASM` (confirms 4bpp rendering)
 
-FNT files contain bitmap fonts used for in-game text rendering. Each file contains a fixed set of character glyphs as palette-indexed pixel bitmaps.
+FNT files contain bitmap fonts used for in-game text rendering. Each file contains a variable number of glyphs (up to 256), stored as **4bpp nibble-packed** palette-indexed bitmaps.
 
-#### File Header
+#### File Header (20 bytes)
 
 ```c
-// From FONT.H
-typedef struct {
-    unsigned short InfoBlock;     // Offset to font info block
-    unsigned short OffsetBlock;   // Offset to character offset table
-    unsigned short WidthBlock;    // Offset to character width table
-    unsigned short DataBlock;     // Offset to glyph bitmap data
-    unsigned short HeightBlock;   // Offset to per-character height info
-} FontHeader_Type;
+// From Vanilla-Conquer common/font.cpp — reverse-engineered FontHeader.
+// EA's FONT.H uses #define offsets (FONTINFOBLOCK=4, FONTOFFSETBLOCK=6, etc.)
+// rather than a packed struct; the struct below matches the on-disk layout.
+#pragma pack(push, 1)
+struct FontHeader {
+    unsigned short FontLength;        // Total font data size in bytes
+    unsigned char  FontCompress;      // Compression flag (0 = uncompressed; only 0 supported)
+    unsigned char  FontDataBlocks;    // Number of data blocks (must be 5 for TD/RA)
+    unsigned short InfoBlockOffset;   // Byte offset to info block (typically 0x0010)
+    unsigned short OffsetBlockOffset; // Byte offset to per-char offset table (typically 0x0014)
+    unsigned short WidthBlockOffset;  // Byte offset to per-char width table
+    unsigned short DataBlockOffset;   // Byte offset to glyph bitmap data
+    unsigned short HeightOffset;      // Byte offset to per-char height table
+    unsigned short UnknownConst;      // Always 0x1012 or 0x1011 (unused by game code)
+    unsigned char  Pad;               // Padding byte (always 0)
+    unsigned char  CharCount;         // Number of characters minus 1 (last char index)
+    unsigned char  MaxHeight;         // Maximum glyph height in pixels
+    unsigned char  MaxWidth;          // Maximum glyph width in pixels
+};
+#pragma pack(pop)
 ```
 
-**Font info block** (at `InfoBlock` offset):
-- `MaxHeight` (u8) — maximum character height in pixels
-- `MaxWidth` (u8) — maximum character width in pixels
-- `NumChars` (u16) — number of characters (typically 128 or 256)
+**Validation:** `LOADFONT.CPP` requires `FontCompress == 0` and `FontDataBlocks == 5`.
 
 **Per-character data:**
-- **Offset table** (at `OffsetBlock`): `NumChars` × `u16` — byte offset from `DataBlock` to each character's bitmap
-- **Width table** (at `WidthBlock`): `NumChars` × `u8` — pixel width of each character
-- **Glyph data** (at `DataBlock`): raw palette-indexed pixels, 1 byte per pixel, row-major order. Each glyph is `width × height` bytes. Index 0 = transparent background.
+- **Offset table** (at `OffsetBlockOffset`): `(CharCount+1)` × `u16` — byte offset from `DataBlockOffset` to each character's glyph data
+- **Width table** (at `WidthBlockOffset`): `(CharCount+1)` × `u8` — pixel width of each character
+- **Height table** (at `HeightOffset`): `(CharCount+1)` × `u16` — packed: low byte = Y-offset of first data row within the character cell, high byte = number of data rows stored. This allows glyphs to omit leading/trailing transparent rows.
+- **Glyph data** (at `DataBlockOffset`): **4bpp nibble-packed** row-major bitmap data. Two pixels per byte: low nibble = left pixel, high nibble = right pixel. Each glyph row is `ceil(width / 2)` bytes; total glyph size is `ceil(width / 2) × data_rows` bytes. Color index 0 = transparent; indices 1–15 map through a 16-entry color translation table supplied at render time (not stored in the FNT file). Glyphs with width 0 have no pixel data (space characters).
 
 **IC usage:** IC does not use `.fnt` for runtime text rendering (Bevy's font pipeline handles modern TTF/OTF fonts with CJK/RTL support). `.fnt` parsing is needed for: (1) displaying original game fonts faithfully in Classic render mode (D048), (2) Asset Studio (D040) font preview and export.
 
 ---
 
-## Insights from EA's Original Source Code
-
-Repository: https://github.com/electronicarts/CnC_Red_Alert (GPL v3, archived Feb 2025)
-
-### Code Statistics
-- 290 C++ header files, 296 implementation files, 14 x86 assembly files
-- ~222,000 lines of C++ code
-- 430+ `#ifdef WIN32` checks (no other platform implemented)
-- Built with Watcom C/C++ v10.6 and Borland Turbo Assembler v4.0
-
-### Keep: Event/Order Queue System
-
-The original uses `OutList` (local player commands) and `DoList` (confirmed orders from all players), both containing `EventClass` objects:
-
-```cpp
-// From CONQUER.CPP
-OutList.Add(EventClass(EventClass::IDLE, TargetClass(tech)));
-```
-
-Player actions → events → queue → deterministic processing each tick. This is the same pattern as our `PlayerOrder → TickOrders → Simulation::apply_tick()` pipeline. Westwood validated this in 1996.
-
-### Keep: Integer Math for Determinism
-
-The original uses integer math everywhere for game logic — positions, damage, timing. No floats in the simulation. This is why multiplayer worked. Our `FixedPoint` / `SimCoord` approach mirrors this.
-
-### Keep: Data-Driven Rules (INI → MiniYAML → YAML)
-
-Original reads unit stats and game rules from `.ini` files at runtime. This data-driven philosophy is what made C&C so moddable. The lineage: `INI → MiniYAML → YAML` — each step more expressive, same philosophy.
-
-### Keep: MIX Archive Concept
-
-Simple flat archive with hash-based lookup. No compression in the archive itself (individual files may be compressed). For `ra-formats`: read MIX as-is for compatibility; native format can modernize.
-
-### Keep: Compression Flexibility
-
-Original implements LCW, LZO, and LZW compression. LZO was settled on for save games:
-```cpp
-// From SAVELOAD.CPP
-LZOPipe pipe(LZOPipe::COMPRESS, SAVE_BLOCK_SIZE);
-// LZWPipe pipe(LZWPipe::COMPRESS, SAVE_BLOCK_SIZE);  // tried, abandoned
-// LCWPipe pipe(LCWPipe::COMPRESS, SAVE_BLOCK_SIZE);   // tried, abandoned
-```
-
-### Leave Behind: Session Type Branching
-
-Original code is riddled with network-type checks embedded in game logic:
-```cpp
-if (Session.Type == GAME_IPX || Session.Type == GAME_INTERNET) { ... }
-```
-
-This is the anti-pattern our `NetworkModel` trait eliminates. Separate code paths for IPX, Westwood Online, MPlayer, TEN, modem — all interleaved with `#ifdef`. The developer disliked the Westwood Online API enough to write a complete wrapper around it.
-
-### Leave Behind: Platform-Specific Rendering
-
-DirectDraw surface management with comments like "Aaaarrgghh!" when hardware allocation fails. Manual VGA mode detection. Custom command-line parsing. `wgpu` solves all of this.
-
-### Leave Behind: Manual Memory Checking
-
-The game allocates 13MB and checks if it succeeds. Checks that `sleep(1000)` actually advances the system clock. Checks free disk space. None of this translates to modern development.
-
-### Interesting Historical Details
-
-- Code path for 640x400 display mode with special VGA fallback
-- `#ifdef FIXIT_CSII` for Aftermath expansion — comment explains they broke the ability to build vanilla Red Alert executables and had to fix it later
-- Developer comments reference "Counterstrike" in VCS headers (`$Header: /CounterStrike/...`)
-- MPEG movie playback code exists but is disabled
-- Game refuses to start if launched from `f:\projects\c&c0` (the network share)
-
-## Coordinate System Translation
-
-For cross-engine compatibility, coordinate transforms must be explicit:
-
-```rust
-pub struct CoordTransform {
-    pub our_scale: i32,       // our subdivisions per cell
-    pub openra_scale: i32,    // 1024 for OpenRA (WDist/WPos)
-    pub original_scale: i32,  // original game's lepton system
-}
-
-impl CoordTransform {
-    pub fn to_wpos(&self, pos: &CellPos) -> (i32, i32, i32) {
-        ((pos.x * self.openra_scale) / self.our_scale,
-         (pos.y * self.openra_scale) / self.our_scale,
-         (pos.z * self.openra_scale) / self.our_scale)
-    }
-    pub fn from_wpos(&self, x: i32, y: i32, z: i32) -> CellPos {
-        CellPos {
-            x: (x * self.our_scale) / self.openra_scale,
-            y: (y * self.our_scale) / self.openra_scale,
-            z: (z * self.our_scale) / self.openra_scale,
-        }
-    }
-}
-```
+> Architecture lessons from EA's GPL source code and coordinate system translation are in [EA Source Code Insights](ea-source-insights.md).

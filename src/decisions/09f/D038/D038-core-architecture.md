@@ -1,4 +1,4 @@
-﻿## D038 — Scenario Editor (OFP/Eden-Inspired, SDK)
+## D038 — Scenario Editor (OFP/Eden-Inspired, SDK)
 
 **Revision note (2026-02-22):** Revised to formalize two advanced mission-authoring patterns requested for campaign-style scenarios: **Map Segment Unlock** (phase-based expansion of a pre-authored battlefield without runtime map resizing) and **Sub-Scenario Portal** (IC-native transitions into interior/mini-scenario spaces with optional cutscene/briefing bridges and explicit state handoff). This revision clarifies what is first-class in the editor versus what remains a future engine-level runtime-instance feature.
 

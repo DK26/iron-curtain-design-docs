@@ -1,4 +1,4 @@
-﻿### Dynamic Mission Flow (Map Expansion, Sub-Maps, Phase Transitions)
+### Dynamic Mission Flow (Map Expansion, Sub-Maps, Phase Transitions)
 
 Classic C&C missions — and especially OFP/ArmA missions — aren't static. The map *changes* as you play: new areas reveal when objectives are completed, units enter building interiors for infiltration sequences, briefings fire between phases. Iron Curtain makes all of this first-class, scriptable, and editor-friendly.
 

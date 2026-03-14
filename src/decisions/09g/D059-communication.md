@@ -1,4 +1,4 @@
-﻿## D059 — In-Game Communication System
+## D059 — In-Game Communication System
 
 > **Keywords:** text chat, VoIP, voice chat, Opus, pings, beacons, tactical markers, chat wheel, minimap drawing, voice-in-replay, tactical coordination, relay voice, spatial audio, jitter buffer, voice effects
 

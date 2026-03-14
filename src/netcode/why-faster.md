@@ -29,7 +29,7 @@ The relay server owns the clock. It broadcasts tick orders on a fixed deadline �
 ```
 Tick 50: relay deadline = 80ms
          Player A orders arrive at 10ms  → ✓ included
-         Player B orders arrive at 15ms  → ✓ included  
+         Player B orders arrive at 15ms  → ✓ included
          Player C orders arrive at 280ms → ✗ missed deadline → Idle
          → Relay broadcasts at 80ms. No stall. Player C's units idle.
 ```

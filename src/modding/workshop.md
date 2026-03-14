@@ -1,4 +1,4 @@
-﻿# Modding System  Workshop (Federated Resource Registry, P2P Distribution, Moderation)
+# Modding System  Workshop (Federated Resource Registry, P2P Distribution, Moderation)
 
 Full design for the Workshop content distribution platform: federated repository architecture, P2P delivery, resource registry with semver dependencies, licensing, moderation, LLM-driven discovery, Steam integration, modpacks, and Workshop API. Decisions D030, D035, D036, D049.
 

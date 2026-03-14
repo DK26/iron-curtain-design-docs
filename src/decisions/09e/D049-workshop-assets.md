@@ -1,4 +1,4 @@
-﻿## D049: Workshop Asset Formats & Distribution — Bevy-Native Canonical, P2P Delivery
+## D049: Workshop Asset Formats & Distribution — Bevy-Native Canonical, P2P Delivery
 
 ### Decision Capsule (LLM/RAG Summary)
 
@@ -76,7 +76,7 @@ Modern formats are somewhat larger for legacy-quality content but the difference
 The Asset Studio (D040) converts in both directions:
 - **Import:** .aud/.shp/.vqa/.pal → OGG/PNG/WebM/.pal (for modders working with legacy assets)
 - **Export:** OGG/PNG/WebM → .aud/.shp/.vqa (for modders targeting OpenRA compatibility or classic aesthetic)
-- **Batch convert:** `ic mod convert --to-modern` or `ic mod convert --to-classic` converts entire mod directories (binary asset conversion: `.shp` → PNG, `.aud` → OGG, `.vqa` → WebM, and reverse). This is distinct from `cnc-formats convert` which handles single-file text format conversion (MiniYAML → YAML) — see D020 § Conversion Command Boundary for the canonical split.
+- **Batch convert:** `ic mod convert --to-modern` or `ic mod convert --to-classic` converts entire mod directories (binary asset conversion: `.shp` → PNG, `.aud` → OGG, `.vqa` → WebM, and reverse). This is distinct from `cnc-formats convert` which handles single-file format conversion (both text and binary: MiniYAML → YAML, SHP ↔ PNG, AUD ↔ WAV, VQA ↔ AVI, etc.) — see D020 § Conversion Command Boundary for the canonical split.
 
 The engine loads both format families at runtime. `cnc-formats` parsers (via `ra-formats` Bevy integration) handle legacy formats; Bevy's built-in loaders handle modern formats. No manual conversion is ever required — only recommended for new Workshop publications.
 

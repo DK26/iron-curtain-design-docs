@@ -1,4 +1,4 @@
-﻿## Feature Cluster Dependency Matrix - M5-M6
+## Feature Cluster Dependency Matrix - M5-M6
 
 > Continued from [clusters-m2-m4.md](clusters-m2-m4.md). See [milestone-dependency-map.md](../milestone-dependency-map.md) for navigation.
 

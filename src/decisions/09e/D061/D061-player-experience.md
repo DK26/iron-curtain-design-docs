@@ -1,4 +1,4 @@
-﻿### Player Experience
+### Player Experience
 
 The mechanical design above (CLI, formats, directory layout) is the foundation. This section defines what the *player* actually sees and feels. The guiding principle: **players should never lose data without trying.** The system works in layers:
 

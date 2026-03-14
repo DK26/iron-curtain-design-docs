@@ -1,4 +1,4 @@
-﻿# Milestone Dependency Map (Execution Overlay)
+# Milestone Dependency Map (Execution Overlay)
 
 Keywords: milestone dag, dependency graph, critical path, feature clusters, roadmap overlay, implementation order, hard dependency, soft dependency
 

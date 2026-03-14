@@ -1,4 +1,4 @@
-﻿### Campaign Editor
+### Campaign Editor
 
 D021 defines the campaign *system* — branching mission graphs, persistent rosters, story flags. But a system without an editor means campaigns are hand-authored YAML, which limits who can create them. The Campaign Editor makes D021's full power visual.
 

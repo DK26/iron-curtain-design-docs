@@ -83,10 +83,10 @@ class QTNode : public INode {
     float speedModSum;          // Sum of terrain speed modifiers in this node
     float speedModAvg;          // Average speed modifier
     float moveCostAvg;          // Average move cost
-    
+
     std::vector<INode*> neighbors;  // Adjacent nodes
     std::vector<float2> netpoints;  // Edge transition points for smooth paths
-    
+
     // Quadtree subdivision
     unsigned int xmin, xmax, zmin, zmax;
     QTNode* children[4];  // TL, TR, BR, BL (null if leaf)
@@ -103,13 +103,13 @@ class QTNode : public INode {
 struct PathSearch : public IPathSearch {
     // Supports both A* (hCostMult > 0) and Dijkstra (hCostMult = 0)
     float hCostMult;            // 1/maxRelSpeedMod for A*, 0 for Dijkstra
-    
+
     binary_heap<INode*> openNodes;  // Global priority queue (reused across searches)
-    
+
     NodeLayer* nodeLayer;
     INode *srcNode, *tgtNode;
     INode *curNode, *minNode;   // Current and best-partial node
-    
+
     float3 srcPoint, tgtPoint;  // World-space coordinates
 };
 ```
@@ -181,7 +181,7 @@ Key design: the navgrid uses **bitwise passability classes** — each navcell st
 class LongPathfinder {
     Grid<NavcellData>* m_Grid;     // Passability grid
     u16 m_GridSize;                // Grid dimensions
-    
+
     void ComputeJPSPath(const HierarchicalPathfinder& hierPath,
                         entity_pos_t x0, entity_pos_t z0,
                         const PathGoal& origGoal,
@@ -198,20 +198,20 @@ function ComputeJPSPath(source, goal, passClass):
     // Step 1: Make goal reachable
     hierPath.MakeGoalReachable(source, goal, passClass)
     // Uses hierarchical pathfinder to find nearest reachable cell to goal
-    
+
     // Step 2: JPS search
     state.open.push(source, cost=0)
-    
+
     while not state.open.empty():
         curr = state.open.pop()
-        
+
         for each direction:
             jump_point = Jump(curr, direction)
             if jump_point found:
                 g = curr.cost + distance(curr, jump_point)
                 h = CalculateHeuristic(jump_point, goal)
                 state.open.push(jump_point, g + h)
-    
+
     // Step 3: Post-process waypoints
     ImprovePathWaypoints(path, passClass)
 ```
@@ -256,14 +256,14 @@ The vertex pathfinder handles **short distances with high precision** — it nav
 ```cpp
 class HierarchicalPathfinder {
     typedef u32 GlobalRegionID;
-    
+
     struct RegionID {
         // Identifies a connected region within a chunk
     };
-    
+
     void Recompute(Grid<NavcellData>* grid, ...);
     void Update(Grid<NavcellData>* grid, const Grid<u8>& dirtinessGrid);
-    
+
     GlobalRegionID GetGlobalRegion(u16 i, u16 j, pass_class_t passClass) const;
     void MakeGoalReachable(u16 i0, u16 j0, PathGoal& goal, pass_class_t passClass);
 };
@@ -292,7 +292,7 @@ This is directly relevant to IC's fixed-point requirement. 0 A.D. proves that JP
 class CCmpPathfinder {
     std::vector<VertexPathfinder> m_VertexPathfinders;  // One per worker thread
     std::vector<Future<void>> m_Futures;                // Worker thread futures
-    
+
     PathRequests<LongPathRequest> m_LongPathRequests;
     PathRequests<ShortPathRequest> m_ShortPathRequests;
 };
@@ -305,11 +305,11 @@ Path requests are queued and computed by worker threads. Results are delivered a
 ```cpp
 void CCmpUnitMotion::ComputePathToGoal(from, goal) {
     bool shortPath = InShortPathRange(goal, from);
-    
+
     // Alternate between long and short pathfinder to handle edge cases
     if (ShouldAlternatePathfinder())
         shortPath = !shortPath;
-    
+
     if (shortPath)
         RequestShortPath(from, goal, extendRange=true);
     else
@@ -373,10 +373,10 @@ The core optimization. When a unit pathfinds to a destination, the entire A* exp
 struct PathfindContext {
     PathCoord tileS;        // Destination tile (search starts from dest)
     uint16_t iteration;     // Lazy deletion generation counter
-    
+
     std::vector<PathNode> nodes;        // Open list (priority heap)
     std::vector<PathExploredTile> map;  // Full map exploration state
-    
+
     PathCoord nearestCoord;             // Nearest reachable tile to dest
     std::shared_ptr<const PathBlockingMap> blockingMap;
 };
@@ -407,7 +407,7 @@ Cache eviction:
 class PathfindContextList {
     std::vector<PathfindContext> contexts;       // Actual storage
     std::vector<size_t> orderedIndexes;          // LRU ordering
-    
+
     void moveToFront(Iterator it);  // Recently used → front of list
 };
 ```
@@ -475,7 +475,7 @@ if (dir % 2 != 0) {  // Diagonal direction
     x2 = node.p.x + aDirOffset[(dir + 1) % 8].x;
     y2 = node.p.y + aDirOffset[(dir + 1) % 8].y;
     if (context.isBlocked(x2, y2)) continue;  // Skip diagonal
-    
+
     x2 = node.p.x + aDirOffset[(dir + 7) % 8].x;
     y2 = node.p.y + aDirOffset[(dir + 7) % 8].y;
     if (context.isBlocked(x2, y2)) continue;  // Skip diagonal

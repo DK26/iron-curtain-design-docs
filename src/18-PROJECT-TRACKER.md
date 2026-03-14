@@ -1,4 +1,4 @@
-﻿# 18 — Project Tracker & Implementation Planning Overlay
+# 18 — Project Tracker & Implementation Planning Overlay
 
 Keywords: milestone overlay, dependency map, progress tracker, design status, implementation status, Dxxx tracker, feature clusters, critical path
 

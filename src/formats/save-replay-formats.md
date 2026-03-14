@@ -1,4 +1,4 @@
-﻿## Save Game Format
+## Save Game Format
 
 Save games store a complete `SimSnapshot` — the entire sim state at a single tick, sufficient to restore the game exactly.
 
@@ -270,7 +270,7 @@ Periodic `SimSnapshot` or `DeltaSnapshot` captures that enable fast seeking with
 
 ### Analysis Event Stream
 
-SC2-inspired analytical data stream sampled during recording — enables stats sites, tournament review, and coaching tools to extract rich data without re-simulating. 18 event types covering unit lifecycle, economy, camera tracking, selection/control groups, abilities, votes, and match structure. For the full `AnalysisEvent` enum, competitive analysis rationale, and compression details, see [Replay Keyframes & Analysis Events](replay-keyframes-analysis.md) § Analysis Event Stream.
+SC2-inspired analytical data stream sampled during recording — enables stats sites, tournament review, and coaching tools to extract rich data without re-simulating. 21 event types covering unit lifecycle, economy, camera tracking, selection/control groups, abilities, votes, match structure, and highlight detection signals (6 engagement-level events added by D077: `EngagementStarted`, `EngagementEnded`, `SuperweaponFired`, `BaseDestroyed`, `ArmyWipe`, `ComebackMoment`). For the full `AnalysisEvent` enum, competitive analysis rationale, and compression details, see [Replay Keyframes & Analysis Events](replay-keyframes-analysis.md) § Analysis Event Stream.
 
 ### Signature Chain (Relay-Certified Replays)
 

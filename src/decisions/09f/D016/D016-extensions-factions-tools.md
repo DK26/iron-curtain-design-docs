@@ -1,4 +1,4 @@
-﻿#### Extended Generative Campaign Modes
+#### Extended Generative Campaign Modes
 
 The three core generative modes — **Narrative** (fixed-length), **Open-Ended** (condition-driven), and **World Domination** (world map + LLM narrative director) — are the structural foundations. But the LLM's expressive range and IC's compositional architecture enable a much wider vocabulary of campaign experiences. Each mode below composes from existing systems (D021 branching, CharacterState, MBTI dynamics, battle reports, roster persistence, story flags, world map renderer, Workshop resources) — no new engine changes required.
 

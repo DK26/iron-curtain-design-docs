@@ -158,7 +158,7 @@ SC2's ranked ladder is the closest RTS reference for IC:
 - **Duo queue restrictions:** Higher-ranked players can't duo with much lower-ranked friends (smurf prevention)
 
 **Lessons for IC:**
-1. **LP/MMR disconnect creates frustration** — players feel "stuck" when their MMR settles but LP gains are small. IC should avoid this by making the rating visible.  
+1. **LP/MMR disconnect creates frustration** — players feel "stuck" when their MMR settles but LP gains are small. IC should avoid this by making the rating visible.
 2. **10 tiers may be too many** for an RTS with smaller populations — the "Emerald" tier was added later to address population clustering, which wouldn't be IC's problem
 3. **Promotion series** (before removal) were universally hated — don't add gatekeeping matches at tier boundaries
 4. **Duo queue restrictions** are important for competitive integrity

@@ -1,4 +1,4 @@
-﻿## D034: SQLite as Embedded Storage for Services and Client
+## D034: SQLite as Embedded Storage for Services and Client
 
 **Decision:** Use SQLite (via `rusqlite`) as the embedded database for all backend services that need persistent state and for the game client's local metadata indices. No external database dependency required for any deployment.
 

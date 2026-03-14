@@ -1,4 +1,4 @@
-﻿## Feature Cluster Sources and Extraction Scope (Baseline)
+## Feature Cluster Sources and Extraction Scope (Baseline)
 
 | Source                      | Extraction Scope in This Map                                                                               | Baseline Status                                |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |

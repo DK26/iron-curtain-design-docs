@@ -1,4 +1,4 @@
-﻿## Feature Cluster Dependency Matrix - M8
+## Feature Cluster Dependency Matrix - M8
 
 > See [milestone-dependency-map.md](../milestone-dependency-map.md) for navigation.
 

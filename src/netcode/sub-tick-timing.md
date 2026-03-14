@@ -212,7 +212,7 @@ The relay server owns the clock. If your orders don't arrive within the tick dea
 impl RelayServer {
     fn process_tick(&mut self, tick: u64) {
         let deadline = Instant::now() + self.tick_deadline; // e.g., 120ms
-        
+
         for player in &self.players {
             match self.receive_orders_from(player, deadline) {
                 Ok(orders) => self.tick_orders.add(player, orders),
@@ -249,7 +249,7 @@ impl OrderBudget {
     fn tick(&mut self) {
         self.tokens = (self.tokens + self.refill_per_tick).min(self.burst_cap);
     }
-    
+
     fn try_consume(&mut self, count: u32) -> u32 {
         let accepted = count.min(self.tokens);
         self.tokens -= accepted;

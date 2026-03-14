@@ -180,7 +180,7 @@ Music/
 │   └── Custom/
 └── Event/               # victory, defeat, mission start
 Cutscenes/
-├── Briefing/            # pre-mission briefings  
+├── Briefing/            # pre-mission briefings
 ├── InGame/              # triggered during gameplay
 └── Cinematic/           # standalone story videos
 ```
@@ -202,7 +202,7 @@ mod:
     purpose: "Starting point for LLM mission generation — all resources are ai_usage:allow and license-compatible"
     gameplay_tags: [soviet, campaign, starter_kit, curated]
     composition_hints: "Use as a base, then search for mission-specific assets"
-  
+
 composition:
   resources:
     - id: "alice/soviet-briefing-pack"

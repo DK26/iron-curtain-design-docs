@@ -1,4 +1,4 @@
-﻿### LLM-Generated Custom Factions
+### LLM-Generated Custom Factions
 
 Beyond missions and campaigns, the LLM can generate **complete custom factions** — a tech tree, unit roster, building roster, unique mechanics, visual identity, and faction personality — from a natural language description. The output is standard YAML (Tier 1), optionally with Lua scripts (Tier 2) for unique abilities. A generated faction is immediately playable in skirmish and custom games, shareable via Workshop, and fully editable by hand.
 

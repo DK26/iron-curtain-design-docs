@@ -1,4 +1,4 @@
-﻿### Game Master Mode (Zeus-Inspired)
+### Game Master Mode (Zeus-Inspired)
 
 A real-time scenario manipulation mode where one player (the Game Master) controls the scenario while others play. Derived from the scenario editor's UI but operates on a live game.
 

@@ -1,4 +1,4 @@
-﻿### Resilience Philosophy: Hackable but Unbreakable
+### Resilience Philosophy: Hackable but Unbreakable
 
 IC gives users power over their data — open `.db` files, shipped `.sql` queries (D034), full CLI access, external tool compatibility. This is the "hacky in the good way" philosophy: transparent, moddable, empowering. But power without safety is dangerous. The design must ensure that **no user action can permanently break the game**, and that recovery from mistakes is always possible.
 

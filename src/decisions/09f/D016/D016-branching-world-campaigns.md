@@ -1,4 +1,4 @@
-﻿#### Saving, Replaying, and Sharing
+#### Saving, Replaying, and Sharing
 
 **Campaign library:**
 
@@ -235,9 +235,9 @@ world_domination:
       color: "#888888"
       starting_regions: ["stockholm", "bern", "ankara", "cairo"]
       ai_personality: "defensive"      # defends territory, doesn't expand
-  
+
   # The LLM decides when and how the campaign ends — these are hints, not hard rules.
-  # The LLM may end the campaign with a climactic finale at 60% control, or let 
+  # The LLM may end the campaign with a climactic finale at 60% control, or let
   # the player push to 90% if the narrative supports it.
   narrative_hints:
     goal_direction: west               # general direction of conquest (flavor for LLM)

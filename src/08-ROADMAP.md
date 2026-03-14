@@ -1,4 +1,4 @@
-﻿# 08 — Development Roadmap (36 Months)
+# 08 — Development Roadmap (36 Months)
 
 ## Phase Dependencies
 
@@ -22,7 +22,7 @@ Phase 0 (Foundation)
 ### Deliverables
 - `ra-formats` crate: parse `.mix` archives, SHP/TMP sprites, `.aud` audio, `.pal` palettes, `.vqa` video
 - Parse OpenRA YAML manifests, map format, rule definitions
-- `cnc-formats` CLI tool — Phase 0 subcommands: `validate` (structural correctness check), `inspect` (dump archive contents and format metadata, `--json` for machine-readable output), `convert` (extensible `--from`/`--to` format conversion; current: `--from miniyaml --to yaml`)
+- `cnc-formats` CLI tool — Phase 0 subcommands: `validate` (structural correctness check), `inspect` (dump archive contents and format metadata, `--json` for machine-readable output), `convert` (extensible `--format`/`--to` format conversion; **text:** `--format miniyaml --to yaml` behind `miniyaml` feature; **binary:** SHP↔PNG, SHP↔GIF, AUD↔WAV, VQA↔AVI, WSA↔PNG/GIF, TMP→PNG, PAL→PNG, FNT→PNG behind `convert` feature; **text sprites:** `--to ist` / `--format ist` behind `ist` feature flag)
 - **Runtime MiniYAML loading (D025):** MiniYAML files load directly at runtime — auto-converts in memory, no pre-conversion required
 - **OpenRA vocabulary alias registry (D023):** Accept OpenRA trait names (`Armament`, `Valued`, etc.) as YAML key aliases alongside IC-native names
 - **OpenRA mod manifest parser (D026):** Parse OpenRA `mod.yaml` manifests, map directory layout to IC equivalents
@@ -65,6 +65,7 @@ Open source `cnc-formats` (MIT/Apache-2.0) early. Useful standalone for any C&C 
 - OpenRA trait name aliases resolve correctly to IC components (D023)
 - Can extract and display sprites from .mix archives
 - Can convert MiniYAML to standard YAML losslessly
+- Can convert `.shp + .pal` to IST and back losslessly (`cnc-formats convert --to ist` / `--format ist`, behind `ist` feature flag — see D076)
 - Code of conduct and RFC process published (D037)
 - SPDX headers present on all source files; `cargo deny check licenses` passes
 - GitHub template repo published; new engine repo instantiated from template has passing CI and a working `AGENTS.md` pointing to the design docs
@@ -125,6 +126,7 @@ Open source `cnc-formats` (MIT/Apache-2.0) early. Useful standalone for any C&C 
 - **System execution order documented and fixed**
 - **State hashing for desync detection**
 - **Engine telemetry foundation (D031):** Unified `telemetry_events` SQLite schema shared by all components; `tracing` span instrumentation on sim systems; per-system tick timing; gameplay event stream (`GameplayEvent` enum) behind `telemetry` feature flag; `/analytics status/inspect/export/clear` console commands; zero-cost engine instrumentation when disabled
+- **Highlight analysis events (D077):** 6 new Analysis Event types in the `.icrep` event stream — `EngagementStarted`, `EngagementEnded`, `SuperweaponFired`, `BaseDestroyed`, `ArmyWipe`, `ComebackMoment` — observation-only events emitted during match recording for post-match highlight detection
 - **Client-side SQLite storage (D034):** Replay catalog, save game index, gameplay event log, asset index — embedded SQLite for local metadata; queryable without OTEL stack
 - **`ic backup` CLI (D061):** `ic backup create/restore/list/verify` — ZIP archive with SQLite `VACUUM INTO` for consistent database copies; `--exclude`/`--only` category filtering; ships alongside save/load system
 - **Automatic daily critical snapshots (D061):** Rotating 3-day `auto-critical-N.zip` files (~5 MB) containing keys, profile, community credentials, achievements, config — created silently on first launch of the day; protects all players regardless of cloud sync status
@@ -177,6 +179,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - Feels like Red Alert to someone who's played it before
 
 **Stretch goals (target Phase 3, can slip to early Phase 4 without blocking):**
+- **Replay highlight detection & POTG (D077):** Four-dimension scoring pipeline (engagement/momentum/anomaly/rarity) over recorded Analysis Event Stream; Play-of-the-Game viewport on post-game screen; per-player highlight library in SQLite; main menu highlight background option; `/highlight` console commands; highlight camera AI
 - **Screenshot browser (D061):** In-game screenshot gallery with metadata filtering (map, mode, date), thumbnail grid, and "Watch replay" linking via `IC:ReplayFile` metadata
 - **Data & Backup settings panel (D061):** In-game Settings → Data & Backup with Data Health summary (identity/sync/backup status), backup create/restore buttons, backup file list, cloud sync status, and Export & Portability section
 - **First-launch identity + backup prompt (D061):** New player flow after D032 theme selection — identity creation with recovery phrase display, cloud sync offer (Steam/GOG), backup recommendation for non-cloud installs; returning player flow includes mnemonic recovery option alongside backup restore

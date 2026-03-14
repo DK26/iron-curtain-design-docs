@@ -1,4 +1,4 @@
-﻿## Granular Foundational Execution Ladder (RA First Mission Loop -> Project Completion)
+## Granular Foundational Execution Ladder (RA First Mission Loop -> Project Completion)
 
 > This section refines the early critical path into a **build-order ladder** for the first playable Red Alert mission loop. It does not replace `M0–M11`; it decomposes the early milestones into implementation steps and then reconnects them to the milestone sequence through completion.
 

@@ -288,11 +288,11 @@ fn compute_trust_score(f: &TrustFactors) -> u16 {
     let commends = (f.commend_rate.clamp(0.0, 0.5) / 0.5) * 1500.0;
     let reports = -(f.report_rate.clamp(0.0, 0.3) / 0.3) * 2000.0;
     let abandons = -(f.abandon_rate.clamp(0.0, 0.1) / 0.1) * 2000.0;
-    
+
     // Anti-cheat points are the dominant negative factor —
     // no positive factor can override active anti-cheat flags
     let anti_cheat = -(f.anti_cheat_points as f64 / 25.0) * 6000.0;
-    
+
     let raw = 6000.0 + age + games + seasons + commends + reports + abandons + anti_cheat;
     raw.clamp(0.0, 12000.0) as u16
 }

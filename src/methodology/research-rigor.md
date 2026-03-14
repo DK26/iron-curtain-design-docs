@@ -1,4 +1,4 @@
-﻿## Stage 7: Integration & Validation
+## Stage 7: Integration & Validation
 
 > How isolated pieces come together. Where bugs live. Where the community weighs in.
 

@@ -1,4 +1,4 @@
-﻿# 16 — Coding Standards
+# 16 — Coding Standards
 
 ## Purpose of This Chapter
 

@@ -42,7 +42,7 @@ for each 10×10 grid on the map:
     flood_fill passable cells within grid boundaries
     each connected region → one AbstractNode
     record which cells belong to which region
-    
+
 for each pair of adjacent grids:
     find cells on shared border that are passable on both sides
     create AbstractEdge between the corresponding regions
@@ -54,24 +54,24 @@ for each pair of adjacent grids:
 ```
 function FindPath(source, target, check, locomotor):
     1. Rebuild any dirty grids (terrain/actors changed)
-    
+
     2. Domain check:
        sourceDomain = abstractDomains[source]
        targetDomain = abstractDomains[target]
        if sourceDomain != targetDomain:
            return PathComplete  // No path possible
-    
+
     3. Short-distance optimization:
        if grid_distance(source, target) <= 2:
            // Skip abstract search, do bounded local A*
            return LocalSearch(source, target, heuristic_weight=100%)
-    
+
     4. Abstract path search:
        abstractPath = SearchAbstractGraph(source_region, target_region)
        // Returns sequence of abstract nodes to traverse
-    
+
     5. Local A* guided by abstract path:
-       return BidirectionalSearch(source, target, 
+       return BidirectionalSearch(source, target,
                                   heuristic=abstract_path_distance,
                                   weight=125%)
 ```
@@ -90,7 +90,7 @@ Standard A* with configurable features:
 class PathSearch {
     PriorityQueue<CPos> openQueue;          // Min-heap by f-cost
     Dictionary<CPos, CellInfo> cellInfos;   // g-cost, parent, status
-    
+
     // Heuristic: diagonal distance (Chebyshev-like)
     int Heuristic(CPos here) {
         var diag = Math.Min(dx, dy);
@@ -121,7 +121,7 @@ Each actor type has a `Locomotor` definition that determines:
 ^Vehicle:
   Mobile:
     Locomotor: unit
-    
+
 Locomotor@unit:
   Crushes: wall, infantry
   CrushDamageTypes: Crush
@@ -146,7 +146,7 @@ The pathfinder responds to map changes via events:
 
 ```
 CellCostChanged(cell)      → mark containing grid as "dirty"
-CellUpdated(cell)          → mark containing grid as "dirty"  
+CellUpdated(cell)          → mark containing grid as "dirty"
 CellProjectionChanged(cell) → update custom movement layers
 
 On next FindPath call:

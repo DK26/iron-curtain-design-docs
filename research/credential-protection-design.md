@@ -1,7 +1,7 @@
 # Credential Protection at Rest — Design Specification
 
-> **Status:** Design study  
-> **Resolves:** Underspecified `CredentialStore` in D047 (byollm-implementation-spec §2.3), identity key encryption in D052/D061, backup credential safety  
+> **Status:** Design study
+> **Resolves:** Underspecified `CredentialStore` in D047 (byollm-implementation-spec §2.3), identity key encryption in D052/D061, backup credential safety
 > **Cross-references:** D034 (SQLite), D047 (LLM config), D052 (community servers/signed credentials), D061 (data backup), D074 (server secrets), 06-SECURITY (threat model V61)
 
 ## Problem Statement

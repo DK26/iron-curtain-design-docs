@@ -1,4 +1,4 @@
-﻿### Layer 3 — New Player Pipeline
+### Layer 3 — New Player Pipeline
 
 The first-launch flow (see `17-PLAYER-FLOW.md`) includes a self-identification step:
 

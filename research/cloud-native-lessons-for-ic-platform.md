@@ -104,16 +104,16 @@ Phase 1: DRAIN ANNOUNCED
   - Server announces "draining" status to federation peers
   - Matchmaking service stops routing players to this server
   - Active matches continue unaffected
-  
+
 Phase 2: DRAIN ACTIVE (configurable: default 30 minutes)
   - In-flight matches run to completion (or timeout)
   - Players in lobby are notified: "This server is restarting. Your match will not be affected, but no new matches will be created."
   - Idle connections time out normally
-  
+
 Phase 3: FORCE DRAIN (after grace period)
   - Remaining matches are saved (snapshot) and players are disconnected with reason "server_restart"
   - Players receive a suggested alternative server (from federation)
-  
+
 Phase 4: SHUTDOWN
   - Flush all SQLite databases
   - Close P2P connections cleanly (BT disconnect messages)
@@ -143,7 +143,7 @@ Every K8s release includes automatic migration for its stored state (etcd). When
 
 The broader cloud-native lesson: **every piece of persisted schema must be versioned, and every version bump must have a migration path.** This applies to:
 - Database schemas (the obvious one)
-- Configuration file formats (when fields are renamed, moved, or deprecated)  
+- Configuration file formats (when fields are renamed, moved, or deprecated)
 - Wire protocol versions (when message formats change)
 - Serialized state formats (replay files, snapshots, credential files)
 
@@ -195,11 +195,11 @@ Handshake:
   Client sends ic_version = 5
   Server supports [4, 5, 6]
   → Negotiate to min(client, max(server_supported)) = 5
-  
+
   Client sends ic_version = 3
   Server supports [4, 5, 6]
   → Reject with reason: "protocol_version_too_old", minimum: 4
-  
+
   Client sends ic_version = 7
   Server supports [4, 5, 6]
   → Negotiate to 6 (server's max), client must handle gracefully
@@ -236,7 +236,7 @@ The federation layer should support a declarative desired state for the communit
 # "What our community should look like"
 community:
   name: "RA Competitive League"
-  
+
   # Relay capacity — at least 2 relays, each handling up to 50 games
   relays:
     min_replicas: 2
@@ -244,14 +244,14 @@ community:
     per_relay:
       max_games: 50
       profile: competitive
-  
+
   # Workshop seeding — content always available
   workshop:
     min_seeders: 1
     seed_packages:
       - "league/official-maps@^2.0"
       - "league/balance-patch@=3.1.0"
-  
+
   # Ranking — exactly one authority
   ranking:
     replicas: 1
@@ -373,7 +373,7 @@ Every 5 minutes (configurable):
     missing = desired - actual
     extra   = actual - desired (unused cached packages)
     revoked = actual ∩ revocation_list
-    
+
     for pkg in missing:
         download(pkg)     # P2P preferred
     for pkg in revoked:
@@ -395,7 +395,7 @@ Every 10 minutes:
     desired = trust_anchors consensus document
     actual  = local trust state (trusted/untrusted/revoked servers)
     diff    = desired - actual
-    
+
     for server in diff.newly_trusted:
         add_to_federation(server)
     for server in diff.newly_revoked:
@@ -409,7 +409,7 @@ Every 10 minutes:
 Every 30 seconds:
     desired = capabilities from server_config.toml
     actual  = running capability status
-    
+
     if desired.relay && !actual.relay_ready:
         restart_relay_subsystem()
     if desired.workshop && !actual.workshop_seeding:

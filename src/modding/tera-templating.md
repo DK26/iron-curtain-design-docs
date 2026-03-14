@@ -1,4 +1,4 @@
-﻿# Tera Templating
+# Tera Templating
 
 ### Tera as the Template Engine
 
@@ -61,32 +61,32 @@ parameters:
     options: [small, medium, large]
     default: medium
     description: "Overall map dimensions"
-  
+
   player_faction:
     type: enum
     options: [allies, soviet]
     default: allies
     description: "Player's faction"
-  
+
   enemy_waves:
     type: integer
     min: 3
     max: 20
     default: 8
     description: "Number of enemy attack waves"
-  
+
   difficulty:
     type: enum
     options: [easy, normal, hard, brutal]
     default: normal
     description: "Controls enemy unit count and AI aggression"
-  
+
   reinforcement_type:
     type: enum
     options: [infantry, armor, air, mixed]
     default: mixed
     description: "What reinforcements the player receives"
-  
+
   enable_naval:
     type: boolean
     default: false
@@ -489,7 +489,7 @@ scenes/
 mission:
   name: "Behind Enemy Lines — {{ difficulty | title }}"
   briefing: >
-    Infiltrate the Soviet base. Destroy the radar, 
+    Infiltrate the Soviet base. Destroy the radar,
     then extract before reinforcements arrive.
 
 scenes:

@@ -1,4 +1,4 @@
-﻿### P2P Distribution (BitTorrent/WebTorrent)
+### P2P Distribution (BitTorrent/WebTorrent)
 
 > **Wire protocol specification:** For the byte-level BT wire protocol, piece picker algorithm, choking strategy, authenticated announce, WebRTC signaling, `icpkg` binary header, and DHT design, see `research/p2p-engine-protocol-design.md`.
 

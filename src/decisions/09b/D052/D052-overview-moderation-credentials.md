@@ -1,4 +1,4 @@
-﻿## D052: Community Servers with Portable Signed Credentials
+## D052: Community Servers with Portable Signed Credentials
 
 ### Decision Capsule (LLM/RAG Summary)
 

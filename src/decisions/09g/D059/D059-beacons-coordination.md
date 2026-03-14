@@ -1,4 +1,4 @@
-﻿### 3. Beacons and Tactical Pings
+### 3. Beacons and Tactical Pings
 
 The non-verbal coordination layer. Research shows this is often more effective than voice for spatial RTS communication — Respawn Entertainment play-tested Apex Legends for a month with no voice chat and found their ping system "rendered voice chat with strangers largely unnecessary" (Polygon review). EA opened the underlying patent (US 11097189, "Contextually Aware Communications Systems") for free use in August 2021.
 

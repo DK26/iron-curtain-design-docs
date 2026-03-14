@@ -1,4 +1,4 @@
-﻿| ------------ | --------------- | ------------------------------------------------------------- |
+| ------------ | --------------- | ------------------------------------------------------------- |
 | < 5MB        | N/A — HTTP only | P2P overhead exceeds benefit                                  |
 | 5–50MB       | 256KB           | Fine-grained. Good for partial recovery and slow connections. |
 | 50–500MB     | 1MB             | Balanced. Reasonable metadata overhead.                       |

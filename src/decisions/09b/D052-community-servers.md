@@ -1,4 +1,4 @@
-﻿## D052 — Community Servers & Signed Credentials
+## D052 — Community Servers & Signed Credentials
 
 > **Keywords:** community server, signed credential records, SCR, Ed25519, SQLite credential store, moderation, reputation, community review, matchmaking, lobby discovery, P2P resource sharing, key lifecycle, cross-community, transparency log
 

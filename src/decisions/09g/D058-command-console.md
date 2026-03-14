@@ -1,4 +1,4 @@
-﻿## D058 — In-Game Command Console
+## D058 — In-Game Command Console
 
 > **Keywords:** command console, chat, developer console, Brigadier, cvars, command tree, competitive integrity, cheat codes, console commands, mod-registered commands, tournament mode, ranked restrictions
 

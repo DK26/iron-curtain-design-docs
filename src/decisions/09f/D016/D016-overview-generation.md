@@ -1,4 +1,4 @@
-﻿## D016: LLM-Generated Missions and Campaigns
+## D016: LLM-Generated Missions and Campaigns
 
 **Decision:** Provide an optional LLM-powered mission generation system (Phase 7) via the `ic-llm` crate. IC ships built-in CPU models (D047 Tier 1) that make LLM features functional with zero setup; users who want higher quality bring their own provider (BYOLLM Tiers 2–4). Every game feature works fully without an LLM configured.
 
@@ -223,13 +223,13 @@ generative_campaign:
   enemy_faction: allied
   theater: european
   length: 24
-  
+
   # Narrative arc — the LLM's plan for the full campaign
   arc:
     act_1: "Establishing foothold in Eastern Europe (missions 1–8)"
     act_2: "Push through Central Europe, betrayal from within (missions 9–16)"
     act_3: "Final assault on Allied HQ, resolution (missions 17–24)"
-  
+
   # Named characters (persistent across the campaign)
   characters:
     - name: "Colonel Petrov"
@@ -285,13 +285,13 @@ generative_campaign:
         speech_style: "Calm, measured, laced with classical references. Never raises his voice. Compliments the player before threatening them."
       arc: "Allied commander; grows from distant threat to personal rival"
       hidden_agenda: "may offer a secret truce if the player's reputation is high enough"
-  
+
   # Backstory and context (fed to the LLM for every subsequent mission prompt)
   backstory: |
     The year is 1953. The Allied peace treaty has collapsed after the
     assassination of the Soviet delegate at the Vienna Conference.
     Colonel Petrov leads a reformed armored division tasked with...
-  
+
   # Planned branch points (approximate — adjusted as the player plays)
   branch_points:
     - mission: 4

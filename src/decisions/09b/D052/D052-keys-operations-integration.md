@@ -1,4 +1,4 @@
-﻿### Key Lifecycle
+### Key Lifecycle
 
 #### Key Identification
 
@@ -68,7 +68,7 @@ $ ic community init --name "Clan Wolfpack" --url "https://wolfpack.example.com"
   ║  in a drawer. Treat it like a master password.              ║
   ╚══════════════════════════════════════════════════════════════╝
 
-  [1/2/3/I saved it, continue]: 
+  [1/2/3/I saved it, continue]:
 ```
 
 The RK private key is shown exactly once during `ic community init`. The server stores only the RK's *public* key (so clients can verify rotation records signed by the RK). The RK private key is never written to disk by the server.

@@ -1,4 +1,4 @@
-﻿#### Relay Voice Forwarding
+#### Relay Voice Forwarding
 
 The relay server forwards voice packets with minimal processing:
 
@@ -196,15 +196,15 @@ impl JitterBuffer {
         // Smoothing factor 0.9 — reacts within ~10 packets to jitter changes
         self.jitter_estimate = 0.9 * self.jitter_estimate + 0.1 * jitter;
         self.last_arrival = now;
-        
+
         // Insert frame at correct position based on sequence number.
         // Handles out-of-order delivery by placing in the correct slot.
         self.insert_frame(sequence, opus_data);
-        
+
         // Adapt buffer depth based on current jitter estimate
         self.adapt_delay();
     }
-    
+
     /// Called every 20ms by the audio render thread.
     /// Returns the next frame to play, or None if the frame is missing.
     /// On None, the caller invokes Opus PLC (decoder with null input)
@@ -212,12 +212,12 @@ impl JitterBuffer {
     pub fn pop(&mut self) -> Option<VoiceFrame> {
         self.frames.pop_front().flatten()
     }
-    
+
     fn adapt_delay(&mut self) {
         // Target: 2× jitter estimate + 1 frame covers ~95% of variance
         let target = ((2.0 * self.jitter_estimate * 50.0) as u32 + 1)
             .clamp(self.min_delay, self.max_delay);
-        
+
         if target > self.delay {
             // Increase delay: expand buffer immediately (insert silence frame)
             self.delay += 1;

@@ -57,15 +57,23 @@ IC consumes these crates as normal Cargo dependencies. The extracted crates are 
 
 These crates are the first things built. They have zero IC-specific dependencies by definition because IC doesn't exist yet when they're created. **Separate repos from the start.**
 
-| Crate Name          | Purpose                                                                                                                                                                                                | Why Standalone                                                                                                                                                                                                                                                                                                                                                                                                           | IC Consumer                                                                                    |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
-| `cnc-formats`       | Parse all C&C formats: binary (`.mix`, `.shp`, `.tmp`, `.pal`, `.aud`, `.vqa`, `.wsa`, `.fnt`), `.ini` rules, MiniYAML (feature-gated), and Petroglyph `.meg`/`.pgm` archives (feature-gated, Phase 2) | Every C&C tool, viewer, converter, and modding project needs format parsing. Currently scattered across C/C#/Python community tools with no canonical Rust implementation. `.ini` is a classic C&C format; MiniYAML is OpenRA-originated but de facto community standard. `.meg` is Petroglyph's archive format (Empire at War / C&C Remastered lineage) — clean-roomable from community docs (OS Big Editor, OpenSage). | `ra-formats` (IC's game-specific layer wraps `cnc-formats` with IC asset pipeline integration) |
-| `fixed-game-math`   | Deterministic fixed-point arithmetic: `Fixed<N>`, trig tables, CORDIC atan2, Newton sqrt, modifier chains                                                                                              | Any deterministic game (lockstep RTS, fighting game, physics sim) needs platform-identical math. No good Rust crate exists with game-focused API.                                                                                                                                                                                                                                                                        | `ic-sim`, `ic-protocol`                                                                        |
-| `deterministic-rng` | Seedable, platform-identical PRNG with game-oriented API: range sampling, weighted selection, shuffle, damage spread                                                                                   | Same audience as `fixed-game-math`. Must produce identical sequences on all platforms (x86/ARM/WASM).                                                                                                                                                                                                                                                                                                                    | `ic-sim`                                                                                       |
+| Crate Name          | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Why Standalone                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | IC Consumer                                                                                    |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `cnc-formats`       | Parse and encode C&C formats: binary (`.mix`, `.shp`, `.tmp`, `.pal`, `.aud`, `.vqa`, `.wsa`, `.fnt`), `.ini` rules, MiniYAML (feature-gated), Petroglyph `.meg`/`.pgm` archives (feature-gated, Phase 2), `.mid` MIDI (feature-gated), Westwood-lineage audio `.adl` AdLib and `.xmi` XMIDI (feature-gated). Clean-room encoders (LCW, IMA ADPCM, VQ codebook, SHP assembly). Bidirectional conversion (SHP↔PNG, AUD↔WAV, VQA↔AVI, MID→WAV/AUD, XMI→MID/WAV/AUD, etc. behind `convert` feature). | Every C&C tool, viewer, converter, and modding project needs format parsing and conversion. Currently scattered across C/C#/Python community tools with no canonical Rust implementation. `.ini` is a classic C&C format; MiniYAML is OpenRA-originated but de facto community standard. `.meg` is Petroglyph's archive format (Empire at War / C&C Remastered lineage) — clean-roomable from community docs (OS Big Editor, OpenSage). MIDI is a universal standard in game audio tooling and the intermediate format for IC's LLM audio generation pipeline (ABC → MIDI → SoundFont → PCM). `.adl` (AdLib OPL2, Dune II) and `.xmi` (XMIDI, Kyrandia / Miles Sound System) are Westwood-lineage audio formats — the community working with Westwood games expects these in the same toolbox. Note: C&C (TD/RA) shipped music as `.aud` digital audio, not MIDI — earlier Westwood titles used these synthesizer formats before switching to pre-rendered digital audio. | `ra-formats` (IC's game-specific layer wraps `cnc-formats` with IC asset pipeline integration) |
+| `fixed-game-math`   | Deterministic fixed-point arithmetic: `Fixed<N>`, trig tables, CORDIC atan2, Newton sqrt, modifier chains                                                                                                                                                                                                                                                                                                                                                                                         | Any deterministic game (lockstep RTS, fighting game, physics sim) needs platform-identical math. No good Rust crate exists with game-focused API.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | `ic-sim`, `ic-protocol`                                                                        |
+| `deterministic-rng` | Seedable, platform-identical PRNG with game-oriented API: range sampling, weighted selection, shuffle, damage spread                                                                                                                                                                                                                                                                                                                                                                              | Same audience as `fixed-game-math`. Must produce identical sequences on all platforms (x86/ARM/WASM).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `ic-sim`                                                                                       |
 
-**Naming note:** The IC crate currently called `ra-formats` stays in the IC monorepo as GPL code because it references EA's GPL-licensed C&C source for struct definitions and lookup tables (D051 rationale #2). `cnc-formats` is the *new* permissive crate containing only clean-room format parsing with no EA-derived code. `ra-formats` becomes a thin wrapper that adds EA-specific details (compression tables, game-specific constants) on top.
+**Naming note:** The IC crate currently called `ra-formats` stays in the IC monorepo as GPL code because it references EA's GPL-licensed C&C source for struct definitions and lookup tables (D051 rationale #2). `cnc-formats` is the *new* permissive crate containing clean-room format parsing and encoding with no EA-derived code. `ra-formats` becomes a thin wrapper that adds EA-specific details (compression tables, game-specific constants, encoder enhancements for pixel-perfect original format matching) on top.
 
-**Feature-gated MiniYAML:** `.ini` parsing is always available (it's a classic C&C format). MiniYAML parsing is behind `features = { miniyaml = [] }` because it's OpenRA-specific — a `.mix` extractor tool or asset viewer doesn't need it. The `cnc-formats` CLI binary ships in the same repo; its `convert` subcommand uses `--from`/`--to` flags for extensible format dispatch: `--to` is always required, `--from` is optional (auto-detected from file extension when unambiguous, required when reading from stdin). The `ConvertFormat` enum defines available formats with per-variant `#[cfg]` feature gating — `Miniyaml` requires the `miniyaml` feature, `Yaml` is always available. Unsupported `(from, to)` pairs print available conversions. Current conversion: `--from miniyaml --to yaml`. `validate` and `inspect` work on all formats unconditionally. `ra-formats` depends on `cnc-formats` with `miniyaml` enabled.
+**Feature-gated MiniYAML:** `.ini` parsing is always available (it's a classic C&C format). MiniYAML parsing is behind `features = { miniyaml = [] }` because it's OpenRA-specific — a `.mix` extractor tool or asset viewer doesn't need it. The `cnc-formats` CLI binary ships in the same repo; its `convert` subcommand uses `--format`/`--to` flags for extensible format dispatch: `--to` is always required, `--format` is optional (auto-detected from file extension when unambiguous, required when reading from stdin). The `--format` flag is shared with `validate` and `inspect` — it always means "source format override." The `ConvertFormat` enum defines available formats with per-variant `#[cfg]` feature gating — `Miniyaml` requires the `miniyaml` feature, `Ist` requires the `ist` feature, `Yaml` is always available. Unsupported `(format, to)` pairs print available conversions. Current conversions: `--format miniyaml --to yaml`, `--format shp --to ist` (requires `.pal`), `--format ist --to shp`. `validate` and `inspect` work on all formats unconditionally. `ra-formats` depends on `cnc-formats` with `miniyaml` enabled.
+
+**Feature-gated IST (IC Sprite Text):** IST is a YAML-wrapped palette-indexed hex pixel grid format — a human-readable, diffable, version-controllable text representation of `.shp` + `.pal` sprite data. Behind `features = { ist = [] }`. Round-trip lossless: `.shp + .pal → IST → .shp + .pal` produces byte-identical output. Compact mode uses 1 hex character per pixel for ≤16 color sprites; full mode uses 2 hex characters for 17–256 colors. Useful standalone as a text-editable sprite format for any retro game engine or pixel art tool. Also serves as the token-efficient representation for LLM-based sprite generation (see `research/text-encoded-visual-assets-for-llm-generation.md`). The `ist` feature adds `.shp`/`.pal` as recognized formats for `convert`, `validate`, and `inspect`.
+
+**Feature-gated MIDI:** MIDI (`.mid`) is the intermediate format for IC's LLM audio generation pipeline (ABC → MIDI → SoundFont → PCM) and a universal standard in game audio tooling. Note: C&C (TD/RA) shipped music as `.aud` digital audio, not MIDI — earlier Westwood titles used synthesizer formats (`.adl`, XMIDI), not standard `.mid`. Behind `features = { midi = ["dep:midly", "dep:nodi", "dep:rustysynth"] }`. Adds three pure Rust permissively licensed dependencies: `midly` (zero-allocation MIDI parser/writer, `no_std`, Unlicense), `nodi` (MIDI playback abstraction, track merging, MIT), and `rustysynth` (SoundFont SF2 synthesizer — renders MIDI to PCM, real-time capable, reverb + chorus, MIT). All three are WASM-compatible with zero C bindings. The `midi` feature enables: `MidFile` parsing/writing, `mid::render_to_pcm()`/`mid::render_to_wav()` SoundFont rendering, and `convert` support for MID→WAV (via SoundFont) and MID→AUD (SoundFont + IMA ADPCM encode). WAV/AUD→MID is explicitly not supported — audio-to-symbolic transcription is an unsolved ML problem outside the scope of a format conversion tool. `validate` and `inspect` report track count, channels, tempo, duration, and instrument programs. Useful standalone for any game modding project that needs to work with MIDI files, and as the intermediate format for IC's LLM audio generation pipeline. See `research/llm-soundtrack-generation-design.md` for the LLM generation pipeline that uses MIDI as its intermediate format.
+
+**Feature-gated ADL (AdLib OPL2):** Dune II (1992) shipped its soundtrack as `.adl` files — sequential OPL2 register writes driving Yamaha YM3812 FM synthesis. Behind `features = { adl = [] }`. `cnc-formats` provides a clean-room read-only parser: `AdlFile` struct containing register write sequences with timing data. `validate` reports structural integrity; `inspect` reports register count, estimated duration, and detected instrument patches. ADL→WAV rendering requires OPL2 chip emulation — the only viable pure Rust emulator (`opl-emu`) is GPL-3.0, so audio rendering lives in `ra-formats`, not `cnc-formats`. Community documentation: DOSBox source code, AdPlug project. No WASM-incompatible dependencies — the parser is pure Rust with zero external dependencies.
+
+**Feature-gated XMI (XMIDI / Miles Sound System):** The Kyrandia series and other Miles AIL-licensed Westwood titles used `.xmi` — an extended MIDI variant in an IFF FORM:XMID container with Miles-specific extensions: IFTHEN-based absolute timing (vs. standard MIDI delta-time), for-loop markers, and multi-sequence files. Behind `features = { xmi = ["midi"] }` — implies `midi` because XMI→MID conversion produces a standard MIDI file processed by the existing pipeline. Clean-room XMI→MID converter (~300 lines): strips IFF wrapper, converts IFTHEN timing to delta-time, merges multi-sequence files into a single SMF. Once converted to MID, the existing MIDI pipeline handles SoundFont rendering to WAV/AUD. `validate` reports IFF structure integrity; `inspect` reports sequence count, timing mode, and embedded SysEx data. No external documentation needed beyond the Miles Sound System SDK specification (publicly available) and community implementations (AIL2MID, WildMIDI).
 
 **Encrypted `.mix` handling:** Extended `.mix` files use Blowfish-encrypted header indices with a hardcoded symmetric key. Both the Blowfish algorithm (public domain) and the key derivation are publicly documented on ModEnc and implemented in community tools (XCC, OpenRA). This is clean-room knowledge — `cnc-formats` handles encrypted `.mix` archives directly using the `blowfish` RustCrypto crate (MIT/Apache-2.0). No EA-derived code is needed.
 
@@ -80,19 +88,21 @@ These crates are the first things built. They have zero IC-specific dependencies
 
 **CLI subcommand roadmap:**
 
-| Subcommand    | Phase | Description                                                                                                                                                                                                                                                                                 |
-| ------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `validate`    | 0     | Structural correctness check for any supported format                                                                                                                                                                                                                                       |
-| `inspect`     | 0     | Dump contents and metadata (`--json` for machine-readable output)                                                                                                                                                                                                                           |
-| `convert`     | 0     | Extensible format conversion via `--from`/`--to` flags. `--to` required, `--from` auto-detected from extension. Current: `--from miniyaml --to yaml` (behind `miniyaml` feature). Adding future conversions is a new `ConvertFormat` enum variant + match arm — no subcommand-level change. |
-| `extract`     | 1     | Decompose `.mix` archives to individual files (`.meg`/`.pgm` support added Phase 2 via `meg` feature)                                                                                                                                                                                       |
-| `list`        | 1     | Quick archive inventory — filenames, sizes, types (`.meg`/`.pgm` support added Phase 2 via `meg` feature)                                                                                                                                                                                   |
-| `check`       | 2     | Deep integrity verification — CRC validation, truncation detection                                                                                                                                                                                                                          |
-| `diff`        | 2     | Format-aware structural comparison of two files of the same type                                                                                                                                                                                                                            |
-| `fingerprint` | 2     | SHA-256 canonical content hash (parsed representation, not raw bytes)                                                                                                                                                                                                                       |
-| `pack`        | 6a    | Create `.mix` archives from directory (inverse of `extract`)                                                                                                                                                                                                                                |
+| Subcommand    | Phase | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `validate`    | 0     | Structural correctness check for any supported format                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `inspect`     | 0     | Dump contents and metadata (`--json` for machine-readable output)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `convert`     | 0     | Extensible format conversion via `--format`/`--to` flags. `--to` required, `--format` auto-detected from extension. **Text:** `--format miniyaml --to yaml` (behind `miniyaml` feature), `--format shp --to ist` and `--format ist --to shp` (behind `ist` feature, requires `.pal`). **Binary** (behind `convert` feature): SHP↔PNG, SHP↔GIF, PAL→PNG, TMP→PNG, WSA↔PNG, WSA↔GIF, AUD↔WAV, VQA↔AVI, FNT→PNG. **MIDI** (behind `midi` feature): MID→WAV (requires SoundFont via `--soundfont`), MID→AUD (SoundFont render + IMA ADPCM encode). **XMIDI** (behind `xmi` feature, implies `midi`): XMI→MID (clean-room conversion), XMI→WAV (via XMI→MID then SoundFont render), XMI→AUD (via XMI→MID→WAV→AUD pipeline). Adding future conversions is a new `ConvertFormat` enum variant + match arm — no subcommand-level change. |
+| `extract`     | 1     | Decompose `.mix` archives to individual files (`.meg`/`.pgm` support added Phase 2 via `meg` feature)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `list`        | 1     | Quick archive inventory — filenames, sizes, types (`.meg`/`.pgm` support added Phase 2 via `meg` feature)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `check`       | 2     | Deep integrity verification — CRC validation, truncation detection                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `diff`        | 2     | Format-aware structural comparison of two files of the same type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `fingerprint` | 2     | SHA-256 canonical content hash (parsed representation, not raw bytes)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `pack`        | 6a    | Create `.mix` archives from directory (inverse of `extract`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 All subcommands are game-agnostic. Semantic validation (missing prerequisites, circular inheritance in rule files) belongs in `ic mod lint`, not in `cnc-formats`.
+
+**CLI error reporting:** All convert operations print status to stderr before heavy work (e.g., `Converting SHP → PNG (12 frames, 50×39, palette: temperat.pal)...`). Error reporting helpers (`report_parse_error`, `report_convert_error`) provide file path + error detail + format hints. For ambiguous file extensions (e.g., `.tmp` files that could be TD or RA format), `print_format_hint` suggests `--format` override. All status/error output goes to stderr; piped stdout stays clean.
 
 ### Tier 2a — Phase 2 (Simulation)
 
@@ -177,7 +187,24 @@ Each extracted crate follows these design principles:
 
 2. **Zero mandatory dependencies beyond `std`.** Optional features gate integration with `serde`, `bevy`, `tokio`, etc.
 
-3. **Feature flags for ecosystem integration.** Example for `fixed-game-math`:
+3. **Feature flags for ecosystem integration.** Optional features gate external dependencies. Library consumers who only need parsing don't pay for image/audio/CLI crate compilation:
+
+   **`cnc-formats` features:**
+   ```toml
+   [features]
+   default = ["encrypted-mix", "cli"]
+   encrypted-mix = ["dep:blowfish", "dep:base64"]   # Blowfish-encrypted .mix header index
+   miniyaml = []                                      # MiniYAML parser (OpenRA format)
+   ist = []                                            # IST sprite text format
+   meg = []                                            # .meg/.pgm Petroglyph archives (Phase 2)
+   midi = ["dep:midly", "dep:nodi", "dep:rustysynth"] # MIDI parse/write/synth
+   adl = []                                            # .adl AdLib OPL2 parser (Dune II)
+   xmi = ["midi"]                                      # .xmi XMIDI parser/converter (Miles Sound System)
+   cli = ["dep:clap"]                                  # Unified CLI binary (primary interface)
+   convert = ["dep:png", "dep:hound", "dep:gif"]       # Bidirectional binary format conversion
+   ```
+
+   **`fixed-game-math` features:**
    ```toml
    [features]
    default = ["std"]
@@ -186,9 +213,31 @@ Each extracted crate follows these design principles:
    bevy = ["dep:bevy_reflect"]
    ```
 
+   Feature flag design principles: `cli` is a default feature because the CLI is the primary user-facing interface and replaces the former single-purpose `miniyaml2yaml` binary. `convert` is opt-in because it pulls in `png`, `hound`, and `gif` — heavy dependencies unnecessary for library consumers who only need parsing. `encrypted-mix` is default because most `.mix` consumers encounter encrypted archives from the original games.
+
 4. **Comprehensive documentation and examples.** Standalone crates must be usable without reading IC's design docs. README, rustdoc, and examples should be self-contained.
 
 5. **Property-based testing.** Determinism-critical crates (`fixed-game-math`, `deterministic-rng`) include cross-platform property tests that verify identical output on x86, ARM, and WASM targets.
+
+---
+
+## Heap Allocation Policy (cnc-formats)
+
+`cnc-formats` minimizes heap allocations in parsing hot paths. The `&[u8]` zero-copy API is the primary interface; `Vec`-returning APIs are convenience wrappers for CLI and tool consumers.
+
+| Module                | Parse-time allocs           | Runtime allocs       | Notes                                                 |
+| --------------------- | --------------------------- | -------------------- | ----------------------------------------------------- |
+| `mix`                 | 1 (entry index `Vec`)       | 0                    | File data read via offset into source slice           |
+| `shp`                 | 1 (frame offset `Vec`)      | 0 per frame          | Frame pixels decoded into caller-provided buffer      |
+| `pal`                 | 0                           | 0                    | Fixed 768-byte array, stack-allocated                 |
+| `tmp`                 | 1 (tile offset `Vec`)       | 0                    | Similar to SHP — offsets into source data             |
+| `aud`                 | 1 (decoded samples `Vec`)   | 0                    | ADPCM decode produces output samples                  |
+| `vqa::decode`         | 2 (frame + audio `Vec`s)    | 0                    | Frame pixels borrowed where possible                  |
+| `vqa::encode`         | N (codebook + frame `Vec`s) | 0                    | Median-cut quantization allocates per-codebook-entry  |
+| `convert`             | varies                      | varies               | PNG/GIF/WAV/AVI encoding — external crate allocations |
+| `mid` (behind `midi`) | 1 (track events `Vec`)      | 1 (PCM render `Vec`) | Parse via `midly`; SoundFont render via `rustysynth`  |
+| `miniyaml`            | 1 (node tree `Vec`)         | 0                    | Parse tree is the output                              |
+| `ini`                 | 1 (section map)             | 0                    | HashMap of sections                                   |
 
 ---
 
@@ -231,138 +280,14 @@ Each extracted crate follows these design principles:
 
 ## Rust Types (Key Interfaces)
 
-These are the public-facing type signatures that define extraction boundaries. IC wraps or extends these types; it never exposes them directly to players.
+Full type signatures for all extracted crates are in the [Rust Types sub-page](D076/D076-rust-types.md). Key types by crate:
 
-```rust
-// cnc-formats — clean-room C&C binary format parsing
-pub struct MixArchive { /* ... */ }
-pub struct ShpFile { /* ... */ }
-pub struct PalFile { /* ... */ }
-pub struct TmpFile { /* ... */ }
-pub struct AudFile { /* ... */ }
-pub struct VqaFile { /* ... */ }
-pub trait FormatReader: Read + Seek {
-    type Output;
-    fn read_from(reader: &mut Self) -> Result<Self::Output, FormatError>;
-}
-
-// cnc-formats — MEG/PGM archive parsing (Phase 2, behind `meg` feature flag)
-#[cfg(feature = "meg")]
-pub struct MegArchive {
-    pub entries: Vec<MegEntry>,
-}
-#[cfg(feature = "meg")]
-pub struct MegEntry {
-    pub name: String,
-    pub offset: u64,
-    pub size: u64,
-}
-
-// cnc-formats CLI — extensible format conversion via --from/--to flags
-/// Available conversion formats. Per-variant `#[cfg]` ensures the binary
-/// only includes parsers for enabled features.
-#[derive(Clone, Copy, Debug, clap::ValueEnum)]
-pub enum ConvertFormat {
-    /// Standard YAML (always available)
-    Yaml,
-    /// OpenRA MiniYAML (requires `miniyaml` feature)
-    #[cfg(feature = "miniyaml")]
-    Miniyaml,
-    /// Classic C&C .ini rules (always available)
-    Ini,
-}
-
-/// `cnc-formats convert` subcommand arguments.
-#[derive(clap::Args)]
-pub struct ConvertArgs {
-    /// Source format (auto-detected from file extension when unambiguous;
-    /// required when reading from stdin).
-    #[arg(long)]
-    pub from: Option<ConvertFormat>,
-    /// Target format (always required).
-    #[arg(long)]
-    pub to: ConvertFormat,
-    /// Input file path (omit or use `-` for stdin).
-    pub input: Option<PathBuf>,
-    /// Output file path (omit for stdout).
-    #[arg(short, long)]
-    pub output: Option<PathBuf>,
-}
-
-/// Dispatch: match on `(from, to)` pairs. Unsupported pairs print
-/// available conversions and exit with a non-zero status code.
-fn convert(from: ConvertFormat, to: ConvertFormat, input: &[u8]) -> Result<Vec<u8>> {
-    match (from, to) {
-        #[cfg(feature = "miniyaml")]
-        (ConvertFormat::Miniyaml, ConvertFormat::Yaml) => miniyaml_to_yaml(input),
-        // Future: (ConvertFormat::Ini, ConvertFormat::Yaml) => ini_to_yaml(input),
-        (f, t) => Err(UnsupportedConversion { from: f, to: t }),
-    }
-}
-
-// fixed-game-math — deterministic fixed-point arithmetic
-pub struct Fixed<const FRAC_BITS: u32>(i64);
-pub struct WorldPos { pub x: Fixed<10>, pub y: Fixed<10>, pub z: Fixed<10> }
-pub struct WAngle(i32);  // 0..1024 = 0°..360°
-
-impl Fixed<FRAC_BITS> {
-    pub const fn from_int(v: i32) -> Self;
-    pub fn sin(angle: WAngle) -> Self;  // table lookup
-    pub fn cos(angle: WAngle) -> Self;
-    pub fn atan2(y: Self, x: Self) -> WAngle;  // CORDIC
-    pub fn sqrt(self) -> Self;  // Newton's method
-}
-
-// deterministic-rng — seedable, platform-identical PRNG
-pub struct GameRng { /* xoshiro256** or similar */ }
-
-impl GameRng {
-    pub fn from_seed(seed: u64) -> Self;
-    pub fn next_u32(&mut self) -> u32;
-    pub fn range(&mut self, min: i32, max: i32) -> i32;
-    pub fn weighted_select<T>(&mut self, items: &[(T, u32)]) -> &T;
-    pub fn shuffle<T>(&mut self, slice: &mut [T]);
-    pub fn damage_spread(&mut self, base: i32, spread_pct: u32) -> i32;
-}
-
-// glicko2-rts — rating system with RTS adaptations
-pub struct Rating {
-    pub mu: f64,
-    pub phi: f64,    // rating deviation
-    pub sigma: f64,  // volatility
-}
-
-pub struct MatchResult {
-    pub players: Vec<(PlayerId, Rating)>,
-    pub outcome: Outcome,
-    pub duration_secs: u32,
-    pub faction: Option<FactionId>,
-}
-
-pub fn update_ratings(results: &[MatchResult], config: &Glicko2Config) -> Vec<(PlayerId, Rating)>;
-
-// lockstep-relay — game-agnostic relay core
-pub struct RelayCore<T: OrderCodec> { /* ... */ }
-
-impl<T: OrderCodec> RelayCore<T> {
-    pub fn new(config: RelayConfig) -> Self;
-    pub fn tick(&mut self) -> Vec<RelayEvent<T>>;
-    pub fn submit_order(&mut self, player: PlayerId, order: T);
-    pub fn player_connected(&mut self, player: PlayerId);
-    pub fn player_disconnected(&mut self, player: PlayerId);
-}
-
-// workshop-core — engine-agnostic mod registry (D050)
-pub struct Package { /* ... */ }
-pub struct Manifest { /* ... */ }
-pub struct Registry { /* ... */ }
-
-pub trait PackageStore {
-    fn publish(&self, package: &Package) -> Result<(), StoreError>;
-    fn fetch(&self, id: &PackageId, version: &VersionReq) -> Result<Package, StoreError>;
-    fn resolve(&self, deps: &[Dependency]) -> Result<Vec<Package>, ResolveError>;
-}
-```
+- **`cnc-formats`:** `MixArchive`, `ShpFile`, `PalFile`, `TmpFile`, `AudFile`, `VqaFile`, `MegArchive` (behind `meg`), `ConvertFormat` enum, `ConvertArgs`. Clean-room encoders: `lcw::compress()`, `shp::encode_frames()`, `aud::encode_adpcm()`, `aud::build_aud()`, `pal::encode()`. VQA codec: `vqa::decode::{VqaFrame, VqaAudio}`, `vqa::encode::{VqaEncodeParams, VqaAudioInput, encode_vqa()}`. MIDI (behind `midi`): `MidFile`, `mid::parse()`, `mid::write()`, `mid::render_to_pcm()`, `mid::render_to_wav()`. ADL (behind `adl`): `AdlFile`, `adl::parse()`. XMI (behind `xmi`): `XmiFile`, `xmi::parse()`, `xmi::to_mid()`.
+- **`fixed-game-math`:** `Fixed<N>`, `WorldPos`, `WAngle`, trig functions
+- **`deterministic-rng`:** `GameRng`, range/weighted/shuffle/damage_spread
+- **`glicko2-rts`:** `Rating`, `MatchResult`, `update_ratings()`
+- **`lockstep-relay`:** `RelayCore<T>`, `RelayConfig`, `RelayEvent`
+- **`workshop-core`:** `Package`, `Manifest`, `Registry`, `PackageStore` trait
 
 ---
 

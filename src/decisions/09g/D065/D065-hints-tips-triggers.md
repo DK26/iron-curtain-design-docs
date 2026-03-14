@@ -1,4 +1,4 @@
-﻿#### Feature Smart Tips (`hints/feature-tips.yaml`)
+#### Feature Smart Tips (`hints/feature-tips.yaml`)
 
 Non-gameplay feature screens use the same Layer 2 hint pipeline with UI-context triggers. These tips explain what each feature does in simple, approachable language for users encountering it for the first time. All tips are dismissible, respect "don't show again," and share the `hint_history` SQLite table.
 

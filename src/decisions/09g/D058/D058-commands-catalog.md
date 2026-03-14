@@ -1,4 +1,4 @@
-﻿#### Built-In Commands
+#### Built-In Commands
 
 **Always available (all players):**
 

@@ -220,15 +220,15 @@ The render layer provides **instant visual feedback** on player input, before th
 fn on_move_order_issued(click_pos: WorldPos, selected_units: &[Entity]) {
     // Show move marker immediately
     spawn_move_marker(click_pos);
-    
+
     // Start unit turn animation toward target (cosmetic only)
     for unit in selected_units {
         start_turn_preview(unit, click_pos);
     }
-    
+
     // Selection acknowledgement sound plays instantly
     play_unit_response_audio(selected_units);
-    
+
     // The actual sim order is still in the network pipeline.
     // Units will begin real movement when the order is confirmed next tick.
     // The visual prediction bridges the gap so the game feels instant.

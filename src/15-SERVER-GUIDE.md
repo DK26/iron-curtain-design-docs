@@ -1,4 +1,4 @@
-﻿# Server Administration Guide
+# Server Administration Guide
 
 > **Audience:** Server operators, tournament organizers, competitive league administrators, and content creators / casters.
 >

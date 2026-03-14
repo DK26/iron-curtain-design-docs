@@ -1,4 +1,4 @@
-﻿### D024 — Lua API Superset of OpenRA
+### D024 — Lua API Superset of OpenRA
 
 **Decision:** Iron Curtain's Lua scripting API is a strict superset of OpenRA's 16 global objects. Same function names, same parameter signatures, same return types. OpenRA Lua missions run unmodified. IC then extends with additional functionality.
 
@@ -69,10 +69,10 @@
 **Key design points:**
 
 1. **Format detection:** `ra-formats` checks the first few lines of each file. Tab-indented content with no YAML indicators triggers the MiniYAML path, which calls `cnc-formats::miniyaml::parse()`.
-2. **In-memory conversion:** MiniYAML is parsed to an intermediate tree, then resolved to standard YAML structs. `cnc-formats convert --from miniyaml --to yaml` performs only the structural MiniYAML→YAML conversion (schema-neutral, standalone crate — D076). The runtime path in `ra-formats` goes further: it also applies alias resolution (D023).
+2. **In-memory conversion:** MiniYAML is parsed to an intermediate tree, then resolved to standard YAML structs. `cnc-formats convert --format miniyaml --to yaml` performs only the structural MiniYAML→YAML conversion (schema-neutral, standalone crate — D076). The runtime path in `ra-formats` goes further: it also applies alias resolution (D023).
 3. **Combined with D023:** OpenRA trait name aliases (D023) apply after MiniYAML parsing — so the full runtime chain is: MiniYAML → intermediate tree (via `cnc-formats`) → alias resolution (via `ra-formats`) → typed Rust structs.
 4. **Performance:** Conversion adds ~10-50ms per mod at load time (one-time cost). Cached after first load.
-5. **Warning output:** Console logs `"Loaded MiniYAML file rules.yaml — consider converting to standard YAML with 'cnc-formats convert --from miniyaml --to yaml rules.yaml'".
+5. **Warning output:** Console logs `"Loaded MiniYAML file rules.yaml — consider converting to standard YAML with 'cnc-formats convert --format miniyaml --to yaml rules.yaml'".
 
 **Rationale:**
 - Turns "migrate then play" into "play immediately, migrate when ready"

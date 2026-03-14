@@ -1,7 +1,7 @@
 # RTS AI Implementation Survey
 
-> **Purpose:** How do real RTS projects actually implement AI decision-making, and what can Iron Curtain learn from them?  
-> **Scope:** Strategic-level AI (build orders, attack timing, economy management, threat response), unit-level AI (engagement, micro, formations), evaluation/scoring, difficulty systems, and performance.  
+> **Purpose:** How do real RTS projects actually implement AI decision-making, and what can Iron Curtain learn from them?
+> **Scope:** Strategic-level AI (build orders, attack timing, economy management, threat response), unit-level AI (engagement, micro, formations), evaluation/scoring, difficulty systems, and performance.
 > **Companion doc:** `research/rts-ai-extensibility-survey.md` covers the *API/plugin architecture* side. This document covers the *intelligence* side — how these AIs actually make decisions.
 
 ---
@@ -22,8 +22,8 @@
 
 ## 1. EA Red Alert (1996)
 
-**Source:** [`electronicarts/CnC_Red_Alert`](https://github.com/electronicarts/CnC_Red_Alert) (GPL v3)  
-**Language:** C++  
+**Source:** [`electronicarts/CnC_Red_Alert`](https://github.com/electronicarts/CnC_Red_Alert) (GPL v3)
+**Language:** C++
 **Architecture:** Monolithic — all AI lives in `HOUSE.CPP` (~6000 lines)
 
 ### Strategic Decision-Making: Urgency-Based State Machine
@@ -86,8 +86,8 @@ Zero additional memory allocation. Simple integer comparisons per tick. No pathf
 
 ## 2. EA Generals / Zero Hour (2003)
 
-**Source:** [`electronicarts/CnC_Generals_Zero_Hour`](https://github.com/electronicarts/CnC_Generals_Zero_Hour) (GPL v3)  
-**Language:** C++  
+**Source:** [`electronicarts/CnC_Generals_Zero_Hour`](https://github.com/electronicarts/CnC_Generals_Zero_Hour) (GPL v3)
+**Language:** C++
 **Architecture:** Class hierarchy — `AIPlayer` → `AISkirmishPlayer` (separate from campaign scripted AI)
 
 ### Two AI Modes
@@ -166,7 +166,7 @@ The Generals AI represents the apex of C&C AI sophistication:
 
 ## 3. EA Remastered Collection (2020)
 
-**Source:** [`electronicarts/CnC_Remastered_Collection`](https://github.com/electronicarts/CnC_Remastered_Collection) (GPL v3 — engine DLLs only)  
+**Source:** [`electronicarts/CnC_Remastered_Collection`](https://github.com/electronicarts/CnC_Remastered_Collection) (GPL v3 — engine DLLs only)
 **Language:** C++ (engine) + C# (client)
 
 ### The Non-News: No AI Changes
@@ -187,8 +187,8 @@ We don't need cutting-edge AI at launch. A solid priority-based system (better t
 
 ## 4. OpenRA
 
-**Source:** [`OpenRA/OpenRA`](https://github.com/OpenRA/OpenRA) (GPL v3)  
-**Language:** C#  
+**Source:** [`OpenRA/OpenRA`](https://github.com/OpenRA/OpenRA) (GPL v3)
+**Language:** C#
 **Architecture:** Modular bot modules via `ConditionalTrait<>` ECS-like composition
 
 ### Modular Bot Architecture
@@ -295,8 +295,8 @@ The second phase prevents obviously stupid superweapon uses (nuking a single inf
 
 ## 5. 0 A.D. (Petra AI)
 
-**Source:** [`0ad/0ad`](https://github.com/0ad/0ad) (GPL v2)  
-**Language:** JavaScript  
+**Source:** [`0ad/0ad`](https://github.com/0ad/0ad) (GPL v2)
+**Language:** JavaScript
 **Architecture:** Hierarchical manager system with influence maps
 
 ### Manager Hierarchy
@@ -346,7 +346,7 @@ if (template.hasClass("Market")) {
 Each candidate building position is scored by combining:
 - Territory ownership (must be in own territory)
 - Influence map value (cluster similar buildings)
-- Resource proximity (`getResourcesAround()`)  
+- Resource proximity (`getResourcesAround()`)
 - Border proximity (varies by building type)
 - Water access (for docks)
 - Obstruction map (avoid blocking paths)
@@ -389,13 +389,13 @@ Each `AttackPlan` defines unit composition requirements:
 
 ```javascript
 // Rush attack
-unitStat.Infantry = { 
-    priority: 1, minSize: 10, targetSize: 20, 
+unitStat.Infantry = {
+    priority: 1, minSize: 10, targetSize: 20,
     batchSize: 2, classes: ["Infantry"],
     interests: [["strength", 1], ["costsResource", 0.5, "stone"]]
 };
-unitStat.FastMoving = { 
-    priority: 1, minSize: 2, targetSize: 4, 
+unitStat.FastMoving = {
+    priority: 1, minSize: 2, targetSize: 4,
     batchSize: 2, classes: ["FastMoving+CitizenSoldier"]
 };
 
@@ -484,8 +484,8 @@ INDIVIDUAL (per-unit)
 
 ## 6. Spring Engine
 
-**Source:** [`spring/spring`](https://github.com/spring/spring) (GPL v2)  
-**Language:** C++ (engine), external AIs in C++/Java/Lua  
+**Source:** [`spring/spring`](https://github.com/spring/spring) (GPL v2)
+**Language:** C++ (engine), external AIs in C++/Java/Lua
 **Architecture:** Engine-as-platform — provides NO built-in strategic AI
 
 ### The Engine Only Provides Unit-Level AI
@@ -559,8 +559,8 @@ These all operate through the same callback interface. The engine doesn't know w
 
 ## 7. MicroRTS (Academic)
 
-**Source:** [`Farama-Foundation/MicroRTS`](https://github.com/Farama-Foundation/MicroRTS) (GPL v3)  
-**Language:** Java  
+**Source:** [`Farama-Foundation/MicroRTS`](https://github.com/Farama-Foundation/MicroRTS) (GPL v3)
+**Language:** Java
 **Architecture:** AI research framework with pluggable AI agents
 
 ### Why MicroRTS Matters
@@ -668,7 +668,7 @@ MicroRTS provides multiple game state evaluation functions, all following the pa
 
 **SimpleEvaluationFunction:**
 ```java
-base_score = resources * 20 
+base_score = resources * 20
            + resources_in_workers * 10
            + sum(unit_cost * hp / maxHP) * 40
 ```
@@ -685,7 +685,7 @@ The `sqrt(hp/maxHP)` gives diminishing returns for overkill — killing a 10% HP
 ```java
 // Weight per unit type (tuned for map size):
 W_LIGHT  = [1.75, 0.13]   // light units worth ~1.75x
-W_RANGE  = [1.68, 0.03]   // ranged slightly less 
+W_RANGE  = [1.68, 0.03]   // ranged slightly less
 W_HEAVY  = [3.90, 0.16]   // heavy worth ~4x
 W_WORKER = [0.18, -0.008] // workers nearly worthless militarily
 

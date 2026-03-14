@@ -1,4 +1,4 @@
-﻿#### Voice Effects & Enhancement
+#### Voice Effects & Enhancement
 
 Voice effects apply DSP processing to incoming voice on the **receiver side** — after Opus decode, before spatial panning and mixing. This is a deliberate architectural choice:
 

@@ -36,7 +36,7 @@ fn is_sane_correction(&self, c: &EntityCorrection) -> bool {
             current.distance_to(new_pos) <= max_drift
         }
         CorrectionField::Credits(amount) => {
-            *amount >= 0 && 
+            *amount >= 0 &&
             (*amount - self.last_known_credits).abs() <= MAX_CREDIT_DELTA
         }
     }

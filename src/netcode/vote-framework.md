@@ -178,7 +178,7 @@ vote_framework:
   # Only one active vote at a time, match-wide.
   # Applies regardless of audience scope (team or all_players).
   max_concurrent_votes: 1
-  
+
   types:
     surrender:
       enabled: true
@@ -477,14 +477,14 @@ vote_framework:
 function on_vote_passed(vote)
     local target = vote.custom_data.disconnected_player
     local entities = Player.GetEntities(target)
-    
+
     -- Transfer to AI controller (D043 AI system)
     local ai = AI.Create("skirmish_ai", {
         difficulty = "medium",
         team = Player.GetTeam(target),
     })
     AI.TransferEntities(ai, entities)
-    
+
     Chat.SendSystem("AI has taken over " .. Player.GetName(target) .. "'s forces.")
 end
 ```

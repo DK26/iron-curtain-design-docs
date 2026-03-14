@@ -1,4 +1,4 @@
-﻿## Function and Module Size Limits
+## Function and Module Size Limits
 
 ### Small Functions, Single Responsibility
 

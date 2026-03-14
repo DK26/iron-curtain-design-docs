@@ -1,4 +1,4 @@
-﻿### Layer 5 — Post-Game Learning
+### Layer 5 — Post-Game Learning
 
 After every match, the post-game stats screen (D034) includes a learning section:
 

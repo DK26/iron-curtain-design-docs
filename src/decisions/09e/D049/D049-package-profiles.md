@@ -1,4 +1,4 @@
-﻿### Workshop Package Format (.icpkg)
+### Workshop Package Format (.icpkg)
 
 Workshop packages are **ZIP archives** with a standardized manifest — the same pattern as `.oramap` but generalized to any resource type:
 

@@ -285,13 +285,13 @@ void InitLua()
     luaopen_string(Lua);
     luaopen_math(Lua);
     luaopen_debug(Lua);
-    
+
     // Conditionally loaded (development only):
     #ifdef DEBUG
     luaopen_io(Lua);
     luaopen_package(Lua);
     #endif
-    
+
     // Release builds: no io, no package — scripts cannot
     // read/write files or load external modules.
 }
@@ -369,7 +369,7 @@ class DataHub : public KaitaiConverter {
         init_sprites_dat();
         // ... all .dat files loaded into typed objects
     }
-    
+
     std::shared_ptr<units_dat_t> units;
     std::shared_ptr<weapons_dat_t> weapons;
     // ...

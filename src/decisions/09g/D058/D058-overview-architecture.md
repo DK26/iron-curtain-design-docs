@@ -1,4 +1,4 @@
-﻿## D058: In-Game Command Console — Unified Chat and Command System
+## D058: In-Game Command Console — Unified Chat and Command System
 
 **Status:** Settled
 **Scope:** `ic-ui` (chat input, dev console UI), `ic-game` (CommandDispatcher, wiring), `ic-sim` (order pipeline), `ic-script` (Lua execution)

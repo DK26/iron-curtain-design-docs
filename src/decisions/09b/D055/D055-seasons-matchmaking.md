@@ -1,4 +1,4 @@
-﻿#### Season Structure
+#### Season Structure
 
 ```yaml
 # Server configuration (community server operators can customize)

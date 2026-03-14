@@ -1,4 +1,4 @@
-﻿### Product Analytics — Comprehensive Client Event Taxonomy
+### Product Analytics — Comprehensive Client Event Taxonomy
 
 The telemetry categories above capture what happens *in the simulation* (gameplay events, system timing) and on the *servers* (relay metrics, game lifecycle). A third domain is equally critical: **how players interact with the game itself** — which features are used, which are ignored, how people navigate the UI, how they play matches, and where they get confused or drop off.
 

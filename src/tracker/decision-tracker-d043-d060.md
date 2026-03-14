@@ -1,4 +1,4 @@
-﻿## Decision Tracker - D043-D060 (Gameplay / Tools)
+## Decision Tracker - D043-D060 (Gameplay / Tools)
 
 > See [decision-tracker.md](decision-tracker.md) for overview.
 

@@ -1,4 +1,4 @@
-﻿## Backup Archive Format (D061)
+## Backup Archive Format (D061)
 
 `ic backup create` produces a standard ZIP archive containing the player's data directory. The archive is not a custom format — any ZIP tool can extract it.
 

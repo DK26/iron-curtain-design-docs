@@ -1,4 +1,4 @@
-﻿### LLM-Driven Resource Discovery (D030)
+### LLM-Driven Resource Discovery (D030)
 
 The `ic-llm` crate can search the Workshop programmatically and incorporate discovered resources into generated content:
 

@@ -1,4 +1,4 @@
-﻿## Decision Tracker (All Dxxx from `src/09-DECISIONS.md`)
+## Decision Tracker (All Dxxx from `src/09-DECISIONS.md`)
 
 > **Keywords:** decision tracker, Dxxx status, milestone mapping, design status, code status, priority, validation
 

@@ -173,7 +173,7 @@ fn is_sane_correction(correction: &EntityCorrection, ticks_since_sync: u64) -> b
 // cross-engine is Phase 5+. Ensures the deferral doesn't silently lapse.
 fn validate_correction(correction: &EntityCorrection, ticks_since_sync: u64) -> bool {
     // SAFETY: This function is the bounds-checking gate from V35.
-    // If you are implementing Level 2+ cross-engine reconciliation and 
+    // If you are implementing Level 2+ cross-engine reconciliation and
     // this todo!() fires, you MUST implement the full bounds logic above
     // before proceeding. See 06-SECURITY.md V35.
     todo!("V35: implement cross-engine correction bounds checking before enabling Level 2+ reconciliation")

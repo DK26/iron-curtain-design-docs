@@ -33,11 +33,11 @@
 
 ## 0 A.D. — Overview
 
-**Language:** C++ with SpiderMonkey JavaScript for gameplay scripting  
-**Transport:** ENet (reliable UDP)  
-**Topology:** Client-server (host acts as server)  
-**Lobby:** XMPP (gloox library)  
-**NAT Traversal:** STUN (RFC 5389) with XMPP/Jingle signaling  
+**Language:** C++ with SpiderMonkey JavaScript for gameplay scripting
+**Transport:** ENet (reliable UDP)
+**Topology:** Client-server (host acts as server)
+**Lobby:** XMPP (gloox library)
+**NAT Traversal:** STUN (RFC 5389) with XMPP/Jingle signaling
 **Key source paths:** `source/network/`, `source/simulation2/system/TurnManager.*`, `source/ps/Replay.*`
 
 ---
@@ -398,11 +398,11 @@ The `-rejointest=N` flag is a lighter version that starts the secondary sim only
 
 ## Warzone 2100 — Overview
 
-**Language:** C++  
-**Transport:** TCP sockets (default), optional GameNetworkingSockets  
-**Topology:** Host-based relay (non-host clients communicate via host using `NET_SEND_TO_PLAYER`)  
-**Crypto:** libsodium (Ed25519, XChaCha20-Poly1305)  
-**Port Mapping:** miniUPnPC + libplum  
+**Language:** C++
+**Transport:** TCP sockets (default), optional GameNetworkingSockets
+**Topology:** Host-based relay (non-host clients communicate via host using `NET_SEND_TO_PLAYER`)
+**Crypto:** libsodium (Ed25519, XChaCha20-Poly1305)
+**Port Mapping:** miniUPnPC + libplum
 **Key source paths:** `lib/netplay/`, `src/multiopt.cpp`, `src/multijoin.cpp`, `src/screens/joiningscreen.cpp`
 
 ---
@@ -420,8 +420,8 @@ static IClientConnection* bsocket = nullptr;                    // client→host
 static IClientConnection* connected_bsocket[MAX_CONNECTED_PLAYERS] = {nullptr}; // host→client sockets
 ```
 
-**Max message size:** 32,768 bytes (`MaxMsgSize`).  
-**Net buffer:** `NET_BUFFER_SIZE = MaxMsgSize * 8` (256KB).  
+**Max message size:** 32,768 bytes (`MaxMsgSize`).
+**Net buffer:** `NET_BUFFER_SIZE = MaxMsgSize * 8` (256KB).
 **Protocol versioning:** Auto-generated `NETCODE_VERSION_MAJOR`/`NETCODE_VERSION_MINOR` from `autorevision` for compatibility checks.
 
 ### Connection Provider Abstraction

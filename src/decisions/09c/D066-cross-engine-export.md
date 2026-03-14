@@ -187,7 +187,7 @@ editor_extension:
       icon: tech_building_icon
       filter:
         tag: tech_building
-  
+
   # Custom property panels for entity types
   property_panels:
     - entity_filter: { has_component: VoxelModel }
@@ -197,7 +197,7 @@ editor_extension:
           - { key: "voxel.turret_offset", type: vec3, label: "Turret Offset" }
           - { key: "voxel.shadow_index", type: int, label: "Shadow Index" }
           - { key: "voxel.remap_color", type: palette_range, label: "Faction Color Range" }
-  
+
   # Custom terrain brush presets
   terrain_brushes:
     - name: "Urban Road"
@@ -206,7 +206,7 @@ editor_extension:
     - name: "Tiberium Field"
       tiles: [tib_01, tib_02, tib_03, tib_spread]
       scatter: { density: 0.7, randomize_variant: true }
-  
+
   # Custom export target configuration
   export_targets:
     - name: "Yuri's Revenge"
@@ -224,7 +224,7 @@ Editor automation, custom validators, batch operations:
 -- Register a custom validation that runs before export
 Editor.RegisterValidator("balance_check", function(scenario)
     local issues = {}
-    
+
     -- Check that both sides have a base
     for _, player in ipairs(scenario:GetPlayers()) do
         local has_mcv = false
@@ -243,7 +243,7 @@ Editor.RegisterValidator("balance_check", function(scenario)
             })
         end
     end
-    
+
     return issues
 end)
 
@@ -281,13 +281,13 @@ Full editor plugins for custom panels, renderers, format support, and export tar
 fn register_editor_plugin(host: &mut EditorHost) {
     // Register a custom export target
     host.register_export_target(TiberianSunExporter::new());
-    
+
     // Register a custom asset viewer for .vxl files
     host.register_asset_viewer("vxl", VoxelViewer::new());
-    
+
     // Register a custom terrain tool
     host.register_terrain_tool(TiberiumGrowthPainter::new());
-    
+
     // Register a custom entity component editor
     host.register_component_editor("SubterraneanUnit", SubUnitEditor::new());
 }

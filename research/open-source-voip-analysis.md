@@ -150,7 +150,7 @@ than Mumble's dual-layer approach and avoids the double-encryption overhead.
 From Mumble's `AudioInput.h` and source architecture:
 
 ```
-Microphone → Platform Backend → Resampler → Echo Canceller → 
+Microphone → Platform Backend → Resampler → Echo Canceller →
 Noise Canceller → Opus Encoder → Voice Packet → Network
 ```
 
@@ -420,15 +420,15 @@ impl JitterBuffer {
         let jitter = (arrival_delta.as_secs_f32() - expected_delta.as_secs_f32()).abs();
         self.jitter_estimate = 0.9 * self.jitter_estimate + 0.1 * jitter;
         self.last_arrival = now;
-        
+
         // Insert frame at correct position based on sequence number
         // Handle out-of-order delivery
         self.insert_frame(sequence, opus_data);
-        
+
         // Adapt buffer depth
         self.adapt_delay();
     }
-    
+
     /// Called every 20ms by the audio render thread.
     /// Returns the next frame to play, or None if the buffer is empty.
     pub fn pop(&mut self) -> Option<VoiceFrame> {
@@ -436,13 +436,13 @@ impl JitterBuffer {
         // Caller should invoke Opus PLC (packet loss concealment).
         self.frames.pop_front().flatten()
     }
-    
+
     fn adapt_delay(&mut self) {
         // Target delay = 2 * jitter_estimate + 1 frame
         // (covers ~95% of jitter variance)
         let target = ((2.0 * self.jitter_estimate * 50.0) as u32 + 1)
             .clamp(self.min_delay, self.max_delay);
-        
+
         if target > self.delay {
             // Increase delay: add one frame immediately (insert silence)
             self.delay += 1;
@@ -489,7 +489,7 @@ Common scenarios where UDP voice fails:
      message type (still using VoicePacket binary format).
    - The relay identifies tunneled voice and forwards normally.
 4. Continue UDP pings in background.
-5. If UDP connectivity is restored (3 consecutive ping responses), 
+5. If UDP connectivity is restored (3 consecutive ping responses),
    switch back to UDP.
 6. UI indicator: "Voice: Direct" (UDP) or "Voice: Tunneled" (TCP).
 ```

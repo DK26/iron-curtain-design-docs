@@ -1,4 +1,4 @@
-﻿### Ranking & Glicko-2 (`rank.*`)
+### Ranking & Glicko-2 (`rank.*`)
 
 Iron Curtain uses the Glicko-2 rating system. These parameters let league administrators tune it for their community's size and activity level.
 

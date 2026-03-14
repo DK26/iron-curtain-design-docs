@@ -22,11 +22,11 @@
 
 ## Overview
 
-**Language:** C  
-**Engine Model:** Client-server authoritative with client-side prediction  
-**Transport:** UDP with custom reliability layer (`net_chan.c`)  
-**Snapshot Rate:** Server-configurable (`sv_fps`, typically 20-40 Hz); per-client rate via `snaps` userinfo  
-**Compression:** Two-layer pipeline — table-driven field-level delta encoding + static Huffman coding on the bitstream  
+**Language:** C
+**Engine Model:** Client-server authoritative with client-side prediction
+**Transport:** UDP with custom reliability layer (`net_chan.c`)
+**Snapshot Rate:** Server-configurable (`sv_fps`, typically 20-40 Hz); per-client rate via `snaps` userinfo
+**Compression:** Two-layer pipeline — table-driven field-level delta encoding + static Huffman coding on the bitstream
 **Key source paths:** `code/qcommon/msg.c`, `code/qcommon/net_chan.c`, `code/qcommon/huffman.c`, `code/server/sv_snapshot.c`, `code/server/sv_net_chan.c`, `code/client/cl_parse.c`, `code/client/cl_net_chan.c`, `code/cgame/cg_predict.c`, `code/game/bg_pmove.c`
 
 ### Why Study This
@@ -330,7 +330,7 @@ void CG_PredictPlayerState(void) {
     current = trap_GetCurrentCmdNumber();
     for (cmdNum = current - CMD_BACKUP + 1; cmdNum <= current; cmdNum++) {
         trap_GetUserCmd(cmdNum, &cg_pmove.cmd);
-        
+
         if (cg_pmove.cmd.serverTime <= cg.predictedPlayerState.commandTime)
             continue;  // already applied by server
 
@@ -477,10 +477,10 @@ Q3 uses a simple but effective XOR stream cipher to prevent trivial packet inspe
 void SV_Netchan_Encode(client_t *client, msg_t *msg) {
     int serverId = cycled_serverId;
     int key = client->challenge ^ serverId;
-    
+
     // Use the last acknowledged reliable command as additional key material
     string = client->reliableCommands[client->reliableAcknowledge & (MAX_RELIABLE_COMMANDS - 1)];
-    
+
     // XOR each byte: key ^ (reliable_command_string_byte << (i & 1))
     for (i = SV_ENCODE_START; i < msg->cursize; i++) {
         if (!string[index]) index = 0;

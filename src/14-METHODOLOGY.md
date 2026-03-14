@@ -1,4 +1,4 @@
-﻿# 14 — Development Methodology
+# 14 — Development Methodology
 
 > How Iron Curtain moves from design docs to a playable game — the meta-process that governs everything from research through release.
 

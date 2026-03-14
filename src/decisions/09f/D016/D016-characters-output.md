@@ -1,4 +1,4 @@
-﻿#### Character Construction Principles
+#### Character Construction Principles
 
 Generative campaigns live or die on character quality. A procedurally generated mission with a mediocre map is forgettable. A procedurally generated mission where a character you care about betrays you is unforgettable. The LLM's system prompt includes explicit character construction guidance drawn from proven storytelling principles.
 
@@ -180,33 +180,33 @@ The LLM doesn't have inherent memory between generation calls. The system mainta
 pub struct GenerativeCampaignContext {
     /// The original campaign skeleton (backstory, arc, characters).
     pub skeleton: CampaignSkeleton,
-    
+
     /// Campaign parameters chosen by the player at setup.
     pub parameters: CampaignParameters,
-    
+
     /// Per-mission summary of what happened (compressed narrative, not raw state).
     pub mission_history: Vec<MissionSummary>,
-    
+
     /// Current state of each named character — tracks everything the LLM needs
     /// to write them consistently and evolve their arc.
     pub character_states: Vec<CharacterState>,
-    
+
     /// Active story flags and campaign variables (D021 persistent state).
     pub flags: HashMap<String, Value>,
-    
+
     /// Current unit roster summary (unit counts by type, veterancy distribution,
     /// named units — not individual unit state, which is too granular for prompts).
     pub roster_summary: RosterSummary,
-    
+
     /// Narrative threads the LLM is tracking (set up in skeleton, updated per mission).
     /// e.g., "Sonya's betrayal — foreshadowed in missions 3, 5; reveal planned for ~mission 12"
     pub active_threads: Vec<NarrativeThread>,
-    
+
     /// Player tendency observations (from D042 profile + mission outcomes).
     /// e.g., "Player favors aggressive strategies, rarely uses naval units,
     /// tends to protect civilians"
     pub player_tendencies: Vec<String>,
-    
+
     /// The planned arc position — where we are in the narrative structure.
     /// e.g., "Act 2, rising action, approaching midpoint crisis"
     pub arc_position: String,

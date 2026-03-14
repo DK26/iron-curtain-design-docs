@@ -17,7 +17,7 @@
    - Blender (GPL) + Python scripts (any license)
    - WordPress (GPL) + themes and plugins loaded via defined APIs (debated, but widely practiced)
    - GCC (GPL) + programs compiled by GCC (any license, via explicit runtime library exception)
-   
+
    IC's tiered modding architecture (D003/D004/D005) was specifically designed so that mods operate through data interfaces and sandboxed runtimes rather than linking against engine internals. The explicit § 7 modding exception removes ambiguity about IC's intent.
 
 6. **Commercial use is allowed.** GPL v3 permits selling copies, hosting commercial servers, running tournaments with prize pools, and charging for relay hosting. It requires sharing source modifications — which is exactly what this community wants.

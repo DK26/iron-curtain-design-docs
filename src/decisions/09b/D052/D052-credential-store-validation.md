@@ -1,4 +1,4 @@
-﻿### Community Credential Store (SQLite)
+### Community Credential Store (SQLite)
 
 Each community a player belongs to gets a separate SQLite file in the player's data directory:
 

@@ -1,4 +1,4 @@
-﻿### 8. Campaign Graph (`ic-sim` / D021)
+### 8. Campaign Graph (`ic-sim` / D021)
 
 **Surface:** `CampaignGraph`, `MissionExecution<S>`, roster carryover, story flags.
 

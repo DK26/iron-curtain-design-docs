@@ -1,4 +1,4 @@
-﻿## Feature Cluster Dependency Matrix - M9
+## Feature Cluster Dependency Matrix - M9
 
 > See [milestone-dependency-map.md](../milestone-dependency-map.md) for navigation.
 

@@ -1,4 +1,4 @@
-﻿## Decision Tracker - D021-D042 (Gameplay / Community)
+## Decision Tracker - D021-D042 (Gameplay / Community)
 
 > See [decision-tracker.md](decision-tracker.md) for overview.
 

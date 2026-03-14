@@ -143,7 +143,7 @@ fn validate_websocket_upgrade(request: &HttpRequest) -> Result<(), IcrpError> {
         // No Origin header — non-browser client (curl, MCP, LSP). Allow.
         None => Ok(()),
         // Localhost origins — same-machine tools. Allow.
-        Some(o) if o.starts_with("http://localhost") 
+        Some(o) if o.starts_with("http://localhost")
                || o.starts_with("http://127.0.0.1")
                || o.starts_with("http://[::1]")
                || o == "null" => Ok(()),

@@ -123,10 +123,10 @@ class Connection final : public IConnection {
     MutexedQueue<ConnectionCommandPtr> m_command_queue;
     // Event queue: ReceiveThread -> user
     MutexedQueue<ConnectionEventPtr> m_event_queue;
-    
+
     std::unique_ptr<ConnectionSendThread> m_sendThread;
     std::unique_ptr<ConnectionReceiveThread> m_receiveThread;
-    
+
     std::map<session_t, Peer *> m_peers;
 };
 ```
@@ -485,7 +485,7 @@ class Peer {
      * and to make sure Minetest servers are not useful for UDP amplification.
      */
     bool m_half_open = true;
-    
+
     void SetFullyOpen() {
         MutexAutoLock lock(m_exclusive_access_mutex);
         m_half_open = false;
@@ -557,7 +557,7 @@ struct PrioritySortedBlockTransfer {
     float priority;    // lower = higher priority
     v3s16 pos;         // block position
     session_t peer_id;
-    
+
     bool operator < (const PrioritySortedBlockTransfer &other) const {
         return priority < other.priority;
     }
@@ -1258,13 +1258,13 @@ case HookThieve.PoolHooks(hooks) =>
   val candidates = members ++ hooks.map(_.member)
   val pairings = MatchMaking(candidates)
   val pairedMembers = pairings.flatMap(_.members)
-  
+
   // Steal hooks that were matched
   hookThieve.stolen(hooks.filter(h => pairedMembers.exists(m => h.member.userId.is(m.userId))))
-  
+
   // Remaining members stay in pool with incremented miss counter
   members = members.diff(pairedMembers).map(_.incMisses)
-  
+
   gameStarter(config, pairings)
   lastPairedUserIds = pairedMembers.view.map(_.userId).toSet
   scheduleWave()

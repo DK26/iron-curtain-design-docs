@@ -1,4 +1,4 @@
-﻿# Security & Threat Model
+# Security & Threat Model
 
 > **Keywords:** threat model, vulnerabilities, anti-cheat, maphack, replay signing, WASM sandbox, transport encryption, Workshop supply chain, ranked integrity, path traversal, competitive integrity
 

@@ -1,4 +1,4 @@
-﻿## Feature Cluster Dependency Matrix - M7 + Cross-Milestone Addenda
+## Feature Cluster Dependency Matrix - M7 + Cross-Milestone Addenda
 
 > Rows L283-303 include cross-milestone addenda added after initial sequencing. See [milestone-dependency-map.md](../milestone-dependency-map.md) for navigation.
 

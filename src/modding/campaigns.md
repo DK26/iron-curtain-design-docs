@@ -2,15 +2,15 @@
 
 *Inspired by Operation Flashpoint: Cold War Crisis / Resistance. See D021.*
 
-OpenRA's campaigns are disconnected: each mission is standalone, you exit to menu between them, there's no flow. Our campaigns are **continuous, branching, and stateful** — a directed graph of missions with persistent state, multiple outcomes per mission, and no mandatory game-over screen.
+OpenRA's campaigns are disconnected: each mission is standalone, you exit to menu between them, there's no flow. Our campaigns are **continuous, branching, and stateful** â€” a directed graph of missions with persistent state, multiple outcomes per mission, and no mandatory game-over screen.
 
 ### Core Principles
 
-1. **Campaign is a graph, not a list.** Missions connect via named outcomes, forming branches, convergence points, and optional paths — not a linear sequence.
+1. **Campaign is a graph, not a list.** Missions connect via named outcomes, forming branches, convergence points, and optional paths â€” not a linear sequence.
 2. **Missions have multiple outcomes, not just win/lose.** "Won with bridge intact" and "Won but bridge destroyed" are different outcomes that lead to different next missions.
 3. **Failure doesn't end the campaign.** A "defeat" outcome is just another edge in the graph. The designer chooses: branch to a fallback mission, retry with fewer resources, or skip ahead with consequences. "No game over" campaigns are possible.
-4. **State persists across missions.** Surviving units, veterancy, captured equipment, story flags, resources — all carry forward based on designer-configured carryover rules.
-5. **Continuous flow.** Briefing → mission → debrief → next mission. No exit to menu between levels (unless the player explicitly quits).
+4. **State persists across missions.** Surviving units, veterancy, captured equipment, story flags, resources â€” all carry forward based on designer-configured carryover rules.
+5. **Continuous flow.** Briefing â†’ mission â†’ debrief â†’ next mission. No exit to menu between levels (unless the player explicitly quits).
 
 ### Campaign Definition (YAML)
 
@@ -21,6 +21,26 @@ campaign:
   title: "Allied Campaign"
   description: "Drive back the Soviet invasion across Europe"
   start_mission: allied_01
+
+  # Campaign-authored default settings (D033/D019/D032/D043/D045/D048)
+  # These are the campaign's baked-in configuration â€” what the author
+  # intends the campaign to play like. Applied as defaults when the
+  # player starts a new playthrough; player can review and tweak
+  # individual switches before launching.
+  default_settings:
+    difficulty: normal           # campaign's intended starting difficulty
+    balance: classic             # D019 balance preset
+    theme: classic               # D032 UI theme
+    behavior: vanilla            # D033 QoL behavior preset
+    ai_behavior: classic_ra      # D043 AI preset
+    pathfinding: classic_ra      # D045 pathfinding feel
+    render_mode: classic         # D048 render mode
+    # Individual toggle overrides â€” fine-grained switches on top of
+    # the behavior preset above (same keys as D033 YAML structure)
+    toggle_overrides:
+      fog_of_war: on             # campaign requires fog
+      shroud_regrow: false       # but no shroud regrowth
+      health_bars: on_selection  # author preference for this campaign
 
   # What persists between missions (campaign-wide defaults)
   persistent_state:
@@ -37,7 +57,7 @@ campaign:
       briefing: briefings/allied-01.yaml
       video: videos/allied-01-briefing.vqa
       carryover:
-        from_previous: none    # first mission — nothing carries
+        from_previous: none    # first mission â€” nothing carries
       outcomes:
         victory_bridge_intact:
           description: "Bridge secured intact"
@@ -57,7 +77,7 @@ campaign:
             set_flag: { retreat_count: +1 }
 
     allied_02a:
-      map: missions/allied-02a    # different map — bridge crossing
+      map: missions/allied-02a    # different map â€” bridge crossing
       briefing: briefings/allied-02a.yaml
       carryover:
         units: surviving          # units from mission 01 appear
@@ -72,7 +92,7 @@ campaign:
           next: allied_02_fallback
 
     allied_02b:
-      map: missions/allied-02b    # different map — river crossing without bridge
+      map: missions/allied-02b    # different map â€” river crossing without bridge
       briefing: briefings/allied-02b.yaml
       carryover:
         units: surviving
@@ -103,30 +123,30 @@ campaign:
 ### Campaign Graph Visualization
 
 ```
-                    ┌─────────────┐
-                    │  allied_01  │
-                    └──┬───┬───┬──┘
-          bridge ok ╱   │       ╲ defeat
-                  ╱     │         ╲
-    ┌────────────┐  bridge   ┌─────────────────┐
-    │ allied_02a │  destroyed│ allied_01_       │
-    └─────┬──────┘      │   │ fallback         │
-          │       ┌─────┴───┐└────────┬────────┘
-          │       │allied_02b│        │
-          │       └────┬─────┘        │
-          │            │         joins 02b
-          └─────┬──────┘
-                │ converge
-          ┌─────┴──────┐
-          │  allied_03  │
-          └─────────────┘
+                    â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+                    â”‚  allied_01  â”‚
+                    â””â”€â”€â”¬â”€â”€â”€â”¬â”€â”€â”€â”¬â”€â”€â”˜
+          bridge ok â•±   â”‚       â•² defeat
+                  â•±     â”‚         â•²
+    â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  bridge   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+    â”‚ allied_02a â”‚  destroyedâ”‚ allied_01_       â”‚
+    â””â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜      â”‚   â”‚ fallback         â”‚
+          â”‚       â”Œâ”€â”€â”€â”€â”€â”´â”€â”€â”€â”â””â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+          â”‚       â”‚allied_02bâ”‚        â”‚
+          â”‚       â””â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”˜        â”‚
+          â”‚            â”‚         joins 02b
+          â””â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜
+                â”‚ converge
+          â”Œâ”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”
+          â”‚  allied_03  â”‚
+          â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 This is a **directed acyclic graph** (with optional cycles for retry loops). The engine validates campaign graphs at load time: no orphan nodes, all outcome targets exist, start mission is defined.
 
 ### Unit Roster & Persistence
 
-Inspired by Operation Flashpoint: Resistance — surviving units are precious resources that carry forward, creating emotional investment and strategic consequences.
+Inspired by Operation Flashpoint: Resistance â€” surviving units are precious resources that carry forward, creating emotional investment and strategic consequences.
 
 **Unit Roster:**
 ```rust
@@ -135,7 +155,7 @@ Inspired by Operation Flashpoint: Resistance — surviving units are precious re
 pub struct RosterUnit {
     pub unit_type: UnitTypeId,        // e.g., "medium_tank", "tanya"
     pub name: Option<String>,         // optional custom name
-    pub veterancy: VeterancyLevel,    // rookie → veteran → elite → heroic
+    pub veterancy: VeterancyLevel,    // rookie â†’ veteran â†’ elite â†’ heroic
     pub kills: u32,                   // lifetime kill count
     pub missions_survived: u32,       // how many missions this unit has lived through
     pub equipment: Vec<EquipmentId>,  // OFP:R-style captured/found equipment
@@ -147,16 +167,16 @@ pub struct RosterUnit {
 
 | Mode        | Behavior                                                                                |
 | ----------- | --------------------------------------------------------------------------------------- |
-| `none`      | Clean slate — the next mission provides its own units                                   |
+| `none`      | Clean slate â€” the next mission provides its own units                                 |
 | `surviving` | All player units alive at mission end join the roster                                   |
 | `extracted` | Only units inside a designated extraction zone carry over (OFP-style "get to the evac") |
 | `selected`  | Lua script explicitly picks which units carry over                                      |
-| `custom`    | Full Lua control — script reads unit list, decides what persists                        |
+| `custom`    | Full Lua control â€” script reads unit list, decides what persists                      |
 
 **Veterancy across missions:**
 - Units gain experience from kills and surviving missions
 - A veteran tank from mission 1 is still veteran in mission 5
-- Losing a veteran unit hurts — they're irreplaceable until you earn new ones
+- Losing a veteran unit hurts â€” they're irreplaceable until you earn new ones
 - Veterancy grants stat bonuses (configurable in YAML rules, per balance preset)
 
 **Equipment persistence (OFP: Resistance model):**
@@ -168,7 +188,7 @@ pub struct RosterUnit {
 ### Campaign State
 
 ```rust
-/// Full campaign progress — serializable for save games.
+/// Full campaign progress â€” serializable for save games.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct CampaignState {
     pub campaign_id: CampaignId,
@@ -255,6 +275,8 @@ pub struct CampaignComparisonScope {
     pub game_module: String,
     pub difficulty: String,
     pub balance_preset: String,
+    pub used_campaign_defaults: bool,     // true if player kept the campaign's default_settings
+    pub settings_fingerprint: [u8; 32],  // SHA-256 of resolved settings (for exact comparison grouping)
 }
 
 /// Persistent progression state for a named hero character (optional toolkit).
@@ -273,7 +295,7 @@ pub struct HeroProfileState {
 
 ### Campaign Progress Metadata & GUI Semantics (Branching-Safe, Spoiler-Safe)
 
-The campaign UI should display **progress metadata** (mission counts, completion %, farthest progress, time played), but D021 campaigns are branching graphs — not a simple linear list. To avoid confusing or misleading numbers, D021 defines these metrics explicitly:
+The campaign UI should display **progress metadata** (mission counts, completion %, farthest progress, time played), but D021 campaigns are branching graphs â€” not a simple linear list. To avoid confusing or misleading numbers, D021 defines these metrics explicitly:
 
 - **`unique_missions_completed`**: count of distinct mission nodes completed across local history (best "completion %" metric for branching campaigns)
 - **`current_path_depth`**: depth of the active run's current path (useful for "where am I now?")
@@ -281,7 +303,7 @@ The campaign UI should display **progress metadata** (mission counts, completion
 - **`endings_unlocked`**: ending/outcome coverage for replayability (optional if the author marks endings hidden)
 
 **UI guidance (campaign browser / graph / profile):**
-- Show **raw counts + percentage** together (example: `5 / 14 missions`, `36%`) — percentages alone hide too much.
+- Show **raw counts + percentage** together (example: `5 / 14 missions`, `36%`) â€” percentages alone hide too much.
 - Label branching-aware metrics explicitly (`Best Path Depth`, not just `Farthest Mission`) to avoid ambiguity.
 - For classic linear campaigns, `best_path_depth` and `unique completion` are numerically similar; UI may simplify wording.
 
@@ -295,7 +317,7 @@ The campaign UI should display **progress metadata** (mission counts, completion
 - Community comparisons (percentiles, average completion, popular branch rates) are **opt-in** and must be scoped by `CampaignComparisonScope` (campaign version, module, difficulty, balance preset).
 - Community comparison data is informational and social-facing, not competitive/ranked authority.
 
-Campaign state is fully serializable (D010 — snapshottable sim state). Save games capture the entire campaign progress. Replays can replay an entire campaign run, not just individual missions.
+Campaign state is fully serializable (D010 â€” snapshottable sim state). Save games capture the entire campaign progress. Replays can replay an entire campaign run, not just individual missions.
 
 ### Named Character Presentation Overrides (Optional Convenience Layer)
 
@@ -553,16 +575,16 @@ end
 
 -- Read story flags set by previous missions
 if Campaign.get_flag("bridge_status") == "intact" then
-    -- Bridge exists on this map — open the crossing
+    -- Bridge exists on this map â€” open the crossing
     bridge_actor:set_state("intact")
 else
-    -- Bridge was destroyed — it's rubble
+    -- Bridge was destroyed â€” it's rubble
     bridge_actor:set_state("destroyed")
 end
 
 -- Check cumulative stats
 if Campaign.get_stat("total_units_lost") > 50 then
-    -- Player has been losing lots of units — offer reinforcements
+    -- Player has been losing lots of units â€” offer reinforcements
     trigger_reinforcements()
 end
 
@@ -582,7 +604,7 @@ Campaign.set_flag("captured_radar", true)
 Campaign.set_flag("enemy_morale", "broken")
 
 -- Update roster: mark which units survived
--- (automatic if carryover mode is "surviving" — manual if "selected")
+-- (automatic if carryover mode is "surviving" â€” manual if "selected")
 function OnMissionEnd()
     local survivors = GetPlayerUnits():alive()
     for _, unit in ipairs(survivors) do
@@ -595,7 +617,7 @@ function OnEnemyVehicleCaptured(vehicle)
     Campaign.equipment_add(vehicle.type)
 end
 
--- Failure doesn't mean game over — it's just another outcome
+-- Failure doesn't mean game over â€” it's just another outcome
 function OnPlayerBaseDestroyed()
     Campaign.complete("defeat")  -- campaign graph decides what happens next
 end
@@ -651,9 +673,9 @@ adaptive:
       enemy_count_multiplier: 1.3
 ```
 
-This is not AI-adaptive difficulty (that's D016/`ic-llm`). This is **designer-authored conditional logic** expressed in YAML — the campaign reacts to the player's cumulative performance without any LLM involvement.
+This is not AI-adaptive difficulty (that's D016/`ic-llm`). This is **designer-authored conditional logic** expressed in YAML â€” the campaign reacts to the player's cumulative performance without any LLM involvement.
 
-> **Dynamic Mission Flow:** Individual missions within a campaign can use **map layers** (dynamic expansion), **sub-map transitions** (building interiors), and **phase briefings** (mid-mission cutscenes) to create multi-phase missions with progressive reveals and infiltration sequences. Flags set during sub-map transitions (e.g., `radar_destroyed`, `radar_captured`) are written to `Campaign.set_flag()` and persist across missions — a spy's infiltration outcome in mission 3 can affect the enemy's capabilities in mission 5. See `04-MODDING.md` § Dynamic Mission Flow for the full system design, Lua API, and worked examples.
+> **Dynamic Mission Flow:** Individual missions within a campaign can use **map layers** (dynamic expansion), **sub-map transitions** (building interiors), and **phase briefings** (mid-mission cutscenes) to create multi-phase missions with progressive reveals and infiltration sequences. Flags set during sub-map transitions (e.g., `radar_destroyed`, `radar_captured`) are written to `Campaign.set_flag()` and persist across missions â€” a spy's infiltration outcome in mission 3 can affect the enemy's capabilities in mission 5. See `04-MODDING.md` Â§ Dynamic Mission Flow for the full system design, Lua API, and worked examples.
 
 > **D070 extension path (future "Ops Campaigns"):** D070's `Commander & Field Ops` asymmetric co-op mode is **v1 match-based** by default (session-local field progression), but it composes with D021 later. A campaign can wrap D070-style missions and persist squad/hero state, requisition unlocks, and role-specific flags across missions using the same `CampaignState` and `Campaign.set_flag()` model defined here. This includes optional **hero-style SpecOps leaders** (e.g., Tanya-like or custom commandos) using the built-in hero toolkit for XP/skills/loadouts between matches/missions. This is an optional campaign layer, not a requirement for the base D070 mode.
 
@@ -669,9 +691,9 @@ This is not AI-adaptive difficulty (that's D016/`ic-llm`). This is **designer-au
 
 > **D070 pacing extension pattern ("Operational Momentum" / "one more phase"):** An `Ops Campaign` can preserve D070's optional Operational Momentum pacing across missions by storing lane progress and war-effort outcomes as campaign state/flags (for example `intel_chain_progress`, `command_network_tier`, `superweapon_delays_applied`, `forward_lz_unlocked`). The next mission can then react with support availability changes, route options, enemy readiness, or objective variants. UI should present these as **branching-safe, spoiler-safe progress summaries** (current gains + next likely payoff), not as a giant opaque meta-score.
 
-### Tutorial Campaigns — Progressive Element Introduction (D065)
+### Tutorial Campaigns â€” Progressive Element Introduction (D065)
 
-The campaign system supports **tutorial campaigns** — campaigns designed to teach game mechanics (or mod mechanics) one at a time. Tutorial campaigns use everything above (branching graphs, state persistence, adaptive difficulty) plus the `Tutorial` Lua global (D065) to restrict and reveal gameplay elements progressively.
+The campaign system supports **tutorial campaigns** â€” campaigns designed to teach game mechanics (or mod mechanics) one at a time. Tutorial campaigns use everything above (branching graphs, state persistence, adaptive difficulty) plus the `Tutorial` Lua global (D065) to restrict and reveal gameplay elements progressively.
 
 This pattern works for the built-in Commander School and for modder-created tutorial campaigns. A modder introducing custom units, buildings, or mechanics in a total conversion can use the same infrastructure.
 
@@ -685,10 +707,10 @@ A modder has created a "Scorched Earth" mod that adds a flamethrower infantry un
 # mods/scorched-earth/campaigns/tutorial/campaign.yaml
 campaign:
   id: scorched_tutorial
-  title: "Scorched Earth — Field Training"
+  title: "Scorched Earth â€” Field Training"
   description: "Learn the fire mechanics before you burn everything down"
   start_mission: se_01
-  category: tutorial           # appears under Campaign → Tutorial
+  category: tutorial           # appears under Campaign â†’ Tutorial
   requires_mod: scorched-earth
   icon: scorched_tutorial_icon
 
@@ -743,10 +765,10 @@ campaign:
       briefing: briefings/scorched/04.yaml
       outcomes:
         pass:
-          description: "Training complete — you're ready for the Scorched Earth campaign"
+          description: "Training complete â€” you're ready for the Scorched Earth campaign"
 ```
 
-**Mission 01 Lua script — introducing the flamethrower and fire spread:**
+**Mission 01 Lua script â€” introducing the flamethrower and fire spread:**
 
 ```lua
 -- mods/scorched-earth/missions/scorched-tutorial/01-meet-the-pyro.lua
@@ -762,7 +784,7 @@ function OnMissionStart()
     -- Spawn player's flame squad
     local pyros = Actor.Create("flame_trooper", player, spawn_south, { count = 3 })
 
-    -- Spawn enemy bunker (wood — flammable)
+    -- Spawn enemy bunker (wood â€” flammable)
     local bunker = Actor.Create("wood_bunker", enemy, bunker_pos)
 
     -- Step 1: Move to position
@@ -781,13 +803,13 @@ function OnStepComplete(step_id)
         Tutorial.SetStep("ignite", {
             title = "Set It Ablaze",
             hint = "Right-click the wooden bunker to attack it. " ..
-                   "Flame Troopers set structures on fire — watch it spread.",
+                   "Flame Troopers set structures on fire â€” watch it spread.",
             highlight_ui = "command_bar",
             completion = { type = "action", action = "attack", target_type = "wood_bunker" }
         })
 
     elseif step_id == "ignite" then
-        -- Step 3: Observe fire spread (no player action needed — just watch)
+        -- Step 3: Observe fire spread (no player action needed â€” just watch)
         Tutorial.ShowHint(
             "Fire spreads to adjacent flammable tiles. " ..
             "Trees, wooden structures, and dry grass will catch fire. " ..
@@ -806,7 +828,7 @@ function OnStepComplete(step_id)
         })
 
     elseif step_id == "watch_spread" then
-        Tutorial.ShowHint("Fire is a powerful tool — but it burns friend and foe alike. " ..
+        Tutorial.ShowHint("Fire is a powerful tool â€” but it burns friend and foe alike. " ..
                           "Be careful where you aim.", {
             title = "A Word of Caution",
             duration = 8,
@@ -842,7 +864,7 @@ hints:
     eva_line = se_fire_warning
 ```
 
-This pattern scales to any complexity — the modder uses the same YAML campaign format for a 3-mission mod tutorial that the engine uses for its 6-mission Commander School. The `Tutorial` Lua API, `hints.yaml` schema, and scenario editor Tutorial modules (D038) all work identically for first-party and third-party content.
+This pattern scales to any complexity â€” the modder uses the same YAML campaign format for a 3-mission mod tutorial that the engine uses for its 6-mission Commander School. The `Tutorial` Lua API, `hints.yaml` schema, and scenario editor Tutorial modules (D038) all work identically for first-party and third-party content.
 
 ### LLM Campaign Generation
 
@@ -854,13 +876,13 @@ User: "Create a 5-mission Soviet campaign where you invade Alaska.
        with consequences. Units should carry over between missions."
 
 LLM generates:
-  → campaign.yaml (graph with 5+ nodes, branching on outcomes)
-  → 5-7 mission files (main path + fallback branches)
-  → Lua scripts with Campaign API calls
-  → briefing text for each mission
-  → carryover rules per transition
+  â†’ campaign.yaml (graph with 5+ nodes, branching on outcomes)
+  â†’ 5-7 mission files (main path + fallback branches)
+  â†’ Lua scripts with Campaign API calls
+  â†’ briefing text for each mission
+  â†’ carryover rules per transition
 ```
 
-The template/scene system makes this tractable — the LLM composes from known building blocks rather than generating raw code. Campaign graphs are validated at load time (no orphan nodes, all outcomes have targets).
+The template/scene system makes this tractable â€” the LLM composes from known building blocks rather than generating raw code. Campaign graphs are validated at load time (no orphan nodes, all outcomes have targets).
 
-> **Security (V40):** LLM-generated content (YAML rules, Lua scripts, briefing text) must pass through the `ic mod check` validation pipeline before execution — same as Workshop submissions. Additional defenses: cumulative mission-lifetime resource limits, content filter for generated text, sandboxed preview mode. LLM output is treated as untrusted Tier 2 mod content, never trusted first-party. See `06-SECURITY.md` § Vulnerability 40.
+> **Security (V40):** LLM-generated content (YAML rules, Lua scripts, briefing text) must pass through the `ic mod check` validation pipeline before execution â€” same as Workshop submissions. Additional defenses: cumulative mission-lifetime resource limits, content filter for generated text, sandboxed preview mode. LLM output is treated as untrusted Tier 2 mod content, never trusted first-party. See `06-SECURITY.md` Â§ Vulnerability 40.

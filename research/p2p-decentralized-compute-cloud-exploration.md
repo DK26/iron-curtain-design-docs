@@ -103,26 +103,26 @@ A `WorkUnit` is to the compute platform what a `TorrentHandle` is to P2P distrib
 pub struct WorkUnit {
     /// Unique identity (publisher/name@version, reuses ResourcePackage ID)
     pub id: ResourceId,
-    
+
     /// The executable content — an OCI image reference, a WASM module,
     /// or a native binary, distributed as a ResourcePackage via P2P.
     pub image: ImageSpec,
-    
+
     /// Resource requirements (what the task needs to run)
     pub resources: ResourceRequirements,
-    
+
     /// Scheduling constraints (where the task can run)
     pub constraints: SchedulingConstraints,
-    
+
     /// Health check definition (how to know the task is alive)
     pub health: HealthSpec,
-    
+
     /// Restart policy on failure
     pub restart: RestartPolicy,
-    
+
     /// Environment configuration (Content Channel reference for live config)
     pub config: Option<ContentChannelRef>,
-    
+
     /// Network exposure (ports, service name for discovery)
     pub network: NetworkSpec,
 }
@@ -159,16 +159,16 @@ pub struct ResourceRequirements {
 pub struct SchedulingConstraints {
     /// Node must have these capabilities (schema-based capability matching)
     pub requires: Vec<Capability>,
-    
+
     /// Affinity: prefer co-location with these WorkUnits
     pub affinity: Vec<ResourceId>,
-    
+
     /// Anti-affinity: avoid co-location (for redundancy)
     pub anti_affinity: Vec<ResourceId>,
-    
+
     /// Geographic / network locality preference
     pub locality: Option<LocalityPreference>,
-    
+
     /// Trust tier requirement (minimum trust of the hosting node)
     pub min_trust: TrustTier,
 }
@@ -190,22 +190,22 @@ A `WorkerNode` is a peer that advertises available compute resources, not just P
 pub struct WorkerNode {
     /// Existing peer identity (Ed25519)
     pub identity: PlayerKey,
-    
+
     /// Available resources (updated periodically)
     pub available: ResourceCapacity,
-    
+
     /// Capabilities this node provides (schema-based, queryable via CapabilityQuery)
     pub capabilities: Vec<Capability>,
-    
+
     /// Trust tier (inherited from publisher trust system)
     pub trust_tier: TrustTier,
-    
+
     /// Current load (running WorkUnits and their resource consumption)
     pub load: NodeLoad,
-    
+
     /// Geographic / network locality hints
     pub locality: LocalityInfo,
-    
+
     /// Health score (EWMA-scored, reuses existing 4D peer scoring)
     pub health_score: f64,
 }
@@ -245,16 +245,16 @@ There is no central control plane. The "cluster" is an emergent view constructed
 pub struct ClusterView {
     /// Cluster identity (a named scope — multiple clusters can coexist)
     pub scope: ClusterScope,
-    
+
     /// Known worker nodes (discovered via DHT/tracker/federation/mDNS)
     pub nodes: HashMap<PlayerKey, WorkerNode>,
-    
+
     /// Running work units and their placements
     pub placements: HashMap<ResourceId, Placement>,
-    
+
     /// Desired state (what should be running)
     pub desired: Vec<WorkUnit>,
-    
+
     /// View freshness (last gossip sync timestamp per node)
     pub freshness: HashMap<PlayerKey, Instant>,
 }
@@ -262,11 +262,11 @@ pub struct ClusterView {
 pub struct ClusterScope {
     /// A human-readable name for this cluster
     pub name: String,
-    
+
     /// The federation sources that define membership
     /// (reuses existing Workshop source configuration)
     pub sources: Vec<SourceConfig>,
-    
+
     /// Admission policy: which nodes can join this cluster?
     pub admission: AdmissionPolicy,
 }
@@ -326,25 +326,25 @@ This is reminiscent of Nomad's evaluation/allocation model more than K8s's centr
 pub struct SchedulingScore {
     /// Does the node have enough resources? (hard constraint — pass/fail)
     pub fits: bool,
-    
+
     /// Soft scoring dimensions (weighted, same pattern as peer scoring):
-    
+
     /// Resource headroom — prefer nodes with more spare capacity
     /// (avoids hot spots, same principle as rarest-first piece selection)
     pub headroom: f64,
-    
+
     /// Locality match — prefer nodes close to dependencies
     /// (reuses peer latency scoring dimension)
     pub locality: f64,
-    
+
     /// Trust level — prefer higher-trust nodes for sensitive workloads
     /// (direct reuse of trust tier system)
     pub trust: f64,
-    
+
     /// Historical reliability — EWMA of this node's task completion rate
     /// (direct reuse of EWMA peer scoring)
     pub reliability: f64,
-    
+
     /// Affinity/anti-affinity satisfaction
     pub affinity: f64,
 }
@@ -491,15 +491,15 @@ The IC platform has a unique answer: **the game community IS the bootstrap.**
 ```
 Phase 1: IC Workshop distributes game content (mods, maps, replays).
          → Thousands of peers running the P2P engine.
-         
+
 Phase 2: ic-server nodes provide game servers + relay + matchmaking.
          → Hundreds of community-operated federated servers.
-         
+
 Phase 3: ic-server nodes start hosting game instances for other communities.
          → Decentralized game server orchestration (§ 3.1).
          → The first "WorkUnits" are game servers — a workload the community
             already runs and understands.
-            
+
 Phase 4: The compute layer generalizes beyond game servers.
          → AI inference, CI/CD, edge computing.
          → The peer network, federation, identity, and trust are already mature

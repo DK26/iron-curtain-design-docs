@@ -1,4 +1,4 @@
-﻿### Per-Database PRAGMA Configuration
+### Per-Database PRAGMA Configuration
 
 Every SQLite database in IC gets a purpose-tuned PRAGMA configuration applied at connection open time. The correct settings depend on the database's access pattern (write-heavy vs. read-heavy), data criticality (irreplaceable credentials vs. recreatable cache), expected size, and concurrency requirements. A single "one size fits all" configuration would either sacrifice durability for databases that need it (credentials, achievements) or sacrifice throughput for databases that need speed (telemetry, gameplay events).
 

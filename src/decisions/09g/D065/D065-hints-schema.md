@@ -1,4 +1,4 @@
-﻿### Layer 2 — Contextual Hints (YAML-Driven, Always-On)
+### Layer 2 — Contextual Hints (YAML-Driven, Always-On)
 
 Contextual hints appear as translucent overlay callouts during gameplay, triggered by game state. They are NOT part of Commander School — they work in any game mode (skirmish, multiplayer, custom campaigns). Modders can author custom hints for their mods.
 

@@ -1,4 +1,4 @@
-﻿#### World Map Assets
+#### World Map Assets
 
 World maps are **game-module-provided and moddable assets** — not hardcoded. A world map can represent anything: Cold War Europe, the entire globe, a fictional continent, an alien planet, a galactic star map, a subway network — whatever fits the game or mod. The engine doesn't care what the map *is*, only that it has regions with connections. Each game module ships with default world maps, and modders can create their own for any setting they imagine.
 
@@ -10,7 +10,7 @@ world_map:
   id: "europe_1953"
   display_name: "Europe 1953"
   game_module: red_alert              # which game module this map is for
-  
+
   # Visual asset — the actual map image
   # Supports multiple render modes (D048): sprite, vector, or 3D globe
   visual:
@@ -18,11 +18,11 @@ world_map:
     region_overlays: "maps/world/europe_1953_regions.png"  # color-coded regions
     faction_colors: true                         # color regions by controlling faction
     animation: frontline_glow                    # animated frontlines between factions
-  
+
   # Region definitions (see region YAML above)
   regions:
     # ... region definitions with adjacency, terrain, resources, etc.
-  
+
   # Starting configurations (selectable in setup)
   scenarios:
     - id: "cold_war_heats_up"
@@ -77,10 +77,10 @@ package:
   category: world-map
   game_module: any                     # or a specific module
   engine_version: "^0.3.0"
-  
+
   tags: ["sci-fi", "galactic", "space", "large"]
   ai_usage: allow                       # LLM can select this map for generated campaigns
-  
+
   dependencies:
     - id: "scifi-modding-collective/space-faction-pack"
       version: "^1.0"                  # faction definitions this map references

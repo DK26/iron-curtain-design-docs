@@ -1,4 +1,4 @@
-﻿## D030: Workshop Resource Registry & Dependency System
+## D030: Workshop Resource Registry & Dependency System
 
 ### Decision Capsule (LLM/RAG Summary)
 

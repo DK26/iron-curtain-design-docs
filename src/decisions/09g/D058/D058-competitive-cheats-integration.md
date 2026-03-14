@@ -1,4 +1,4 @@
-﻿#### Competitive Integrity in Multiplayer
+#### Competitive Integrity in Multiplayer
 
 Dev commands and cheat codes are handled. But what about the ~120 *normal* commands available to every player in multiplayer — `/move`, `/attack`, `/build`, `/select`, `/place`? These produce the same `PlayerOrder` variants as clicking the GUI, but they make external automation trivially easy. A script that sends `/select idle` → `/build harvester` → `/rally 120,80` every 3 seconds is functionally a perfect macro player. Does this create an unfair advantage for scripters?
 

@@ -41,36 +41,36 @@ Key constants:
 function Find_Path(dest, output_moves[], max_length, threshold):
     start = current_cell
     path_cost = 0
-    
+
     while current_cell != dest AND path_length < max_length:
         // Step 1: Walk straight line toward destination
         desired_facing = direction_to(current_cell, dest)
         next_cell = adjacent(current_cell, desired_facing)
-        
+
         cost = Passable_Cell(next_cell, desired_facing, threshold)
-        
+
         if cost > 0:  // Passable
             record move(desired_facing)
             current_cell = next_cell
             path_cost += cost
             Register_Cell(current_cell)  // Mark in overlap bitfield
-            
+
         else:  // Blocked — trace obstacle boundary
             // Step 2: Try to walk THROUGH the obstacle
             //   (walk straight until we exit the blocked area)
-            
+
             // Step 3: Follow_Edge in BOTH directions (CW and CCW)
             left_path = Follow_Edge(current_cell, dest, facing, LEFT/CCW)
             right_path = Follow_Edge(current_cell, dest, facing, RIGHT/CW)
-            
+
             // Step 4: Pick shorter trace
             if left_path.cost < right_path.cost:
                 append left_path moves
             else:
                 append right_path moves
-            
+
             current_cell = new position after edge trace
-    
+
     Optimize_Moves(output_moves)  // Smooth diagonals
     Unravel_Loop(output_moves)    // Remove self-intersections
     return path

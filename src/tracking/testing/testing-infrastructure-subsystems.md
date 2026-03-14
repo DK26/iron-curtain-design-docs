@@ -1,4 +1,4 @@
-﻿## Test Infrastructure Requirements
+## Test Infrastructure Requirements
 
 ### Custom Test Harness (`ic-test-harness`)
 

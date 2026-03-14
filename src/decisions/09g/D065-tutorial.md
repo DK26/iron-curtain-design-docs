@@ -1,4 +1,4 @@
-﻿## D065 — Tutorial & New Player Experience
+## D065 — Tutorial & New Player Experience
 
 > **Keywords:** tutorial, new player, Commander School, contextual hints, adaptive pacing, skill assessment, hints.yaml, feature tips, binding profiles, controls walkthrough, post-game learning, annotated replay, multiplayer onboarding, modder tutorial API
 

@@ -1,7 +1,7 @@
 # Netcode Research Alignment Audit (2026-02-27)
 
-**Status:** Recorded  
-**Type:** Spec-review evidence (design-doc validation, no runtime test evidence)  
+**Status:** Recorded
+**Type:** Spec-review evidence (design-doc validation, no runtime test evidence)
 **Scope:** Validate staged netcode-related decision docs against internal research corpus and document reasoning for future review.
 
 ## Purpose
@@ -86,7 +86,7 @@ Research draft (`research/relay-wire-protocol-design.md`) still contains older g
 
 Related survey note also still references `2-4 ticks` as calibration guidance.
 
-Verdict: **Not fully aligned at constant level**.  
+Verdict: **Not fully aligned at constant level**.
 Impact: Implementers reading research drafts as implementation source could produce behavior that diverges from current policy.
 
 ### D. Accuracy hardening applied in normative docs

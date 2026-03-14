@@ -280,7 +280,7 @@ impl Simulation {
             }
         }
     }
-    
+
     fn validate_order(&self, player: PlayerId, order: &PlayerOrder) -> OrderValidity {
         // Every order type validated: ownership, affordability, prerequisites, placement
         // This is deterministic — all clients agree on what to reject

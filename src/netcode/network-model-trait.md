@@ -149,7 +149,7 @@ impl NetworkModel for LocalNetwork {
         // Order goes directly into the next tick — no delay, no projection
         self.pending.push(order);
     }
-    
+
     fn poll_tick(&mut self) -> Option<TickOrders> {
         // Accumulator-based: tracks how much real time has elapsed and
         // emits one tick per TICK_DURATION of accumulated time. TICK_DURATION

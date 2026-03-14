@@ -1,4 +1,4 @@
-﻿### Trigger System (RTS-Adapted)
+### Trigger System (RTS-Adapted)
 
 OFP's trigger system adapted for RTS gameplay:
 

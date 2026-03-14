@@ -1,4 +1,4 @@
-﻿### Workshop-Distributed Editor Plugins
+### Workshop-Distributed Editor Plugins
 
 Garry's Mod's most powerful pattern: community-created tools appear alongside built-in tools in the same menu. The community doesn't just create content — they **extend the creation tools themselves.** Wire Mod and Expression 2 are the canonical examples: community-built systems that became essential editor infrastructure, indistinguishable from first-party tools.
 

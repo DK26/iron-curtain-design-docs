@@ -1,7 +1,7 @@
 # Embark Studios — Rust Game Development Analysis
 
-> **Research for:** Iron Curtain engine  
-> **Date:** 2026-02-15  
+> **Research for:** Iron Curtain engine
+> **Date:** 2026-02-15
 > **Sources:** GitHub repositories under `EmbarkStudios/` and `Rust-GPU/` orgs, project documentation, Cargo.toml files, and architecture docs
 
 ## Executive Summary
@@ -14,7 +14,7 @@ Embark Studios (Stockholm, Sweden) is the most significant Rust game studio to d
 
 ## 1. rust-gpu — Rust as a GPU Shader Language
 
-**Repository:** `EmbarkStudios/rust-gpu` (7,588★, **archived** → transferred to community `Rust-GPU/rust-gpu`)  
+**Repository:** `EmbarkStudios/rust-gpu` (7,588★, **archived** → transferred to community `Rust-GPU/rust-gpu`)
 **License:** MIT/Apache-2.0
 
 ### What It Did
@@ -39,7 +39,7 @@ Embark transferred rust-gpu to a community-run `Rust-GPU` GitHub organization in
 
 ## 2. kajiya — Experimental Real-Time Renderer
 
-**Repository:** `EmbarkStudios/kajiya` (5,274★, **unmaintained**)  
+**Repository:** `EmbarkStudios/kajiya` (5,274★, **unmaintained**)
 **License:** MIT/Apache-2.0
 
 ### Architecture
@@ -71,8 +71,8 @@ The README explicitly states: *"This project is no longer maintained. It was a s
 
 ## 3. quilkin — UDP Proxy for Game Servers ★★★ DIRECTLY RELEVANT
 
-**Repository:** `EmbarkStudios/quilkin` (1,510★, **active, beta, production use**)  
-**License:** Apache 2.0  
+**Repository:** `EmbarkStudios/quilkin` (1,510★, **active, beta, production use**)
+**License:** Apache 2.0
 **Co-developed with Google Cloud Gaming**
 
 ### Architecture Overview
@@ -179,7 +179,7 @@ Three progressively complex patterns:
 
 ## 4. cargo-deny — Dependency Linting
 
-**Repository:** `EmbarkStudios/cargo-deny` (2,204★, **active, well-maintained**)  
+**Repository:** `EmbarkStudios/cargo-deny` (2,204★, **active, well-maintained**)
 **License:** MIT/Apache-2.0
 
 ### What It Does
@@ -202,7 +202,7 @@ Four categories of dependency checks:
 
 ## 5. puffin — Instrumentation Profiler
 
-**Repository:** `EmbarkStudios/puffin` (1,674★, **active**)  
+**Repository:** `EmbarkStudios/puffin` (1,674★, **active**)
 **License:** MIT/Apache-2.0
 
 ### Architecture
@@ -258,7 +258,7 @@ This pattern avoids profiling overhead for functions that are sometimes fast and
 
 ## 6. texture-synthesis — Example-Based Texture Generation
 
-**Repository:** `EmbarkStudios/texture-synthesis` (1,801★, **maintenance mode**)  
+**Repository:** `EmbarkStudios/texture-synthesis` (1,801★, **maintenance mode**)
 **License:** MIT/Apache-2.0
 
 ### What It Does
@@ -279,7 +279,7 @@ The README states: *"We at Embark are not actively using or developing these cra
 
 ## 7. physx-rs — C++ Library Wrapping Patterns
 
-**Repository:** `EmbarkStudios/physx-rs` (726★, **active**)  
+**Repository:** `EmbarkStudios/physx-rs` (726★, **active**)
 **License:** MIT/Apache-2.0 (Rust bindings), BSD-3 (PhysX SDK)
 
 ### Architecture: The Two-Layer Pattern

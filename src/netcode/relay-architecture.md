@@ -71,7 +71,7 @@ impl RelayCore {
     /// Signature-invalid orders are dropped and logged. See
     /// vulns-protocol.md § Vulnerability 16 for the signing scheme.
     pub fn receive_order(&mut self, player: PlayerId, order: TimestampedOrder) { ... }
-    
+
     /// Receive a per-tick SyncHash from a client. Compared against other
     /// clients' hashes — mismatch triggers DesyncDetected.
     pub fn receive_sync_hash(&mut self, player: PlayerId, tick: SimTick, hash: SyncHash) { ... }
@@ -110,7 +110,7 @@ impl RelayCore {
     /// Produce the canonical TickOrders for this tick.
     /// Sub-tick sorts, runs filter chain, advances tick counter.
     pub fn finalize_tick(&mut self) -> TickOrders { ... }
-    
+
     /// Generate liveness token for the next frame.
     pub fn next_liveness_token(&mut self, player: PlayerId) -> u32 { ... }
 }

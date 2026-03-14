@@ -1,4 +1,4 @@
-﻿### 5. Voice-in-Replay — Architecture & Feasibility
+### 5. Voice-in-Replay — Architecture & Feasibility
 
 The user asked: "would it make sense technically speaking and otherwise, to keep player voice records in the replay?"
 
@@ -188,7 +188,7 @@ All coordination features are accessible via the command console:
 
 ```
 /all <message>           # Send to all-chat
-/team <message>          # Send to team chat  
+/team <message>          # Send to team chat
 /w <player> <message>    # Whisper to player
 /mute <player>           # Mute player (voice + text)
 /unmute <player>         # Unmute player
@@ -501,7 +501,7 @@ pub struct ConnectionQuality {
 pub enum QualityTier {
     Excellent,  // <30ms RTT, <1% loss
     Good,       // <80ms RTT, <3% loss
-    Fair,       // <150ms RTT, <5% loss  
+    Fair,       // <150ms RTT, <5% loss
     Poor,       // <300ms RTT, <10% loss
     Critical,   // >300ms RTT or >10% loss
 }

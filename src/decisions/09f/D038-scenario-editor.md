@@ -1,4 +1,4 @@
-﻿## D038 — Scenario Editor (OFP/Eden-Inspired, SDK)
+## D038 — Scenario Editor (OFP/Eden-Inspired, SDK)
 
 > **Keywords:** scenario editor, SDK, validate playtest publish, map segment unlock, sub-scenario portal, export-safe authoring, publish readiness, guided tour, SDK tutorial, editor onboarding, waypoints, mission outcome, export, campaign editor, game master, replay-to-scenario, co-op, multiplayer scenario, game mode templates, accessibility, controller, Steam Deck
 

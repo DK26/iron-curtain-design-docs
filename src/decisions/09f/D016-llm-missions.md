@@ -1,4 +1,4 @@
-﻿## D016 — LLM-Generated Missions & Custom Factions (Phase 7, Optional)
+## D016 — LLM-Generated Missions & Custom Factions (Phase 7, Optional)
 
 > **Keywords:** LLM, mission generation, custom factions, BYOLLM, generative campaign, world domination, character construction, cinematic generation, media pipeline, multiplayer co-op, workshop integration, editor tool bindings
 

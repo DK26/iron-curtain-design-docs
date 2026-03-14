@@ -1,4 +1,4 @@
-﻿## D059: In-Game Communication — Text Chat, Voice, Beacons, and Coordination
+## D059: In-Game Communication — Text Chat, Voice, Beacons, and Coordination
 
 |                |                                                                                                                                                                                      |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -141,7 +141,7 @@ Shift+Enter   → Open chat in All (if last-used was Team)
 Tab           → Cycle: All → Team → Observer (if spectating)
 /w <name>     → Switch to whisper channel targeting <name>
 /all           → Switch to All channel (D058 command)
-/team          → Switch to Team channel (D058 command)  
+/team          → Switch to Team channel (D058 command)
 ```
 
 The active channel is displayed as a colored prefix in the chat input: `[ALL]`, `[TEAM]`, `[WHISPER → Alice]`, `[OBS]`.

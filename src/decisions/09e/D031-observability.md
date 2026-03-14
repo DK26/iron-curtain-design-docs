@@ -1,4 +1,4 @@
-﻿## D031: Observability & Telemetry — OTEL Across Engine, Servers, and AI Pipeline
+## D031: Observability & Telemetry — OTEL Across Engine, Servers, and AI Pipeline
 
 ### Decision Capsule (LLM/RAG Summary)
 

@@ -1,4 +1,4 @@
-﻿### Community Transparency Log
+### Community Transparency Log
 
 The trust model above establishes that the community server only signs credentials it computed or verified. But who watches the server? A malicious or compromised operator could inflate a friend's rating, issue contradictory records to different players (equivocation), or silently revoke and reissue credentials. Players trust the community, but have no way to *audit* it.
 
@@ -15,7 +15,7 @@ IC solves this with a **transparency log** — an append-only Merkle tree of eve
 ```
                     Merkle Tree (append-only)
                     ┌───────────────────────┐
-                    │      Root Hash        │  ← Published as 
+                    │      Root Hash        │  ← Published as
                     │   (Signed Tree Head)  │    STH every hour
                     └───────────┬───────────┘
                    ┌────────────┴────────────┐
@@ -104,13 +104,13 @@ pub struct MatchmakingEntry {
 fn matchmaking_tick(pool: &mut Vec<MatchmakingEntry>, provider: &dyn RankingProvider) {
     // Sort by queue time (longest-waiting first)
     pool.sort_by_key(|e| e.queue_time);
-    
+
     for candidate_pair in pool.windows(2) {
         let quality = provider.match_quality(
             &[candidate_pair[0].verified_rating],
             &[candidate_pair[1].verified_rating],
         );
-        
+
         if quality.fairness > FAIRNESS_THRESHOLD || queue_time_exceeded(candidate_pair) {
             // Accept match — create lobby
             create_lobby(candidate_pair);

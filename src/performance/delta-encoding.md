@@ -25,7 +25,7 @@ Source Engine annotates frequently-changing properties with `SPROP_CHANGES_OFTEN
 /// cache locality (hot fields are contiguous in the diff buffer).
 ///
 /// Typical priority ordering for a unit component:
-///   1. Position, Velocity        — change nearly every tick (movement)  
+///   1. Position, Velocity        — change nearly every tick (movement)
 ///   2. Health, Facing            — change during combat
 ///   3. Owner, UnitType, Armor    — rarely change (cold)
 ```

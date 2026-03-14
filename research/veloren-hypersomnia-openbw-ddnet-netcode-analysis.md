@@ -37,11 +37,11 @@
 
 ## Veloren — Overview
 
-**Language:** Rust  
-**ECS:** specs (not Bevy, but same paradigm — parallel ECS with systems)  
-**Transport:** Custom `veloren-network-protocol` crate with TCP, QUIC (via `quinn`), and MPSC (in-process) backends  
-**Model:** Client-server authoritative (not lockstep — server runs full sim, clients render server snapshots)  
-**Compression:** LZ4 (`lz_fear`) for protocol-level, Deflate (`flate2`) for terrain chunks, PNG-based voxel encoding  
+**Language:** Rust
+**ECS:** specs (not Bevy, but same paradigm — parallel ECS with systems)
+**Transport:** Custom `veloren-network-protocol` crate with TCP, QUIC (via `quinn`), and MPSC (in-process) backends
+**Model:** Client-server authoritative (not lockstep — server runs full sim, clients render server snapshots)
+**Compression:** LZ4 (`lz_fear`) for protocol-level, Deflate (`flate2`) for terrain chunks, PNG-based voxel encoding
 **Key source paths:** `network/protocol/src/`, `server/src/sys/entity_sync.rs`, `common/net/src/`
 
 ### Why Study This
@@ -304,11 +304,11 @@ async fn flush(&mut self, bandwidth: Bandwidth, dt: Duration)
 
 ## Hypersomnia — Overview
 
-**Language:** C++ (modern C++17)  
-**Genre:** Competitive top-down multiplayer shooter (Steam title, app ID 2660970)  
-**Transport:** `netcode.io` + `yojimbo` (reliable UDP) + WebRTC for browser clients  
-**Model:** Server-authoritative with client-side prediction and rollback  
-**Platform:** Desktop (native) + Browser (WASM via WebRTC)  
+**Language:** C++ (modern C++17)
+**Genre:** Competitive top-down multiplayer shooter (Steam title, app ID 2660970)
+**Transport:** `netcode.io` + `yojimbo` (reliable UDP) + WebRTC for browser clients
+**Model:** Server-authoritative with client-side prediction and rollback
+**Platform:** Desktop (native) + Browser (WASM via WebRTC)
 **Key source paths:** `src/application/setups/server/`, `src/application/network/`, `src/game/modes/`
 
 ### Why Study This
@@ -439,11 +439,11 @@ struct server_client_state {
     net_time_t when_connected;
     net_time_t when_kicked;
     net_time_t last_keyboard_activity_time;
-    
+
     downloading_type downloading_status;
     std::string authenticated_id;
     bool verified_has_no_ban;
-    
+
     uint32_t session_id;
     client_pause_state web_client_paused;
     uint32_t entropies_since_pause;
@@ -533,12 +533,12 @@ From Hypersomnia's bug database: a desync was caused by a shared RNG being used 
 
 ## OpenBW — Overview
 
-**Language:** C++ (header-heavy, template-based)  
-**Game:** StarCraft: Brood War reimplementation  
-**Model:** Deterministic lockstep (matching original BW behavior)  
-**Transport:** Custom lightweight protocol over raw sockets  
-**RNG:** LCG (Linear Congruential Generator, matching original BW)  
-**Fixed-point:** Custom `fixed_point<integer_bits, fractional_bits, is_signed>` template  
+**Language:** C++ (header-heavy, template-based)
+**Game:** StarCraft: Brood War reimplementation
+**Model:** Deterministic lockstep (matching original BW behavior)
+**Transport:** Custom lightweight protocol over raw sockets
+**RNG:** LCG (Linear Congruential Generator, matching original BW)
+**Fixed-point:** Custom `fixed_point<integer_bits, fractional_bits, is_signed>` template
 **Key source paths:** `sync.h`, `actions.h`, `replay.h`, `replay_saver.h`, `util.h`
 
 ### Why Study This
@@ -577,7 +577,7 @@ struct sync_state {
     int latency = 2;  // Input delay (frames)
     bool game_started = false;
     int sync_frame = 0;
-    
+
     struct client_t {
         uid_t uid;
         int player_slot = -1;
@@ -586,10 +586,10 @@ struct sync_state {
         uint8_t frame = 0;               // Client's current frame
         std::chrono::steady_clock::time_point last_synced;
     };
-    
+
     a_list<client_t> clients;
     client_t* local_client;
-    
+
     int successful_action_count = 0;
     int failed_action_count = 0;
     std::array<uint32_t, 4> insync_hash{};  // Rolling hash array
@@ -609,7 +609,7 @@ void sync_next_frame() {
     }
     ++sync_st.sync_frame;
     send_client_frame();
-    
+
     // Hash check every 32 frames
     if (sync_st.game_started && sync_st.sync_frame % 32 == 0) {
         update_insync_hash();
@@ -640,7 +640,7 @@ void execute_scheduled_actions(action_F&& action_f) {
     for (auto i = sync_st.clients.begin(); i != sync_st.clients.end();) {
         sync_state::client_t* c = &*i;
         ++i;
-        while (!c->scheduled_actions.empty() 
+        while (!c->scheduled_actions.empty()
                && (uint8_t)sync_st.sync_frame == c->scheduled_actions.front().frame) {
             auto act = c->scheduled_actions.front();
             c->scheduled_actions.pop_front();
@@ -671,36 +671,36 @@ void update_insync_hash() {
         hash ^= (uint32_t)v;
         hash *= 16777619u;        // FNV-1a prime
     };
-    
+
     // Action counts
     add(sync_st.successful_action_count);
     add(sync_st.failed_action_count);
-    
+
     // RNG state
     add(st.lcg_rand_state);
-    
+
     // All player resources
     for (auto v : st.current_minerals) add(v);
     for (auto v : st.current_gas) add(v);
     for (auto v : st.total_minerals_gathered) add(v);
     for (auto v : st.total_gas_gathered) add(v);
-    
+
     // Active entity counts
     add(st.active_orders_size);
     add(st.active_bullets_size);
     add(st.active_thingies_size);
-    
+
     // Per-unit HP + shields (using raw fixed-point values)
     for (unit_t* u : ptr(st.visible_units)) {
         add((u->shield_points + u->hp).raw_value);
         add(u->exact_position.x.raw_value);
         add(u->exact_position.y.raw_value);
     }
-    
+
     // Rolling 4-hash array
     if (sync_st.insync_hash_index == sync_st.insync_hash.size() - 1)
         sync_st.insync_hash_index = 0;
-    else 
+    else
         ++sync_st.insync_hash_index;
     sync_st.insync_hash[sync_st.insync_hash_index] = hash;
 }
@@ -738,10 +738,10 @@ bool schedule_action(sync_state::client_t* client, reader_T&& r) {
     size_t n = r.left();
     auto& buffer = client->buffer;
     // ... circular buffer management with wrap-around ...
-    
+
     const size_t max_size = 1024u * 4 * sync_st.latency;
     // Buffer grows dynamically up to max_size
-    
+
     client->scheduled_actions.push_back({
         (uint8_t)(client->frame + sync_st.latency),  // Execute at frame + latency
         pos, buffer_end
@@ -869,7 +869,7 @@ void start_game(uint32_t seed) {
     uint32_t rand_state = seed ^ data_loading::crc32_t()(
         (const uint8_t*)seed_str.data(), seed_str.size());
     st.lcg_rand_state = rand_state;
-    
+
     // Randomize player slots using the deterministic LCG
     // ... Fisher-Yates shuffle using lcg_rand() ...
 }
@@ -891,12 +891,12 @@ This is more secure than OpenBW's approach (OpenBW's UIDs are predictable from t
 
 ## DDraceNetwork — Overview
 
-**Language:** C/C++  
-**Genre:** Cooperative platformer (Teeworlds fork)  
-**Transport:** Custom UDP protocol with Huffman-compressed snapshots  
-**Model:** Server-authoritative with client-side prediction  
-**Scale:** 128 clients per server (expanded from Teeworlds' 16)  
-**Database:** SQLite for player records, racing times  
+**Language:** C/C++
+**Genre:** Cooperative platformer (Teeworlds fork)
+**Transport:** Custom UDP protocol with Huffman-compressed snapshots
+**Model:** Server-authoritative with client-side prediction
+**Scale:** 128 clients per server (expanded from Teeworlds' 16)
+**Database:** SQLite for player records, racing times
 **Key source paths:** `src/engine/server/`, `src/engine/client/`, `src/engine/shared/snapshot.*`, `src/game/server/`
 
 ### Why Study This
@@ -915,12 +915,12 @@ DDNet uses a 3-stage compression pipeline for snapshots, documented in `src/engi
 
 ```cpp
 // src/engine/shared/snapshot.cpp:509-610
-int CSnapshotDelta::UnpackDelta(const CSnapshot *pFrom, CSnapshot *pTo, 
+int CSnapshotDelta::UnpackDelta(const CSnapshot *pFrom, CSnapshot *pTo,
     const void *pSrcData, int DataSize, bool Sixup)
 {
     CData *pDelta = (CData *)pSrcData;
     // pDelta contains: NumDeletedItems, NumUpdateItems, item diffs
-    
+
     // Copy non-deleted items from previous snapshot
     for (int i = 0; i < pFrom->NumItems(); i++) {
         // ... skip if in deleted list ...
@@ -983,15 +983,15 @@ Snapshot CRC is verified after delta decompression. Occasional errors (bit flips
 // src/engine/server/server.cpp:1021-1040
 void CServer::DoSnapshot() {
     // INIT: 1 snapshot every 10 ticks (~5/sec)
-    if (m_aClients[i].m_SnapRate == CClient::SNAPRATE_INIT 
+    if (m_aClients[i].m_SnapRate == CClient::SNAPRATE_INIT
         && (Tick() % 10) != 0)
         continue;
-    
+
     // RECOVER: 1 snapshot per second
-    if (m_aClients[i].m_SnapRate == CClient::SNAPRATE_RECOVER 
+    if (m_aClients[i].m_SnapRate == CClient::SNAPRATE_RECOVER
         && (Tick() % TickSpeed()) != 0)
         continue;
-    
+
     // FULL: every tick or every 2nd tick (based on sv_high_bandwidth)
 }
 ```
@@ -1035,8 +1035,8 @@ if (m_aClients[ClientId].m_Traffic > Limit) {
 }
 
 // Exponential moving average of traffic rate
-m_aClients[ClientId].m_Traffic = 
-    (Alpha * ((double)pPacket->m_DataSize / Diff)) + 
+m_aClients[ClientId].m_Traffic =
+    (Alpha * ((double)pPacket->m_DataSize / Diff)) +
     (1.0 - Alpha) * m_aClients[ClientId].m_Traffic;
 ```
 

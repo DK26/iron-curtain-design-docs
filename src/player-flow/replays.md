@@ -7,40 +7,40 @@
 ### Replay Browser
 
 ```
-Main Menu → Replays
+Main Menu â†’ Replays
 ```
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│  REPLAYS                                             [← Back]    │
-│                                                                  │
-│  Search... [⌕]  [My Games ▾] [Sort: Date ▾] [Filters ▾]        │
-│                                                                  │
-│  ┌─ LIST ──────────────────────────┬─ DETAIL ─────────────────┐ │
-│  │                                 │                           │ │
-│  │ ■ Coastal Fortress              │  MAP PREVIEW              │ │
-│  │   You vs PlayerX · Victory      │  ┌─────────────┐         │ │
-│  │   12:34 · IC Default · Ranked   │  │             │         │ │
-│  │   +32 Elo · Jan 15              │  │  (minimap)  │         │ │
-│  │                                 │  │             │         │ │
-│  │ ■ Desert Arena FFA              │  └─────────────┘         │ │
-│  │   4 players · 2nd place         │                           │ │
-│  │   24:01 · Vanilla RA            │  PLAYERS                  │ │
-│  │   Jan 14                        │  P1: You (Allied) — Win   │ │
-│  │                                 │  P2: PlayerX (Soviet) — L │ │
-│  │ ■ Imported: match.orarep        │                           │ │
-│  │   OpenRA · Converted            │  Duration: 12:34          │ │
-│  │                                 │  Balance: IC Default      │ │
-│  │                                 │  Speed: Normal            │ │
-│  │                                 │  Signed: Relay-certified  │ │
-│  │                                 │  Mod: (none)              │ │
-│  │                                 │                           │ │
-│  │                                 │  [Watch]  [Share]         │ │
-│  │                                 │  [Rename] [Delete]        │ │
-│  └─────────────────────────────────┴───────────────────────────┘ │
-│                                                                  │
-│  [Import Replay...]  [Enter Match ID...]  [Reset Filters]        │
-└──────────────────────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚  REPLAYS                                             [â† Back]    â”‚
+â”‚                                                                  â”‚
+â”‚  Search... [âŒ•]  [My Games â–¾] [Sort: Date â–¾] [Filters â–¾]        â”‚
+â”‚                                                                  â”‚
+â”‚  â”Œâ”€ LIST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€ DETAIL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”‚
+â”‚  â”‚                                 â”‚                           â”‚ â”‚
+â”‚  â”‚ â–  Coastal Fortress              â”‚  MAP PREVIEW              â”‚ â”‚
+â”‚  â”‚   You vs PlayerX Â· Victory      â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”         â”‚ â”‚
+â”‚  â”‚   12:34 Â· IC Default Â· Ranked   â”‚  â”‚             â”‚         â”‚ â”‚
+â”‚  â”‚   +32 Elo Â· Jan 15              â”‚  â”‚  (minimap)  â”‚         â”‚ â”‚
+â”‚  â”‚                                 â”‚  â”‚             â”‚         â”‚ â”‚
+â”‚  â”‚ â–  Desert Arena FFA              â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜         â”‚ â”‚
+â”‚  â”‚   4 players Â· 2nd place         â”‚                           â”‚ â”‚
+â”‚  â”‚   24:01 Â· Vanilla RA            â”‚  PLAYERS                  â”‚ â”‚
+â”‚  â”‚   Jan 14                        â”‚  P1: You (Allied) â€” Win   â”‚ â”‚
+â”‚  â”‚                                 â”‚  P2: PlayerX (Soviet) â€” L â”‚ â”‚
+â”‚  â”‚ â–  Imported: match.orarep        â”‚                           â”‚ â”‚
+â”‚  â”‚   OpenRA Â· Converted            â”‚  Duration: 12:34          â”‚ â”‚
+â”‚  â”‚                                 â”‚  Balance: IC Default      â”‚ â”‚
+â”‚  â”‚                                 â”‚  Speed: Normal            â”‚ â”‚
+â”‚  â”‚                                 â”‚  Signed: Relay-certified  â”‚ â”‚
+â”‚  â”‚                                 â”‚  Mod: (none)              â”‚ â”‚
+â”‚  â”‚                                 â”‚                           â”‚ â”‚
+â”‚  â”‚                                 â”‚  [Watch]  [Share]         â”‚ â”‚
+â”‚  â”‚                                 â”‚  [Rename] [Delete]        â”‚ â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â”‚
+â”‚                                                                  â”‚
+â”‚  [Import Replay...]  [Enter Match ID...]  [Reset Filters]        â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 #### Filter System
@@ -52,21 +52,21 @@ Seven filter dimensions (adapted from OpenRA's proven model, extended with IC-sp
 | **Scope**      | My Games / Bookmarked / All Local / Imported                                   | Default: My Games                      |
 | **Game Type**  | Any / Ranked / Custom / Campaign / Skirmish vs AI                              |                                        |
 | **Date Range** | Today / This Week / This Month / This Year / All Time                          |                                        |
-| **Duration**   | Any / Short (<10 min) / Medium (10–30 min) / Long (30–60 min) / Epic (60+ min) |                                        |
+| **Duration**   | Any / Short (<10 min) / Medium (10â€“30 min) / Long (30â€“60 min) / Epic (60+ min) |                                        |
 | **Map**        | Dropdown populated from local replay metadata                                  | Searchable                             |
 | **Player**     | Text field with autocomplete from local replay metadata                        |                                        |
 | **Outcome**    | Any / Victory / Defeat / Draw                                                  | Relative to the selected player filter |
 
 - Sort by: Date (default), Duration, Map Name, Player Count, Rating Change
 - Filters are additive (AND logic); [Reset Filters] clears all
-- Replay list loads asynchronously — no UI freeze on large collections
+- Replay list loads asynchronously â€” no UI freeze on large collections
 
 #### Replay Detail Panel (Right Side)
 
 - **Map preview:** Minimap render with spawn point markers per player (colored dots)
 - **Player list:** Name, faction, team, outcome (Win/Loss/Draw), APM average
 - **Metadata:** Duration, balance preset, game speed, mod fingerprint, signed/unsigned status, engine version
-- **Missing map handling:** If the replay's map is not installed, show [Install Map →] inline (downloads from Workshop if available) — adapted from OpenRA's auto-install pattern
+- **Missing map handling:** If the replay's map is not installed, show [Install Map â†’] inline (downloads from Workshop if available) â€” adapted from OpenRA's auto-install pattern
 - **Foreign replay badge:** Imported replays show source format badge (OpenRA / Remastered) and divergence confidence level (D056)
 
 #### Actions
@@ -85,12 +85,12 @@ Seven filter dimensions (adapted from OpenRA's proven model, extended with IC-sp
 ### Replay Viewer
 
 ```
-Replay Browser → [Watch]
-  — or —
-Post-Game → [Watch Replay]
-  — or —
-Match History → [Watch]
-  — or —
+Replay Browser â†’ [Watch]
+  â€” or â€”
+Post-Game â†’ [Watch Replay]
+  â€” or â€”
+Match History â†’ [Watch]
+  â€” or â€”
 Double-click .icrep file (OS file association)
 ```
 
@@ -99,30 +99,30 @@ The Replay Viewer reuses the full game viewport with an observer transport bar r
 #### Layout
 
 ```
-┌────────────────────────────────────────────────┬──────────────────┐
-│                                                │    MINIMAP        │
-│                                                │   (clickable)     │
-│              GAME VIEWPORT                     │                  │
-│           (replay playback)                    ├──────────────────┤
-│                                                │  OBSERVER PANEL   │
-│                                                │  (toggleable,     │
-│                                                │   see § Overlays) │
-│                                                │                  │
-│                                                │                  │
-│                                                │                  │
-├────────────────────────────────────────────────┴──────────────────┤
-│  TRANSPORT BAR                                                    │
-│                                                                   │
-│  ⏮ ◄◄ ◄ ▶/⏸ ► ►► ⏭    0.5x [1x] 2x 4x 8x    12:34 / --:--    │
-│                                                                   │
-│  ├─△──●──△────△─────△──────────────────────────────────────┤     │
-│    ⚔     ⚔🏠  ⚔⚔   🏠                                           │
-│                                                                   │
-│  CAMERA: [P1 ▾] [P2] [Free] [Follow Unit] [Directed]  [Fog ▾]   │
-│  PANELS: [A]rmy [P]rod [E]con [Po]wers [S]core [AP]M  [Voice ▾] │
-│                                                                   │
-│  [Bookmark] [Clip] [Summary]                          [Settings]  │
-└───────────────────────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                                                â”‚    MINIMAP        â”‚
+â”‚                                                â”‚   (clickable)     â”‚
+â”‚              GAME VIEWPORT                     â”‚                  â”‚
+â”‚           (replay playback)                    â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+â”‚                                                â”‚  OBSERVER PANEL   â”‚
+â”‚                                                â”‚  (toggleable,     â”‚
+â”‚                                                â”‚   see Â§ Overlays) â”‚
+â”‚                                                â”‚                  â”‚
+â”‚                                                â”‚                  â”‚
+â”‚                                                â”‚                  â”‚
+â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+â”‚  TRANSPORT BAR                                                    â”‚
+â”‚                                                                   â”‚
+â”‚  â® â—„â—„ â—„ â–¶/â¸ â–º â–ºâ–º â­    0.5x [1x] 2x 4x 8x    12:34 / --:--    â”‚
+â”‚                                                                   â”‚
+â”‚  â”œâ”€â–³â”€â”€â—â”€â”€â–³â”€â”€â”€â”€â–³â”€â”€â”€â”€â”€â–³â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤     â”‚
+â”‚    âš”     âš”ðŸ   âš”âš”   ðŸ                                            â”‚
+â”‚                                                                   â”‚
+â”‚  CAMERA: [P1 â–¾] [P2] [Free] [Follow Unit] [Directed]  [Fog â–¾]   â”‚
+â”‚  PANELS: [A]rmy [P]rod [E]con [Po]wers [S]core [AP]M  [Voice â–¾] â”‚
+â”‚                                                                   â”‚
+â”‚  [Bookmark] [Clip] [Summary]                          [Settings]  â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ---
@@ -133,17 +133,17 @@ The Replay Viewer reuses the full game viewport with an observer transport bar r
 
 | Button               | Icon | Action                                                  |
 | -------------------- | ---- | ------------------------------------------------------- |
-| **Jump to Start**    | ⏮    | Jump to tick 0                                          |
-| **Rewind 15s**       | ◄◄   | Jump back 15 seconds (configurable: 5s/10s/15s/30s)     |
-| **Step Back**        | ◄    | Step back one game tick (hold for slow reverse scan)    |
-| **Play / Pause**     | ▶/⏸  | Toggle playback                                         |
-| **Step Forward**     | ►    | Step forward one game tick (hold for slow forward scan) |
-| **Fast Forward 15s** | ►►   | Jump forward 15 seconds                                 |
-| **Jump to End**      | ⏭    | Jump to final tick                                      |
+| **Jump to Start**    | â®    | Jump to tick 0                                          |
+| **Rewind 15s**       | â—„â—„   | Jump back 15 seconds (configurable: 5s/10s/15s/30s)     |
+| **Step Back**        | â—„    | Step back one game tick (hold for slow reverse scan)    |
+| **Play / Pause**     | â–¶/â¸  | Toggle playback                                         |
+| **Step Forward**     | â–º    | Step forward one game tick (hold for slow forward scan) |
+| **Fast Forward 15s** | â–ºâ–º   | Jump forward 15 seconds                                 |
+| **Jump to End**      | â­    | Jump to final tick                                      |
 
 #### Speed Controls
 
-Speed buttons are displayed as discrete clickable labels (not a dropdown — LoL's single-click model, avoiding Dota 2's dropdown regression):
+Speed buttons are displayed as discrete clickable labels (not a dropdown â€” LoL's single-click model, avoiding Dota 2's dropdown regression):
 
 ```
 0.25x  0.5x  [1x]  2x  4x  8x  Max
@@ -165,19 +165,19 @@ The active speed is highlighted. Click to switch instantly.
 | `Home`              | Jump to start                                    |
 | `End`               | Jump to end                                      |
 | `Ctrl+B`            | Add bookmark at current tick                     |
-| `←` / `→`           | Jump to previous / next bookmark or event marker |
-| `Ctrl+←` / `Ctrl+→` | Jump to previous / next engagement               |
+| `â†` / `â†’`           | Jump to previous / next bookmark or event marker |
+| `Ctrl+â†` / `Ctrl+â†’` | Jump to previous / next engagement               |
 | `Escape`            | Open replay menu (exit / settings / summary)     |
 
 #### Seeking
 
-IC's 300-tick (~10 second) keyframe snapshots enable **true arbitrary seeking** — the key architectural advantage over OpenRA, AoE2, CoH3, and WC3 (all forward-only).
+IC's 300-tick (~10 second) keyframe snapshots enable **true arbitrary seeking** â€” the key architectural advantage over OpenRA, AoE2, CoH3, and WC3 (all forward-only).
 
 - **Click anywhere on the timeline** to jump to that moment
 - **Drag the playhead** to scrub through the replay
 - Re-simulation from nearest keyframe takes <100ms for typical games
 - Both forward and backward seeking are supported
-- Seeking works at any point — no "already viewed" restriction (unlike SC2)
+- Seeking works at any point â€” no "already viewed" restriction (unlike SC2)
 
 ---
 
@@ -188,43 +188,44 @@ The timeline is the most important UX element in the replay viewer. IC's design 
 #### Layout
 
 ```
-├─△──●──△────△─────△──────────────────────────────────────┤
-  ⚔     ⚔🏠  ⚔⚔   🏠
+â”œâ”€â–³â”€â”€â—â”€â”€â–³â”€â”€â”€â”€â–³â”€â”€â”€â”€â”€â–³â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+  âš”     âš”ðŸ   âš”âš”   ðŸ
 ```
 
 - **Horizontal progress bar** spanning the full width of the transport area
-- **Playhead** (●) shows current position; draggable
-- **Event markers** (△) appear as small icons above the bar at their timestamp
+- **Playhead** (â—) shows current position; draggable
+- **Event markers** (â–³) appear as small icons above the bar at their timestamp
 - **Engagement zones** shown as colored intensity bands behind the bar (SC2 combat shading pattern)
 - **Time display:** `elapsed / total` in `mm:ss` format (or `--:--` in spoiler-free mode)
 
 #### Event Markers
 
-Auto-generated from the analysis event stream (see `formats/save-replay-formats.md` § "Analysis Event Stream"):
+Auto-generated from the analysis event stream (see `formats/save-replay-formats.md` Â§ "Analysis Event Stream"):
 
 | Marker                           | Icon         | Source Event                                                                        |
 | -------------------------------- | ------------ | ----------------------------------------------------------------------------------- |
-| **Unit destroyed (significant)** | ⚔            | `UnitDestroyed` (filtered to non-trivial: hero units, expensive units, first blood) |
-| **Base structure destroyed**     | 🏠            | `ConstructionDestroyed` for production/defense buildings                            |
-| **Tech transition**              | ▲            | `UpgradeCompleted` for tier-changing upgrades                                       |
-| **Expansion established**        | ◆            | `ConstructionCompleted` for resource structures at new locations                    |
+| **Unit destroyed (significant)** | âš”            | `UnitDestroyed` (filtered to non-trivial: hero units, expensive units, first blood) |
+| **Base structure destroyed**     | ðŸ             | `ConstructionDestroyed` for production/defense buildings                            |
+| **Tech transition**              | â–²            | `UpgradeCompleted` for tier-changing upgrades                                       |
+| **Expansion established**        | â—†            | `ConstructionCompleted` for resource structures at new locations                    |
 | **Engagement zone**              | Colored band | Clusters of `UnitDestroyed` events within a time window                             |
-| **Player eliminated**            | ☓            | `PlayerEliminated` / `MatchEnded` for that player                                   |
-| **Bookmark (user)**              | 🔖            | User-placed via `Ctrl+B`                                                            |
+| **Player eliminated**            | â˜“            | `PlayerEliminated` / `MatchEnded` for that player                                   |
+| **Bookmark (user)**              | ðŸ”–            | User-placed via `Ctrl+B`                                                            |
+| **Highlight moment (D077)**      | â­            | Auto-detected highlight (top-scoring windows from D077 scoring pipeline)             |
 
 #### Contextual Highlighting (LoL Pattern)
 
 When the viewer locks camera to a specific player:
 
 - That player's event markers **brighten** on the timeline
-- Other players' markers **fade** (not hidden — just reduced opacity)
+- Other players' markers **fade** (not hidden â€” just reduced opacity)
 - This makes "find my kills" or "find my losses" effortless without separate filtering UI
 
 #### Spoiler-Free Mode
 
 **No game surveyed offers this.** IC can be first.
 
-When enabled (toggle in replay menu or Settings → Gameplay):
+When enabled (toggle in replay menu or Settings â†’ Gameplay):
 
 - Total duration display shows `--:--` instead of the actual end time
 - Timeline bar renders as an **expanding bar** that only shows the elapsed portion (the unplayed portion is hidden, not greyed out)
@@ -233,13 +234,13 @@ When enabled (toggle in replay menu or Settings → Gameplay):
 
 ```
 Spoiler-Free ON:
-├─△──●──△────△─                                           │
-  ⚔     ⚔🏠  ⚔⚔   ← bar ends at playhead; future is hidden
+â”œâ”€â–³â”€â”€â—â”€â”€â–³â”€â”€â”€â”€â–³â”€                                           â”‚
+  âš”     âš”ðŸ   âš”âš”   â† bar ends at playhead; future is hidden
                     12:34 / --:--
 
 Spoiler-Free OFF (default):
-├─△──●──△────△─────△──────────────────────────────────────┤
-  ⚔     ⚔🏠  ⚔⚔   🏠                    12:34 / 38:21
+â”œâ”€â–³â”€â”€â—â”€â”€â–³â”€â”€â”€â”€â–³â”€â”€â”€â”€â”€â–³â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+  âš”     âš”ðŸ   âš”âš”   ðŸ                     12:34 / 38:21
 ```
 
 **Default:** Spoiler-free is **off** by default (most users want the full timeline). The setting persists across sessions.
@@ -253,7 +254,7 @@ Six camera modes, selectable via the camera bar or hotkeys:
 | Mode                   | Key                       | Description                                                                                                                                                                                                                     |
 | ---------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Free Camera**        | `F`                       | Default. Pan (edge scroll / middle-click drag / WASD), zoom (scroll wheel), minimap click to jump. Standard RTS observer camera.                                                                                                |
-| **Player Perspective** | `1`–`8`                   | Lock to a specific player's recorded camera position, scroll, and zoom. Shows what the player actually saw during the game. Selected units shown with dashed circles in player color (SC2 pattern).                             |
+| **Player Perspective** | `1`â€“`8`                   | Lock to a specific player's recorded camera position, scroll, and zoom. Shows what the player actually saw during the game. Selected units shown with dashed circles in player color (SC2 pattern).                             |
 | **Follow Unit**        | `Ctrl+F` on selected unit | Camera tracks a selected unit, keeping it centered. Useful for following hero units, harvesters, scouts. Click elsewhere or press `F` to exit.                                                                                  |
 | **Directed Camera**    | `D`                       | AI-controlled camera that automatically follows the action. Jumps between engagements, expansions, and production events. Useful for passive viewing and casting. Configurable aggression (how quickly it cuts between events). |
 | **Drone Follow**       | `Ctrl+D`                  | Loosely attached camera that follows the action with inertia and smooth movement. Cinematic feel without sharp cuts. (Fortnite drone-attach pattern adapted for isometric RTS.)                                                 |
@@ -271,13 +272,13 @@ Dropdown in the camera bar:
 | **Player 2 Vision**        | `Shift+2` | See only what Player 2 can see                    |
 | ...                        | `Shift+N` | Per-player fog-of-war                             |
 
-**Ghost View (analysis mode):** `Ctrl+=` — Full map revealed, but units outside the selected player's vision are shown as translucent ghosts. Useful for studying opponent movements you couldn't see during the game. (Adapted from CS2 X-ray concept for RTS.)
+**Ghost View (analysis mode):** `Ctrl+=` â€” Full map revealed, but units outside the selected player's vision are shown as translucent ghosts. Useful for studying opponent movements you couldn't see during the game. (Adapted from CS2 X-ray concept for RTS.)
 
 ---
 
 ### Observer Overlay Panels
 
-Hotkey-toggled panels in the right sidebar. Each panel is independently toggleable and shows real-time data for all players. Design follows SC2's proven model — the most praised RTS observer system across all games surveyed.
+Hotkey-toggled panels in the right sidebar. Each panel is independently toggleable and shows real-time data for all players. Design follows SC2's proven model â€” the most praised RTS observer system across all games surveyed.
 
 | Panel          | Key | Content                                                                                                                                        |
 | -------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -329,7 +330,7 @@ Available via the [Summary] button or during playback as overlay panels:
 | **Workers**           | Harvester count per player over time              | Economic investment tracking                                           |
 | **APM**               | Actions Per Minute per player over time           | Activity patterns and fatigue                                          |
 
-Graphs are clickable — click a point on any graph to jump the replay to that timestamp.
+Graphs are clickable â€” click a point on any graph to jump the replay to that timestamp.
 
 #### Build Order Timeline
 
@@ -341,7 +342,7 @@ Side-by-side per-player build order timeline showing:
 
 #### Heatmaps (Analysis Mode)
 
-Accessible via [Summary] → Heatmaps tab:
+Accessible via [Summary] â†’ Heatmaps tab:
 
 | Heatmap              | Content                                                                           |
 | -------------------- | --------------------------------------------------------------------------------- |
@@ -360,7 +361,7 @@ Users can mark moments for later reference:
 
 - **Add bookmark:** `Ctrl+B` at current playhead position
 - **Name bookmark:** Optional text label (default: `Bookmark at mm:ss`)
-- **Navigate:** `←` / `→` to jump between bookmarks and event markers
+- **Navigate:** `â†` / `â†’` to jump between bookmarks and event markers
 - **Bookmark list:** Accessible via the replay menu; shows timestamp + label for each
 - **Persistent:** Bookmarks are saved alongside the replay file (in a sidecar `.icrep.bookmarks` JSON file, not modifying the replay itself)
 
@@ -370,7 +371,7 @@ Users can mark moments for later reference:
 
 If voice was recorded during the match (opt-in per D059 consent model):
 
-- **Per-player voice tracks** toggle in the transport bar: `[Voice ▾]` dropdown lists each player's name with a checkbox
+- **Per-player voice tracks** toggle in the transport bar: `[Voice â–¾]` dropdown lists each player's name with a checkbox
 - Voice tracks are Opus-encoded, aligned to game ticks
 - **Mute/unmute** individual players without affecting others
 - **Volume slider** per track (accessible from dropdown)
