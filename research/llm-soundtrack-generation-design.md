@@ -80,13 +80,13 @@ Behind the `midi` feature flag (opt-in, like `meg` and `ist`). Adds three pure R
 | Conversion | Direction         | Notes                                                                                                                             |
 | ---------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | MID → WAV  | Export            | Requires SoundFont (`.sf2`). `--soundfont` flag (required — `cnc-formats` bundles none; IC ships one in the engine content pack). |
-| WAV → MID  | **Not supported** | Transcription (audio → symbolic) is an unsolved ML problem. Explicitly out of scope.                                              |
+| WAV → MID  | Export            | Audio-to-MIDI transcription via DSP pipeline (behind `transcribe` + `convert` features — WAV decoding requires `hound` under `convert`). ML-enhanced via `transcribe-ml` feature (Spotify Basic Pitch). Library-only API surface; no CLI `convert` target yet. See `formats/transcribe-upgrade-roadmap.md`. |
 | MID → AUD  | Export            | MID → WAV (SoundFont) → AUD (IMA ADPCM). Two-step, single CLI command.                                                            |
-| AUD → MID  | **Not supported** | Same reason as WAV → MID — audio waveforms cannot be reverse-engineered to symbolic notes.                                        |
+| AUD → MID  | **Not yet implemented** | Not a documented implementation surface. Would require AUD→WAV decode then WAV→MID transcription; no combined pipeline exists yet. |
 
 **MID → AUD makes sense** for modders targeting the original game engine, which expects `.aud` files. The pipeline is: render MIDI through SoundFont to get PCM, then encode PCM as Westwood IMA ADPCM. Both steps use existing `cnc-formats` infrastructure (SoundFont via `rustysynth`, ADPCM via `aud::encode_adpcm()`).
 
-**AUD/WAV → MID does NOT make sense.** MIDI is symbolic (note events); AUD/WAV is a waveform. Converting waveform to notes requires music transcription — a hard ML problem with no clean-room pure Rust solution. This is a fundamentally lossy, best-guess operation that doesn't belong in a format conversion tool.
+**WAV → MID is supported as a library API** behind the `transcribe` feature flag (`pcm_to_mid()`, `wav_to_mid()`). WAV file input additionally requires the `convert` feature for `hound`. MIDI is symbolic (note events); WAV is a waveform — the conversion is inherently lossy and best-effort. The `transcribe` module provides a phased upgrade path from basic YIN pitch detection toward pYIN + Viterbi HMM + SuperFlux onset detection (DSP-only, zero new deps), and optionally ML-enhanced quality via Spotify's Basic Pitch model (behind `transcribe-ml` feature). See `formats/transcribe-upgrade-roadmap.md` for the full phased upgrade plan.
 
 ### CLI Examples
 
@@ -636,7 +636,7 @@ IC's IST (IC Sprite Text) format established the pattern: **use a text-friendly 
 
 5. **MID → AUD conversion? → Yes, via SoundFont + ADPCM.** Useful for modders targeting original game engines that expect `.aud` files. Pipeline: render MIDI through SoundFont to PCM, encode PCM as Westwood IMA ADPCM. Both steps use existing `cnc-formats` infrastructure.
 
-6. **AUD/WAV → MID conversion? → No, not feasible.** Audio-to-MIDI transcription is an unsolved ML problem. The conversion is fundamentally lossy and non-deterministic. Explicitly out of scope for a format conversion tool.
+6. **WAV → MID conversion? → Yes, library API behind `transcribe` + `convert` features.** `pcm_to_mid()` / `wav_to_mid()` work on raw `f32` samples with `transcribe` alone; WAV file input requires `convert` for `hound`. No CLI `convert` target exists yet. The conversion is inherently lossy and best-effort. DSP upgrade path (pYIN, SuperFlux, polyphonic HPS) and ML-enhanced path (`transcribe-ml`, Spotify Basic Pitch via ONNX) are planned. **AUD → MID: not yet a documented implementation surface.** See `formats/transcribe-upgrade-roadmap.md`.
 
 7. **Should IC play `.mid` directly at runtime? → Yes, as a supported asset format.** `.mid` files in the asset pipeline are auto-rendered to PCM at load time via SoundFont. Mods can ship `.mid` files directly — smaller than OGG, SoundFont-switchable by the player. Real-time MIDI playback (as opposed to load-time rendering) is optional for Classic render mode.
 

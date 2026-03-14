@@ -701,6 +701,64 @@ typedef struct _VQHeader {
 
 ---
 
+### VQP Palette Interpolation Tables (.vqp)
+
+**Source:** `REDALERT/CODE/CONQUER.CPP` (CnC_Red_Alert repo), Gordan Ugarkovic's `vqp_info.txt`
+
+VQP (VQ Palette) files are precomputed 256x256 color interpolation lookup tables that enable smooth 2x horizontal stretching of paletted VQA video at SVGA resolution. Each VQP file is a companion sidecar to a VQA file (e.g., `SIZZLE.VQA` + `SIZZLE.VQP`).
+
+#### File Structure
+
+```c
+// Pseudocode from CONQUER.CPP: Load_Interpolated_Palettes()
+struct VQPFile {
+    uint32_t num_palettes;     // Number of interpolation tables (LE)
+    // Followed by num_palettes tables, each 32,896 bytes:
+    // Lower triangle of a symmetric 256x256 matrix.
+    // (256 * 257) / 2 = 32,896 unique entries.
+};
+```
+
+#### Loading Algorithm
+
+Each table is stored as the lower triangle of a symmetric 256x256 matrix (since `table[A][B] == table[B][A]`):
+
+```c
+// From CONQUER.CPP
+file.Read(&num_palettes, 4);
+for (i = 0; i < num_palettes; i++) {
+    table = calloc(65536, 1);  // Full 256x256 table
+    for (y = 0; y < 256; y++) {
+        file.Read(table + y * 256, y + 1);  // Read row 0..y (triangle)
+    }
+    Rebuild_Interpolated_Palette(table);  // Mirror triangle
+}
+
+// Rebuild_Interpolated_Palette mirrors lower triangle to upper:
+for (y = 0; y < 255; y++)
+    for (x = y + 1; x < 256; x++)
+        table[y * 256 + x] = table[x * 256 + y];
+```
+
+#### Usage
+
+When stretching a 320-pixel-wide VQA frame to 640 pixels, each pair of adjacent palette-indexed pixels is interpolated by inserting a middle pixel:
+
+```
+interpolated_pixel = table[left_pixel][right_pixel]
+```
+
+The lookup returns a palette index that is the visual average of the two source colors. One table per palette change in the VQA — a movie with 52 palette changes has 52 tables.
+
+#### Size Validation
+
+- `SIZZLE.VQP`: first 4 bytes = `0x34` (52 tables). `4 + (52 * 32,896) = 1,710,596` bytes. Matches file size exactly.
+- `SIZZLE2.VQP`: first 4 bytes = `0x07` (7 tables). `4 + (7 * 32,896) = 230,276` bytes. Matches file size exactly.
+
+**IC relevance:** Read-only. No modern use case — GPU scaling replaces palette-based pixel interpolation. Parsed for format completeness and potential Classic render mode (D048) fidelity. VQP tables may also be embedded inside `MAIN.MIX` for videos stored within archives.
+
+---
+
 ### WSA Animation Format (.wsa)
 
 **Source:** `TIBERIANDAWN/WIN32LIB/WSA.CPP` (struct `WSA_FileHeaderType`), `REDALERT/WSA.H`
