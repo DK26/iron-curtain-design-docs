@@ -2,12 +2,12 @@
 
 ### Decision: Real YAML, Not MiniYAML
 
-OpenRA uses "MiniYAML" â€” a custom dialect that uses tabs, has custom inheritance (`^`, `@`), and doesn't comply with the YAML spec. Standard parsers choke on it.
+OpenRA uses "MiniYAML" — a custom dialect that uses tabs, has custom inheritance (`^`, `@`), and doesn't comply with the YAML spec. Standard parsers choke on it.
 
 **Our approach:** Standard YAML with `serde_yaml`, inheritance resolved at load time.
 
 **Rationale:**
-- `serde` + `serde_yaml` â†’ typed Rust struct deserialization for free
+- `serde` + `serde_yaml` → typed Rust struct deserialization for free
 - Every text editor has YAML support, linters, formatters
 - JSON-schema validation catches errors before the game loads
 - No custom parser to maintain
@@ -52,7 +52,7 @@ units:
 
 #### Unit Definition Features
 
-The YAML unit definition system supports several patterns informed by SC2's data model (see `research/blizzard-github-analysis.md` Â§ Part 2):
+The YAML unit definition system supports several patterns informed by SC2's data model (see `research/blizzard-github-analysis.md` § Part 2):
 
 **Stable IDs:** Every unit type, weapon, ability, and upgrade has a stable numeric ID in addition to its string name. Stable IDs are assigned at mod-load time from a deterministic hash of the string name. Replays, network orders, and the analysis event stream reference entities by stable ID for compactness. When a mod renames a unit, backward compatibility is maintained via an explicit `aliases` list:
 
@@ -63,7 +63,7 @@ units:
     aliases: [med_tank, medium]  # old names still resolve
 ```
 
-**Multi-weapon units:** Units can mount multiple weapons with independent targeting, cooldowns, and target filters â€” matching C&C's original design where units like the Cruiser have separate anti-ground and anti-air weapons:
+**Multi-weapon units:** Units can mount multiple weapons with independent targeting, cooldowns, and target filters — matching C&C's original design where units like the Cruiser have separate anti-ground and anti-air weapons:
 
 ```yaml
 combat:
@@ -76,7 +76,7 @@ combat:
       target_filter: [air]
 ```
 
-**Attribute tags:** Units carry attribute tags that affect damage calculations via versus tables. Tags are open-ended strings â€” game modules define their own sets. The RA1 module uses tags modeled on both C&C's original armor types and SC2's attribute system:
+**Attribute tags:** Units carry attribute tags that affect damage calculations via versus tables. Tags are open-ended strings — game modules define their own sets. The RA1 module uses tags modeled on both C&C's original armor types and SC2's attribute system:
 
 ```yaml
 attributes: [armored, mechanical]  # used by damage bonus lookups
@@ -97,7 +97,7 @@ weapons:
 
 ### Conditional Modifiers
 
-Beyond static `damage_bonuses`, any numeric stat can carry **conditional modifiers** â€” declarative rules that adjust values based on runtime conditions, attributes, or game state. This is IC's **Tier 1.5**: more powerful than static YAML data, but still pure data (no Lua required). Inspired by [Unciv's "Uniques" system](https://github.com/yairm210/Unciv) and building on D028's condition and multiplier systems.
+Beyond static `damage_bonuses`, any numeric stat can carry **conditional modifiers** — declarative rules that adjust values based on runtime conditions, attributes, or game state. This is IC's **Tier 1.5**: more powerful than static YAML data, but still pure data (no Lua required). Inspired by [Unciv's "Uniques" system](https://github.com/yairm210/Unciv) and building on D028's condition and multiplier systems.
 
 **Syntax:** Each modifier specifies an effect, a magnitude, and one or more conditions:
 
@@ -197,30 +197,30 @@ The same inheritance system powers **switchable balance presets** (D019). Preset
 
 ```
 rules/
-â”œâ”€â”€ units/              # base definitions (always loaded)
-â”œâ”€â”€ weapons/
-â”œâ”€â”€ structures/
-â””â”€â”€ presets/
-    â”œâ”€â”€ classic/        # EA source code values (DEFAULT)
-    â”‚   â”œâ”€â”€ units/
-    â”‚   â”‚   â””â”€â”€ tanya.yaml    # cost: 1200, health: 125, weapon_range: 5, ...
-    â”‚   â””â”€â”€ weapons/
-    â”œâ”€â”€ openra/         # OpenRA competitive balance
-    â”‚   â”œâ”€â”€ units/
-    â”‚   â”‚   â””â”€â”€ tanya.yaml    # cost: 1400, health: 80, weapon_range: 3, ...
-    â”‚   â””â”€â”€ weapons/
-    â””â”€â”€ remastered/     # Remastered Collection tweaks
-        â””â”€â”€ ...
+├── units/              # base definitions (always loaded)
+├── weapons/
+├── structures/
+└── presets/
+    ├── classic/        # EA source code values (DEFAULT)
+    │   ├── units/
+    │   │   └── tanya.yaml    # cost: 1200, health: 125, weapon_range: 5, ...
+    │   └── weapons/
+    ├── openra/         # OpenRA competitive balance
+    │   ├── units/
+    │   │   └── tanya.yaml    # cost: 1400, health: 80, weapon_range: 3, ...
+    │   └── weapons/
+    └── remastered/     # Remastered Collection tweaks
+        └── ...
 ```
 
 **How it works:**
 1. Engine loads base definitions from `rules/`
 2. Engine loads the selected preset directory, overriding matching fields via inheritance
-3. Preset YAML files only contain fields that differ â€” everything else falls through to base
+3. Preset YAML files only contain fields that differ — everything else falls through to base
 
 ```yaml
 # rules/presets/openra/units/tanya.yaml
-# Only overrides what OpenRA changes â€” rest inherits from base definition
+# Only overrides what OpenRA changes — rest inherits from base definition
 tanya:
   inherits: _base_tanya       # base definition with display, sequences, AI metadata, etc.
   buildable:
@@ -264,9 +264,9 @@ struct LlmMeta {
 }
 ```
 
-### Rule Hydration: UnitDef â†’ ECS Components
+### Rule Hydration: UnitDef → ECS Components
 
-Deserialized `UnitDef` structs are intermediate data â€” not ECS components. The **rule hydration** step converts YAML rule data into spawned ECS entities with the game module's components:
+Deserialized `UnitDef` structs are intermediate data — not ECS components. The **rule hydration** step converts YAML rule data into spawned ECS entities with the game module's components:
 
 ```rust
 /// Spawns a unit entity from a deserialized UnitDef.
@@ -291,34 +291,34 @@ fn spawn_unit(world: &mut World, def: &UnitDef, pos: WorldPos) -> UnitTag {
 }
 ```
 
-The hydration function is game-module-specific â€” RA1's module maps `UnitDef.combat` to RA1 combat components, while an RA2 module would additionally map shield and garrison fields to their respective components. The `GameModule::register_components()` method (see `architecture/multi-game.md`) ensures all required component types are registered in the ECS `World` before hydration occurs.
+The hydration function is game-module-specific — RA1's module maps `UnitDef.combat` to RA1 combat components, while an RA2 module would additionally map shield and garrison fields to their respective components. The `GameModule::register_components()` method (see `architecture/multi-game.md`) ensures all required component types are registered in the ECS `World` before hydration occurs.
 
-**Full pipeline:** YAML file â†’ `serde_yaml` / MiniYAML auto-convert â†’ `UnitDef` struct â†’ inheritance resolution â†’ rule hydration â†’ ECS entity with components. The first three steps are documented above; inheritance resolution is load-time (see Â§ Inheritance below); rule hydration is the bridge from data to simulation.
+**Full pipeline:** YAML file → `serde_yaml` / MiniYAML auto-convert → `UnitDef` struct → inheritance resolution → rule hydration → ECS entity with components. The first three steps are documented above; inheritance resolution is load-time (see § Inheritance below); rule hydration is the bridge from data to simulation.
 
 ### MiniYAML Migration & Runtime Loading
 
-**Converter tool:** The `cnc-formats` CLI includes a `convert` subcommand (behind the `miniyaml` feature flag) that translates existing OpenRA MiniYAML mod data to standard YAML on disk: `cnc-formats convert --format miniyaml --to yaml rules.yaml` (explicit `--format` needed because `.yaml` is ambiguous; auto-detection works for unambiguous extensions like `.miniyaml`; `--format` always required for stdin). The `convert` subcommand uses extensible `--format`/`--to` flags â€” `--to` is always required, `--format` is optional (auto-detected from file extension when unambiguous, required for stdin). Adding new conversions is a `ConvertFormat` enum variant, not a subcommand change. The same CLI also provides `validate` (structural correctness check) and `inspect` (dump archive contents, frame counts, palette info) for all supported C&C formats.
+**Converter tool:** The `cnc-formats` CLI includes a `convert` subcommand (behind the `miniyaml` feature flag) that translates existing OpenRA MiniYAML mod data to standard YAML on disk: `cnc-formats convert --format miniyaml --to yaml rules.yaml` (explicit `--format` needed because `.yaml` is ambiguous; auto-detection works for unambiguous extensions like `.miniyaml`; `--format` always required for stdin). The `convert` subcommand uses extensible `--format`/`--to` flags — `--to` is always required, `--format` is optional (auto-detected from file extension when unambiguous, required for stdin). Adding new conversions is a `ConvertFormat` enum variant, not a subcommand change. The same CLI also provides `validate` (structural correctness check) and `inspect` (dump archive contents, frame counts, palette info) for all supported C&C formats.
 
-**Runtime loading (D025):** MiniYAML files also load directly at runtime â€” no pre-conversion required. When `ra-formats` detects tab-indented content with `^` inheritance or `@` suffixes, it calls `cnc-formats`'s clean-room MiniYAML parser and auto-converts in memory. The runtime pipeline then applies alias resolution (D023 â€” OpenRA trait names â†’ IC component names), which the standalone `cnc-formats convert` CLI does *not* perform (it is schema-neutral). This means existing OpenRA mods can be dropped into IC and played immediately â€” `ra-formats` handles both structural conversion and semantic mapping in one pass.
+**Runtime loading (D025):** MiniYAML files also load directly at runtime — no pre-conversion required. When `ra-formats` detects tab-indented content with `^` inheritance or `@` suffixes, it calls `cnc-formats`'s clean-room MiniYAML parser and auto-converts in memory. The runtime pipeline then applies alias resolution (D023 — OpenRA trait names → IC component names), which the standalone `cnc-formats convert` CLI does *not* perform (it is schema-neutral). This means existing OpenRA mods can be dropped into IC and played immediately — `ra-formats` handles both structural conversion and semantic mapping in one pass.
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚           MiniYAML Loading Pipeline                     â”‚
-â”‚                                                         â”‚
-â”‚  .yaml file â”€â”€â†’ Format detection                        â”‚
-â”‚                   â”‚                                     â”‚
-â”‚                   â”œâ”€ Standard YAML â†’ serde_yaml parse   â”‚
-â”‚                   â”‚                                     â”‚
-â”‚                   â””â”€ MiniYAML detected                  â”‚
-â”‚                       â”‚                                 â”‚
-â”‚                       â”œâ”€ MiniYAML parser (tabs, ^, @)   â”‚
-â”‚                       â”œâ”€ Intermediate tree              â”‚
-â”‚                       â”œâ”€ Alias resolution (D023)        â”‚
-â”‚                       â””â”€ Typed Rust structs             â”‚
-â”‚                                                         â”‚
-â”‚  Both paths produce identical output.                   â”‚
-â”‚  Runtime conversion adds ~10-50ms per mod (cached).     â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌─────────────────────────────────────────────────────────┐
+│           MiniYAML Loading Pipeline                     │
+│                                                         │
+│  .yaml file ──→ Format detection                        │
+│                   │                                     │
+│                   ├─ Standard YAML → serde_yaml parse   │
+│                   │                                     │
+│                   └─ MiniYAML detected                  │
+│                       │                                 │
+│                       ├─ MiniYAML parser (tabs, ^, @)   │
+│                       ├─ Intermediate tree              │
+│                       ├─ Alias resolution (D023)        │
+│                       └─ Typed Rust structs             │
+│                                                         │
+│  Both paths produce identical output.                   │
+│  Runtime conversion adds ~10-50ms per mod (cached).     │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ### OpenRA Vocabulary Aliases (D023)
@@ -355,11 +355,11 @@ ic mod run --openra-dir /path/to/openra-mod/
 ic mod import /path/to/openra-mod/ --output ./my-ic-mod/
 ```
 
-Sections like `Rules`, `Sequences`, `Weapons`, `Maps`, `Voices`, `Music` are mapped to IC equivalents. `Assemblies` (C# DLLs) are flagged as warnings â€” units using unavailable traits get placeholder rendering.
+Sections like `Rules`, `Sequences`, `Weapons`, `Maps`, `Voices`, `Music` are mapped to IC equivalents. `Assemblies` (C# DLLs) are flagged as warnings — units using unavailable traits get placeholder rendering.
 
-**OpenRA mod composition patterns and IC's alternative:** OpenRA mods compose functionality by stacking C# DLL assemblies. Romanovs-Vengeance loads **five DLLs simultaneously** (Common, Cnc, D2k, RA2, AttacqueSuperior) to combine cross-game components. OpenKrush uses `Include:` directives to compose modular content directories, each with their own rules, sequences, and assets. This DLL-stacking approach works but creates fragile version dependencies â€” a new OpenRA release can break all mods simultaneously.
+**OpenRA mod composition patterns and IC's alternative:** OpenRA mods compose functionality by stacking C# DLL assemblies. Romanovs-Vengeance loads **five DLLs simultaneously** (Common, Cnc, D2k, RA2, AttacqueSuperior) to combine cross-game components. OpenKrush uses `Include:` directives to compose modular content directories, each with their own rules, sequences, and assets. This DLL-stacking approach works but creates fragile version dependencies — a new OpenRA release can break all mods simultaneously.
 
-IC's mod composition replaces DLL stacking with a layered mod dependency system (see Mod Load Order below) combined with WASM modules for new mechanics. Instead of stacking opaque DLLs, mods declare explicit dependencies and the engine resolves load order deterministically. Cross-game component reuse (D029) works through the engine's first-party component library â€” no need to import foreign game module DLLs just to access a carrier/spawner system or mind control mechanic.
+IC's mod composition replaces DLL stacking with a layered mod dependency system (see Mod Load Order below) combined with WASM modules for new mechanics. Instead of stacking opaque DLLs, mods declare explicit dependencies and the engine resolves load order deterministically. Cross-game component reuse (D029) works through the engine's first-party component library — no need to import foreign game module DLLs just to access a carrier/spawner system or mind control mechanic.
 
 ### Why Not TOML / RON / JSON?
 
@@ -372,47 +372,47 @@ IC's mod composition replaces DLL stacking with a layered mod dependency system 
 
 ### Mod Load Order & Conflict Resolution
 
-When multiple mods modify the same game data, deterministic load order and explicit conflict handling are essential. Bethesda taught the modding world this lesson: Skyrim's 200+ mod setups are only viable because community tools (LOOT, xEdit, Bashed Patches) compensate for Bethesda's vague native load order. IC builds deterministic conflict resolution into the engine from day one â€” no third-party tools required.
+When multiple mods modify the same game data, deterministic load order and explicit conflict handling are essential. Bethesda taught the modding world this lesson: Skyrim's 200+ mod setups are only viable because community tools (LOOT, xEdit, Bashed Patches) compensate for Bethesda's vague native load order. IC builds deterministic conflict resolution into the engine from day one — no third-party tools required.
 
-**Three-phase data loading (from Factorio):** Factorio's mod loading uses three sequential phases â€” `data.lua` (define new prototypes), `data-updates.lua` (modify prototypes defined by other mods), `data-final-fixes.lua` (final overrides that run after all mods) â€” which eliminates load-order conflicts for the vast majority of mod interactions. IC should adopt an analogous three-phase approach for YAML/Lua mod loading:
+**Three-phase data loading (from Factorio):** Factorio's mod loading uses three sequential phases — `data.lua` (define new prototypes), `data-updates.lua` (modify prototypes defined by other mods), `data-final-fixes.lua` (final overrides that run after all mods) — which eliminates load-order conflicts for the vast majority of mod interactions. IC should adopt an analogous three-phase approach for YAML/Lua mod loading:
 
-1. **Define phase:** Mods declare new actors, weapons, and rules (additive only â€” no overrides)
+1. **Define phase:** Mods declare new actors, weapons, and rules (additive only — no overrides)
 2. **Modify phase:** Mods modify definitions from earlier mods (explicit dependency required)
 3. **Final-fixes phase:** Balance patches and compatibility layers apply last-wins overrides
 
-This structure means a mod that defines new units and a mod that rebalances existing units don't conflict â€” they run in different phases by design. Factorio's 8,000+ mod ecosystem validates that three-phase loading scales to massive mod counts. See `research/mojang-wube-modding-analysis.md` Â§ Factorio.
+This structure means a mod that defines new units and a mod that rebalances existing units don't conflict — they run in different phases by design. Factorio's 8,000+ mod ecosystem validates that three-phase loading scales to massive mod counts. See `research/mojang-wube-modding-analysis.md` § Factorio.
 
 **Load order rules:**
 
 1. **Engine defaults** load first (built-in RA1/TD rules).
 2. **Balance preset** (D019) overlays next.
-3. **Mods** load in dependency-graph order â€” if mod A depends on mod B, B loads first.
-4. **Mods with no dependency relationship** between them load in lexicographic order by mod ID. Deterministic tiebreaker â€” no ambiguity.
+3. **Mods** load in dependency-graph order — if mod A depends on mod B, B loads first.
+4. **Mods with no dependency relationship** between them load in lexicographic order by mod ID. Deterministic tiebreaker — no ambiguity.
 5. **Within a mod**, files load in directory order, then alphabetical within each directory.
 
-**Multiplayer enforcement:** In multiplayer, the lobby enforces identical mod sets, versions, and load order across all clients before the game starts (see `03-NETCODE.md` Â§ `GameListing.required_mods`). The deterministic load order is sufficient *because* divergent mod configurations are rejected at join time â€” there is no scenario where two clients resolve the same mods differently.
+**Multiplayer enforcement:** In multiplayer, the lobby enforces identical mod sets, versions, and load order across all clients before the game starts (see `03-NETCODE.md` § `GameListing.required_mods`). The deterministic load order is sufficient *because* divergent mod configurations are rejected at join time — there is no scenario where two clients resolve the same mods differently.
 
 **Conflict behavior (same YAML key modified by two mods):**
 
 | Scenario                                                          | Behavior                                                    | Rationale                                |
 | ----------------------------------------------------------------- | ----------------------------------------------------------- | ---------------------------------------- |
 | Two mods set different values for the same field on the same unit | Last-wins (later in load order) + warning in `ic mod check` | Modders need to know about the collision |
-| Mod adds a new field to a unit also modified by another mod       | Merge â€” both additions survive                            | Non-conflicting additions are safe       |
+| Mod adds a new field to a unit also modified by another mod       | Merge — both additions survive                            | Non-conflicting additions are safe       |
 | Mod deletes a field that another mod modifies                     | Delete wins + warning                                       | Explicit deletion is intentional         |
-| Two mods define the same new unit ID                              | Error â€” refuses to load                                   | Ambiguous identity is never acceptable   |
+| Two mods define the same new unit ID                              | Error — refuses to load                                   | Ambiguous identity is never acceptable   |
 
 **Tooling:**
 
-- `ic mod check-conflicts [mod1] [mod2] ...` â€” reports all field-level conflicts between a set of mods before launch. Shows which mod "wins" each conflict and why.
-- `ic mod load-order [mod1] [mod2] ...` â€” prints the resolved load order with dependency graph visualization.
+- `ic mod check-conflicts [mod1] [mod2] ...` — reports all field-level conflicts between a set of mods before launch. Shows which mod "wins" each conflict and why.
+- `ic mod load-order [mod1] [mod2] ...` — prints the resolved load order with dependency graph visualization.
 - In-game mod manager shows conflict warnings with "which mod wins" detail when enabling mods.
 
 **Conflict override file (optional):**
 
-For advanced setups, a `conflicts.yaml` file in the **game's user configuration directory** (next to `settings.toml`) lets the player explicitly resolve conflicts in their personal setup. This is a per-user file â€” it is not distributed with mods or modpacks, and it is not synced in multiplayer. Players who want to share their conflict resolutions can distribute the file manually or include it in a modpack manifest (the `modpack.conflicts` field serves the same purpose for published modpacks):
+For advanced setups, a `conflicts.yaml` file in the **game's user configuration directory** (next to `settings.toml`) lets the player explicitly resolve conflicts in their personal setup. This is a per-user file — it is not distributed with mods or modpacks, and it is not synced in multiplayer. Players who want to share their conflict resolutions can distribute the file manually or include it in a modpack manifest (the `modpack.conflicts` field serves the same purpose for published modpacks):
 
 ```yaml
-# conflicts.yaml â€” explicit conflict resolution
+# conflicts.yaml — explicit conflict resolution
 overrides:
   - unit: heavy_tank
     field: health.max
@@ -423,11 +423,11 @@ overrides:
     use_mod: "bob/economy-overhaul"
 ```
 
-This is the manual equivalent of Bethesda's Bashed Patches â€” but declarative, version-controlled, and shareable.
+This is the manual equivalent of Bethesda's Bashed Patches — but declarative, version-controlled, and shareable.
 
 ### Mod Profiles & Virtual Asset Namespace (D062)
 
-The load order, active mod set, conflict resolutions, and experience settings (D033) compose into a **mod profile** â€” a named, hashable, switchable TOML file (D067: infrastructure, not content) that captures a complete mod configuration:
+The load order, active mod set, conflict resolutions, and experience settings (D033) compose into a **mod profile** — a named, hashable, switchable TOML file (D067: infrastructure, not content) that captures a complete mod configuration:
 
 ```toml
 # <data_dir>/profiles/tournament-s5.toml
@@ -455,6 +455,6 @@ theme = "remastered"
 pathfinding = "ic_default"
 ```
 
-When a profile is activated, the engine builds a **virtual asset namespace** â€” a resolved lookup table mapping every logical asset path to a content-addressed blob (D049 local CAS) and every YAML rule to its merged value. The namespace fingerprint (SHA-256 of sorted entries) serves as a single-value compatibility check in multiplayer lobbies and replay playback. See `decisions/09c-modding.md` Â§ D062 for the full design: namespace struct, Bevy `AssetSource` integration, lobby fingerprint verification, editor hot-swap, and the relationship between local profiles and published modpacks (D030).
+When a profile is activated, the engine builds a **virtual asset namespace** — a resolved lookup table mapping every logical asset path to a content-addressed blob (D049 local CAS) and every YAML rule to its merged value. The namespace fingerprint (SHA-256 of sorted entries) serves as a single-value compatibility check in multiplayer lobbies and replay playback. See `decisions/09c-modding.md` § D062 for the full design: namespace struct, Bevy `AssetSource` integration, lobby fingerprint verification, editor hot-swap, and the relationship between local profiles and published modpacks (D030).
 
 **Phase:** Load order engine support in Phase 2 (part of YAML rule loading). `VirtualNamespace` struct and fingerprinting in Phase 2. `ic profile` CLI in Phase 4. Lobby fingerprint verification in Phase 5. Conflict detection CLI in Phase 4 (with `ic` CLI). In-game mod manager with profile dropdown in Phase 6a.

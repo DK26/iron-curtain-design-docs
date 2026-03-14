@@ -3,75 +3,75 @@
 ### Post-Game Screen
 
 ```
-InGame â†’ Victory/Defeat â†’ Post-Game
+InGame → Victory/Defeat → Post-Game
 ```
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  VICTORY                                                     â”‚
-â”‚  Coastal Fortress â€” 12:34                                    â”‚
-â”‚                                                              â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚
-â”‚  â”‚ STATS           You              Opponent             â”‚  â”‚
-â”‚  â”‚ Units Built:    87               63                   â”‚  â”‚
-â”‚  â”‚ Units Lost:     34               63 (all)             â”‚  â”‚
-â”‚  â”‚ Structures:     12               8                    â”‚  â”‚
-â”‚  â”‚ Economy:        $45,200          $31,800              â”‚  â”‚
-â”‚  â”‚ APM:            142              98                   â”‚  â”‚
-â”‚  â”‚ Peak Army:      52               41                   â”‚  â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â”‚
-â”‚                                                              â”‚
-â”‚  Rating: Captain II â†’ Captain I (+32)  ðŸŽ–                    â”‚
-â”‚                                                              â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”‚
-â”‚  â”‚ CHAT (5-minute post-game lobby, still active)        â”‚   â”‚
-â”‚  â”‚ Opponent: gg wp                                      â”‚   â”‚
-â”‚  â”‚ You: gg                                              â”‚   â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â”‚
-â”‚                                                              â”‚
-â”‚  [Watch Replay]  [Save Replay]  [Re-Queue]  [Main Menu]     â”‚
-â”‚                                                              â”‚
-â”‚  [Report Player]                          Closes in: 4:32    â”‚
-â”‚                                                              â”‚
-â”‚  ðŸ’¡ TIP: You had 15 idle harvester seconds â€” try keeping     â”‚
-â”‚     all harvesters active for higher income. [Learn more â†’]  â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌──────────────────────────────────────────────────────────────┐
+│  VICTORY                                                     │
+│  Coastal Fortress — 12:34                                    │
+│                                                              │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ STATS           You              Opponent             │  │
+│  │ Units Built:    87               63                   │  │
+│  │ Units Lost:     34               63 (all)             │  │
+│  │ Structures:     12               8                    │  │
+│  │ Economy:        $45,200          $31,800              │  │
+│  │ APM:            142              98                   │  │
+│  │ Peak Army:      52               41                   │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                              │
+│  Rating: Captain II → Captain I (+32)  🎖                    │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ CHAT (5-minute post-game lobby, still active)        │   │
+│  │ Opponent: gg wp                                      │   │
+│  │ You: gg                                              │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  [Watch Replay]  [Save Replay]  [Re-Queue]  [Main Menu]     │
+│                                                              │
+│  [Report Player]                          Closes in: 4:32    │
+│                                                              │
+│  💡 TIP: You had 15 idle harvester seconds — try keeping     │
+│     all harvesters active for higher income. [Learn more →]  │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 **Post-game elements:**
 
-- **Stats comparison** â€” Economy, production, combat, activity (APM/EPM). Graphs available on hover/click.
-- **MVP Awards** â€” Stat-based recognition cards highlighting top performers (see MVP Awards section below).
-- **Rating update** â€” Tier badge animation if promoted/demoted. Delta shown.
-- **Chat** â€” Active for the full 5-minute post-game lobby duration. Both teams can talk.
-- **Post-game learning** (D065) â€” Rule-based tip analyzing the match (e.g., idle harvesters, low APM, no control groups used). Links to tutorial or replay annotation.
-- **Watch Replay** â†’ Replay Viewer (immediate â€” the `.icrep` file is incrementally valid during recording, so the viewer can open it before the writer finalizes the archival header)
-- **Save Replay** â†’ Save finalized `.icrep` file with complete header (`total_ticks`, `final_state_hash`) and metadata (available after the background writer flushes on match end)
-- **Re-Queue** â†’ Back to matchmaking queue (ranked)
-- **Main Menu** â†’ Return to main menu
-- **Report Player** â†’ Report dialog (reason dropdown, optional text)
-- **Post-play feedback pulse** (optional, sampled) â€” quick "how was this?" prompt for mode/mod/campaign with skip/snooze controls
+- **Stats comparison** — Economy, production, combat, activity (APM/EPM). Graphs available on hover/click.
+- **MVP Awards** — Stat-based recognition cards highlighting top performers (see MVP Awards section below).
+- **Rating update** — Tier badge animation if promoted/demoted. Delta shown.
+- **Chat** — Active for the full 5-minute post-game lobby duration. Both teams can talk.
+- **Post-game learning** (D065) — Rule-based tip analyzing the match (e.g., idle harvesters, low APM, no control groups used). Links to tutorial or replay annotation.
+- **Watch Replay** → Replay Viewer (immediate — the `.icrep` file is incrementally valid during recording, so the viewer can open it before the writer finalizes the archival header)
+- **Save Replay** → Save finalized `.icrep` file with complete header (`total_ticks`, `final_state_hash`) and metadata (available after the background writer flushes on match end)
+- **Re-Queue** → Back to matchmaking queue (ranked)
+- **Main Menu** → Return to main menu
+- **Report Player** → Report dialog (reason dropdown, optional text)
+- **Post-play feedback pulse** (optional, sampled) — quick "how was this?" prompt for mode/mod/campaign with skip/snooze controls
 
 #### MVP Awards (Post-Game Recognition)
 
-After every multiplayer match (skirmish, ranked, co-op, team), the post-game screen will display stat-based MVP award cards recognizing standout performance. These are auto-calculated from match data â€” no player voting required.
+After every multiplayer match (skirmish, ranked, co-op, team), the post-game screen will display stat-based MVP award cards recognizing standout performance. These are auto-calculated from match data — no player voting required.
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  MVP AWARDS                                                  â”‚
-â”‚                                                              â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”         â”‚
-â”‚  â”‚ ðŸ† MVP      â”‚  â”‚ âš” Warlord   â”‚  â”‚ ðŸ’° Tycoon   â”‚         â”‚
-â”‚  â”‚ CommanderX  â”‚  â”‚ TankRush99  â”‚  â”‚ You         â”‚         â”‚
-â”‚  â”‚ Score: 4820 â”‚  â”‚ 142 kills   â”‚  â”‚ $68,200     â”‚         â”‚
-â”‚  â”‚             â”‚  â”‚ 23 K/D      â”‚  â”‚ harvested   â”‚         â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜         â”‚
-â”‚                                                              â”‚
-â”‚  Personal: ðŸ›¡ Iron Wall â€” lost only 12 units                â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌──────────────────────────────────────────────────────────────┐
+│  MVP AWARDS                                                  │
+│                                                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │ 🏆 MVP      │  │ ⚔ Warlord   │  │ 💰 Tycoon   │         │
+│  │ CommanderX  │  │ TankRush99  │  │ You         │         │
+│  │ Score: 4820 │  │ 142 kills   │  │ $68,200     │         │
+│  │             │  │ 23 K/D      │  │ harvested   │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘         │
+│                                                              │
+│  Personal: 🛡 Iron Wall — lost only 12 units                │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-**Award categories** â€” the engine selects 2â€“4 awards per match from the following categories, based on which stats are most exceptional relative to the match context. Not all awards appear every game â€” only standout performances are highlighted.
+**Award categories** — the engine selects 2–4 awards per match from the following categories, based on which stats are most exceptional relative to the match context. Not all awards appear every game — only standout performances are highlighted.
 
 | Category              | Award Name          | Criteria                                                                        |
 | --------------------- | ------------------- | ------------------------------------------------------------------------------- |
@@ -107,67 +107,67 @@ After every multiplayer match (skirmish, ranked, co-op, team), the post-game scr
 
 1. After match ends, compute all stat categories for all players
 2. For each category, check if any player's stat is significantly above the match average (threshold: top percentile relative to match context, not absolute values)
-3. Select the top 2â€“4 most exceptional awards â€” prefer variety across categories (don't show 3 combat awards)
-4. In 1v1: show 1â€“2 awards per player. In team games: show 3â€“4 total across all players. Overall MVP always shown if the match has 3+ players
+3. Select the top 2–4 most exceptional awards — prefer variety across categories (don't show 3 combat awards)
+4. In 1v1: show 1–2 awards per player. In team games: show 3–4 total across all players. Overall MVP always shown if the match has 3+ players
 5. Each player also sees a **personal award** (their single best stat) even if they didn't earn a match-wide award
 
 **Design rules:**
 
-- **No effect on ranked rating.** Awards are cosmetic recognition only â€” Glicko-2 rating changes are computed purely from win/loss (D055).
-- **Profile-visible.** Award counts are tracked in the player profile (D053) â€” e.g., "MVP Ã—47, Tycoon Ã—23, Iron Wall Ã—15." Displayed as a stat line, not badges.
+- **No effect on ranked rating.** Awards are cosmetic recognition only — Glicko-2 rating changes are computed purely from win/loss (D055).
+- **Profile-visible.** Award counts are tracked in the player profile (D053) — e.g., "MVP ×47, Tycoon ×23, Iron Wall ×15." Displayed as a stat line, not badges.
 - **Moddable.** Award definitions are YAML-driven (`awards.yaml`): name, icon, stat formula, threshold, flavor text. Modders can add game-module-specific awards (e.g., Tiberian Dawn: "Nod Commander" for most stealth unit kills). Workshop-publishable.
 - **Anti-farming.** Awards are only granted in matches that meet minimum thresholds: minimum match duration (>3 minutes), minimum opponent count/difficulty, and no early surrenders. AI-only matches grant awards but they are tagged as `vs-AI` in the profile and tracked separately.
 - **Replay-linked.** Each award links to the replay moment that earned it (e.g., "Decimator" links to the tick of the largest battle). Clicking the award in the post-game screen jumps to that moment in the replay viewer.
 
 #### Play-of-the-Game (D077)
 
-After each match, the highest-scoring highlight moment is displayed as a **POTG viewport** on the post-game screen â€” a 20â€“45 second replay clip with cinematic camera and a category label (e.g., "Decisive Assault", "Against All Odds", "Nuclear Option"). All players in multiplayer see the same POTG (deterministic scoring from the shared Analysis Event Stream).
+After each match, the highest-scoring highlight moment is displayed as a **POTG viewport** on the post-game screen — a 20–45 second replay clip with cinematic camera and a category label (e.g., "Decisive Assault", "Against All Odds", "Nuclear Option"). All players in multiplayer see the same POTG (deterministic scoring from the shared Analysis Event Stream).
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  PLAY OF THE GAME                                           â”‚
-â”‚                                                              â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”          â”‚
-â”‚  â”‚                                                â”‚          â”‚
-â”‚  â”‚   [Replay viewport: highlight camera AI]       â”‚          â”‚
-â”‚  â”‚   [20â€“45 second clip of top scoring moment]    â”‚          â”‚
-â”‚  â”‚                                                â”‚          â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜          â”‚
-â”‚                                                              â”‚
-â”‚  Category: "Against All Odds"    Player: CommanderX          â”‚
-â”‚                                                              â”‚
-â”‚  [Watch Full Replay]  [Skip to Stats â†’]                      â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌──────────────────────────────────────────────────────────────┐
+│  PLAY OF THE GAME                                           │
+│                                                              │
+│  ┌────────────────────────────────────────────────┐          │
+│  │                                                │          │
+│  │   [Replay viewport: highlight camera AI]       │          │
+│  │   [20–45 second clip of top scoring moment]    │          │
+│  │                                                │          │
+│  └────────────────────────────────────────────────┘          │
+│                                                              │
+│  Category: "Against All Odds"    Player: CommanderX          │
+│                                                              │
+│  [Watch Full Replay]  [Skip to Stats →]                      │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-- **Skippable** â€” Escape or Skip button jumps to MVP awards / stats screen
+- **Skippable** — Escape or Skip button jumps to MVP awards / stats screen
 - **Team games:** Bonus for coordinated team actions in the same engagement window
 - **Scoring:** Four-dimension pipeline (engagement density 0.35, momentum swing 0.25, z-score anomaly 0.20, rarity bonus 0.20) with per-match baselines. See `decisions/09d/D077-replay-highlights.md` for the full scoring specification
 - **Category labels:** YAML-moddable per game module (`highlight-config.yaml`)
-- **Highlight library:** Top 5 moments per match stored as replay references in SQLite (`profile.db`); available in Profile â†’ Highlights and as a main menu background option
+- **Highlight library:** Top 5 moments per match stored as replay references in SQLite (`profile.db`); available in Profile → Highlights and as a main menu background option
 
 #### Post-Play Feedback Prompt (Modes / Mods / Campaigns; Optional D049 + D053)
 
 The post-game screen may show a **sampled, skippable** feedback prompt. It is designed to help mode/mod/campaign authors improve content without blocking normal post-game actions.
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  HOW WAS THIS MATCH / MODE?                                 â”‚
-â”‚                                                              â”‚
-â”‚  Target: Commander & SpecOps (IC-native mode)               â”‚
-â”‚  Optional mod in use: "Combined Arms v2.1"                  â”‚
-â”‚                                                              â”‚
-â”‚  Fun / Experience:  [â˜…] [â˜…] [â˜…] [â˜…] [â˜…]                    â”‚
-â”‚  Quick tags: [Fun] [Confusing] [Too fast] [Great co-op]     â”‚
-â”‚                                                              â”‚
-â”‚  Feedback (optional): [__________________________________]  â”‚
-â”‚                                                              â”‚
-â”‚  If sent to the author/community, constructive feedback may â”‚
-â”‚  earn profile-only recognition if marked helpful.           â”‚
-â”‚  (No gameplay or ranked bonuses.)                           â”‚
-â”‚                                                              â”‚
-â”‚  [Send Feedback] [Skip] [Snooze] [Don't Ask for This Mode]  â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌──────────────────────────────────────────────────────────────┐
+│  HOW WAS THIS MATCH / MODE?                                 │
+│                                                              │
+│  Target: Commander & SpecOps (IC-native mode)               │
+│  Optional mod in use: "Combined Arms v2.1"                  │
+│                                                              │
+│  Fun / Experience:  [★] [★] [★] [★] [★]                    │
+│  Quick tags: [Fun] [Confusing] [Too fast] [Great co-op]     │
+│                                                              │
+│  Feedback (optional): [__________________________________]  │
+│                                                              │
+│  If sent to the author/community, constructive feedback may │
+│  earn profile-only recognition if marked helpful.           │
+│  (No gameplay or ranked bonuses.)                           │
+│                                                              │
+│  [Send Feedback] [Skip] [Snooze] [Don't Ask for This Mode]  │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 **UX rules:**
@@ -182,33 +182,33 @@ The post-game screen may show a **sampled, skippable** feedback prompt. It is de
 The `Report Player` action (also available from lobby/player-list context menus) opens a compact moderation dialog with local safety controls and queue preferences in the same place, but with clear scope labels.
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  REPORT PLAYER: Opponent                                    â”‚
-â”‚                                                              â”‚
-â”‚  Category: [Cheating â–¾]                                      â”‚
-â”‚  Note (optional): [Suspicious impossible scout timing...]    â”‚
-â”‚                                                              â”‚
-â”‚  Evidence to attach (auto):                                  â”‚
-â”‚   âœ“ Signed replay / match ID                                 â”‚
-â”‚   âœ“ Relay telemetry summary                                  â”‚
-â”‚   âœ“ Timestamps / event markers                               â”‚
-â”‚                                                              â”‚
-â”‚  Quick actions                                               â”‚
-â”‚   [Mute Player]  (Local comms)                               â”‚
-â”‚   [Block Player] (Local social)                              â”‚
-â”‚   [Avoid Player] (Queue preference, best-effort)             â”‚
-â”‚                                                              â”‚
-â”‚  Reports are reviewed by the community server. Submission    â”‚
-â”‚  does not guarantee punishment. False reports may be penalizedâ”‚
-â”‚                                                              â”‚
-â”‚  [Submit Report]  [Cancel]                                   â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌──────────────────────────────────────────────────────────────┐
+│  REPORT PLAYER: Opponent                                    │
+│                                                              │
+│  Category: [Cheating ▾]                                      │
+│  Note (optional): [Suspicious impossible scout timing...]    │
+│                                                              │
+│  Evidence to attach (auto):                                  │
+│   ✓ Signed replay / match ID                                 │
+│   ✓ Relay telemetry summary                                  │
+│   ✓ Timestamps / event markers                               │
+│                                                              │
+│  Quick actions                                               │
+│   [Mute Player]  (Local comms)                               │
+│   [Block Player] (Local social)                              │
+│   [Avoid Player] (Queue preference, best-effort)             │
+│                                                              │
+│  Reports are reviewed by the community server. Submission    │
+│  does not guarantee punishment. False reports may be penalized│
+│                                                              │
+│  [Submit Report]  [Cancel]                                   │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 **UX rules:**
 - `Avoid Player` is labeled **best-effort** and links to ranked queue constraints (D055)
 - `Mute`/`Block` remain usable without submitting a report
-- Evidence is attached by reference/ID when possible (no unnecessary duplicate upload). The reporter does **not** see raw relay telemetry â€” only the moderation backend and reviewers with appropriate privileges access telemetry summaries.
+- Evidence is attached by reference/ID when possible (no unnecessary duplicate upload). The reporter does **not** see raw relay telemetry — only the moderation backend and reviewers with appropriate privileges access telemetry summaries.
 - The dialog is available post-game, from scoreboard/player list, and from lobby profile/context menus
 
 #### Community Review Queue (Optional D052 "Overwatch"-Style, Reviewer/Moderator Surface)
@@ -216,30 +216,30 @@ The `Report Player` action (also available from lobby/player-list context menus)
 Eligible community reviewers (or moderators) may access an optional review queue if the community server enables D052's review capability. This is a **separate role surface** from normal player matchmaking UX.
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  COMMUNITY REVIEW QUEUE (Official IC Community)             â”‚
-â”‚  Reviewer: calibrated âœ“   Weight: 0.84                      â”‚
-â”‚                                                              â”‚
-â”‚  Case: #2026-02-000123        Category: Suspected Cheating   â”‚
-â”‚  State: In Review             Evidence: Replay + Telemetry   â”‚
-â”‚  Anonymized Subject: Player-7F3A                             â”‚
-â”‚                                                              â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚
-â”‚  â”‚ Replay timeline (flagged markers)                     â”‚  â”‚
-â”‚  â”‚ 12:14  suspicious scout timing                        â”‚  â”‚
-â”‚  â”‚ 15:33  repeated impossible reaction window            â”‚  â”‚
-â”‚  â”‚ 18:07  order-rate spike                               â”‚  â”‚
-â”‚  â”‚ [Watch Clip] [Full Replay] [Telemetry Summary]        â”‚  â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â”‚
-â”‚                                                              â”‚
-â”‚  Vote                                                        â”‚
-â”‚  [Likely Clean] [Suspected Griefing] [Suspected Cheating]    â”‚
-â”‚  [Insufficient Evidence] [Escalate]                          â”‚
-â”‚  Confidence: [70 â–®â–®â–®â–®â–®â–®â–®â–¡â–¡â–¡]                                 â”‚
-â”‚  Notes (optional): [____________________________________]    â”‚
-â”‚                                                              â”‚
-â”‚  [Submit Vote]   [Skip Case]   [Reviewer Guide]             â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌──────────────────────────────────────────────────────────────┐
+│  COMMUNITY REVIEW QUEUE (Official IC Community)             │
+│  Reviewer: calibrated ✓   Weight: 0.84                      │
+│                                                              │
+│  Case: #2026-02-000123        Category: Suspected Cheating   │
+│  State: In Review             Evidence: Replay + Telemetry   │
+│  Anonymized Subject: Player-7F3A                             │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ Replay timeline (flagged markers)                     │  │
+│  │ 12:14  suspicious scout timing                        │  │
+│  │ 15:33  repeated impossible reaction window            │  │
+│  │ 18:07  order-rate spike                               │  │
+│  │ [Watch Clip] [Full Replay] [Telemetry Summary]        │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  Vote                                                        │
+│  [Likely Clean] [Suspected Griefing] [Suspected Cheating]    │
+│  [Insufficient Evidence] [Escalate]                          │
+│  Confidence: [70 ▮▮▮▮▮▮▮□□□]                                 │
+│  Notes (optional): [____________________________________]    │
+│                                                              │
+│  [Submit Vote]   [Skip Case]   [Reviewer Guide]             │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 **Reviewer UI rules (D052/D037/`06-SECURITY`):**
@@ -282,32 +282,32 @@ D070 matches add a role-aware breakdown tab/card to the post-game screen:
 
 This reinforces the mode's cooperative identity and provides actionable learning without forcing competitive scoring semantics onto a PvE-first mode.
 
-#### Experimental Survival Post-Game Breakdown (D070-adjacent `Last Commando Standing` / `SpecOps Survival`) â€” Proposal-Only
+#### Experimental Survival Post-Game Breakdown (D070-adjacent `Last Commando Standing` / `SpecOps Survival`) — Proposal-Only
 
 D070-adjacent survival matches (proposal-only, `M10+`, `P-Optional`) add a placement- and objective-focused breakdown so players understand **why** they survived (or were eliminated), not just who got the last hit.
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  LAST COMMANDO STANDING â€” 2nd PLACE / 8 Teams               â”‚
-â”‚  Iron Wastes â€” 18:42                                        â”‚
-â”‚                                                              â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚
-â”‚  â”‚ SURVIVAL SUMMARY                                      â”‚  â”‚
-â”‚  â”‚ Team Eliminations: 3      Squad Losses: 7            â”‚  â”‚
-â”‚  â”‚ Hazard Escapes: 5         Final Hazard Phase: 6      â”‚  â”‚
-â”‚  â”‚ Objective Captures: 4     Redeploy Tokens Used: 1    â”‚  â”‚
-â”‚  â”‚ Requisition Spent: 1,240  Unspent: 180              â”‚  â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â”‚
-â”‚                                                              â”‚
-â”‚  KEY OBJECTIVE IMPACTS                                        â”‚
-â”‚  â€¢ Captured Tech Uplink â†’ Recon Sweep unlocked (Phase 3)     â”‚
-â”‚  â€¢ Destroyed Bridge â†’ Forced Team Delta into hazard lane     â”‚
-â”‚  â€¢ Failed Power Relay Hold â†’ Lost safe corridor window       â”‚
-â”‚                                                              â”‚
-â”‚  ELIMINATION CONTEXT                                           â”‚
-â”‚  Phase 6 chrono contraction + enemy ambush near Depot C      â”‚
-â”‚  [Watch Replay] [View Timeline] [Save Replay] [Main Menu]     â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌──────────────────────────────────────────────────────────────┐
+│  LAST COMMANDO STANDING — 2nd PLACE / 8 Teams               │
+│  Iron Wastes — 18:42                                        │
+│                                                              │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ SURVIVAL SUMMARY                                      │  │
+│  │ Team Eliminations: 3      Squad Losses: 7            │  │
+│  │ Hazard Escapes: 5         Final Hazard Phase: 6      │  │
+│  │ Objective Captures: 4     Redeploy Tokens Used: 1    │  │
+│  │ Requisition Spent: 1,240  Unspent: 180              │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                              │
+│  KEY OBJECTIVE IMPACTS                                        │
+│  • Captured Tech Uplink → Recon Sweep unlocked (Phase 3)     │
+│  • Destroyed Bridge → Forced Team Delta into hazard lane     │
+│  • Failed Power Relay Hold → Lost safe corridor window       │
+│                                                              │
+│  ELIMINATION CONTEXT                                           │
+│  Phase 6 chrono contraction + enemy ambush near Depot C      │
+│  [Watch Replay] [View Timeline] [Save Replay] [Main Menu]     │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 **Survival breakdown focus (prototype-first):**

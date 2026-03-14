@@ -1,9 +1,9 @@
-# Replay Highlights & Play-of-the-Game â€” Design Specification
+# Replay Highlights & Play-of-the-Game — Design Specification
 
 > **Status:** Design study
 > **Date:** 2026-03-14
 > **Resolves:** No automatic highlight detection in replay system; no POTG-style feature for RTS; main menu background limited to shellmap AI battles
-> **Cross-references:** D010 (snapshottable sim), D031 (telemetry/analytics events), D032 (UI themes/shellmap), D033 (QoL toggles), D056 (foreign replay import), D058 (console commands), D059 (pings/markers), D065 (tutorial â€” annotated replay mode)
+> **Cross-references:** D010 (snapshottable sim), D031 (telemetry/analytics events), D032 (UI themes/shellmap), D033 (QoL toggles), D056 (foreign replay import), D058 (console commands), D059 (pings/markers), D065 (tutorial — annotated replay mode)
 > **Format references:** `src/formats/save-replay-formats.md` (`.icrep` format), `src/formats/replay-keyframes-analysis.md` (15 analysis event types)
 > **Player flow references:** `src/player-flow/replays.md` (replay browser/viewer), `src/player-flow/post-game.md` (post-game screen), `src/player-flow/main-menu.md` (main menu/shellmap)
 
@@ -16,10 +16,10 @@ Iron Curtain's replay system already records a rich Analysis Event Stream (15 ev
 This document designs a **Replay Highlights system** that:
 
 1. **Detects "interesting moments"** automatically from the Analysis Event Stream using a multi-criteria scoring pipeline (engagement density, momentum swings, statistical anomaly, rarity bonuses)
-2. **Generates a Play-of-the-Game (POTG) moment** â€” the single best moment per match, shown on the post-game screen
-3. **Builds a per-player highlight reel** stored locally â€” the top 5 moments from each match, accumulated over the player's career
-4. **Plays highlights as main menu background** â€” an alternative to shellmap AI battles, cycling through the player's personal highlight reel (or community/tournament highlights)
-5. **Supports community highlight sharing** â€” Workshop-distributed highlight packs from tournaments, streamers, and community curators
+2. **Generates a Play-of-the-Game (POTG) moment** — the single best moment per match, shown on the post-game screen
+3. **Builds a per-player highlight reel** stored locally — the top 5 moments from each match, accumulated over the player's career
+4. **Plays highlights as main menu background** — an alternative to shellmap AI battles, cycling through the player's personal highlight reel (or community/tournament highlights)
+5. **Supports community highlight sharing** — Workshop-distributed highlight packs from tournaments, streamers, and community curators
 
 ### Prior Art Survey
 
@@ -28,15 +28,15 @@ This document designs a **Replay Highlights system** that:
 | **CS:GO/CS2**         | "Your Best" / "Your Lowlights" post-match                         | Kill clusters, multi-kills, clutch rounds, weapon bonuses                         | Killer POV, slow-mo on final kill            | No (FPS)       |
 | **Overwatch**         | Play of the Game (POTG), top 5 auto-saved                         | Multi-dimensional: engagement cluster, efficiency, momentum swing, role weighting | Third-person dramatic angles, slow-mo        | No (FPS)       |
 | **Dota 2**            | Post-game moment replays                                          | Multikill, killing spree, buyback clutch, rampage                                 | Isometric observer locked to action hot zone | Partial (MOBA) |
-| **StarCraft 2**       | None (manual scrub) â€” Blizzard attempted in 2016, never shipped | â€”                                                                               | Observer AI for caster broadcasts            | Yes            |
+| **StarCraft 2**       | None (manual scrub) — Blizzard attempted in 2016, never shipped | —                                                                               | Observer AI for caster broadcasts            | Yes            |
 | **Age of Empires 4**  | Timeline event markers (tech advance, production spike)           | Scripted detection, not scored                                                    | Standard replay camera                       | Yes            |
 | **Company of Heroes** | Engagement heat map, theater mode                                 | Casualty count default sorting                                                    | Replay camera with bookmarks                 | Yes            |
-| **C&C Remastered**    | None â€” community-requested feature                              | Community tool: largest engagement, building streaks, superweapons                | Standard replay camera                       | Yes            |
-| **OpenRA**            | None â€” repeatedly requested (GitHub issues)                     | â€”                                                                               | Single observer POV per frame                | Yes            |
+| **C&C Remastered**    | None — community-requested feature                              | Community tool: largest engagement, building streaks, superweapons                | Standard replay camera                       | Yes            |
+| **OpenRA**            | None — repeatedly requested (GitHub issues)                     | —                                                                               | Single observer POV per frame                | Yes            |
 
 **Key insight:** No shipping RTS has automatic highlight detection. SC2 attempted it and abandoned it (ambiguity in "best moment" varies by skill level and game context). IC's rich Analysis Event Stream, existing post-game MVP infrastructure, and replay keyframe system position it uniquely to be the first RTS to ship this feature.
 
-**Key challenge:** RTS highlights are fundamentally different from FPS highlights. An FPS highlight is a 5â€“15 second clip of aim precision. An RTS highlight is a 20â€“45 second narrative of army positioning, engagement, and outcome â€” closer to a sports highlight than a twitch clip. The detection and camera systems must account for this.
+**Key challenge:** RTS highlights are fundamentally different from FPS highlights. An FPS highlight is a 5–15 second clip of aim precision. An RTS highlight is a 20–45 second narrative of army positioning, engagement, and outcome — closer to a sports highlight than a twitch clip. The detection and camera systems must account for this.
 
 ---
 
@@ -68,7 +68,7 @@ The `.icrep` Analysis Event Stream (flag `HAS_EVENTS`) already records these 15 
 | `EngagementStarted` | `tick`, `center_pos`, `player_units[]`, `enemy_units[]`, `total_value_friendly`, `total_value_enemy`               | Marks the start of a combat engagement (units entering weapon range). Required for engagement windowing. |
 | `EngagementEnded`   | `tick`, `center_pos`, `friendly_losses`, `enemy_losses`, `friendly_survivors`, `enemy_survivors`, `duration_ticks` | Marks engagement resolution. Required for engagement scoring.                                            |
 | `SuperweaponFired`  | `tick`, `weapon_type`, `target_pos`, `player`, `units_hit`, `buildings_hit`                                        | Superweapons are inherently highlight-worthy. Currently not a distinct event.                            |
-| `BaseDestroyed`     | `tick`, `player`, `pos`, `buildings_lost[]`                                                                        | Primary base or expansion wiped â€” game-defining moment.                                                |
+| `BaseDestroyed`     | `tick`, `player`, `pos`, `buildings_lost[]`                                                                        | Primary base or expansion wiped — game-defining moment.                                                |
 | `ArmyWipe`          | `tick`, `player`, `units_lost`, `total_value_lost`, `percentage_of_army`                                           | >70% of a player's army destroyed in one engagement.                                                     |
 | `ComebackMoment`    | `tick`, `player`, `deficit_before`, `advantage_after`, `swing_value`                                               | Player goes from losing position to winning position. Detected by comparing `PlayerStatSnapshot` deltas. |
 
@@ -77,74 +77,74 @@ The `.icrep` Analysis Event Stream (flag `HAS_EVENTS`) already records these 15 
 Highlight detection runs **post-match** (not real-time) over the recorded Analysis Event Stream. It uses a sliding window with four independent scoring dimensions:
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚                   Highlight Scoring Pipeline                     â”‚
-â”‚                                                                  â”‚
-â”‚  Analysis Event Stream                                           â”‚
-â”‚        â”‚                                                         â”‚
-â”‚        â–¼                                                         â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”                                                â”‚
-â”‚  â”‚   Window      â”‚  Slide 5-tick steps across match timeline     â”‚
-â”‚  â”‚   Generator   â”‚  Window size: configurable (default 30s)      â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”˜                                                â”‚
-â”‚         â”‚                                                         â”‚
-â”‚         â–¼                                                         â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”        â”‚
-â”‚  â”‚  Four Scoring Dimensions (computed per window)        â”‚        â”‚
-â”‚  â”‚                                                       â”‚        â”‚
-â”‚  â”‚  1. Engagement Score    â€” kill density, army losses   â”‚        â”‚
-â”‚  â”‚  2. Momentum Score      â€” economic/military swing     â”‚        â”‚
-â”‚  â”‚  3. Anomaly Score       â€” statistical outlier (z >2Ïƒ) â”‚        â”‚
-â”‚  â”‚  4. Rarity Score        â€” event type novelty bonus    â”‚        â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜        â”‚
-â”‚                     â”‚                                             â”‚
-â”‚                     â–¼                                             â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”                            â”‚
-â”‚  â”‚  Composite Score (weighted sum)   â”‚                            â”‚
-â”‚  â”‚                                   â”‚                            â”‚
-â”‚  â”‚  0.35 Ã— Engagement                â”‚                            â”‚
-â”‚  â”‚  0.25 Ã— Momentum                  â”‚                            â”‚
-â”‚  â”‚  0.20 Ã— Anomaly                   â”‚                            â”‚
-â”‚  â”‚  0.20 Ã— Rarity                    â”‚                            â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜                            â”‚
-â”‚                 â”‚                                                  â”‚
-â”‚                 â–¼                                                  â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”                                â”‚
-â”‚  â”‚  Non-Maximum Suppression     â”‚  Merge overlapping windows     â”‚
-â”‚  â”‚  (keep peak, discard <15s    â”‚  into single highlight moment  â”‚
-â”‚  â”‚   neighbors)                 â”‚                                 â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜                                 â”‚
-â”‚                 â”‚                                                  â”‚
-â”‚                 â–¼                                                  â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”                                â”‚
-â”‚  â”‚  Top-N Selection             â”‚  POTG = top 1                  â”‚
-â”‚  â”‚  (N=5 for highlight reel,    â”‚  Reel = top 5                  â”‚
-â”‚  â”‚   N=1 for POTG)              â”‚  Ensure category variety       â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜                                â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌─────────────────────────────────────────────────────────────────┐
+│                   Highlight Scoring Pipeline                     │
+│                                                                  │
+│  Analysis Event Stream                                           │
+│        │                                                         │
+│        ▼                                                         │
+│  ┌──────────────┐                                                │
+│  │   Window      │  Slide 5-tick steps across match timeline     │
+│  │   Generator   │  Window size: configurable (default 30s)      │
+│  └──────┬───────┘                                                │
+│         │                                                         │
+│         ▼                                                         │
+│  ┌──────────────────────────────────────────────────────┐        │
+│  │  Four Scoring Dimensions (computed per window)        │        │
+│  │                                                       │        │
+│  │  1. Engagement Score    — kill density, army losses   │        │
+│  │  2. Momentum Score      — economic/military swing     │        │
+│  │  3. Anomaly Score       — statistical outlier (z >2σ) │        │
+│  │  4. Rarity Score        — event type novelty bonus    │        │
+│  └──────────────────┬───────────────────────────────────┘        │
+│                     │                                             │
+│                     ▼                                             │
+│  ┌──────────────────────────────────┐                            │
+│  │  Composite Score (weighted sum)   │                            │
+│  │                                   │                            │
+│  │  0.35 × Engagement                │                            │
+│  │  0.25 × Momentum                  │                            │
+│  │  0.20 × Anomaly                   │                            │
+│  │  0.20 × Rarity                    │                            │
+│  └──────────────┬───────────────────┘                            │
+│                 │                                                  │
+│                 ▼                                                  │
+│  ┌──────────────────────────────┐                                │
+│  │  Non-Maximum Suppression     │  Merge overlapping windows     │
+│  │  (keep peak, discard <15s    │  into single highlight moment  │
+│  │   neighbors)                 │                                 │
+│  └──────────────┬──────────────┘                                 │
+│                 │                                                  │
+│                 ▼                                                  │
+│  ┌──────────────────────────────┐                                │
+│  │  Top-N Selection             │  POTG = top 1                  │
+│  │  (N=5 for highlight reel,    │  Reel = top 5                  │
+│  │   N=1 for POTG)              │  Ensure category variety       │
+│  └──────────────────────────────┘                                │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ### 1.3 Scoring Dimension Details
 
-**Dimension 1 â€” Engagement Score (0.35 weight)**
+**Dimension 1 — Engagement Score (0.35 weight)**
 
 Measures combat intensity within the window.
 
 ```
-engagement_score = Î£ (unit_value[destroyed_unit] Ã— context_multiplier) / window_duration_sec
+engagement_score = Σ (unit_value[destroyed_unit] × context_multiplier) / window_duration_sec
 
 context_multiplier for each kill:
   base:                1.0
-  kill part of cluster: 1.0 + (cluster_size - 1) Ã— 0.3   (3 kills â†’ 1.6x)
-  building destroyed:   1.5Ã— (economic significance)
-  harvester killed:     1.3Ã— (economic disruption)
-  tech structure:       2.0Ã— (strategic significance)
-  superweapon:          5.0Ã— (rarity)
+  kill part of cluster: 1.0 + (cluster_size - 1) × 0.3   (3 kills → 1.6x)
+  building destroyed:   1.5× (economic significance)
+  harvester killed:     1.3× (economic disruption)
+  tech structure:       2.0× (strategic significance)
+  superweapon:          5.0× (rarity)
 ```
 
 The kill cluster detection uses a 3-second sliding sub-window: any kills within 3 seconds of each other are part of the same cluster.
 
-**Dimension 2 â€” Momentum Score (0.25 weight)**
+**Dimension 2 — Momentum Score (0.25 weight)**
 
 Measures the magnitude of a swing in game state during the window. Uses `PlayerStatSnapshot` events (every 60 seconds) interpolated to the window boundaries.
 
@@ -159,12 +159,12 @@ momentum_score = max(
 # or dominant player suddenly loses advantage (upset)
 
 direction_bonus:
-  comeback (deficit â†’ advantage):    1.5Ã—
-  collapse (advantage â†’ deficit):    1.2Ã—
-  neutral swing:                     1.0Ã—
+  comeback (deficit → advantage):    1.5×
+  collapse (advantage → deficit):    1.2×
+  neutral swing:                     1.0×
 ```
 
-**Dimension 3 â€” Anomaly Score (0.20 weight)**
+**Dimension 3 — Anomaly Score (0.20 weight)**
 
 Measures how statistically unusual this window is relative to the match baseline. Computes z-scores against match-wide averages.
 
@@ -182,10 +182,10 @@ anomaly_score = max(
 )
 
 # Flagged as anomaly if z > 2.0 (95th percentile)
-# Normalized: min(anomaly_raw / 4.0, 1.0)  â€” cap at z=4
+# Normalized: min(anomaly_raw / 4.0, 1.0)  — cap at z=4
 ```
 
-**Dimension 4 â€” Rarity Score (0.20 weight)**
+**Dimension 4 — Rarity Score (0.20 weight)**
 
 Flat bonuses for event types that are inherently exciting regardless of quantity.
 
@@ -208,8 +208,8 @@ Rarity score = max of all rarity bonuses present in the window.
 | Filter                | Rule                                                                | Rationale                                  |
 | --------------------- | ------------------------------------------------------------------- | ------------------------------------------ |
 | Early game            | Skip first 2 minutes unless 5+ kills or building destroyed          | Scout-on-scout fights are not exciting     |
-| Worker-only kills     | Require â‰¥1 non-worker unit kill in window                         | Harvester snipes alone are routine         |
-| Idle engagement       | Window must have â‰¥2 distinct players involved                     | Self-damage/friendly fire not a highlight  |
+| Worker-only kills     | Require ≥1 non-worker unit kill in window                         | Harvester snipes alone are routine         |
+| Idle engagement       | Window must have ≥2 distinct players involved                     | Self-damage/friendly fire not a highlight  |
 | Match duration        | Match must be >3 minutes                                            | Instant-forfeit matches have no highlights |
 | Duplicate suppression | If top 5 all from same 2-minute span, spread selection across match | Variety in the reel                        |
 
@@ -230,7 +230,7 @@ selection_algorithm:
   2. For remaining 4 slots:
      a. Pick highest-scoring moment from each uncovered category
      b. If fewer than 4 categories represented, fill with next-highest overall
-     c. Ensure no two moments overlap (>50% window overlap â†’ drop lower)
+     c. Ensure no two moments overlap (>50% window overlap → drop lower)
 ```
 
 ---
@@ -244,29 +244,29 @@ After a match ends, the highlight detection pipeline runs on the Analysis Event 
 **Post-game screen addition** (extends the existing layout from `src/player-flow/post-game.md`):
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  Match Complete â€” [Faction]          â”‚
-â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
-â”‚                                      â”‚
-â”‚  â–¶ PLAY OF THE GAME                  â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚
-â”‚  â”‚                                â”‚  â”‚
-â”‚  â”‚  [Auto-camera replay of the    â”‚  â”‚
-â”‚  â”‚   POTG moment, ~20-45 sec,    â”‚  â”‚
-â”‚  â”‚   playing in a viewport]      â”‚  â”‚
-â”‚  â”‚                                â”‚  â”‚
-â”‚  â”‚  Category: "Decisive Assault"  â”‚  â”‚
-â”‚  â”‚  Player: [name] | Tick 14,320 â”‚  â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â”‚
-â”‚  [Skip] [Save Clip] [Watch Full]     â”‚
-â”‚                                      â”‚
-â”‚  MVP AWARDS (center highlight)       â”‚
-â”‚  ...existing layout...               â”‚
+┌──────────────────────────────────────┐
+│  Match Complete — [Faction]          │
+├──────────────────────────────────────┤
+│                                      │
+│  ▶ PLAY OF THE GAME                  │
+│  ┌────────────────────────────────┐  │
+│  │                                │  │
+│  │  [Auto-camera replay of the    │  │
+│  │   POTG moment, ~20-45 sec,    │  │
+│  │   playing in a viewport]      │  │
+│  │                                │  │
+│  │  Category: "Decisive Assault"  │  │
+│  │  Player: [name] | Tick 14,320 │  │
+│  └────────────────────────────────┘  │
+│  [Skip] [Save Clip] [Watch Full]     │
+│                                      │
+│  MVP AWARDS (center highlight)       │
+│  ...existing layout...               │
 ```
 
-**POTG is skippable** â€” pressing Escape or clicking Skip jumps to the existing MVP/stats screen. Players who just want the numbers are not forced to watch.
+**POTG is skippable** — pressing Escape or clicking Skip jumps to the existing MVP/stats screen. Players who just want the numbers are not forced to watch.
 
-**POTG viewport:** Renders the replay segment in a bounded viewport (~60% of screen width) with the Directed Camera mode auto-following the action. Plays at 1Ã— speed by default, with the option to switch to 1.5Ã— or 2Ã— via a small speed control.
+**POTG viewport:** Renders the replay segment in a bounded viewport (~60% of screen width) with the Directed Camera mode auto-following the action. Plays at 1× speed by default, with the option to switch to 1.5× or 2× via a small speed control.
 
 ### 2.2 POTG Category Labels
 
@@ -281,7 +281,7 @@ Each POTG receives a human-readable category label based on which scoring dimens
 | Rarity (army wipe)    | "Total Wipeout", "No Survivors", "Complete Elimination"                            |
 | Narrative (match end) | "The Final Push", "Finishing Blow", "Victory Sealed"                               |
 
-Labels are YAML-defined (moddable via D032 theme system or Lua), and the game module provides the label pool. The RA1 game module provides Cold Warâ€“themed labels; TD would provide GDI/Nod-themed variants.
+Labels are YAML-defined (moddable via D032 theme system or Lua), and the game module provides the label pool. The RA1 game module provides Cold War–themed labels; TD would provide GDI/Nod-themed variants.
 
 ### 2.3 Multiplayer POTG
 
@@ -289,7 +289,7 @@ In multiplayer matches, POTG selection considers all players:
 
 - The highest composite score across all players wins POTG
 - The POTG labels which player's perspective it represents
-- All players in the match see the same POTG (deterministic: same Analysis Event Stream â†’ same scoring â†’ same result)
+- All players in the match see the same POTG (deterministic: same Analysis Event Stream → same scoring → same result)
 - **Team games:** Bonus for moments involving coordinated team actions (ally assists in the same engagement window)
 
 ---
@@ -317,12 +317,12 @@ Highlight camera sequence for a 30-second moment:
      - Spread < 10 cells: zoom in tight (unit-level detail)
      - Spread 10-30 cells: medium zoom (tactical view)
      - Spread > 30 cells: zoom out (strategic overview)
-   - Speed: 1Ã— normal (preserving real-time pacing)
+   - Speed: 1× normal (preserving real-time pacing)
 
-2. CLIMAX (peak moment â€” highest instantaneous score within window):
-   - Brief slow-motion: 0.5Ã— for 2 seconds around the peak kill cluster
+2. CLIMAX (peak moment — highest instantaneous score within window):
+   - Brief slow-motion: 0.5× for 2 seconds around the peak kill cluster
    - Camera snap-zoom toward the kill location
-   - Resume 1Ã— after slow-mo window
+   - Resume 1× after slow-mo window
 
 3. RESOLUTION (last 3 seconds of window):
    - Zoom out slightly to show aftermath (surviving units, wreckage)
@@ -334,25 +334,25 @@ Highlight camera sequence for a 30-second moment:
 
 ### 3.3 Camera Path Generation
 
-The camera path is computed from the Analysis Event Stream â€” no re-simulation required.
+The camera path is computed from the Analysis Event Stream — no re-simulation required.
 
 ```
 Inputs:
   engagement_events:  UnitDestroyed[], EngagementStarted/Ended
   position_samples:   UnitPositionSample[] (delta-encoded, combat units only)
-  camera_samples:     CameraPositionSample[] (2 Hz â€” where the player was looking)
+  camera_samples:     CameraPositionSample[] (2 Hz — where the player was looking)
 
 Camera target per frame:
   target_pos = weighted_center_of_mass(
     active_units,
-    weight = unit_value Ã— (1.0 + is_about_to_die Ã— 0.5)
+    weight = unit_value × (1.0 + is_about_to_die × 0.5)
   )
 
   # Bias toward the POTG player's perspective
   bias_pos = lerp(target_pos, potg_player_camera_pos, 0.3)
 
 Camera height:
-  height = base_height Ã— (1.0 + engagement_spread / 50.0)
+  height = base_height × (1.0 + engagement_spread / 50.0)
   # Clamped to [min_zoom, max_zoom] from game settings
 
 Camera transition:
@@ -362,7 +362,7 @@ Camera transition:
 
 ### 3.4 Player Camera Reference
 
-The `CameraPositionSample` events (recorded at 2 Hz during the match) capture where the player was actually looking during the moment. The highlight camera uses this as a hint â€” biasing toward the player's attention but not strictly following it (the player may have been looking elsewhere during a surprise attack, and the highlight should show the attack itself).
+The `CameraPositionSample` events (recorded at 2 Hz during the match) capture where the player was actually looking during the moment. The highlight camera uses this as a hint — biasing toward the player's attention but not strictly following it (the player may have been looking elsewhere during a surprise attack, and the highlight should show the attack itself).
 
 ---
 
@@ -373,7 +373,7 @@ The `CameraPositionSample` events (recorded at 2 Hz during the match) capture wh
 Highlights are stored as **references** into replay files, not as extracted video clips. This keeps storage minimal:
 
 ```
-Highlight entry (stored in local SQLite â€” profile.db):
+Highlight entry (stored in local SQLite — profile.db):
   - highlight_id:     UUID
   - replay_path:      relative path to .icrep file
   - replay_id:        string (from .icrep metadata)
@@ -423,8 +423,8 @@ CREATE INDEX idx_highlights_module ON highlights(game_module);
 
 ### 4.3 Storage Budget
 
-- Each highlight entry: ~200â€“500 bytes (mostly the camera_path blob)
-- 5 highlights per match Ã— 1,000 matches = 5,000 entries â‰ˆ 1â€“2.5 MB in SQLite
+- Each highlight entry: ~200–500 bytes (mostly the camera_path blob)
+- 5 highlights per match × 1,000 matches = 5,000 entries ≈ 1–2.5 MB in SQLite
 - The actual replay data stays in `.icrep` files (not duplicated)
 - If the referenced `.icrep` is deleted, the highlight becomes unplayable (orphan cleanup on next browse)
 
@@ -444,7 +444,7 @@ Reel playback (5 moments):
   10. Play highlight 5
   11. Fade to black, loop or return to menu
 
-Total reel duration: ~2â€“4 minutes (varies by moment length)
+Total reel duration: ~2–4 minutes (varies by moment length)
 ```
 
 ---
@@ -466,7 +466,7 @@ And a fourth for discoverability and community engagement:
 
 4. **Community/tournament highlights** (curated highlight packs from the Workshop)
 
-**Selection in Settings â†’ Display â†’ Main Menu Background:**
+**Selection in Settings → Display → Main Menu Background:**
 
 ```yaml
 main_menu_background:
@@ -485,15 +485,15 @@ When the player selects "Personal Highlights" as their menu background:
 1. System queries the `highlights` table, ordered by `composite_score DESC`
 2. Filters to current game module (e.g., RA1 highlights only if RA1 is active)
 3. Validates that referenced `.icrep` files still exist on disk
-4. Selects top 10â€“20 moments as a playlist
+4. Selects top 10–20 moments as a playlist
 5. Plays them in shuffled order with crossfade transitions
 6. Camera follows the pre-computed highlight camera path
 7. Audio: match sound effects play (muted to ~30% volume, under menu music)
-8. **Fog of war disabled** â€” always shows full vision for visual appeal
+8. **Fog of war disabled** — always shows full vision for visual appeal
 
 **Fallback:** If the player has fewer than 3 valid highlights (new player, replays deleted), fall back to shellmap AI battle automatically.
 
-**Performance:** Highlight playback is replay re-simulation â€” it uses the same code path as the replay viewer but renders into the menu background viewport. The sim re-simulates from the nearest keyframe (worst case: 300 ticks â‰ˆ 20 seconds of sim, <100ms re-simulation time on target hardware). Since the menu is not performance-critical, this runs at reduced priority.
+**Performance:** Highlight playback is replay re-simulation — it uses the same code path as the replay viewer but renders into the menu background viewport. The sim re-simulates from the nearest keyframe (worst case: 300 ticks ≈ 20 seconds of sim, <100ms re-simulation time on target hardware). Since the menu is not performance-critical, this runs at reduced priority.
 
 ### 5.3 First-Time Experience
 
@@ -506,7 +506,7 @@ New players have no highlights. The progression:
 | After 5+ matches  | "Personal Highlights" becomes a selectable option in settings | Build enough reel content |
 | After 20+ matches | Option to auto-enable personal highlights as default          | Subtle prompt in settings |
 
-**No forced popup.** The option appears in settings; the player discovers it naturally or via tooltip ("Your best moments can play behind the main menu â€” check Settings â†’ Display").
+**No forced popup.** The option appears in settings; the player discovers it naturally or via tooltip ("Your best moments can play behind the main menu — check Settings → Display").
 
 ### 5.4 Community & Tournament Highlights
 
@@ -536,7 +536,7 @@ highlights:
   # ... more moments
 ```
 
-The pack includes the referenced `.icrep` files (or portions thereof â€” the keyframe nearest to the highlight window plus the subsequent ticks, not the entire replay). This keeps pack sizes small (typically 2â€“10 MB for a pack of 10â€“20 moments).
+The pack includes the referenced `.icrep` files (or portions thereof — the keyframe nearest to the highlight window plus the subsequent ticks, not the entire replay). This keeps pack sizes small (typically 2–10 MB for a pack of 10–20 moments).
 
 **Discovery:** Community highlight packs appear in the Workshop browser under a "Highlights" category. Popular packs surface in the "Featured" section. Players can subscribe to packs, and they automatically become available as menu background options.
 
@@ -547,7 +547,7 @@ A lightweight, opt-in feature for community engagement:
 - Community servers (D052) can maintain a "featured highlights" feed via Content Channels (D049)
 - The feed is a curated list of highlight references (replay + window) updated periodically
 - Players who opt in see a rotating selection from the community's best moments on their menu
-- **No automatic upload** â€” highlights are nominated by community curators, not scraped
+- **No automatic upload** — highlights are nominated by community curators, not scraped
 
 ---
 
@@ -559,15 +559,15 @@ The fundamental problem SC2's team encountered: RTS "best moments" are subjectiv
 
 **IC's solution: multi-axis scoring with per-match baselines.**
 
-The z-score anomaly detection (Dimension 3) computes baselines **per-match**, not globally. A moment is highlighted because it's unusual *for this match* â€” not because it exceeds some absolute threshold. This means:
+The z-score anomaly detection (Dimension 3) computes baselines **per-match**, not globally. A moment is highlighted because it's unusual *for this match* — not because it exceeds some absolute threshold. This means:
 
 - In a 10-minute rush game, a 15-unit battle is the highlight
-- In a 45-minute macro game, a 15-unit battle is routine â€” the 200-unit engagement is the highlight
+- In a 45-minute macro game, a 15-unit battle is routine — the 200-unit engagement is the highlight
 - A new player's first successful tank rush scores as highly (relative to their match) as a pro's micro-intensive engagement
 
 ### 6.2 Time Window: RTS vs FPS
 
-FPS highlights are 5â€“15 seconds. RTS engagements unfold over 20â€“60 seconds (army moves in, battle starts, resolution, aftermath). The highlight window must be longer.
+FPS highlights are 5–15 seconds. RTS engagements unfold over 20–60 seconds (army moves in, battle starts, resolution, aftermath). The highlight window must be longer.
 
 **Adaptive window sizing:**
 
@@ -582,24 +582,24 @@ adjustments:
   if army_wipe:
     window = max(window, 20s)  (show the full annihilation)
 
-clamp: window âˆˆ [15s, 60s]
+clamp: window ∈ [15s, 60s]
   min 15s: enough to show a quick raid
   max 60s: longer than 60s loses focus (split into two moments)
 ```
 
 ### 6.3 Camera Challenge: Isometric vs First-Person
 
-FPS highlights show the player's POV â€” inherently cinematic (crosshair on enemies). RTS highlights are isometric/top-down â€” potentially boring (minimap blobs moving into each other).
+FPS highlights show the player's POV — inherently cinematic (crosshair on enemies). RTS highlights are isometric/top-down — potentially boring (minimap blobs moving into each other).
 
 **Making RTS highlights cinematic:**
 
-1. **Zoom in tighter than normal gameplay** â€” during highlights, zoom to unit-level to show explosions, projectiles, and unit animations. Players normally play zoomed out; the highlight camera zooms in to make the action visually impactful.
+1. **Zoom in tighter than normal gameplay** — during highlights, zoom to unit-level to show explosions, projectiles, and unit animations. Players normally play zoomed out; the highlight camera zooms in to make the action visually impactful.
 
-2. **Slow-motion on peak moments** â€” a 2-second 0.5Ã— slowdown during the highest-scoring instant within the window (the biggest kill cluster, the superweapon impact, the final unit dying). This is the RTS equivalent of CS:GO's slow-mo final kill.
+2. **Slow-motion on peak moments** — a 2-second 0.5× slowdown during the highest-scoring instant within the window (the biggest kill cluster, the superweapon impact, the final unit dying). This is the RTS equivalent of CS:GO's slow-mo final kill.
 
-3. **Follow the action, not the player's camera** â€” the player may have been looking at their base during a surprise attack on their army. The highlight camera follows the *action*, biased toward the player's camera position but not locked to it.
+3. **Follow the action, not the player's camera** — the player may have been looking at their base during a surprise attack on their army. The highlight camera follows the *action*, biased toward the player's camera position but not locked to it.
 
-4. **Strategic zoom-out for context** â€” before the engagement, briefly zoom out to show both armies' positions and the terrain. This gives the viewer spatial context (where is this happening on the map?) before zooming in for the action.
+4. **Strategic zoom-out for context** — before the engagement, briefly zoom out to show both armies' positions and the terrain. This gives the viewer spatial context (where is this happening on the map?) before zooming in for the action.
 
 ### 6.4 Highlight Types Unique to RTS
 
@@ -609,12 +609,12 @@ Beyond FPS-style kill clusters, RTS games have highlight-worthy moments that don
 | ------------------ | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | **The Nuke**       | Superweapon detonation wipes out an entire base                                              | `SuperweaponFired` + high `buildings_hit`                                    |
 | **Economy Raid**   | Fast units sneak past defense and destroy harvesters/refineries                              | `UnitDestroyed` where targets are economic units, attacker from behind lines |
-| **Tech Rush**      | Player researches game-changing tech significantly earlier than opponent                     | `UpgradeCompleted` where time < expected_time_for_tech Ã— 0.7                |
+| **Tech Rush**      | Player researches game-changing tech significantly earlier than opponent                     | `UpgradeCompleted` where time < expected_time_for_tech × 0.7                |
 | **Base Race**      | Both players attacking each other's bases simultaneously, each ignoring defense              | Concurrent `ConstructionCompleted` (destroyed) events on both sides          |
 | **Comeback**       | Player recovers from <30% army value to win the engagement                                   | `ComebackMoment` event with high `swing_value`                               |
 | **Multi-Front**    | Player manages simultaneous attacks on 3+ fronts                                             | Engagement events at 3+ spatially distinct locations within same window      |
 | **Last Stand**     | Small force holds a chokepoint against overwhelming numbers (and wins or dies spectacularly) | Army value ratio >3:1 unfavorable + `EngagementEnded` at a map chokepoint    |
-| **Macro Glory**    | Player's economy snowball becomes visually overwhelming (factory floor pumping out tanks)    | Production rate anomaly (>3Ïƒ above match baseline)                          |
+| **Macro Glory**    | Player's economy snowball becomes visually overwhelming (factory floor pumping out tanks)    | Production rate anomaly (>3σ above match baseline)                          |
 
 ### 6.5 Perspective: Whose Highlight Is It?
 
@@ -779,12 +779,12 @@ Extends D058 command console:
 
 ### 9.2 Phasing
 
-**Phase 2 (Simulation) â€” Foundation:**
+**Phase 2 (Simulation) — Foundation:**
 - Add 6 new Analysis Event types to the event stream
 - Engagement detection system (identifies when units enter/exit combat)
 - Events are recorded into `.icrep` Analysis Event Stream
 
-**Phase 3 (Game Chrome) â€” Core Feature:**
+**Phase 3 (Game Chrome) — Core Feature:**
 - Highlight scoring pipeline (all 4 dimensions)
 - POTG detection and post-game viewport display
 - Highlight camera AI (zoom behavior, slow-mo, path generation)
@@ -793,20 +793,20 @@ Extends D058 command console:
 - Highlight entry in replay viewer timeline (markers at highlight window positions)
 - Console commands (`/highlight list`, `/highlight play`, etc.)
 
-**Phase 5 (Multiplayer) â€” Social:**
+**Phase 5 (Multiplayer) — Social:**
 - Multiplayer POTG (all players see same POTG)
 - Community server highlight feeds (Content Channel integration)
 
-**Phase 6a (Modding) â€” Extensibility:**
+**Phase 6a (Modding) — Extensibility:**
 - YAML-configurable scoring weights per game module
 - Lua highlight detector API
 - WASM HighlightScorer trait
 - Workshop highlight packs (tournament/community curated)
 
-**Phase 7 (Polish) â€” Enrichment:**
+**Phase 7 (Polish) — Enrichment:**
 - Video export (render highlight to WebM/GIF file)
-- LLM-generated highlight commentary (optional, uses D044 LLM infrastructure â€” "The Allied forces launched a devastating Chronosphere assault, teleporting 5 heavy tanks directly into the Soviet power grid...")
-- Foreign replay highlight detection (D056 â€” run highlight scoring on imported OpenRA/Remastered replays)
+- LLM-generated highlight commentary (optional, uses D044 LLM infrastructure — "The Allied forces launched a devastating Chronosphere assault, teleporting 5 heavy tanks directly into the Soviet power grid...")
+- Foreign replay highlight detection (D056 — run highlight scoring on imported OpenRA/Remastered replays)
 
 ### 9.3 Dependencies
 
@@ -834,11 +834,11 @@ Phase 6a prerequisites:
 | Aspect                    | Shellmap AI Battle                                 | Personal Highlights                          | Community Highlights                            |
 | ------------------------- | -------------------------------------------------- | -------------------------------------------- | ----------------------------------------------- |
 | **Content**               | Pre-designed scenario, AI plays both sides         | Player's own best moments                    | Curated tournament/community moments            |
-| **Novelty**               | Same battle every launch (deterministic from seed) | Always different â€” grows with play history | Updated by community curators                   |
-| **Personal connection**   | None â€” generic visuals                           | High â€” "that's MY comeback"                | Medium â€” aspirational ("pros play like this") |
+| **Novelty**               | Same battle every launch (deterministic from seed) | Always different — grows with play history | Updated by community curators                   |
+| **Personal connection**   | None — generic visuals                           | High — "that's MY comeback"                | Medium — aspirational ("pros play like this") |
 | **New player experience** | Works immediately                                  | Requires 1+ completed matches                | Requires Workshop pack download                 |
 | **Performance**           | Runs real-time AI + sim                            | Replay re-sim from keyframe                  | Same as personal                                |
-| **Storage**               | Map included in game data                          | References player's `.icrep` files           | Workshop pack download (2â€“10 MB)              |
+| **Storage**               | Map included in game data                          | References player's `.icrep` files           | Workshop pack download (2–10 MB)              |
 | **Moddable**              | Theme YAML (`shellmap:` section)                   | Scoring config YAML + Lua detectors          | Curator-created highlight packs                 |
 
 ---
@@ -847,10 +847,10 @@ Phase 6a prerequisites:
 
 1. **Highlight generation timing.** Should highlights be detected immediately post-match (blocking the post-game screen for ~500ms) or computed asynchronously (POTG appears a few seconds later, stats appear immediately)? Async is better UX but requires a loading state for the POTG viewport.
 
-2. **Foreign replay highlights.** D056 imports OpenRA and Remastered replays. Can we run highlight detection on foreign replays? The Analysis Event Stream may not be present â€” we'd need to re-simulate the foreign replay to generate events, then score. This is Phase 7 work and depends on the foreign replay compatibility level.
+2. **Foreign replay highlights.** D056 imports OpenRA and Remastered replays. Can we run highlight detection on foreign replays? The Analysis Event Stream may not be present — we'd need to re-simulate the foreign replay to generate events, then score. This is Phase 7 work and depends on the foreign replay compatibility level.
 
-3. **Highlight sharing format.** Should shared highlights be standalone files (`.ichighlight` â€” containing the replay segment + camera path + metadata) or references into full replay files? Standalone is more portable but duplicates data; references are compact but require the full replay.
+3. **Highlight sharing format.** Should shared highlights be standalone files (`.ichighlight` — containing the replay segment + camera path + metadata) or references into full replay files? Standalone is more portable but duplicates data; references are compact but require the full replay.
 
-4. **Community highlight curation.** Who decides which highlights go into community packs? Tournament organizers curate their own. But for general "best of the week" â€” is this community-voted, curator-selected, or algorithmically determined from uploaded highlights? All three are viable; the infrastructure supports any approach via the Workshop model.
+4. **Community highlight curation.** Who decides which highlights go into community packs? Tournament organizers curate their own. But for general "best of the week" — is this community-voted, curator-selected, or algorithmically determined from uploaded highlights? All three are viable; the infrastructure supports any approach via the Workshop model.
 
 5. **LLM commentary.** Phase 7 proposes LLM-generated commentary for highlights. Should this be text overlays, EVA-style voice synthesis, or both? Text is simpler and more achievable; voice synthesis is ambitious but fits the C&C EVA tradition.

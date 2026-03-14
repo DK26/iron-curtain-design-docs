@@ -3,96 +3,96 @@
 ### Campaign Selection
 
 ```
-Main Menu â†’ Campaign
+Main Menu → Campaign
 ```
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  CAMPAIGNS                                    [â† Back]   â”‚
-â”‚                                                          â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”     â”‚
-â”‚  â”‚  [Allied    â”‚  â”‚  [Soviet    â”‚  â”‚ [Community  â”‚     â”‚
-â”‚  â”‚   Flag]     â”‚  â”‚   Flag]     â”‚  â”‚  Campaigns] â”‚     â”‚
-â”‚  â”‚             â”‚  â”‚             â”‚  â”‚             â”‚     â”‚
-â”‚  â”‚  ALLIED     â”‚  â”‚  SOVIET     â”‚  â”‚  WORKSHOP   â”‚     â”‚
-â”‚  â”‚  CAMPAIGN   â”‚  â”‚  CAMPAIGN   â”‚  â”‚  CAMPAIGNS  â”‚     â”‚
-â”‚  â”‚             â”‚  â”‚             â”‚  â”‚             â”‚     â”‚
-â”‚  â”‚ Missions:14 â”‚  â”‚ Missions:14 â”‚  â”‚ Browse â†’    â”‚     â”‚
-â”‚  â”‚ 5/14 (36%)  â”‚  â”‚ 2/14 (14%)  â”‚  â”‚             â”‚     â”‚
-â”‚  â”‚ Best: 9/14  â”‚  â”‚ Best: 3/14  â”‚  â”‚             â”‚     â”‚
-â”‚  â”‚ [New Game]  â”‚  â”‚ [New Game]  â”‚  â”‚             â”‚     â”‚
-â”‚  â”‚ [Continue]  â”‚  â”‚ [Continue]  â”‚  â”‚             â”‚     â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜     â”‚
-â”‚                                                          â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”                       â”‚
-â”‚  â”‚ [Commander  â”‚  â”‚ [Generative â”‚                       â”‚
-â”‚  â”‚  School]    â”‚  â”‚  Campaign]  â”‚                       â”‚
-â”‚  â”‚             â”‚  â”‚             â”‚                       â”‚
-â”‚  â”‚  TUTORIAL   â”‚  â”‚  AI-CREATED â”‚                       â”‚
-â”‚  â”‚  10 lessons â”‚  â”‚  (BYOLLM)   â”‚                       â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜                       â”‚
-â”‚                                                          â”‚
-â”‚  Difficulty: [Cadet â–¾]  Experience: [IC Default â–¾]       â”‚
-â”‚                         [Review Settings âš™]              â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌──────────────────────────────────────────────────────────┐
+│  CAMPAIGNS                                    [← Back]   │
+│                                                          │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
+│  │  [Allied    │  │  [Soviet    │  │ [Community  │     │
+│  │   Flag]     │  │   Flag]     │  │  Campaigns] │     │
+│  │             │  │             │  │             │     │
+│  │  ALLIED     │  │  SOVIET     │  │  WORKSHOP   │     │
+│  │  CAMPAIGN   │  │  CAMPAIGN   │  │  CAMPAIGNS  │     │
+│  │             │  │             │  │             │     │
+│  │ Missions:14 │  │ Missions:14 │  │ Browse →    │     │
+│  │ 5/14 (36%)  │  │ 2/14 (14%)  │  │             │     │
+│  │ Best: 9/14  │  │ Best: 3/14  │  │             │     │
+│  │ [New Game]  │  │ [New Game]  │  │             │     │
+│  │ [Continue]  │  │ [Continue]  │  │             │     │
+│  └─────────────┘  └─────────────┘  └─────────────┘     │
+│                                                          │
+│  ┌─────────────┐  ┌─────────────┐                       │
+│  │ [Commander  │  │ [Generative │                       │
+│  │  School]    │  │  Campaign]  │                       │
+│  │             │  │             │                       │
+│  │  TUTORIAL   │  │  AI-CREATED │                       │
+│  │  10 lessons │  │  (BYOLLM)   │                       │
+│  └─────────────┘  └─────────────┘                       │
+│                                                          │
+│  Difficulty: [Cadet ▾]  Experience: [IC Default ▾]       │
+│                         [Review Settings ⚙]              │
+└──────────────────────────────────────────────────────────┘
 ```
 
-**Campaign default settings (D021):** Campaigns ship a `default_settings` block in their YAML definition â€” the author's baked-in configuration for difficulty, experience axes (D019/D032/D033/D043/D045/D048), and individual toggle overrides. When the player selects a campaign:
+**Campaign default settings (D021):** Campaigns ship a `default_settings` block in their YAML definition — the author's baked-in configuration for difficulty, experience axes (D019/D032/D033/D043/D045/D048), and individual toggle overrides. When the player selects a campaign:
 
 - **Difficulty** and **Experience** dropdowns are pre-populated from the campaign's `default_settings`. If the campaign defines no defaults, the player's global preferences apply.
-- **[Review Settings]** opens a panel showing every active toggle (grouped by category: production, commands, UI, gameplay). Each switch shows the campaign's default value; the player can flip individual toggles before starting. Changes are per-playthrough â€” they don't alter the player's global preferences.
+- **[Review Settings]** opens a panel showing every active toggle (grouped by category: production, commands, UI, gameplay). Each switch shows the campaign's default value; the player can flip individual toggles before starting. Changes are per-playthrough — they don't alter the player's global preferences.
 - The first-party Allied/Soviet campaigns use `vanilla` + `classic` defaults (authentic 1996 feel). Community campaigns set whatever their author intends.
-- If a player changes settings from the campaign's defaults, the post-game comparison (D052/D053) groups their run separately from players who kept the defaults â€” ensuring fair benchmarks.
+- If a player changes settings from the campaign's defaults, the post-game comparison (D052/D053) groups their run separately from players who kept the defaults — ensuring fair benchmarks.
 
 **Navigation paths from this screen:**
 
 | Action                                                    | Destination                                                                 |
 | --------------------------------------------------------- | --------------------------------------------------------------------------- |
-| New Game (Allied/Soviet)                                  | Campaign Graph â†’ first mission briefing                                   |
-| Continue (Allied/Soviet)                                  | Campaign Graph â†’ next available mission                                   |
+| New Game (Allied/Soviet)                                  | Campaign Graph → first mission briefing                                   |
+| Continue (Allied/Soviet)                                  | Campaign Graph → next available mission                                   |
 | Workshop Campaigns                                        | Workshop Browser (filtered to campaigns)                                    |
 | Commander School                                          | Tutorial campaign (D065, 6 branching missions)                              |
 | Ops Prologue *(optional / D070 validation mini-campaign)* | Campaign Browser / Featured (when enabled)                                  |
-| Generative Campaign                                       | Generative Campaign Setup (D016) â€” or guidance panel if no LLM configured |
-| â† Back                                                  | Main Menu                                                                   |
+| Generative Campaign                                       | Generative Campaign Setup (D016) — or guidance panel if no LLM configured |
+| ← Back                                                  | Main Menu                                                                   |
 
 ### Campaign Graph
 
 ```
-Campaign Selection â†’ [New Game] or [Continue]
+Campaign Selection → [New Game] or [Continue]
 ```
 
 The campaign graph is a visual world map (or node-and-edge graph for community campaigns) showing mission progression. Completed missions are solid, available missions pulse, locked missions are dimmed.
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  ALLIED CAMPAIGN                             [â† Back]    â”‚
-â”‚  Operation: Allies Reunited                              â”‚
-â”‚                                                          â”‚
-â”‚          â”Œâ”€â”€â”€â”                                           â”‚
-â”‚          â”‚ 1 â”‚ â† Completed (solid)                       â”‚
-â”‚          â””â”€â”¬â”€â”˜                                           â”‚
-â”‚        â”Œâ”€â”€â”€â”´â”€â”€â”€â”                                         â”‚
-â”‚     â”Œâ”€â”€â”´â”€â”€â” â”Œâ”€â”€â”´â”€â”€â”                                     â”‚
-â”‚     â”‚ 2a  â”‚ â”‚ 2b  â”‚ â† Branching (based on mission 1     â”‚
-â”‚     â””â”€â”€â”¬â”€â”€â”˜ â””â”€â”€â”¬â”€â”€â”˜    outcome)                          â”‚
-â”‚        â””â”€â”€â”€â”¬â”€â”€â”€â”˜                                         â”‚
-â”‚         â”Œâ”€â”€â”´â”€â”€â”                                          â”‚
-â”‚         â”‚  3  â”‚ â† Next available (pulsing)               â”‚
-â”‚         â””â”€â”€â”¬â”€â”€â”˜                                          â”‚
-â”‚            Â·                                             â”‚
-â”‚            Â· (locked missions dimmed below)              â”‚
-â”‚                                                          â”‚
-â”‚  Unit Roster: 12 units carried over                      â”‚
-â”‚  [View Roster]  [View Heroes]  [Mission Briefing â†’]      â”‚
-â”‚                                                          â”‚
-â”‚  Campaign Stats: 3/14 complete (21%)  Time: 2h 15m       â”‚
-â”‚  Current Path: 4   Best Path: 6   Endings: 0/2           â”‚
-â”‚  [Details â–¾] [Community Benchmarks â–¾]                    â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌──────────────────────────────────────────────────────────┐
+│  ALLIED CAMPAIGN                             [← Back]    │
+│  Operation: Allies Reunited                              │
+│                                                          │
+│          ┌───┐                                           │
+│          │ 1 │ ← Completed (solid)                       │
+│          └─┬─┘                                           │
+│        ┌───┴───┐                                         │
+│     ┌──┴──┐ ┌──┴──┐                                     │
+│     │ 2a  │ │ 2b  │ ← Branching (based on mission 1     │
+│     └──┬──┘ └──┬──┘    outcome)                          │
+│        └───┬───┘                                         │
+│         ┌──┴──┐                                          │
+│         │  3  │ ← Next available (pulsing)               │
+│         └──┬──┘                                          │
+│            ·                                             │
+│            · (locked missions dimmed below)              │
+│                                                          │
+│  Unit Roster: 12 units carried over                      │
+│  [View Roster]  [View Heroes]  [Mission Briefing →]      │
+│                                                          │
+│  Campaign Stats: 3/14 complete (21%)  Time: 2h 15m       │
+│  Current Path: 4   Best Path: 6   Endings: 0/2           │
+│  [Details ▾] [Community Benchmarks ▾]                    │
+└──────────────────────────────────────────────────────────┘
 ```
 
-**Flow:** Select a node â†’ Mission Briefing screen â†’ click "Begin Mission" â†’ Loading â†’ InGame. After mission: Debrief â†’ next node unlocks on graph.
+**Flow:** Select a node → Mission Briefing screen → click "Begin Mission" → Loading → InGame. After mission: Debrief → next node unlocks on graph.
 
 **Branching-safe progress display (D021):**
 - `Progress` defaults to **unique missions completed / total missions in graph**.
@@ -104,15 +104,15 @@ The campaign graph is a visual world map (or node-and-edge graph for community c
 - Normalized by **campaign version + difficulty + balance preset**.
 - Spoiler-safe by default (no locked mission names/hidden ending names before discovery).
 - Example summary: `Ahead of 62% (Normal, IC Default)` and `Average completion: 41%`.
-- Benchmark cards show a trust/source badge (for example `Local Aggregate`, `Community Aggregate`, `Community Aggregate âœ“ Verified`).
+- Benchmark cards show a trust/source badge (for example `Local Aggregate`, `Community Aggregate`, `Community Aggregate ✓ Verified`).
 
-**Campaign transitions** (D021): Briefing â†’ mission â†’ debrief â†’ next mission. No exit-to-menu between levels unless the player explicitly presses Escape. The debrief screen loads instantly (no black screen), and the next mission's briefing runs concurrently with background asset loading.
+**Campaign transitions** (D021): Briefing → mission → debrief → next mission. No exit-to-menu between levels unless the player explicitly presses Escape. The debrief screen loads instantly (no black screen), and the next mission's briefing runs concurrently with background asset loading.
 
 Cutscene intros/outros may be authored as either:
 - **Video cutscenes** (classic FMV path: `Video Playback`)
 - **Rendered cutscenes** (real-time in-engine path: `Cinematic Sequence`)
 
-If a **video cutscene** exists and the player's preferred cutscene variant (Original / Clean Remaster / AI Enhanced) is installed, that version can play while assets load â€” by the time the cutscene ends, the mission is typically ready. If the preferred variant is missing, IC falls back to another installed cutscene variant (preferably Original) before falling back to the mission's briefing/intermission presentation.
+If a **video cutscene** exists and the player's preferred cutscene variant (Original / Clean Remaster / AI Enhanced) is installed, that version can play while assets load — by the time the cutscene ends, the mission is typically ready. If the preferred variant is missing, IC falls back to another installed cutscene variant (preferably Original) before falling back to the mission's briefing/intermission presentation.
 
 If the selected cutscene/dub package does not support the player's preferred spoken or subtitle language, IC must offer a clear fallback choice (for example: `Use Original Audio + Preferred Subtitles`, `Use Secondary Subtitle Language`, or `Use Briefing Fallback`). Any machine-translated subtitle/CC fallback, if enabled in later phases, must be clearly labeled and remain opt-in.
 
@@ -126,7 +126,7 @@ The only loading bar appears on cold start or unusually large asset loads, and e
 - Rendered cutscenes can be authored as **trigger-driven camera scenes** (OFP-style property-driven trigger conditions + camera shot presets over `Cinematic Sequence` data), so common mission reveals and dialogue pans do not require Lua.
 - Rendered `radar_comm` / `picture_in_picture` cutscene presentation targets are part of the phased D038 advanced authoring path (`M10`), with render-mode preference/policy polish tied to D048 visual infrastructure (`M11`).
 
-**Hero campaigns (optional D021 hero toolkit):** A campaign node may chain `Debrief â†’ Hero Sheet / Skill Choice â†’ Armory/Roster â†’ Briefing â†’ Begin Mission` without leaving the campaign flow. These screens appear only when the campaign enables hero progression; classic campaigns keep the simpler debrief/briefing path.
+**Hero campaigns (optional D021 hero toolkit):** A campaign node may chain `Debrief → Hero Sheet / Skill Choice → Armory/Roster → Briefing → Begin Mission` without leaving the campaign flow. These screens appear only when the campaign enables hero progression; classic campaigns keep the simpler debrief/briefing path.
 
 **Commander rescue bootstrap (optional D021 + D070 pattern, planned for `M10`):** A campaign/mini-campaign may begin with a **SpecOps rescue mission** where command/building systems are intentionally restricted because the commander is captured or missing. On success, the campaign sets a flag (for example `commander_recovered = true`) and subsequent missions unlock commander-avatar presence, broader unit coordination, base construction/production, and commander support powers. The UI should state both the restriction and the unlock explicitly so this reads as narrative progression, not a missing feature.
 
@@ -135,92 +135,91 @@ The only loading bar appears on cold start or unusually large asset loads, and e
 ### Skirmish Setup
 
 ```
-Main Menu â†’ Skirmish
+Main Menu → Skirmish
 ```
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  SKIRMISH                                       [â† Back]     â”‚
-â”‚                                                              â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”‚
-â”‚  â”‚ MAP                     â”‚  â”‚ PLAYERS                    â”‚ â”‚
-â”‚  â”‚ [map preview image]     â”‚  â”‚                            â”‚ â”‚
-â”‚  â”‚                         â”‚  â”‚ 1. You (Allied) [color â–¾]  â”‚ â”‚
-â”‚  â”‚ Coastal Fortress        â”‚  â”‚ 2. AI Easy (Soviet) [â–¾]    â”‚ â”‚
-â”‚  â”‚ 2-4 players, 128Ã—128   â”‚  â”‚ 3. [Add AI...]             â”‚ â”‚
-â”‚  â”‚                         â”‚  â”‚ 4. [Add AI...]             â”‚ â”‚
-â”‚  â”‚ [Change Map]            â”‚  â”‚                            â”‚ â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â”‚
-â”‚                                                              â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”‚
-â”‚  â”‚ GAME SETTINGS                                        â”‚   â”‚
-â”‚  â”‚                                                      â”‚   â”‚
-â”‚  â”‚ Balance:     [IC Default â–¾]   Game Speed: [Normal â–¾] â”‚   â”‚
-â”‚  â”‚ Pathfinding: [IC Default â–¾]   Starting $:  [10000 â–¾] â”‚   â”‚
-â”‚  â”‚ Fog of War:  [Shroud â–¾]       Tech Level: [Full â–¾]   â”‚   â”‚
-â”‚  â”‚ Crates:      [On â–¾]           Short Game: [Off â–¾]    â”‚   â”‚
-â”‚  â”‚                                                      â”‚   â”‚
-â”‚  â”‚ AI Preset:   [IC Default â–¾]   AI Difficulty: [â–¾]     â”‚   â”‚
-â”‚  â”‚ [More options...]                                     â”‚   â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â”‚
-â”‚                                                              â”‚
-â”‚  Experience Profile: [IC Default â–¾]                          â”‚
-â”‚                                                              â”‚
-â”‚                        [Start Game]                          â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌──────────────────────────────────────────────────────────────┐
+│  SKIRMISH                                       [← Back]     │
+│                                                              │
+│  ┌─────────────────────────┐  ┌───────────────────────────┐ │
+│  │ MAP                     │  │ PLAYERS                    │ │
+│  │ [map preview image]     │  │                            │ │
+│  │                         │  │ 1. You (Allied) [color ▾]  │ │
+│  │ Coastal Fortress        │  │ 2. Col. Volkov (Hard)  [▾]    │ │
+│  │ 2-4 players, 128×128   │  │ 3. [Add AI...]             │ │
+│  │                         │  │ 4. [Add AI...]             │ │
+│  │ [Change Map]            │  │                            │ │
+│  └─────────────────────────┘  └───────────────────────────┘ │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ GAME SETTINGS                                        │   │
+│  │                                                      │   │
+│  │ Balance:     [IC Default ▾]   Game Speed: [Normal ▾] │   │
+│  │ Pathfinding: [IC Default ▾]   Starting $:  [10000 ▾] │   │
+│  │ Fog of War:  [Shroud ▾]       Tech Level: [Full ▾]   │   │
+│  │ Crates:      [On ▾]           Short Game: [Off ▾]    │   │
+│  │                                                      │   │
+│  │ [More options...]                                     │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  Experience Profile: [IC Default ▾]                          │
+│                                                              │
+│                        [Start Game]                          │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 **Key interactions:**
 
-- **Change Map** â†’ opens map browser (thumbnails, filters by size/players/theater, search)
-- **Add AI** â†’ dropdown: difficulty (Easy/Medium/Hard/Brutal) Ã— AI preset (Classic/OpenRA/IC Default) Ã— faction
-- **More options** â†’ expands full D033 toggle panel (sim-affecting toggles for this match)
-- **Experience Profile** dropdown â†’ one-click preset that sets balance + AI + pathfinding + theme
-- **Start Game** â†’ Loading â†’ InGame
+- **Change Map** → opens map browser (thumbnails, filters by size/players/theater, search)
+- **Add AI** → commander picker (named persona with portrait + specialization, or unnamed preset) → difficulty (Easy/Medium/Hard/Brutal) → faction
+- **More options** → expands full D033 toggle panel (sim-affecting toggles for this match)
+- **Experience Profile** dropdown → one-click preset that sets balance + AI + pathfinding + theme
+- **Start Game** → Loading → InGame
 
 Settings persist between sessions. "Start Game" with last-used settings is a two-click path from the main menu.
 
 ### Generative Campaign Setup
 
 ```
-Main Menu â†’ Campaign â†’ Generative Campaign
+Main Menu → Campaign → Generative Campaign
 ```
 
 If no LLM provider is configured, this screen shows the No Dead-End Button guidance (D033/D016):
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  GENERATIVE CAMPAIGNS                        [â† Back]    â”‚
-â”‚                                                          â”‚
-â”‚  Generative campaigns use an LLM to create unique        â”‚
-â”‚  missions tailored to your play style.                   â”‚
-â”‚                                                          â”‚
-â”‚  [Configure LLM Provider â†’]                              â”‚
-â”‚  [Browse Pre-Generated Campaigns on Workshop â†’]          â”‚
-â”‚  [Use Built-in Mission Templates (no LLM needed) â†’]     â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌──────────────────────────────────────────────────────────┐
+│  GENERATIVE CAMPAIGNS                        [← Back]    │
+│                                                          │
+│  Generative campaigns use an LLM to create unique        │
+│  missions tailored to your play style.                   │
+│                                                          │
+│  [Configure LLM Provider →]                              │
+│  [Browse Pre-Generated Campaigns on Workshop →]          │
+│  [Use Built-in Mission Templates (no LLM needed) →]     │
+└──────────────────────────────────────────────────────────┘
 ```
 
-If an LLM is configured, the setup screen (D016 Â§ "Step 1 â€” Campaign Setup"):
+If an LLM is configured, the setup screen (D016 § "Step 1 — Campaign Setup"):
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  NEW GENERATIVE CAMPAIGN                     [â† Back]    â”‚
-â”‚                                                          â”‚
-â”‚  Story style:        [C&C Classic â–¾]                     â”‚
-â”‚  Faction:            [Soviet â–¾]                          â”‚
-â”‚  Campaign length:    [Medium (8-12 missions) â–¾]          â”‚
-â”‚  Difficulty curve:   [Steady Climb â–¾]                    â”‚
-â”‚  Theater:            [European â–¾]                        â”‚
-â”‚                                                          â”‚
-â”‚  [â–¸ Advanced...]                                         â”‚
-â”‚    Mission variety targets, era constraints, roster       â”‚
-â”‚    persistence rules, narrative tone, etc.               â”‚
-â”‚                                                          â”‚
-â”‚                    [Generate Campaign]                    â”‚
-â”‚                                                          â”‚
-â”‚  Using: GPT-4o via OpenAI   Estimated time: ~45s         â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌──────────────────────────────────────────────────────────┐
+│  NEW GENERATIVE CAMPAIGN                     [← Back]    │
+│                                                          │
+│  Story style:        [C&C Classic ▾]                     │
+│  Faction:            [Soviet ▾]                          │
+│  Campaign length:    [Medium (8-12 missions) ▾]          │
+│  Difficulty curve:   [Steady Climb ▾]                    │
+│  Theater:            [European ▾]                        │
+│                                                          │
+│  [▸ Advanced...]                                         │
+│    Mission variety targets, era constraints, roster       │
+│    persistence rules, narrative tone, etc.               │
+│                                                          │
+│                    [Generate Campaign]                    │
+│                                                          │
+│  Using: GPT-4o via OpenAI   Estimated time: ~45s         │
+└──────────────────────────────────────────────────────────┘
 ```
 
-"Generate Campaign" â†’ generation progress â†’ Campaign Graph (same graph UI as hand-crafted campaigns).
+"Generate Campaign" → generation progress → Campaign Graph (same graph UI as hand-crafted campaigns).

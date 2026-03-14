@@ -49,6 +49,7 @@ Every toggle is categorized as **sim-affecting** (changes game logic — must be
 | `production_progress`  | ❌       | ✅        | ✅              | ✅              | Progress bar on sidebar build icons                                                     |
 | `target_lines`         | ❌       | ✅        | ❌              | ✅              | Lines showing order targets (move, attack)                                              |
 | `rally_point_display`  | ❌       | ✅        | ✅              | ✅              | Visual line from factory to rally point                                                 |
+| `ai_taunts`            | N/A     | N/A      | N/A            | `on`           | Show AI Commander contextual taunts in chat (D043); `on` / `off`                        |
 
 #### Selection & Input (Client-Only)
 
@@ -118,6 +119,7 @@ qol:
     production_progress: true
     target_lines: true
     rally_point_display: true
+    ai_taunts: true            # show AI Commander taunts in chat (D043)
 
   selection:
     double_click_select_type: true
@@ -166,6 +168,7 @@ qol:
     production_progress: false
     target_lines: false
     rally_point_display: false
+    ai_taunts: true            # taunts are new to IC; no vanilla/OpenRA/Remastered equivalent
 
   selection:
     double_click_select_type: false

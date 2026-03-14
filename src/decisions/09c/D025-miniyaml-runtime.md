@@ -12,13 +12,13 @@
 - **Why:**
   - Zero-friction import of existing OpenRA mods (drop a mod folder in, play immediately)
   - Pre-conversion would add a mandatory setup step that deters casual modders
-  - Runtime cost is small (~10â€“50ms per mod file, cached after first parse)
+  - Runtime cost is small (~10–50ms per mod file, cached after first parse)
   - Permanent converter still available for modders who want clean YAML going forward
 - **Non-goals:** Maintaining MiniYAML as a first-class authoring format. IC-native content uses standard YAML. MiniYAML is a compatibility input, not an output.
 - **Invariants preserved:** Deterministic sim (parsing produces identical output regardless of input format). No network or I/O in `ic-sim`.
-- **Performance impact:** ~10â€“50ms per mod file on first load; result cached for session. Negligible for gameplay.
+- **Performance impact:** ~10–50ms per mod file on first load; result cached for session. Negligible for gameplay.
 - **Public interfaces / types / commands:** `cnc-formats` CLI (`validate`/`inspect`/`convert` subcommands, ships with crate), `cnc_formats::miniyaml::parse()` (clean-room parser, MIT/Apache-2.0), `ra_formats::detect_format()` (IC integration layer)
-- **Affected docs:** `02-ARCHITECTURE.md` Â§ Data Format, `04-MODDING.md` Â§ MiniYAML Migration, `05-FORMATS.md`
+- **Affected docs:** `02-ARCHITECTURE.md` § Data Format, `04-MODDING.md` § MiniYAML Migration, `05-FORMATS.md`
 - **Keywords:** MiniYAML, runtime loading, auto-conversion, format detection, cnc-formats CLI, OpenRA compatibility
 
 ---
@@ -34,23 +34,23 @@ When `ra-formats` loads a `.yaml` file, it inspects the first non-empty lines:
 If any of these markers are detected, the file routes through the MiniYAML parser instead of `serde_yaml`. The MiniYAML parser produces an intermediate tree, resolves aliases (D023), and outputs typed Rust structs identical to what the standard YAML path produces.
 
 ```
-.yaml file â†’ Format detection
-               â”‚
-               â”œâ”€ Standard YAML â†’ serde_yaml parse â†’ Rust structs
-               â”‚
-               â””â”€ MiniYAML detected
-                   â”œâ”€ MiniYAML parser (tabs, ^, @)
-                   â”œâ”€ Intermediate tree
-                   â”œâ”€ Alias resolution (D023)
-                   â””â”€ Rust structs (identical output)
+.yaml file → Format detection
+               │
+               ├─ Standard YAML → serde_yaml parse → Rust structs
+               │
+               └─ MiniYAML detected
+                   ├─ MiniYAML parser (tabs, ^, @)
+                   ├─ Intermediate tree
+                   ├─ Alias resolution (D023)
+                   └─ Rust structs (identical output)
 ```
 
-Both paths produce identical output. The runtime conversion adds ~10â€“50ms per mod file on first load; results are cached for the remainder of the session.
+Both paths produce identical output. The runtime conversion adds ~10–50ms per mod file on first load; results are cached for the remainder of the session.
 
 #### Rust API
 
 ```rust
-// cnc-formats (MIT/Apache-2.0) â€” clean-room MiniYAML parser (behind `miniyaml` feature flag)
+// cnc-formats (MIT/Apache-2.0) — clean-room MiniYAML parser (behind `miniyaml` feature flag)
 #[cfg(feature = "miniyaml")]
 pub mod miniyaml {
     /// Parse MiniYAML text into a format-agnostic node tree.
@@ -67,15 +67,15 @@ pub mod miniyaml {
     }
 }
 
-// ra-formats (GPL v3) â€” IC integration layer for runtime auto-detection
+// ra-formats (GPL v3) — IC integration layer for runtime auto-detection
 /// Detect whether a `.yaml` file contains standard YAML or MiniYAML.
 /// Returns the detected format for routing to the correct parser.
 pub fn detect_format(content: &str) -> DetectedFormat;
 
 pub enum DetectedFormat {
-    /// Standard YAML â€” route to `serde_yaml`.
+    /// Standard YAML — route to `serde_yaml`.
     StandardYaml,
-    /// MiniYAML â€” route through `cnc_formats::miniyaml::parse()` + alias resolution (D023).
+    /// MiniYAML — route through `cnc_formats::miniyaml::parse()` + alias resolution (D023).
     MiniYaml {
         /// Which markers triggered detection (for diagnostics).
         markers: Vec<MiniYamlMarker>,

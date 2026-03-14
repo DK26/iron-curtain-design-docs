@@ -1,11 +1,11 @@
-# D076 â€” Rust Types (Key Interfaces)
+# D076 — Rust Types (Key Interfaces)
 
-> Sub-page of [D076 â€” Standalone MIT/Apache-Licensed Crate Extraction Strategy](../D076-standalone-crates.md).
+> Sub-page of [D076 — Standalone MIT/Apache-Licensed Crate Extraction Strategy](../D076-standalone-crates.md).
 
 These are the public-facing type signatures that define extraction boundaries. IC wraps or extends these types; it never exposes them directly to players.
 
 ```rust
-// cnc-formats â€” clean-room C&C binary format parsing and encoding
+// cnc-formats — clean-room C&C binary format parsing and encoding
 pub struct MixArchive { /* ... */ }
 pub struct ShpFile { /* ... */ }
 pub struct PalFile { /* ... */ }
@@ -16,9 +16,9 @@ pub struct VqaFile { /* ... */ }
 // All format types use a slice-based parsing API:
 //   MixArchive::parse(data: &[u8]) -> Result<Self, FormatError>
 //   ShpFile::parse(data: &[u8]) -> Result<Self, FormatError>
-// Streaming (Read + Seek) is a planned future option â€” not yet implemented.
+// Streaming (Read + Seek) is a planned future option — not yet implemented.
 
-// cnc-formats â€” clean-room encoders (no EA-derived code)
+// cnc-formats — clean-room encoders (no EA-derived code)
 pub mod lcw {
     pub fn compress(input: &[u8]) -> Vec<u8>;
     pub fn decompress(input: &[u8], output: &mut [u8]) -> Result<usize, LcwError>;
@@ -36,7 +36,7 @@ pub mod pal {
     }
 }
 
-// cnc-formats â€” VQA decode/encode (clean-room VQ codebook via median-cut quantization)
+// cnc-formats — VQA decode/encode (clean-room VQ codebook via median-cut quantization)
 pub mod vqa {
     pub mod decode {
         pub struct VqaFrame { pub width: u16, pub height: u16, pub palette: [PalColor; 256], pub pixels: Vec<u8> }
@@ -54,7 +54,7 @@ pub mod vqa {
     }
 }
 
-// cnc-formats â€” MEG/PGM archive parsing (Phase 2, behind `meg` feature flag)
+// cnc-formats — MEG/PGM archive parsing (Phase 2, behind `meg` feature flag)
 #[cfg(feature = "meg")]
 pub struct MegArchive {
     pub entries: Vec<MegEntry>,
@@ -66,7 +66,7 @@ pub struct MegEntry {
     pub size: u64,
 }
 
-// cnc-formats CLI â€” extensible format conversion via --format/--to flags
+// cnc-formats CLI — extensible format conversion via --format/--to flags
 /// Available conversion formats. Per-variant `#[cfg]` ensures the binary
 /// only includes parsers for enabled features.
 #[derive(Clone, Copy, Debug, clap::ValueEnum)]
@@ -109,7 +109,7 @@ pub enum ConvertFormat {
     /// VQA video (requires `convert` feature)
     #[cfg(feature = "convert")]
     Vqa,
-    /// AVI video â€” interchange format for VQA conversion (requires `convert` feature)
+    /// AVI video — interchange format for VQA conversion (requires `convert` feature)
     #[cfg(feature = "convert")]
     Avi,
     /// FNT bitmap font (requires `convert` feature)
@@ -131,7 +131,7 @@ pub enum ConvertFormat {
 pub struct ConvertArgs {
     /// Source format override (auto-detected from file extension when
     /// unambiguous; required when reading from stdin). Shared with
-    /// `validate` and `inspect` â€” always means "source format override."
+    /// `validate` and `inspect` — always means "source format override."
     #[arg(long)]
     pub format: Option<ConvertFormat>,
     /// Target format (always required).
@@ -145,7 +145,7 @@ pub struct ConvertArgs {
     /// Palette file path (required for SHP/TMP conversions that need color data).
     #[arg(long)]
     pub palette: Option<PathBuf>,
-    /// SoundFont file path (required for MIDIâ†’WAV/AUD conversions).
+    /// SoundFont file path (required for MIDI→WAV/AUD conversions).
     #[cfg(feature = "midi")]
     #[arg(long)]
     pub soundfont: Option<PathBuf>,
@@ -194,7 +194,7 @@ fn convert(args: &ConvertArgs) -> Result<Vec<u8>> {
 // Dependencies: midly (Unlicense), nodi (MIT), rustysynth (MIT)
 #[cfg(feature = "midi")]
 pub mod mid {
-    /// Parsed MIDI file â€” wraps midly::Smf with additional metadata.
+    /// Parsed MIDI file — wraps midly::Smf with additional metadata.
     pub struct MidFile { /* tracks, tempo, duration, channel info */ }
 
     /// Parse a MIDI file from bytes.
@@ -212,7 +212,7 @@ pub mod mid {
 }
 
 // cnc-formats ADL types (behind `adl` feature flag)
-// No external dependencies â€” pure Rust parser
+// No external dependencies — pure Rust parser
 #[cfg(feature = "adl")]
 pub mod adl {
     /// Parsed AdLib OPL2 register data file (Dune II .adl format).
@@ -237,7 +237,7 @@ pub mod adl {
 // Depends on midly (via `midi` feature) for MID output
 #[cfg(feature = "xmi")]
 pub mod xmi {
-    /// Parsed XMIDI file â€” IFF FORM:XMID container with Miles Sound System extensions.
+    /// Parsed XMIDI file — IFF FORM:XMID container with Miles Sound System extensions.
     pub struct XmiFile {
         pub sequences: Vec<XmiSequence>,
     }
@@ -248,7 +248,7 @@ pub mod xmi {
         pub timing_mode: XmiTimingMode,
     }
 
-    /// XMIDI timing modes â€” IFTHEN (absolute) vs. standard delta-time.
+    /// XMIDI timing modes — IFTHEN (absolute) vs. standard delta-time.
     pub enum XmiTimingMode { Ifthen, DeltaTime }
 
     /// Parse an .xmi file from bytes.
@@ -260,10 +260,10 @@ pub mod xmi {
     pub fn to_mid(xmi: &XmiFile) -> Result<mid::MidFile>;
 }
 
-// fixed-game-math â€” deterministic fixed-point arithmetic
+// fixed-game-math — deterministic fixed-point arithmetic
 pub struct Fixed<const FRAC_BITS: u32>(i64);
 pub struct WorldPos { pub x: Fixed<10>, pub y: Fixed<10>, pub z: Fixed<10> }
-pub struct WAngle(i32);  // 0..1024 = 0Â°..360Â°
+pub struct WAngle(i32);  // 0..1024 = 0°..360°
 
 impl Fixed<FRAC_BITS> {
     pub const fn from_int(v: i32) -> Self;
@@ -273,7 +273,7 @@ impl Fixed<FRAC_BITS> {
     pub fn sqrt(self) -> Self;  // Newton's method
 }
 
-// deterministic-rng â€” seedable, platform-identical PRNG
+// deterministic-rng — seedable, platform-identical PRNG
 pub struct GameRng { /* xoshiro256** or similar */ }
 
 impl GameRng {
@@ -285,7 +285,7 @@ impl GameRng {
     pub fn damage_spread(&mut self, base: i32, spread_pct: u32) -> i32;
 }
 
-// glicko2-rts â€” rating system with RTS adaptations
+// glicko2-rts — rating system with RTS adaptations
 pub struct Rating {
     pub mu: f64,
     pub phi: f64,    // rating deviation
@@ -301,7 +301,7 @@ pub struct MatchResult {
 
 pub fn update_ratings(results: &[MatchResult], config: &Glicko2Config) -> Vec<(PlayerId, Rating)>;
 
-// lockstep-relay â€” game-agnostic relay core
+// lockstep-relay — game-agnostic relay core
 pub struct RelayCore<T: OrderCodec> { /* ... */ }
 
 impl<T: OrderCodec> RelayCore<T> {
@@ -312,7 +312,7 @@ impl<T: OrderCodec> RelayCore<T> {
     pub fn player_disconnected(&mut self, player: PlayerId);
 }
 
-// workshop-core â€” engine-agnostic mod registry (D050)
+// workshop-core — engine-agnostic mod registry (D050)
 pub struct Package { /* ... */ }
 pub struct Manifest { /* ... */ }
 pub struct Registry { /* ... */ }

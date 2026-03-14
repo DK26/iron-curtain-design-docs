@@ -1,19 +1,19 @@
 ## D073: LLM Exhibition Matches & Prompt-Coached Modes — Spectacle Without Breaking Competitive Integrity
 
-|                |                                                                                                                                                                                                                                                                                             |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**     | Accepted                                                                                                                                                                                                                                                                                    |
-| **Phase**      | Phase 7 (custom/local exhibition + prompt-coached modes + replay metadata/overlay support), Phase 7+ (showmatch spectator prompt queue hardening + tournament tooling polish). Never part of ranked matchmaking (D055).                                                              |
+|                |                                                                                                                                                                                                                                                                                                                       |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**     | Accepted                                                                                                                                                                                                                                                                                                              |
+| **Phase**      | Phase 7 (custom/local exhibition + prompt-coached modes + replay metadata/overlay support), Phase 7+ (showmatch spectator prompt queue hardening + tournament tooling polish). Never part of ranked matchmaking (D055).                                                                                               |
 | **Depends on** | D007 (relay), D010 (snapshottable state/replays), D012 (order validation), D034 (SQLite), D041 (AI trait/event log/fog view), D044 (LLM AI), D047 (LLM config manager/BYOLLM routing), D057 (skill library), D059 (communication + coach/observer rules), D071 (ICRP), D072 (server management), D055 (ranked policy) |
-| **Driver**     | IC already supports LLM-controlled AI (D044), but it lacks a canonical match-level policy for LLM-vs-LLM exhibitions, human prompt-coached LLM play, and spectator-driven showmatches. Without a decision, communities will improvise modes that conflict with anti-coaching and competitive-integrity rules.                         |
+| **Driver**     | IC already supports LLM-controlled AI (D044), but it lacks a canonical match-level policy for LLM-vs-LLM exhibitions, human prompt-coached LLM play, and spectator-driven showmatches. Without a decision, communities will improvise modes that conflict with anti-coaching and competitive-integrity rules.         |
 
 ### Decision Capsule (LLM/RAG Summary)
 
 - **Status:** Accepted
 - **Phase:** Phase 7 experimental/custom modes first, showmatch/tournament tooling polish later
-- **Canonical for:** Match-level policy for LLM-vs-LLM exhibition play, prompt-coached LLM matches, spectator prompt showmatches, trust labels, and replay/privacy defaults
+- **Canonical for:** Match-level policy for LLM-vs-LLM exhibition play, prompt-coached matches (any AI type), spectator prompt showmatches, trust labels, and replay/privacy defaults
 - **Scope:** `ic-ai`, `ic-llm`, `ic-ui`, `ic-net`, replay metadata/annotation capture, server policy/config; not a new sim/netcode architecture
-- **Decision:** IC supports three opt-in, non-ranked LLM match surfaces: **LLM Exhibition**, **Prompt-Coached LLM**, and **Director/Showmatch Prompt** modes. All preserve sim determinism by recording and replaying orders only; prompts and LLM plan text are optional replay annotations with explicit privacy controls.
+- **Decision:** IC supports three opt-in, non-ranked match surfaces: **LLM Exhibition**, **Prompt-Coached** (any AI type), and **Director/Showmatch Prompt** modes. All preserve sim determinism by recording and replaying orders only; prompts and LLM plan text are optional replay annotations with explicit privacy controls.
 - **Why:** D044 already enables LLM AI behavior technically. D073 adds the social/tournament/server/replay policy layer so communities can safely run "LLM vs LLM" and "prompt duel" events without undermining D055 ranked integrity or D059 anti-coaching rules.
 - **Non-goals:** Ranked LLM assistance, hidden spectator coaching in competitive play, direct observer order injection, storing provider credentials or API keys in replays/logs
 - **Invariants preserved:** `ic-sim` remains pure (no LLM/network I/O), all gameplay effects still arrive as normal orders, fog/observer restrictions remain mode-dependent and explicit
@@ -43,7 +43,7 @@ Without a canonical policy, "fun exhibition features" become a trust-model footg
 Define a canonical family of opt-in LLM match surfaces built on D044:
 
 1. **LLM Exhibition Match**
-2. **Prompt-Coached LLM Match** (includes "Prompt Duel" variants)
+2. **Prompt-Coached Match** (any AI type; includes "Prompt Duel" variants)
 3. **Director Prompt Showmatch** (spectator-driven / audience-driven prompts)
 
 These are **match policy + UI + replay + server controls**, not new simulation or network architectures.
@@ -57,18 +57,22 @@ These are **match policy + UI + replay + server controls**, not new simulation o
 - Primary use case: "watch GPT vs Claude/Ollama" style content, AI benchmarking, sandbox experimentation
 - Eligible for local replay recording and replay sharing like any other match
 
-#### 2. Prompt-Coached LLM Match (fair prompting)
+#### 2. Prompt-Coached Match (fair prompting)
 
-- Each participating LLM side can have a **designated prompt coach seat**
-- The coach submits strategic directives (text prompts / structured intents)
-- The LLM remains the entity that turns context into gameplay orders
+- Each participating AI side can have a **designated prompt coach seat**
+- The coach submits strategic directives (text or structured intents: "focus anti-air", "expand north", "defend and tech up")
+- The AI retains autonomous control — the coach provides strategic direction, not direct orders
 - The coach does **not** directly issue `PlayerOrder`s and is **not** a hidden spectator
 - Fair-play default vision is **team-shared vision only** (same concept as D059 coach slot)
+- Works with any AI configuration: `LlmOrchestratorAi`, `PersonalityDrivenAi`, or any `AiStrategy` implementation — the coached AI does not need to be LLM-powered
+
+**Relationship to D043 Puppet Master architecture:** Prompt-Coached mode is the primary delivery surface for Human Puppet Masters (D043 Tier 2). The D073 infrastructure (prompt submission pipeline, rate limiting, vision scope, relay routing, replay privacy) governs the transport; the `HumanPuppetMaster` implementation in `ic-ai` translates directives into `StrategicGuidance` for the inner `AiStrategy` via `GuidedAi`. Coaching a non-LLM AI (e.g., "IC Default AI ◆ Coach: Alice") uses identical infrastructure — the PM pattern is AI-algorithm-agnostic.
 
 **Player-facing variant names (recommended):**
 
-- `Prompt-Coached LLM`
-- `Prompt Duel` (when both sides are prompt-only humans + their own LLMs)
+- `Prompt-Coached` (general — any AI type)
+- `Prompt-Coached LLM` (when the inner AI is LLM-powered)
+- `Prompt Duel` (when both sides are prompt-only humans + their AIs)
 
 #### 3. Director Prompt Showmatch (omniscient / audience-driven)
 
@@ -81,13 +85,13 @@ These are **match policy + UI + replay + server controls**, not new simulation o
 
 This matrix is the canonical policy layer that resolves the "can observers/LLMs do X here?" questions.
 
-| Match Surface | D044 LLM AI Allowed? | Human Prompt Coach Seats? | Observer / Audience Prompts? | Vision Scope for Prompt Source | Competitive / Certification Status | Default Trust Label |
-| --- | --- | --- | --- | --- | --- | --- |
-| **Ranked Matchmaking (D055)** | **No** (for player-control assistance modes) | **No** | **No** | N/A | Ranked-certified path only | `ranked_native` |
-| **Tournament (fair / competitive)** | Organizer option (typically `LlmOrchestratorAi` only for dedicated exhibition brackets; not normal ranked equivalence) | **Yes** (coach-style, explicit slot) | **No** | Team-shared vision only | Not ranked-certified unless no LLM/player assistance is active | `tournament_fair` or `tournament_llm_exhibition` |
-| **Custom / LAN / Community Casual** | **Yes** | **Yes** | Host option | Team-shared by default; observer/full-map only if host enables | Unranked | `custom_llm` / `custom_prompt_coached` |
-| **Showmatch / Broadcast Event** | **Yes** | **Yes** | **Yes** (director/audience queue) | Organizer-defined (team-view, delayed spectator, or omniscient) | Explicitly non-ranked, non-certified | `showmatch_director_prompt` |
-| **Offline Sandbox / Replay Lab** | **Yes** | **Yes** | N/A (local user only) | User-defined | N/A | `offline_llm_lab` |
+| Match Surface                       | D044 LLM AI Allowed?                                                                                                   | Human Prompt Coach Seats?            | Observer / Audience Prompts?      | Vision Scope for Prompt Source                                  | Competitive / Certification Status                             | Default Trust Label                              |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | --------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------ |
+| **Ranked Matchmaking (D055)**       | **No** (for player-control assistance modes)                                                                           | **No**                               | **No**                            | N/A                                                             | Ranked-certified path only                                     | `ranked_native`                                  |
+| **Tournament (fair / competitive)** | Organizer option (typically `LlmOrchestratorAi` only for dedicated exhibition brackets; not normal ranked equivalence) | **Yes** (coach-style, explicit slot) | **No**                            | Team-shared vision only                                         | Not ranked-certified unless no LLM/player assistance is active | `tournament_fair` or `tournament_llm_exhibition` |
+| **Custom / LAN / Community Casual** | **Yes**                                                                                                                | **Yes**                              | Host option                       | Team-shared by default; observer/full-map only if host enables  | Unranked                                                       | `custom_llm` / `custom_prompt_coached`           |
+| **Showmatch / Broadcast Event**     | **Yes**                                                                                                                | **Yes**                              | **Yes** (director/audience queue) | Organizer-defined (team-view, delayed spectator, or omniscient) | Explicitly non-ranked, non-certified                           | `showmatch_director_prompt`                      |
+| **Offline Sandbox / Replay Lab**    | **Yes**                                                                                                                | **Yes**                              | N/A (local user only)             | User-defined                                                    | N/A                                                            | `offline_llm_lab`                                |
 
 **Policy rule:** if any mode grants omniscient or spectator-sourced prompts to a live side, the match is **not** a fair competitive result and must never be labeled/routed as ranked-equivalent.
 
@@ -162,23 +166,19 @@ Prompt submission must be server-controlled, similar to D059 chat anti-spam and 
 - optional moderator approval for audience prompts (showmatch mode)
 - audit log entries for accepted/rejected prompts in tournament/showmatch operations
 
-### Prompt-Coached Match Variants (Including "Player + LLM vs Player + LLM")
+### Prompt-Coached Match Variants (Including "Player + AI vs Player + AI")
 
 The user-proposed format maps cleanly to D073 as a **Prompt Duel** variant:
 
 - Each side has:
   - one human prompt coach (or a shared coach team)
-  - one LLM-controlled side (`LlmOrchestratorAi` recommended for v1)
+  - one AI-controlled side (any `AiStrategy` — `LlmOrchestratorAi`, `PersonalityDrivenAi`, etc.)
 - Human participants "play" through prompts only
-- The LLM executes via D044 and emits orders
+- The AI executes autonomously, guided by coach directives via the Puppet Master pipeline (D043)
 
 #### v1 recommendation
 
-Default to **`LlmOrchestratorAi` + inner AI** rather than full `LlmPlayerAi` for prompt duel:
-
-- more responsive under real-world BYOLLM latency
-- better spectator experience (less idle time)
-- easier to compare strategy quality rather than raw model micro latency
+Default to **`LlmOrchestratorAi` + inner AI** for LLM-focused prompt duels (more responsive under real-world BYOLLM latency, better spectator experience). For non-LLM coaching, **`PersonalityDrivenAi`** with a `HumanPuppetMaster` is the natural combination — useful for training, community events, and casual play.
 
 `LlmPlayerAi` remains an explicit experimental option for sandbox/showmatch content.
 
@@ -239,16 +239,16 @@ Orders remain the canonical gameplay record. Everything else is optional annotat
 
 #### Replay privacy matrix (LLM-specific additions)
 
-| LLM-Related Replay Data | Recorded by Default (Custom/Showmatch) | Public Share Default | Notes |
-| --- | --- | --- | --- |
-| **LLM mode + trust label** | Yes | Yes | Needed to interpret the match and avoid misleading "competitive" framing |
-| **Provider/model/profile metadata (safe subset)** | Yes | Yes | No secrets/credentials |
-| **Accepted prompt timestamps + sender role** | Yes | Yes | Lightweight annotation; good for replay commentary and audits |
-| **Accepted prompt full text** | Custom: configurable (`off` default) / Showmatch: configurable (`on` recommended) | Off unless creator opts in | Entertainment value is high, but can reveal private strategy/team comms |
-| **Rejected/queued audience prompts** | No (default) | No | High noise + moderation/privacy risk; enable only for event archives |
-| **LLM raw reasoning text / chain-like verbose output** | No (default) | No | Privacy + prompt/IP leakage risk; prefer concise plan summaries |
-| **Plan summary / strategic updates** | Yes (summary form) | Yes | D044 observability value without leaking full prompt internals |
-| **API keys / tokens / credentials** | Never | Never | Hard prohibition |
+| LLM-Related Replay Data                                | Recorded by Default (Custom/Showmatch)                                            | Public Share Default       | Notes                                                                    |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------- | -------------------------- | ------------------------------------------------------------------------ |
+| **LLM mode + trust label**                             | Yes                                                                               | Yes                        | Needed to interpret the match and avoid misleading "competitive" framing |
+| **Provider/model/profile metadata (safe subset)**      | Yes                                                                               | Yes                        | No secrets/credentials                                                   |
+| **Accepted prompt timestamps + sender role**           | Yes                                                                               | Yes                        | Lightweight annotation; good for replay commentary and audits            |
+| **Accepted prompt full text**                          | Custom: configurable (`off` default) / Showmatch: configurable (`on` recommended) | Off unless creator opts in | Entertainment value is high, but can reveal private strategy/team comms  |
+| **Rejected/queued audience prompts**                   | No (default)                                                                      | No                         | High noise + moderation/privacy risk; enable only for event archives     |
+| **LLM raw reasoning text / chain-like verbose output** | No (default)                                                                      | No                         | Privacy + prompt/IP leakage risk; prefer concise plan summaries          |
+| **Plan summary / strategic updates**                   | Yes (summary form)                                                                | Yes                        | D044 observability value without leaking full prompt internals           |
+| **API keys / tokens / credentials**                    | Never                                                                             | Never                      | Hard prohibition                                                         |
 
 #### Replay privacy controls
 
@@ -346,15 +346,15 @@ The format naturally creates community content, rivalry, and iterative improveme
 
 #### How It Maps to D073 Infrastructure
 
-| Fight Night Element | D073 Mechanism | Notes |
-| --- | --- | --- |
-| Player submits LLM config | D047 `LlmProvider` + prompt strategy profile | Player brings their own API key / local model |
-| LLM controls a side | D044 `LlmOrchestratorAi` (recommended v1) | `LlmPlayerAi` as experimental opt-in |
-| Live audience viewing | D073 spectator overlays + trust labels | Plan summary panel, model badge, mode banner |
-| Match governance | `LLM Exhibition Match` policy (mode 1) | No prompt coaching — pure LLM vs LLM |
-| Prompted variant | `Prompt Duel` policy (mode 2) | Each player coaches their own LLM live |
-| Replay / VOD | Standard replay + LLM annotation capture | Shareable `.icrep` with optional prompt transcript |
-| Tournament ops | D071 ICRP + D072 dashboard | Bracket management, match scheduling, replay archive |
+| Fight Night Element       | D073 Mechanism                               | Notes                                                |
+| ------------------------- | -------------------------------------------- | ---------------------------------------------------- |
+| Player submits LLM config | D047 `LlmProvider` + prompt strategy profile | Player brings their own API key / local model        |
+| LLM controls a side       | D044 `LlmOrchestratorAi` (recommended v1)    | `LlmPlayerAi` as experimental opt-in                 |
+| Live audience viewing     | D073 spectator overlays + trust labels       | Plan summary panel, model badge, mode banner         |
+| Match governance          | `LLM Exhibition Match` policy (mode 1)       | No prompt coaching — pure LLM vs LLM                 |
+| Prompted variant          | `Prompt Duel` policy (mode 2)                | Each player coaches their own LLM live               |
+| Replay / VOD              | Standard replay + LLM annotation capture     | Shareable `.icrep` with optional prompt transcript   |
+| Tournament ops            | D071 ICRP + D072 dashboard                   | Bracket management, match scheduling, replay archive |
 
 #### Experimental Scope and Constraints
 
@@ -392,6 +392,7 @@ These are community-driven extensions, not core engine features. IC provides the
 
 ### Cross-References
 
+- **D043 (Puppet Master architecture):** Prompt-Coached mode is the primary delivery surface for Human Puppet Masters (Tier 2). D073's prompt submission pipeline, rate limiting, vision scope rules, relay routing, and replay privacy all govern how a Human Puppet Master communicates with the AI. Director/Audience roles are specialized variants with different vision and trust policies. See [AI Commanders & Puppet Masters](D043/commanders-and-puppet-masters.md) for the full trait design and tier taxonomy.
 - **D044 (LLM AI):** Supplies `LlmOrchestratorAi` and `LlmPlayerAi`; D073 wraps them in match policy
 - **D047 (LLM Config Manager):** BYOLLM provider routing, prompt strategy profiles, capability probing
 - **D057 (Skill Library):** D073 adds fairness tagging rules for skill promotion eligibility

@@ -211,23 +211,24 @@ profiles:
 
 ### Lobby Integration
 
-AI preset is selectable per AI player slot in the lobby, independent of game-wide balance preset:
+AI commander (or unnamed preset) is selectable per AI player slot in the lobby, independent of game-wide balance preset:
 
 ```
 Player 1: [Human]           Faction: Soviet
-Player 2: [AI] IC Default (Hard)    Faction: Allied
-Player 3: [AI] Classic RA (Normal)  Faction: Allied
-Player 4: [AI] OpenRA (Brutal)      Faction: Soviet
+Player 2: [AI] Col. Stavros — Air Superiority (Hard)    Faction: Allied
+Player 3: [AI] Classic RA AI (Normal)   Faction: Allied
+Player 4: [AI] Gen. Kukov — Brute Force (Brutal)       Faction: Soviet
 
 Balance Preset: Classic RA
 ```
 
-This allows mixed AI playstyles in the same game – useful for testing, fun for variety, and educational for understanding how different AI approaches handle the same scenario.
+This allows mixed AI commander personalities in the same game – useful for testing, fun for variety, and educational for understanding how different AI approaches handle the same scenario.
 
 ### Community AI Presets
 
-Modders can create custom AI presets as Workshop resources (D030):
+Modders can create custom AI presets and named commanders as Workshop resources (D030):
 
+- YAML commander files (name, portrait, personality overrides, taunts) — Tier 1, no code required
 - YAML preset files defining `personality` parameters for `PersonalityDrivenAi`
 - Full `AiStrategy` implementations via WASM Tier 3 mods (D041)
 - AI tournament brackets: community members compete by submitting AI presets, tournament server runs automated matches
@@ -336,15 +337,15 @@ In the lobby, each AI player slot has two independent selections:
 2. **Difficulty level** — which engine scaling + personality config
 
 ```
-Player 2: [AI] IC Default / Hard        Faction: Allied
-Player 3: [AI] Classic RA / Normal      Faction: Allied
-Player 4: [AI] Workshop: GOAP Planner / Brutal   Faction: Soviet
-Player 5: [AI] Workshop: Neural Net v2 / Nightmare   Faction: Soviet
+Player 2: [AI] Col. Stavros — Air Superiority / Hard        Faction: Allied
+Player 3: [AI] Classic RA AI / Normal                        Faction: Allied
+Player 4: [AI] Workshop: GOAP Planner / Brutal               Faction: Soviet
+Player 5: [AI] Workshop: Neural Net v2 / Nightmare           Faction: Soviet
 
 Balance Preset: Classic RA
 ```
 
-This is different from pathfinders (one axis: which algorithm). AI has two orthogonal axes because *how smart the AI plays* and *what advantages it gets* are independent concerns. A "Brutal Classic RA" AI should play with original 1996 patterns but get economic bonuses and instant reactions; an "Easy IC Default" AI should use modern tactics but gather slowly and react late.
+This is different from pathfinders (one axis: which algorithm). AI has two orthogonal axes because *how smart the AI plays* and *what advantages it gets* are independent concerns. A "Brutal Col. Volkov" should play with armor-specialist tendencies and get economic bonuses and instant reactions; an "Easy Cdr. Stavros" should use air-superiority tactics but gather slowly and react late.
 
 **Modder as consumer — selecting an AI:**
 
@@ -436,6 +437,25 @@ replan_interval_ticks = 30
 - **D033 (QoL toggles / experience profiles):** AI preset selection integrates naturally into experience profiles. The "Classic Red Alert" experience profile bundles classic balance + classic AI + classic theme.
 - **D045 (pathfinding presets):** Same modder-selectable pattern. Mods select or provide pathfinders; mods select or provide AI implementations. Both distribute via Workshop; both compose with experience profiles. Key difference: pathfinding is one axis (algorithm), AI is two axes (algorithm + difficulty).
 - **D048 (render modes):** Same modder-selectable pattern. The trait-per-subsystem architecture means every pluggable system follows the same model: engine ships built-in implementations, mods can add more, players/modders pick what they want.
+- **D059 (communication system):** AI Commander taunts are delivered via D059's chat channel system as all-chat messages. Rate-limited and toggleable via D033 QoL (`ai_taunts: on/off`). Taunts are cosmetic — they do not affect simulation or determinism.
+
+### AI Commanders & Puppet Masters
+
+> **Full detail:** [AI Commanders & Puppet Masters](D043/commanders-and-puppet-masters.md)
+
+Two layers build on top of the behavioral AI presets:
+
+**AI Commanders — Named Personas:** Named characters with portraits, specializations, visible agendas, and contextual taunts wrapped around personality presets. 6 built-in RA1 commanders (Col. Volkov, Cmdr. Nadia, Gen. Kukov, Cdr. Stavros, Col. von Esling, Lt. Tanya). Community commanders via Workshop (YAML — no code required); LLM-generated commanders (Phase 7). Taunts delivered via D059 chat system, rate-limited and toggleable.
+
+**Puppet Masters — Strategic Guidance:** A Puppet Master is an external strategic guidance source that influences an AI player's objectives and priorities without directly controlling units. Three tiers:
+
+| Tier  | Name                    | Description                                                                                                          |
+| ----- | ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **0** | **Masterless**          | No PM assigned — standard autonomous AI. The default for all AI slots.                                               |
+| **1** | **AI Puppet Master**    | Algorithmic or LLM-based strategic advisor. D044 `LlmOrchestratorAi` is the primary implementation.                  |
+| **2** | **Human Puppet Master** | Real player providing strategic direction via structured intents. D073 Prompt-Coached is the primary implementation. |
+
+The `PuppetMaster` trait abstracts the guidance source; `GuidedAi` wraps any `AiStrategy` with any `PuppetMaster`, bridging them through `set_parameter()`. Architecture is open-ended for future PM types (rule-based advisors, ML models, training coaches). No PMs in ranked play (D055).
 
 ### Alternatives Considered
 
@@ -445,6 +465,7 @@ replan_interval_ticks = 30
 - Difficulty as a fixed enum only (rejected — modders should be able to define new difficulty levels via YAML without code changes; AoE2's 20+ years of community AI prove that a large parameter space outlasts a restrictive one)
 - No engine-level difficulty scaling (rejected — delegating difficulty entirely to AI implementations produces inconsistent experiences across different AIs; 0 A.D. and AoE2 both provide engine scaling with opt-out, proving this is the right separation of concerns)
 - No event callbacks on `AiStrategy` (rejected — polling-only AI misses reactive opportunities; Spring Engine and BWAPI both use event + tick hybrid, which is the proven model)
+- Unnamed presets only, no commander personas (rejected — prior art from Generals ZH, Civ 5/6, and C&C3 overwhelmingly shows that named AI characters with visible agendas increase replayability and engagement; the behavioral engine already supports differentiated personalities, the presentation layer is low-cost and high-impact)
 
 ---
 

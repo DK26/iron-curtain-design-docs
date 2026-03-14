@@ -33,13 +33,13 @@
 
 ## 1. Problem Statement
 
-D040 Layer 3 (Agentic Asset Generation) currently assumes a **diffusion model pipeline**: text prompt â†’ image model (DALL-E, Stable Diffusion, local diffusion) â†’ raw PNG â†’ Asset Studio post-processes (palette quantization, frame extraction, .shp conversion). This works, but has three problems for IC's context:
+D040 Layer 3 (Agentic Asset Generation) currently assumes a **diffusion model pipeline**: text prompt → image model (DALL-E, Stable Diffusion, local diffusion) → raw PNG → Asset Studio post-processes (palette quantization, frame extraction, .shp conversion). This works, but has three problems for IC's context:
 
-1. **CPU infeasibility.** Diffusion models require GPU. IC's Tier 1 (D047) is CPU-only inference. A modder on a 2012 laptop can generate mission YAML but not sprites â€” the toolchain is asymmetric.
+1. **CPU infeasibility.** Diffusion models require GPU. IC's Tier 1 (D047) is CPU-only inference. A modder on a 2012 laptop can generate mission YAML but not sprites — the toolchain is asymmetric.
 
 2. **Lossy quantization.** Diffusion models output 24-bit RGB images. Converting to 256-color palette-indexed format is a lossy step that discards the model's effort on color precision. The model wastes capacity on color detail that gets quantized away.
 
-3. **No structural awareness.** Diffusion models don't understand that frame 0 and frame 1 should look like the same tank rotated 11.25Â°. Each frame is generated independently, requiring manual consistency enforcement.
+3. **No structural awareness.** Diffusion models don't understand that frame 0 and frame 1 should look like the same tank rotated 11.25°. Each frame is generated independently, requiring manual consistency enforcement.
 
 The core insight: **C&C sprites are tiny discrete grids with a finite color vocabulary.** They're closer to text than to photographs. Can we skip the image model entirely and have a text LLM directly output palette-indexed pixel grids?
 
@@ -53,34 +53,34 @@ A typical RA1 unit sprite has these dimensions (from `formats/binary-codecs.md` 
 
 | Asset Type     | Pixel Size | Colors Used | Facings | Frames per Facing     | Total Frames |
 | -------------- | ---------- | ----------- | ------- | --------------------- | ------------ |
-| Infantry       | 24Ã—24     | 12â€“20     | 8       | 1â€“6 (walk cycle)    | 8â€“48       |
-| Vehicle body   | 32Ã—32     | 16â€“32     | 32      | 1 (static)            | 32           |
-| Vehicle turret | 16Ã—16     | 8â€“16      | 32      | 1 (static)            | 32           |
-| Building       | 48Ã—48     | 20â€“40     | 1       | 1â€“20 (construction) | 1â€“20       |
-| Terrain tile   | 24Ã—24     | 8â€“16      | 1       | 1                     | 1            |
+| Infantry       | 24×24     | 12–20     | 8       | 1–6 (walk cycle)    | 8–48       |
+| Vehicle body   | 32×32     | 16–32     | 32      | 1 (static)            | 32           |
+| Vehicle turret | 16×16     | 8–16      | 32      | 1 (static)            | 32           |
+| Building       | 48×48     | 20–40     | 1       | 1–20 (construction) | 1–20       |
+| Terrain tile   | 24×24     | 8–16      | 1       | 1                     | 1            |
 
 **Key properties that make this text-friendly:**
 
-1. **Palette-indexed.** Each pixel is an integer index (0â€“255) into a 256-color .pal file. This is already a discrete vocabulary â€” no continuous color space.
+1. **Palette-indexed.** Each pixel is an integer index (0–255) into a 256-color .pal file. This is already a discrete vocabulary — no continuous color space.
 
-2. **Small canvas.** A 32Ã—32 frame has 1,024 pixels. At one character per pixel (using hex for 16-color mode), that's ~1 KB of text. At two characters per pixel (hex for 256 colors), ~2 KB.
+2. **Small canvas.** A 32×32 frame has 1,024 pixels. At one character per pixel (using hex for 16-color mode), that's ~1 KB of text. At two characters per pixel (hex for 256 colors), ~2 KB.
 
-3. **Low entropy.** Most pixels in a sprite are either transparent (index 0) or one of 10â€“30 active colors. Run-length patterns are extremely common (background, outlines, fill).
+3. **Low entropy.** Most pixels in a sprite are either transparent (index 0) or one of 10–30 active colors. Run-length patterns are extremely common (background, outlines, fill).
 
 4. **Strong structural priors.** Military vehicles are bilaterally symmetric. Infantry follow anatomical proportions. Buildings have rectangular foundations. Shading follows consistent light direction (top-left in C&C).
 
-5. **VGA 6-bit palette.** Each color is 3 bytes of 6-bit values (0â€“63 per channel), meaning 262,144 possible colors â€” but in practice, RA1 palettes use ~200 distinct colors, of which any single sprite uses 10â€“40.
+5. **VGA 6-bit palette.** Each color is 3 bytes of 6-bit values (0–63 per channel), meaning 262,144 possible colors — but in practice, RA1 palettes use ~200 distinct colors, of which any single sprite uses 10–40.
 
 ### Comparison to Photographic Images
 
 | Property              | Photograph            | C&C Sprite                   |
 | --------------------- | --------------------- | ---------------------------- |
-| Resolution            | 1024Ã—1024+           | 24Ã—24 to 64Ã—64             |
+| Resolution            | 1024×1024+           | 24×24 to 64×64             |
 | Color depth           | 24-bit (16.7M colors) | 8-bit indexed (256 palette)  |
-| Colors per image      | Millions              | 10â€“40 active               |
+| Colors per image      | Millions              | 10–40 active               |
 | Pixel semantics       | Continuous gradients  | Discrete fill regions        |
 | Symmetry              | Rare                  | Common (vehicles, buildings) |
-| Tokens needed (naive) | ~50Kâ€“300K           | ~300â€“3,000                 |
+| Tokens needed (naive) | ~50K–300K           | ~300–3,000                 |
 
 A photograph needs a visual tokenizer (VQ-VAE, MAGVIT) to compress it into a tractable number of tokens. A C&C sprite **is already tokenized by the palette**.
 
@@ -88,27 +88,27 @@ A photograph needs a visual tokenizer (VQ-VAE, MAGVIT) to compress it into a tra
 
 ## 3. Prior Art: Visual Tokenization Research
 
-The AI research community has independently arrived at the same insight â€” that discrete token vocabularies can represent images â€” but for much harder problems (photographic images, video).
+The AI research community has independently arrived at the same insight — that discrete token vocabularies can represent images — but for much harder problems (photographic images, video).
 
 ### DALL-E 1 (OpenAI, 2021)
 
-- **Method:** Discrete VAE (dVAE) compresses 256Ã—256 images to 32Ã—32 grids of 8,192 possible tokens. A GPT-like transformer then generates these token sequences autoregressively.
+- **Method:** Discrete VAE (dVAE) compresses 256×256 images to 32×32 grids of 8,192 possible tokens. A GPT-like transformer then generates these token sequences autoregressively.
 - **Result:** Proved that autoregressive language models can generate coherent images when given the right tokenization.
-- **Relevance to IC:** DALL-E's 32Ã—32 token grid is *larger* than a C&C sprite's 24Ã—24 pixel grid. IC sprites are simpler than what DALL-E was designed for.
+- **Relevance to IC:** DALL-E's 32×32 token grid is *larger* than a C&C sprite's 24×24 pixel grid. IC sprites are simpler than what DALL-E was designed for.
 
 ### MAGVIT-v2 (Google, ICLR 2024)
 
-- **Paper:** "Language Model Beats Diffusion â€” Tokenizer is Key to Visual Generation" (arXiv:2310.05737)
+- **Paper:** "Language Model Beats Diffusion — Tokenizer is Key to Visual Generation" (arXiv:2310.05737)
 - **Method:** Lookup-Free Quantization video tokenizer maps images and video to compact discrete tokens with a shared vocabulary. Standard autoregressive transformer generates tokens.
 - **Result:** LLM *outperforms diffusion models* on ImageNet and Kinetics benchmarks.
 - **Key quote:** "The quality of the visual tokenizer dictates the upper bound of the visual generation quality."
-- **Relevance to IC:** IC already has the ideal tokenizer â€” the palette. The "lookup-free quantization" that MAGVIT-v2 had to invent is what palette indexing does natively.
+- **Relevance to IC:** IC already has the ideal tokenizer — the palette. The "lookup-free quantization" that MAGVIT-v2 had to invent is what palette indexing does natively.
 
 ### Parti (Google, 2022)
 
 - **Method:** ViT-VQGAN tokenizer + autoregressive transformer for text-to-image.
 - **Result:** High-quality text-to-image via pure token prediction, scaling to 20B parameters.
-- **Relevance to IC:** Validates that quality scales with model size even in token-based image generation. IC's sprites are simple enough that a small model (1â€“3B) should suffice.
+- **Relevance to IC:** Validates that quality scales with model size even in token-based image generation. IC's sprites are simple enough that a small model (1–3B) should suffice.
 
 ### Chameleon (Meta, 2024)
 
@@ -118,7 +118,7 @@ The AI research community has independently arrived at the same insight â€”
 
 ### Summary of Research Trajectory
 
-The AI community has spent 2021â€“2024 building sophisticated visual tokenizers to compress photographs into ~1,000 tokens. IC's sprites are *natively* ~1,000 tokens. The hard part of visual tokenization (converting continuous high-dimensional images to discrete low-dimensional sequences) is **already solved by the palette-indexed format**.
+The AI community has spent 2021–2024 building sophisticated visual tokenizers to compress photographs into ~1,000 tokens. IC's sprites are *natively* ~1,000 tokens. The hard part of visual tokenization (converting continuous high-dimensional images to discrete low-dimensional sequences) is **already solved by the palette-indexed format**.
 
 ---
 
@@ -126,7 +126,7 @@ The AI community has spent 2021â€“2024 building sophisticated visual tokeni
 
 ### ASCII Art Generation
 
-LLMs (even without fine-tuning) can generate ASCII art â€” text patterns that visually represent objects using character glyphs. This demonstrates spatial reasoning ability, though at very low resolution (~1-bit, character-cell granularity).
+LLMs (even without fine-tuning) can generate ASCII art — text patterns that visually represent objects using character glyphs. This demonstrates spatial reasoning ability, though at very low resolution (~1-bit, character-cell granularity).
 
 ### Hex Grid Representations in Roguelikes
 
@@ -178,11 +178,11 @@ BBS-era art using ANSI escape codes for 16-color pixel art at character resoluti
 
 ### Design Goals
 
-1. **Minimal tokens** â€” every character carries information; no verbose markup within pixel data
-2. **Round-trip lossless** â€” IST â†” .shp + .pal with zero information loss
-3. **LLM-learnable** â€” spatial patterns (symmetry, shading, outlines) are visually recognizable in the text
-4. **Human-editable** â€” a modder can open the file, change pixel values, and the result is immediately meaningful
-5. **Palette-semantic** â€” the mapping from index to meaning (transparent, outline, faction color, shadow) is explicit
+1. **Minimal tokens** — every character carries information; no verbose markup within pixel data
+2. **Round-trip lossless** — IST ↔ .shp + .pal with zero information loss
+3. **LLM-learnable** — spatial patterns (symmetry, shading, outlines) are visually recognizable in the text
+4. **Human-editable** — a modder can open the file, change pixel values, and the result is immediately meaningful
+5. **Palette-semantic** — the mapping from index to meaning (transparent, outline, faction color, shadow) is explicit
 
 ### Format Specification
 
@@ -192,7 +192,7 @@ BBS-era art using ANSI escape codes for 16-color pixel art at character resoluti
 
 meta:
   name: "htnk"                   # Asset identifier (matches .shp filename)
-  desc: "Heavy Tank â€” Allied"    # Human description (LLM prompt context)
+  desc: "Heavy Tank — Allied"    # Human description (LLM prompt context)
   type: unit                     # unit | building | terrain | infantry | projectile | effect
   size: [32, 32]                 # [width, height] in pixels per frame
   facings: 32                    # Number of rotation frames
@@ -221,7 +221,7 @@ remap_range: [16, 19]           # Indices that change with faction color
 
 frames:
   # Each frame is a grid of palette indices in hex (0-9, a-f for 0-15; 00-ff for 0-255)
-  # For sprites using â‰¤16 active colors, single-char hex (compact mode)
+  # For sprites using ≤16 active colors, single-char hex (compact mode)
   # For sprites using >16 active colors, two-char hex (full mode)
 
   - facing: 0                    # South (0 of 32)
@@ -266,11 +266,11 @@ frames:
 
 ### Compact Mode vs. Full Mode
 
-**Compact mode** (â‰¤16 active colors): Each pixel is one hex character (0â€“f). A 32Ã—32 frame = 32 lines Ã— 32 characters = **1,024 characters**.
+**Compact mode** (≤16 active colors): Each pixel is one hex character (0–f). A 32×32 frame = 32 lines × 32 characters = **1,024 characters**.
 
-**Full mode** (17â€“256 active colors): Each pixel is two hex characters (00â€“ff), space-separated or zero-padded. A 32Ã—32 frame = 32 lines Ã— 64 characters = **2,048 characters**.
+**Full mode** (17–256 active colors): Each pixel is two hex characters (00–ff), space-separated or zero-padded. A 32×32 frame = 32 lines × 64 characters = **2,048 characters**.
 
-Most RA1 unit sprites use â‰¤16 active colors (even though the palette has 256 entries, any single sprite draws from a small subset). Compact mode covers the common case.
+Most RA1 unit sprites use ≤16 active colors (even though the palette has 256 entries, any single sprite draws from a small subset). Compact mode covers the common case.
 
 ### Shadow Encoding
 
@@ -303,7 +303,7 @@ The pixel grids are raw text, but the metadata is structured YAML because:
 LLM tokenizers (BPE) compress repetitive text efficiently. The pixel grid lines in IST are highly compressible because:
 - Long runs of `0` (transparent background) collapse to few tokens
 - Repeated patterns (symmetric shapes) share token sequences
-- The hex alphabet (0â€“9, aâ€“f) maps to single tokens in most tokenizers
+- The hex alphabet (0–9, a–f) maps to single tokens in most tokenizers
 
 ### Measured Token Counts (Estimated)
 
@@ -311,14 +311,14 @@ Using a BPE tokenizer (GPT-4/Qwen2 family), approximate token counts:
 
 | Asset                             | Pixel Size | Facings | Raw Chars | Est. Tokens (pixels only) | Est. Tokens (full IST) |
 | --------------------------------- | ---------- | ------- | --------- | ------------------------- | ---------------------- |
-| Infantry (1 frame)                | 24Ã—24     | 1       | 576       | ~150                      | ~200                   |
-| Infantry (8 facings)              | 24Ã—24     | 8       | 4,608     | ~1,200                    | ~1,500                 |
-| Vehicle body (1 frame)            | 32Ã—32     | 1       | 1,024     | ~270                      | ~350                   |
-| Vehicle body (32 facings)         | 32Ã—32     | 32      | 32,768    | ~8,500                    | ~9,500                 |
-| Building (1 frame)                | 48Ã—48     | 1       | 2,304     | ~600                      | ~700                   |
-| Building (20 construction frames) | 48Ã—48     | 1Ã—20   | 46,080    | ~12,000                   | ~13,000                |
-| Terrain tile                      | 24Ã—24     | 1       | 576       | ~150                      | ~200                   |
-| Palette (.pal metadata)           | â€”        | â€”     | ~300      | ~80                       | ~80                    |
+| Infantry (1 frame)                | 24×24     | 1       | 576       | ~150                      | ~200                   |
+| Infantry (8 facings)              | 24×24     | 8       | 4,608     | ~1,200                    | ~1,500                 |
+| Vehicle body (1 frame)            | 32×32     | 1       | 1,024     | ~270                      | ~350                   |
+| Vehicle body (32 facings)         | 32×32     | 32      | 32,768    | ~8,500                    | ~9,500                 |
+| Building (1 frame)                | 48×48     | 1       | 2,304     | ~600                      | ~700                   |
+| Building (20 construction frames) | 48×48     | 1×20   | 46,080    | ~12,000                   | ~13,000                |
+| Terrain tile                      | 24×24     | 1       | 576       | ~150                      | ~200                   |
+| Palette (.pal metadata)           | —        | —     | ~300      | ~80                       | ~80                    |
 
 ### Context Window Fit
 
@@ -326,22 +326,22 @@ Using a BPE tokenizer (GPT-4/Qwen2 family), approximate token counts:
 | --------------------- | ------------------ | --------------------------------------------------------------- |
 | Qwen2.5-1.5B (Tier 1) | 32K tokens         | ~3 full vehicle sprites, or ~20 infantry, or ~100 terrain tiles |
 | Phi-4-mini (Tier 1)   | 128K tokens        | An entire game module's complete sprite set                     |
-| Claude/GPT-4 (Tier 2) | 128Kâ€“200K tokens | Multiple sprite sets for comparison/style transfer              |
+| Claude/GPT-4 (Tier 2) | 128K–200K tokens | Multiple sprite sets for comparison/style transfer              |
 
-**Key insight:** Even the smallest Tier 1 CPU model can hold several complete sprites in context â€” enough for few-shot learning: "Here are 3 example tanks. Generate a 4th with a different turret."
+**Key insight:** Even the smallest Tier 1 CPU model can hold several complete sprites in context — enough for few-shot learning: "Here are 3 example tanks. Generate a 4th with a different turret."
 
 ### Comparison to Diffusion Requirements
 
 A Stable Diffusion generation requires:
 - ~1B+ parameter model (4+ GB VRAM)
-- GPU inference (~2â€“10 seconds per image on consumer GPU)
+- GPU inference (~2–10 seconds per image on consumer GPU)
 - Post-processing pipeline (quantize, extract, convert)
 - No CPU-only path is practical
 
 An IST text generation requires:
 - ~1.5B parameter text model (~1 GB at Q4_K_M)
-- CPU inference (~5â€“15 seconds for a 32Ã—32 sprite at 38 tok/s)
-- Direct conversion (IST â†’ .shp, lossless, no quantization)
+- CPU inference (~5–15 seconds for a 32×32 sprite at 38 tok/s)
+- Direct conversion (IST → .shp, lossless, no quantization)
 - Runs on the same Tier 1 CPU models already planned for D047
 
 ---
@@ -356,13 +356,13 @@ RA1 ships with approximately:
 - ~30 effect/projectile sprites
 - ~10 palettes
 
-OpenRA's mod repository adds cleaned-up versions plus community contributions. The total usable corpus is ~300â€“500 sprite files.
+OpenRA's mod repository adds cleaned-up versions plus community contributions. The total usable corpus is ~300–500 sprite files.
 
 ### Conversion Pipeline
 
 ```
-.shp + .pal  â†’  cnc-formats inspect  â†’  IST (text)
-                                         â†“
+.shp + .pal  →  cnc-formats inspect  →  IST (text)
+                                         ↓
                                     Training pairs:
                                     (description, IST text)
 ```
@@ -383,7 +383,7 @@ Each sprite gets a human-written description tag:
 ### Data Augmentation
 
 The small corpus (~500 sprites) benefits from augmentation:
-- **Palette swaps:** Re-index the same sprite with different palettes â†’ new training examples with same geometry
+- **Palette swaps:** Re-index the same sprite with different palettes → new training examples with same geometry
 - **Mirror:** Horizontal flip for all non-symmetric sprites
 - **Description variation:** Multiple description phrasings for the same sprite
 - **Partial occlusion:** Mask portions of the sprite and train the model to infill
@@ -391,7 +391,7 @@ The small corpus (~500 sprites) benefits from augmentation:
 ### Fine-Tuning Strategy
 
 **LoRA fine-tuning** (Low-Rank Adaptation) on a base model (Qwen2.5-1.5B or Phi-4-mini):
-- Small adapter weights (~50â€“100 MB), not a full model retrain
+- Small adapter weights (~50–100 MB), not a full model retrain
 - Trains on consumer hardware (single GPU or high-end CPU)
 - Base model retains general text capability; LoRA adds sprite generation skill
 - Can be distributed as a D047 model pack via Workshop
@@ -406,11 +406,11 @@ Given a corpus of ~500 annotated IST files, a fine-tuned model can learn:
 - **Outline rules:** C&C sprites use 1-pixel dark outlines. The model sees this as index `1` consistently surrounding filled regions.
 - **Shadow direction:** Shadows fall southeast. The shadow layer offset is consistent across the corpus.
 - **Symmetry:** Vehicles are often bilaterally symmetric. The model can learn to generate symmetric pixel rows.
-- **Bounding box usage:** Units don't fill their full frame â€” there's transparent padding. The model learns typical fill ratios.
+- **Bounding box usage:** Units don't fill their full frame — there's transparent padding. The model learns typical fill ratios.
 
 ### Palette Semantics
-- **Faction remap zone:** Indices 16â€“19 (or whatever the remap range is) always appear in the same structural positions â€” the "team-colored" areas of the unit.
-- **Metal shading:** Dark-to-light progressions (indices 32â†’33â†’34â†’35) follow consistent light direction.
+- **Faction remap zone:** Indices 16–19 (or whatever the remap range is) always appear in the same structural positions — the "team-colored" areas of the unit.
+- **Metal shading:** Dark-to-light progressions (indices 32→33→34→35) follow consistent light direction.
 - **Tread/wheel patterns:** Ground contact points use specific dark indices.
 
 ### Rotation Coherence
@@ -431,9 +431,9 @@ Given the corpus represents RA1's art style, a fine-tuned model would naturally 
 
 The IST principle extends to other IC resource types:
 
-### Palettes (.pal â†’ Palette Text)
+### Palettes (.pal → Palette Text)
 
-Already almost text â€” a palette is 256 RGB triplets. As a text list:
+Already almost text — a palette is 256 RGB triplets. As a text list:
 
 ```yaml
 palette:
@@ -452,16 +452,16 @@ palette:
 
 Token count: ~600 tokens for a complete 256-color palette. Trivial for any LLM.
 
-**LLM capability:** "Generate a volcanic wasteland palette â€” reds, oranges, charred blacks, lava glows" â†’ a 256-entry color list that follows the structural conventions (remap ranges preserved, shadow indices consistent).
+**LLM capability:** "Generate a volcanic wasteland palette — reds, oranges, charred blacks, lava glows" → a 256-entry color list that follows the structural conventions (remap ranges preserved, shadow indices consistent).
 
-### Maps (Tile Grid â†’ Map Text)
+### Maps (Tile Grid → Map Text)
 
 Maps are 2D grids of tile indices, exactly like sprites but at map scale:
 
 ```yaml
 map:
   name: "desert_outpost"
-  size: [64, 64]           # 64Ã—64 tiles
+  size: [64, 64]           # 64×64 tiles
   tile_set: "desert"
   cells: |
     SSSSSSSSDDDDDDDDDDDDDDDDSSSSSSSS...
@@ -470,27 +470,27 @@ map:
     # S=sand, D=desert, R=road, W=water, C=cliff, O=ore
 ```
 
-A 64Ã—64 map is 4,096 characters â€” ~1,000 tokens. Well within context.
+A 64×64 map is 4,096 characters — ~1,000 tokens. Well within context.
 
-**LLM capability:** "Generate a 64Ã—64 desert map with a river running north-south, two ore patches in the northwest and southeast, and a road crossing the river at the middle" â†’ a tile grid that matches existing map conventions.
+**LLM capability:** "Generate a 64×64 desert map with a river running north-south, two ore patches in the northwest and southeast, and a road crossing the river at the middle" → a tile grid that matches existing map conventions.
 
 Note: LLM-generated mission maps (D016) already use a feature-zone description approach. IST-style maps are a more granular alternative for tile-level precision.
 
-### Terrain Templates (.tmp â†’ Template Text)
+### Terrain Templates (.tmp → Template Text)
 
-Terrain templates define how tile transitions work (landâ†’water edges, road curves). These are small (8Ã—8 to 16Ã—16) indexed grids â€” trivially text-encodable.
+Terrain templates define how tile transitions work (land→water edges, road curves). These are small (8×8 to 16×16) indexed grids — trivially text-encodable.
 
 ### UI Themes (Chrome Sprite Sheets)
 
 UI elements (buttons, panels, scrollbars) are sprite sheets with 9-slice metadata. The sprite data is IST-encodable; the layout metadata is already YAML.
 
-### Sound Effects â€” Not Text-Native
+### Sound Effects — Not Text-Native
 
 Audio waveforms are high-dimensional continuous data. Text encoding (e.g., base64 WAV) would be enormous and unlearnable. Audio remains in the domain of specialized models (`SoundFxProvider`, `VoiceProvider`). This is an honest boundary of the text-encoding approach.
 
-### Music â€” Partially Text-Native
+### Music — Partially Text-Native
 
-MIDI and ABC notation are text-native music formats. An LLM can generate ABC notation that converts to MIDI. This is a known capability â€” multiple models already generate ABC music. For C&C-style synthwave/industrial music, the quality ceiling of text-generated music is likely insufficient for release quality, but useful for prototyping soundtrack mood.
+MIDI and ABC notation are text-native music formats. An LLM can generate ABC notation that converts to MIDI. This is a known capability — multiple models already generate ABC music. For C&C-style synthwave/industrial music, the quality ceiling of text-generated music is likely insufficient for release quality, but useful for prototyping soundtrack mood.
 
 ---
 
@@ -499,34 +499,34 @@ MIDI and ABC notation are text-native music formats. An LLM can generate ABC not
 ### Current D040 Architecture
 
 ```
-Text Prompt â†’ AssetGenerator trait â†’ Image Provider (DALL-E/SD/Local)
-                                          â†“
+Text Prompt → AssetGenerator trait → Image Provider (DALL-E/SD/Local)
+                                          ↓
                                      Raw PNG image
-                                          â†“
+                                          ↓
                               Asset Studio Post-Processing
                               (palette quantize, frame extract,
                                .shp conversion)
-                                          â†“
+                                          ↓
                                    Game-ready .shp + .pal
 ```
 
 ### Proposed IST-Enhanced Architecture
 
 ```
-Text Prompt â†’ AssetGenerator trait â†’ IST Text Provider (fine-tuned LLM)
-                                          â†“
+Text Prompt → AssetGenerator trait → IST Text Provider (fine-tuned LLM)
+                                          ↓
                                      IST text output
-                                          â†“
-                              IST â†’ .shp direct conversion
+                                          ↓
+                              IST → .shp direct conversion
                               (lossless, no quantization needed)
-                                          â†“
+                                          ↓
                                    Game-ready .shp + .pal
 ```
 
-**The trait doesn't change** â€” `AssetGenerator` returns generated asset data. The difference is in the provider implementation:
+**The trait doesn't change** — `AssetGenerator` returns generated asset data. The difference is in the provider implementation:
 
-- **Diffusion provider:** Returns raw PNG bytes â†’ requires post-processing
-- **IST text provider:** Returns IST YAML text â†’ direct lossless conversion
+- **Diffusion provider:** Returns raw PNG bytes → requires post-processing
+- **IST text provider:** Returns IST YAML text → direct lossless conversion
 
 Both providers satisfy the same `AssetGenerator` trait. D047 task routing determines which provider handles the request based on user configuration and provider availability.
 
@@ -542,7 +542,7 @@ For best results, both providers can coexist:
 | Palette generation    | IST text      | Exact color control needed                             |
 | Building sprite       | IST text      | Structural regularity, construction animation sequence |
 | Effect/explosion      | Diffusion     | Organic, non-geometric shapes                          |
-| Terrain tile          | IST text      | Must tile seamlessly â€” text gives exact edge control |
+| Terrain tile          | IST text      | Must tile seamlessly — text gives exact edge control |
 | Portrait/briefing art | Diffusion     | Illustrative, non-pixel-art content                    |
 
 ### SDK Workflow Addition
@@ -551,10 +551,10 @@ Asset Studio gains a new workflow option:
 
 1. **Describe** what you want (same as current)
 2. **Choose mode:** "Generate as pixel art (IST)" vs. "Generate as image (diffusion)"
-3. **IST mode:** LLM outputs IST directly â†’ preview â†’ edit text if needed â†’ convert to .shp
-4. **Diffusion mode:** Image model outputs PNG â†’ preview â†’ quantize â†’ convert (existing flow)
+3. **IST mode:** LLM outputs IST directly → preview → edit text if needed → convert to .shp
+4. **Diffusion mode:** Image model outputs PNG → preview → quantize → convert (existing flow)
 
-The IST mode adds a unique capability: **the modder can hand-edit the text output before conversion**. Change a pixel's color index, fix an asymmetry, adjust an outline â€” all in a text editor. This is impossible with diffusion-generated PNGs.
+The IST mode adds a unique capability: **the modder can hand-edit the text output before conversion**. Change a pixel's color index, fix an asymmetry, adjust an outline — all in a text editor. This is impossible with diffusion-generated PNGs.
 
 ---
 
@@ -562,17 +562,17 @@ The IST mode adds a unique capability: **the modder can hand-edit the text outpu
 
 | Aspect                                | Diffusion (DALL-E/SD)                    | IST Text LLM                                    |
 | ------------------------------------- | ---------------------------------------- | ----------------------------------------------- |
-| **Output resolution**                 | 512Ã—512+ (too large, downscale needed)  | Exact pixel size (24Ã—24, 32Ã—32, 48Ã—48)       |
+| **Output resolution**                 | 512×512+ (too large, downscale needed)  | Exact pixel size (24×24, 32×32, 48×48)       |
 | **Color control**                     | Approximate (24-bit, needs quantization) | Exact palette indices (lossless)                |
 | **Faction remap**                     | Post-process nightmare                   | Built into format (remap_range)                 |
 | **Frame consistency**                 | Each frame independent                   | All frames in one context window                |
-| **CPU inference**                     | Impractical                              | Tier 1 feasible (~5â€“15s per frame)            |
+| **CPU inference**                     | Impractical                              | Tier 1 feasible (~5–15s per frame)            |
 | **Training data needed**              | Millions of images                       | ~500 annotated sprites                          |
 | **Model size**                        | ~1B+ params, 4+ GB VRAM                  | ~1.5B params, ~1 GB RAM (Q4_K_M)                |
 | **Editability**                       | Regenerate entire image                  | Edit specific pixels in text                    |
 | **Round-trip fidelity**               | Lossy (quantization)                     | Lossless                                        |
-| **Artistic quality (photorealistic)** | Excellent                                | N/A â€” not the goal                            |
-| **Artistic quality (pixel art)**      | Mixed â€” often over-detailed            | Likely good â€” trained on actual C&C pixel art |
+| **Artistic quality (photorealistic)** | Excellent                                | N/A — not the goal                            |
+| **Artistic quality (pixel art)**      | Mixed — often over-detailed            | Likely good — trained on actual C&C pixel art |
 | **Animation coherence**               | Poor (per-frame)                         | Better (all frames visible to model)            |
 | **Shadow consistency**                | Must be painted per frame                | Separate shadow layer, consistent rules         |
 | **Tiling correctness (terrain)**      | No guarantee                             | Can enforce edge constraints in text            |
@@ -602,26 +602,26 @@ The model generates what it's trained on. Ask for "Soviet heavy tank" and it'll 
 
 ### Larger Sprites
 
-A 128Ã—128 sprite at 64 colors (two-char hex mode) is ~32K characters per frame â€” ~8,000 tokens. Still feasible for large-context models, but pushes Tier 1 limits for multi-frame sprites. The IST approach works best for classic C&C scale (24Ã—48 pixels), which is IC's primary target.
+A 128×128 sprite at 64 colors (two-char hex mode) is ~32K characters per frame — ~8,000 tokens. Still feasible for large-context models, but pushes Tier 1 limits for multi-frame sprites. The IST approach works best for classic C&C scale (24×48 pixels), which is IC's primary target.
 
 ### Not a Solved Problem
 
-As of 2026, no one has shipped a production system that fine-tunes a text LLM specifically on palette-indexed pixel art and generates game-ready sprites from text descriptions. The research foundations (MAGVIT-v2, DALL-E 1 tokenization) validate the approach, and the XPM precedent proves the format is viable â€” but IC would be among the first to implement this specific pipeline. This is experimental, Phase 7 work.
+As of 2026, no one has shipped a production system that fine-tunes a text LLM specifically on palette-indexed pixel art and generates game-ready sprites from text descriptions. The research foundations (MAGVIT-v2, DALL-E 1 tokenization) validate the approach, and the XPM precedent proves the format is viable — but IC would be among the first to implement this specific pipeline. This is experimental, Phase 7 work.
 
 ---
 
 ## 13. Implementation Roadmap
 
-### Phase 0â€“1: IST Format + Converter (Foundation)
+### Phase 0–1: IST Format + Converter (Foundation)
 
-**Effort:** ~1â€“2 weeks
+**Effort:** ~1–2 weeks
 **Crate:** `cnc-formats` (MIT/Apache-2.0)
 
 - Define IST v1 format specification
-- Implement `.shp + .pal â†’ IST` converter (one direction)
-- Implement `IST â†’ .shp + .pal` converter (round-trip)
+- Implement `.shp + .pal → IST` converter (one direction)
+- Implement `IST → .shp + .pal` converter (round-trip)
 - Add `cnc-formats convert --to ist` and `cnc-formats convert --format ist` CLI subcommands
-- Validate round-trip: `.shp â†’ IST â†’ .shp` produces byte-identical output
+- Validate round-trip: `.shp → IST → .shp` produces byte-identical output
 - Validation: `cnc-formats validate` accepts IST files
 
 **Value independent of LLMs:** IST is immediately useful as a human-readable, diffable, version-controllable sprite format. Modders can view and edit sprites in any text editor.
@@ -631,14 +631,14 @@ As of 2026, no one has shipped a production system that fine-tunes a text LLM sp
 **Effort:** ~1 week
 **Crate:** Tooling script, not a shipped crate
 
-- Convert entire RA1 sprite set to IST using the Phase 0â€“1 converter
+- Convert entire RA1 sprite set to IST using the Phase 0–1 converter
 - Write description annotations for each sprite (manual + template)
 - Generate augmented training pairs (palette swaps, mirrors, description variants)
-- Package as a training dataset (~500â€“2,000 examples after augmentation)
+- Package as a training dataset (~500–2,000 examples after augmentation)
 
 ### Phase 7: LLM Fine-Tuning + AssetGenerator Integration
 
-**Effort:** ~2â€“4 weeks (follows D047 infrastructure)
+**Effort:** ~2–4 weeks (follows D047 infrastructure)
 **Crate:** `ic-llm` (IST provider implementation)
 
 - LoRA fine-tune Qwen2.5-1.5B (or current Tier 1 model) on IST corpus
@@ -651,7 +651,7 @@ As of 2026, no one has shipped a production system that fine-tunes a text LLM sp
 
 If the IST format and converter prove useful beyond IC, they could be extracted as a standalone MIT/Apache-2.0 crate (same pattern as `cnc-formats`, `fixed-game-math`):
 
-- `sprite-text` â€” IST format parser/writer, palette operations, round-trip validation
+- `sprite-text` — IST format parser/writer, palette operations, round-trip validation
 - Useful for any retro game engine, pixel art tool, or LLM-based sprite generation project
 - Decision deferred until the format proves itself in IC's pipeline
 
@@ -669,5 +669,5 @@ If the IST format and converter prove useful beyond IC, they could be extracted 
 | `architecture/ra-experience.md`      | Facing quantization (8/32 facings) and frame indexing rules                                 |
 | `cpu-llm-model-evaluation.md`        | Tier 1 model capabilities and RAM budgets                                                   |
 | `pure-rust-inference-feasibility.md` | candle-based inference runtime that would run the IST fine-tuned model                      |
-| `llm-generation-schemas.md`          | Mission YAML schemas â€” IST follows the same "structured text output" philosophy           |
+| `llm-generation-schemas.md`          | Mission YAML schemas — IST follows the same "structured text output" philosophy           |
 | D057 (Skill Library)                 | Generated IST sprites that pass quality validation could be stored as skill library entries |

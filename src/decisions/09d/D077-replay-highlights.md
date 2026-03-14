@@ -1,16 +1,16 @@
-## D077: Replay Highlights & Play-of-the-Game â€” Auto-Detection, POTG, and Main Menu Background
+## D077: Replay Highlights & Play-of-the-Game — Auto-Detection, POTG, and Main Menu Background
 
 |                |                                                                                                                                                                                                                                                                                                                                                  |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Status**     | Accepted                                                                                                                                                                                                                                                                                                                                         |
 | **Phase**      | Phase 2 (new analysis events), Phase 3 (highlight detection + POTG + menu background), Phase 5 (multiplayer POTG), Phase 6a (Lua/WASM custom detectors + Workshop highlight packs), Phase 7 (video export + LLM commentary + foreign replay highlights)                                                                                          |
 | **Depends on** | D010 (snapshottable state/replays), D031 (telemetry/analysis events), D032 (UI themes/shellmap), D033 (QoL toggles), D034 (SQLite storage), D049 (Workshop assets/CAS), D056 (foreign replay import), D058 (console commands), D059 (pings/markers)                                                                                              |
-| **Driver**     | No RTS has automatic highlight detection â€” SC2 attempted it in 2016 and abandoned it. IC's rich Analysis Event Stream (15 event types growing to 21), existing post-game MVP infrastructure, and replay keyframe system position it to be the first RTS to ship this feature. Community request across OpenRA, C&C Remastered, and SC2 forums. |
+| **Driver**     | No RTS has automatic highlight detection — SC2 attempted it in 2016 and abandoned it. IC's rich Analysis Event Stream (15 event types growing to 21), existing post-game MVP infrastructure, and replay keyframe system position it to be the first RTS to ship this feature. Community request across OpenRA, C&C Remastered, and SC2 forums. |
 
 ### Decision Capsule (LLM/RAG Summary)
 
 - **Status:** Accepted
-- **Phase:** Phase 2 (events) â†’ Phase 3 (core) â†’ Phase 5 (multiplayer) â†’ Phase 6a (modding) â†’ Phase 7 (polish)
+- **Phase:** Phase 2 (events) → Phase 3 (core) → Phase 5 (multiplayer) → Phase 6a (modding) → Phase 7 (polish)
 - **Canonical for:** Automatic replay highlight detection, Play-of-the-Game (POTG) on post-game screen, per-player highlight library, main menu highlight background, community/tournament highlight packs
 - **Scope:** `ic-sim` (6 new analysis events), `ic-game`/`ic-ui` (scoring pipeline + POTG viewport + menu background), `ic-render` (highlight camera AI), `ic-script` (Lua/WASM custom detectors)
 - **Decision:** IC detects "interesting moments" from the Analysis Event Stream using a four-dimension scoring pipeline (engagement density, momentum swing, z-score anomaly, rarity bonus), generates a POTG per match shown on the post-game screen, accumulates per-player highlights in SQLite, and offers personal/community highlights as a main menu background alternative to shellmap AI battles.
@@ -25,7 +25,7 @@ IC's replay system records a rich Analysis Event Stream (15 event types: `UnitDe
 
 **None of this infrastructure is currently used for automatic highlight detection or highlight playback.**
 
-Players must manually scrub through replays to find interesting moments. The main menu's only dynamic background option is a shellmap AI battle â€” the same scripted battle every launch. Tournament organizers have no automated way to extract highlight reels. New players miss the emotional punctuation of a "Play of the Game" moment after each match.
+Players must manually scrub through replays to find interesting moments. The main menu's only dynamic background option is a shellmap AI battle — the same scripted battle every launch. Tournament organizers have no automated way to extract highlight reels. New players miss the emotional punctuation of a "Play of the Game" moment after each match.
 
 ### Prior Art
 
@@ -34,17 +34,17 @@ Players must manually scrub through replays to find interesting moments. The mai
 | **CS:GO/CS2**               | "Your Best" multi-kill clips, server-side scoring      | No      | Industry gold standard for FPS                                  |
 | **Overwatch**               | POTG with multi-dimensional scoring, role weighting    | No      | Iconic feature, copied widely                                   |
 | **Dota 2**                  | Post-game multikill/rampage replays                    | Partial | Kill-count dominant, less nuanced                               |
-| **StarCraft 2**             | None â€” Blizzard attempted 2016â€“2017, never shipped | Yes     | Abandoned â€” "best moment" ambiguity at different skill levels |
+| **StarCraft 2**             | None — Blizzard attempted 2016–2017, never shipped | Yes     | Abandoned — "best moment" ambiguity at different skill levels |
 | **Age of Empires 4**        | Timeline event markers, no auto-detection              | Yes     | Markers only, no scoring or POTG                                |
-| **OpenRA / C&C Remastered** | None â€” community-requested feature                   | Yes     | No implementation                                               |
+| **OpenRA / C&C Remastered** | None — community-requested feature                   | Yes     | No implementation                                               |
 
-**Key insight from SC2's failure:** They tried to define a universal "best moment" across skill brackets. IC solves this with **per-match baselines** â€” highlights are unusual *relative to this match* (z-score anomaly), not compared to a global database.
+**Key insight from SC2's failure:** They tried to define a universal "best moment" across skill brackets. IC solves this with **per-match baselines** — highlights are unusual *relative to this match* (z-score anomaly), not compared to a global database.
 
 ### Decision
 
 #### 1. Six New Analysis Event Types
 
-Extend the Analysis Event Stream (currently 15 types â†’ 21) with engagement-level events that the highlight scoring pipeline needs:
+Extend the Analysis Event Stream (currently 15 types → 21) with engagement-level events that the highlight scoring pipeline needs:
 
 | New Event           | Fields                                                                                                             | Detection Trigger                                                                     |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
@@ -55,7 +55,7 @@ Extend the Analysis Event Stream (currently 15 types â†’ 21) with engagemen
 | `ArmyWipe`          | `tick`, `player`, `units_lost`, `total_value_lost`, `percentage_of_army`                                           | >70% of a player's army destroyed in a single engagement                              |
 | `ComebackMoment`    | `tick`, `player`, `deficit_before`, `advantage_after`, `swing_value`                                               | Player transitions from losing to winning position (from `PlayerStatSnapshot` deltas) |
 
-These events are **observation-only** â€” they do not feed back into the simulation. They are recorded into the `.icrep` Analysis Event Stream during match recording.
+These events are **observation-only** — they do not feed back into the simulation. They are recorded into the `.icrep` Analysis Event Stream during match recording.
 
 #### 2. Four-Dimension Highlight Scoring Pipeline
 
@@ -63,12 +63,12 @@ Runs **post-match** over the recorded event stream (not real-time). Uses a slidi
 
 | Dimension      | Weight | What It Measures                                                                                                                                      |
 | -------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Engagement** | 0.35   | Kill density within window â€” unit value destroyed, kill clusters (3-second sub-window), building/tech/harvester multipliers                         |
-| **Momentum**   | 0.25   | Economic/military swing magnitude â€” army value delta, economy rate delta, territory delta. Comeback bonus (1.5Ã—), collapse bonus (1.2Ã—)           |
-| **Anomaly**    | 0.20   | Statistical outlier relative to match baselines â€” z-score against per-match averages for kills, building losses, economy swings. Flagged at z > 2.0 |
-| **Rarity**     | 0.20   | Flat bonuses for inherently exciting events â€” superweapon (0.9), army wipe (0.8), base destroyed (0.85), comeback (0.75), match-ending kill (0.6)   |
+| **Engagement** | 0.35   | Kill density within window — unit value destroyed, kill clusters (3-second sub-window), building/tech/harvester multipliers                         |
+| **Momentum**   | 0.25   | Economic/military swing magnitude — army value delta, economy rate delta, territory delta. Comeback bonus (1.5×), collapse bonus (1.2×)           |
+| **Anomaly**    | 0.20   | Statistical outlier relative to match baselines — z-score against per-match averages for kills, building losses, economy swings. Flagged at z > 2.0 |
+| **Rarity**     | 0.20   | Flat bonuses for inherently exciting events — superweapon (0.9), army wipe (0.8), base destroyed (0.85), comeback (0.75), match-ending kill (0.6)   |
 
-**Composite score** = `0.35 Ã— Engagement + 0.25 Ã— Momentum + 0.20 Ã— Anomaly + 0.20 Ã— Rarity`
+**Composite score** = `0.35 × Engagement + 0.25 × Momentum + 0.20 × Anomaly + 0.20 × Rarity`
 
 After scoring all windows, **non-maximum suppression** merges overlapping windows (keep peak, discard neighbors within 15 seconds). **Top-N selection** picks POTG (N=1) and highlight reel (N=5) with category diversity enforcement.
 
@@ -78,9 +78,9 @@ After scoring all windows, **non-maximum suppression** merges overlapping window
 
 After each match, the highest-scoring highlight moment is displayed as a **POTG viewport** on the post-game screen:
 
-- Renders the replay segment (20â€“45 seconds) in a bounded viewport with the highlight camera AI
+- Renders the replay segment (20–45 seconds) in a bounded viewport with the highlight camera AI
 - Category label from YAML-moddable pool (e.g., "Decisive Assault", "Against All Odds", "Nuclear Option")
-- **Skippable** â€” Escape or Skip button jumps to existing MVP/stats screen
+- **Skippable** — Escape or Skip button jumps to existing MVP/stats screen
 - **Multiplayer:** All players see the same POTG (deterministic scoring from the same event stream)
 - **Team games:** Bonus for coordinated team actions in the same engagement window
 
@@ -109,7 +109,7 @@ CREATE TABLE highlights (
 );
 ```
 
-5 highlights per match Ã— 1,000 matches = ~1â€“2.5 MB in SQLite. Actual replay data stays in `.icrep` files.
+5 highlights per match × 1,000 matches = ~1–2.5 MB in SQLite. Actual replay data stays in `.icrep` files.
 
 #### 5. Main Menu Highlight Background
 
@@ -130,9 +130,9 @@ A new menu background option alongside static image and shellmap AI battle:
 
 Extends the existing Directed Camera mode with cinematic behaviors tuned for short clips:
 
-1. **Pre-roll** (3s): Establishing shot â€” zoom out to show both armies approaching
-2. **Engagement**: Track center-of-mass of active combat units, zoom adaptive to engagement spread (tight <10 cells, medium 10â€“30, wide >30)
-3. **Climax**: Brief 0.5Ã— slow-motion for 2 seconds around peak kill cluster
+1. **Pre-roll** (3s): Establishing shot — zoom out to show both armies approaching
+2. **Engagement**: Track center-of-mass of active combat units, zoom adaptive to engagement spread (tight <10 cells, medium 10–30, wide >30)
+3. **Climax**: Brief 0.5× slow-motion for 2 seconds around peak kill cluster
 4. **Resolution** (3s): Zoom out to show aftermath, hold position
 5. **Post-roll** (2s): Fade transition
 
@@ -156,7 +156,7 @@ highlights:
     camera_path: "cameras/grand-final-g3-nuke.bin"
 ```
 
-Packs include keyframe-trimmed replay segments (not full replays) â€” typically 2â€“10 MB for 10â€“20 moments.
+Packs include keyframe-trimmed replay segments (not full replays) — typically 2–10 MB for 10–20 moments.
 
 ### Scoring Configuration (YAML-Moddable)
 
@@ -240,20 +240,20 @@ RTS engagements are longer than FPS clips. Window sizes adapt:
 
 ### Alternatives Considered
 
-1. **Manual-only highlights (status quo in all RTS games):** Lowest effort. But misses the emotional POTG moment and the personal connection of "my highlights on my menu." Rejected â€” the infrastructure already exists.
+1. **Manual-only highlights (status quo in all RTS games):** Lowest effort. But misses the emotional POTG moment and the personal connection of "my highlights on my menu." Rejected — the infrastructure already exists.
 
 2. **Kill-count-only scoring (Dota 2 model):** Simple but misses RTS-specific moments (comebacks, superweapons, economy raids). Kill-count dominant scoring would always favor the aggressor, missing defensive brilliance. Rejected.
 
-3. **Global baseline scoring (SC2's attempted approach):** Compare against a global database of "typical moments per bracket." This was why SC2 abandoned the feature â€” too many edge cases, bracket estimation errors, and "one player's routine is another's highlight." Rejected in favor of per-match baselines (z-score anomaly against *this match*).
+3. **Global baseline scoring (SC2's attempted approach):** Compare against a global database of "typical moments per bracket." This was why SC2 abandoned the feature — too many edge cases, bracket estimation errors, and "one player's routine is another's highlight." Rejected in favor of per-match baselines (z-score anomaly against *this match*).
 
-4. **Real-time highlight detection:** Compute highlights during the match for live spectator feeds. Higher complexity, performance risk in sim thread. Deferred â€” post-match scoring is sufficient for all current use cases. Live detection could be Phase 7+ for tournament broadcasts.
+4. **Real-time highlight detection:** Compute highlights during the match for live spectator feeds. Higher complexity, performance risk in sim thread. Deferred — post-match scoring is sufficient for all current use cases. Live detection could be Phase 7+ for tournament broadcasts.
 
 ### Cross-References
 
 - **Research doc:** `research/replay-highlights-potg-design.md` (full scoring algorithm details, camera path generation, storage budget analysis, prior art survey)
-- **Replay format:** `formats/save-replay-formats.md` Â§ Analysis Event Stream, `formats/replay-keyframes-analysis.md` Â§ AnalysisEvent enum
-- **Post-game screen:** `player-flow/post-game.md` Â§ Play-of-the-Game section
-- **Main menu:** `player-flow/main-menu.md` Â§ Background selection
-- **Replay viewer:** `player-flow/replays.md` Â§ Event Markers
+- **Replay format:** `formats/save-replay-formats.md` § Analysis Event Stream, `formats/replay-keyframes-analysis.md` § AnalysisEvent enum
+- **Post-game screen:** `player-flow/post-game.md` § Play-of-the-Game section
+- **Main menu:** `player-flow/main-menu.md` § Background selection
+- **Replay viewer:** `player-flow/replays.md` § Event Markers
 - **UI themes:** D032 (shellmap configuration, theme YAML)
-- **Foreign replay import:** D056 (highlight detection on imported OpenRA/Remastered replays â€” Phase 7)
+- **Foreign replay import:** D056 (highlight detection on imported OpenRA/Remastered replays — Phase 7)

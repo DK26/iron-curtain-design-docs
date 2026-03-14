@@ -9,7 +9,7 @@
 | Mode                           | What You Get                                                                                                                                                                                                                                                  |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Campaign (Allied + Soviet)** | All original Red Alert missions fully playable with branching outcomes, unit roster persistence, veterancy carry-over, and optional hero progression (D021)                                                                                                   |
-| **Skirmish vs AI**             | Up to 8 players/AI on any map; AI difficulty (Easy–Brutal) with distinct personality profiles (Classic Westwood, OpenRA, IC Default); mix different AI personalities in the same match (D043)                                                                 |
+| **Skirmish vs AI**             | Up to 8 players/AI on any map; named AI Commanders with portraits, agendas, and taunts (D043); AI difficulty (Easy–Brutal); mix different commander personalities in the same match                                                                           |
 | **Ranked Multiplayer**         | Glicko-2 rating with seasonal tiers (Conscript → Supreme Commander), per-queue ratings (1v1, 2v2, FFA), map veto system, placement matches, escalating cooldowns (D055)                                                                                       |
 | **Casual Multiplayer**         | Game browser, Among Us-style room codes (IRON-XXXX), QR join for LAN/streaming, Discord/Steam deep links, auto-download missing mods on join (D030)                                                                                                           |
 | **Asymmetric Co-op**           | Commander + Field Ops roles with separate HUDs, support request system (CAS, Recon, Reinforcements, Extraction), and War-Effort Board pacing (D070)                                                                                                           |
@@ -64,9 +64,13 @@ IC doesn't force one way to play. Every axis is independently composable:
 - Per-lobby selection, mod-extensible via WASM
 
 **AI Personality & Difficulty (D043):**
-- Two-axis tuning: engine scaling (resource bonuses) + behavioral personality (aggression, expansion, tech preference)
-- Mix different personalities in the same match
-- Replay-based behavioral mimicry: AI learns from your replays
+- Named AI Commanders with portraits, specializations, visible agendas, and contextual taunts (Generals ZH / Civ 5 pattern)
+- 6 built-in RA1 commanders (Col. Volkov — Armor, Cmdr. Nadia — Intel, Gen. Kukov — Brute Force, Cdr. Stavros — Air, Col. von Esling — Defense, Lt. Tanya — Spec Ops)
+- Two-axis tuning: commander persona (aggression, expansion, tech preference) × engine difficulty scaling (resource bonuses)
+- Mix different commanders in the same match — each AI slot picks independently
+- **Puppet Master** strategic guidance: optional external advisor (LLM, human coach, or future types) that directs AI objectives without replacing tick-level control; Masterless by default
+- Community commanders via Workshop (YAML — no code required); LLM-generated commanders (Phase 7)
+- Replay-based behavioral mimicry: AI learns from your replays (D042)
 
 ### Multiplayer Infrastructure
 

@@ -1,4 +1,4 @@
-# Workshop Content Protection â€” Design Specification
+# Workshop Content Protection — Design Specification
 
 > **Status:** Design study
 > **Date:** 2026-03-13
@@ -9,9 +9,9 @@
 
 ## 0. Executive Summary
 
-Iron Curtain's Workshop (D030/D049) distributes content via BitTorrent-compatible P2P with SHA-256 integrity verification â€” but **zero access control**. D046 defines a premium content YAML schema (`pricing.model: premium`) and cosmetic-only constraint, but no enforcement mechanism exists. D035 states "all Workshop resources are freely downloadable." The existing `PlatformServices` trait has six methods â€” none related to entitlement checking or payment verification.
+Iron Curtain's Workshop (D030/D049) distributes content via BitTorrent-compatible P2P with SHA-256 integrity verification — but **zero access control**. D046 defines a premium content YAML schema (`pricing.model: premium`) and cosmetic-only constraint, but no enforcement mechanism exists. D035 states "all Workshop resources are freely downloadable." The existing `PlatformServices` trait has six methods — none related to entitlement checking or payment verification.
 
-This document designs a **self-hosted content protection system** that enforces premium content access without depending on Steam, GOG, or any external storefront. The architecture extends the existing Ed25519 SCR system (D052) with a new `PurchaseRecord` type, adds AES-256-GCM content encryption compatible with P2P distribution, introduces per-buyer key derivation via HKDF, defines a three-level key hierarchy (Identity Key â†’ Device Key â†’ Session Key), and applies Tardos fingerprinting codes for collusion-resistant content watermarking.
+This document designs a **self-hosted content protection system** that enforces premium content access without depending on Steam, GOG, or any external storefront. The architecture extends the existing Ed25519 SCR system (D052) with a new `PurchaseRecord` type, adds AES-256-GCM content encryption compatible with P2P distribution, introduces per-buyer key derivation via HKDF, defines a three-level key hierarchy (Identity Key → Device Key → Session Key), and applies Tardos fingerprinting codes for collusion-resistant content watermarking.
 
 **Five-layer protection stack:**
 
@@ -20,12 +20,12 @@ This document designs a **self-hosted content protection system** that enforces 
 | 1 | PurchaseRecord (Ed25519 SCR, bound to Identity Key) | Forged entitlements |
 | 2 | Per-buyer key wrapping (HKDF-SHA256 from Identity Key) | Sharing wrapped keys between players |
 | 3 | Device cache encryption (AES-256-GCM, bound to Device Key) | Copying decrypted content between machines |
-| 4 | Session attestation (SKâ†’DKâ†’IK cryptographic chain) | Cosmetic spoofing in multiplayer relay |
+| 4 | Session attestation (SK→DK→IK cryptographic chain) | Cosmetic spoofing in multiplayer relay |
 | 5 | Tardos content fingerprinting | Identifying the source of leaked decrypted content |
 
-**Design philosophy:** Self-hosted, offline-capable, P2P-compatible, no phone-home required. IC never processes payments â€” creators handle their own payment flow (Stripe, PayPal, Ko-fi, etc.) and IC's cryptographic infrastructure proves the purchase happened.
+**Design philosophy:** Self-hosted, offline-capable, P2P-compatible, no phone-home required. IC never processes payments — creators handle their own payment flow (Stripe, PayPal, Ko-fi, etc.) and IC's cryptographic infrastructure proves the purchase happened.
 
-**Estimated implementation:** ~1,460 lines of Rust across `ic-paths` (key hierarchy), `ic-net` (session attestation), and Workshop infrastructure. Phase 5â€“6a.
+**Estimated implementation:** ~1,460 lines of Rust across `ic-paths` (key hierarchy), `ic-net` (session attestation), and Workshop infrastructure. Phase 5–6a.
 
 ---
 
@@ -49,7 +49,7 @@ pricing:
 But nothing in the architecture prevents a non-paying client from downloading, decrypting, and using premium content. The P2P layer (D049) verifies integrity (SHA-256) but not authorization. Any peer that knows the infohash can download any package.
 
 **Gap 2: `PlatformServices` has no entitlement checking.**
-The trait's six methods cover achievements, presence, friends, invites, and cloud saves â€” nothing about purchase verification:
+The trait's six methods cover achievements, presence, friends, invites, and cloud saves — nothing about purchase verification:
 
 ```rust
 pub trait PlatformServices: Send + Sync {
@@ -63,13 +63,13 @@ pub trait PlatformServices: Send + Sync {
 }
 ```
 
-Adding `check_entitlement()` here would couple IC to external storefronts (Steam, GOG) â€” violating the project's self-hosting independence goal.
+Adding `check_entitlement()` here would couple IC to external storefronts (Steam, GOG) — violating the project's self-hosting independence goal.
 
 **Gap 3: D035 vs D046 contradiction.**
-D035 states: "Monetization is never mandatory â€” **all Workshop resources are freely downloadable.**" D046 introduces `pricing.model: premium` with price fields and revenue splits. These two positions need reconciliation â€” the resolution is that the **free tier** (gameplay, multiplayer functionality) is always freely downloadable with default fallbacks, while **cosmetic premium content** is an opt-in layer with cryptographic access control.
+D035 states: "Monetization is never mandatory — **all Workshop resources are freely downloadable.**" D046 introduces `pricing.model: premium` with price fields and revenue splits. These two positions need reconciliation — the resolution is that the **free tier** (gameplay, multiplayer functionality) is always freely downloadable with default fallbacks, while **cosmetic premium content** is an opt-in layer with cryptographic access control.
 
 **Gap 4: No Device Key in key hierarchy.**
-D052/D061 define the Identity Key (Ed25519 keypair, BIP-39 recoverable) and `credential-protection-design.md` defines the CredentialStore with a DEK (Data Encryption Key) â€” but there is no explicit Device Key concept for binding content to a specific machine, nor a Session Key for ephemeral multiplayer attestation.
+D052/D061 define the Identity Key (Ed25519 keypair, BIP-39 recoverable) and `credential-protection-design.md` defines the CredentialStore with a DEK (Data Encryption Key) — but there is no explicit Device Key concept for binding content to a specific machine, nor a Session Key for ephemeral multiplayer attestation.
 
 ### 1.2 Design Constraints
 
@@ -78,7 +78,7 @@ D052/D061 define the Identity Key (Ed25519 keypair, BIP-39 recoverable) and `cre
 - **P2P-compatible:** Encrypted content must still be distributable via BitTorrent-compatible P2P (D049). SHA-256 integrity verification operates on ciphertext.
 - **Offline-capable:** A player who has purchased content must be able to use it offline, indefinitely, without phoning home.
 - **Cosmetic-only premium:** Premium content is cosmetic or supplementary (art packs, soundtracks, campaigns). No gameplay-affecting content behind paywalls. Multiplayer always falls back to default assets for non-owners (D046).
-- **Open-source compatible:** All protection code is open-source (GPL v3). Security comes from cryptographic strength, not obscurity. An attacker who reads the source code gains no advantage â€” the secrets are keys, not algorithms.
+- **Open-source compatible:** All protection code is open-source (GPL v3). Security comes from cryptographic strength, not obscurity. An attacker who reads the source code gains no advantage — the secrets are keys, not algorithms.
 
 ---
 
@@ -93,7 +93,7 @@ Creator publishes premium content:
 
 Buyer purchases content:
   1. Buyer pays creator directly (Stripe/PayPal/Ko-fi/etc.)
-  2. Creator's payment webhook â†’ community server API
+  2. Creator's payment webhook → community server API
   3. Server generates PurchaseRecord SCR (Ed25519-signed)
   4. Server derives per-buyer wrapped_key: HKDF(buyer_identity_key, content_key)
   5. Server delivers PurchaseRecord + wrapped_key to buyer
@@ -106,7 +106,7 @@ Buyer uses content:
   5. Subsequent launches: decrypt from DK-bound cache (no IK needed)
 
 Multiplayer verification:
-  1. Client presents Session Key â†’ Device Key â†’ Identity Key chain to relay
+  1. Client presents Session Key → Device Key → Identity Key chain to relay
   2. Relay verifies PurchaseRecord SCR for cosmetic content
   3. Non-owners see default fallback assets (transparent to gameplay)
 ```
@@ -136,22 +136,22 @@ New:
 The SCR envelope (158 bytes + payload + 64-byte signature) remains unchanged. The payload for `record_type = 0x06` is:
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  content_id         32 bytes   SHA-256 hash of content manifest   â”‚
-â”‚  content_version    4 bytes    u32 LE, semver-encoded             â”‚
-â”‚  creator_key        32 bytes   Ed25519 public key of content      â”‚
-â”‚                                creator (for cross-verification)    â”‚
-â”‚  wrapped_key_len    2 bytes    u16 LE                             â”‚
-â”‚  wrapped_key        variable   AES-256-GCM encrypted content key  â”‚
-â”‚                                (typically 44 bytes: 12 nonce +    â”‚
-â”‚                                 32 ciphertext)                     â”‚
-â”‚  purchase_flags     1 byte     bitfield (see below)               â”‚
-â”‚  watermark_seed     16 bytes   per-buyer Tardos fingerprint seed  â”‚
-â”‚  reserved           3 bytes    must be zero                       â”‚
-â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
-â”‚  Typical payload size: 132 bytes                                  â”‚
-â”‚  Total SCR size: 158 + 132 + 64 = 354 bytes                      â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌────────────────────────────────────────────────────────────────────┐
+│  content_id         32 bytes   SHA-256 hash of content manifest   │
+│  content_version    4 bytes    u32 LE, semver-encoded             │
+│  creator_key        32 bytes   Ed25519 public key of content      │
+│                                creator (for cross-verification)    │
+│  wrapped_key_len    2 bytes    u16 LE                             │
+│  wrapped_key        variable   AES-256-GCM encrypted content key  │
+│                                (typically 44 bytes: 12 nonce +    │
+│                                 32 ciphertext)                     │
+│  purchase_flags     1 byte     bitfield (see below)               │
+│  watermark_seed     16 bytes   per-buyer Tardos fingerprint seed  │
+│  reserved           3 bytes    must be zero                       │
+├────────────────────────────────────────────────────────────────────┤
+│  Typical payload size: 132 bytes                                  │
+│  Total SCR size: 158 + 132 + 64 = 354 bytes                      │
+└────────────────────────────────────────────────────────────────────┘
 
 purchase_flags bitfield:
   bit 0: grant_type (0 = purchase, 1 = bundled/promotional)
@@ -165,7 +165,7 @@ purchase_flags bitfield:
 - **Signed by:** Community server's Signing Key (SK), same as all other SCR types
 - **`community_key` field:** The community server's current SK public key (32 bytes, from SCR envelope)
 - **`player_key` field:** The buyer's Identity Key public key (32 bytes, from SCR envelope)
-- **Verification:** Standard SCR O(1) check (D052): Ed25519 signature verification + `sequence â‰¥ min_valid` + `expires_at > now`
+- **Verification:** Standard SCR O(1) check (D052): Ed25519 signature verification + `sequence ≥ min_valid` + `expires_at > now`
 - **Offline verification:** Client stores PurchaseRecord in local SQLite. No network required after initial receipt.
 
 ### 3.4 SQLite Storage Extension
@@ -216,11 +216,11 @@ When a creator publishes premium content:
 Encrypted `.icpkg` files distribute identically to free content:
 - SHA-256 integrity verification operates on ciphertext (unchanged)
 - BitTorrent piece hashing works on ciphertext (unchanged)
-- Peer protocol is identical â€” peers cannot distinguish encrypted from unencrypted content
+- Peer protocol is identical — peers cannot distinguish encrypted from unencrypted content
 - Web seeding (BEP 17/19) works unchanged
 - Tracker tokens authenticate P2P participation, not content access
 
-This means **everyone can seed premium content**, which maximizes swarm health. Only buyers can decrypt it â€” the swarm itself is a distribution mechanism, not an access control mechanism.
+This means **everyone can seed premium content**, which maximizes swarm health. Only buyers can decrypt it — the swarm itself is a distribution mechanism, not an access control mechanism.
 
 ### 4.3 Decryption at Use
 
@@ -272,13 +272,13 @@ Server-side (during purchase):
   5. Delivers: PurchaseRecord { wrapped_key, eph_pk }
 
 Client-side (during unwrap):
-  1. Convert buyer_identity_ed25519_sk â†’ X25519 (RFC 8032 birational map)
+  1. Convert buyer_identity_ed25519_sk → X25519 (RFC 8032 birational map)
   2. shared_secret = X25519(buyer_x25519_sk, eph_pk)
   3. wrapping_key = HKDF-SHA256(ikm=shared_secret, salt=content_id, info="ic-content-key-v1")
   4. content_key = AES-256-GCM_decrypt(key=wrapping_key, nonce=..., ciphertext=wrapped_key, aad=buyer_pk)
 ```
 
-This is a standard X25519+HKDF+AES-GCM construction â€” the same pattern used by the Signal Protocol (X3DH) and Noise Protocol Framework.
+This is a standard X25519+HKDF+AES-GCM construction — the same pattern used by the Signal Protocol (X3DH) and Noise Protocol Framework.
 
 ### 5.3 Sharing Resistance
 
@@ -311,17 +311,17 @@ This adds 32 bytes to the PurchaseRecord payload (total ~164 bytes payload, ~386
 | **Device Key** | DK | WHICH machine | Per-installation | OS keyring (Tier 1) or vault (Tier 2) | Re-derive from IK on new device |
 | **Session Key** | SK | THIS launch | Ephemeral (single process) | In-memory only | Not recoverable (regenerated each launch) |
 
-### 6.2 Identity Key (IK) â€” Existing
+### 6.2 Identity Key (IK) — Existing
 
 Already defined in D052/D061:
 - Ed25519 keypair, generated on first launch or community join
-- Recoverable via 24-word BIP-39 mnemonic phrase (PBKDF2-HMAC-SHA512 â†’ Ed25519 seed)
+- Recoverable via 24-word BIP-39 mnemonic phrase (PBKDF2-HMAC-SHA512 → Ed25519 seed)
 - Stored encrypted in `keys/identity.key` via CredentialStore (Tier 1: OS keyring DEK, Tier 2: passphrase DEK)
 - Fingerprint: `SHA-256(public_key)[0..8]`, displayed as 16 hex chars
 
-### 6.3 Device Key (DK) â€” New
+### 6.3 Device Key (DK) — New
 
-Generated automatically per IC installation. **Not** portable between machines â€” that is the point.
+Generated automatically per IC installation. **Not** portable between machines — that is the point.
 
 ```
 Generation:
@@ -337,7 +337,7 @@ Generation:
      })
 ```
 
-**Device Certificate** proves this DK belongs to this IK â€” a relay or verifier can check the chain without contacting any server.
+**Device Certificate** proves this DK belongs to this IK — a relay or verifier can check the chain without contacting any server.
 
 **OS-specific storage backends** (via `keyring` crate, same as CredentialStore Tier 1):
 
@@ -363,12 +363,12 @@ device_cache_key = HKDF-SHA256(
 cached_content = AES-256-GCM(key=device_cache_key, plaintext=decrypted_content)
 ```
 
-On subsequent launches, the client decrypts from the DK-bound cache â€” no IK private material needed. This means:
+On subsequent launches, the client decrypts from the DK-bound cache — no IK private material needed. This means:
 - Copying the cache to another machine produces undecryptable data (wrong DK)
 - The IK only touches the key unwrapping operation, not ongoing use
 - Losing IK access (e.g., locked device) does not prevent using already-cached content
 
-### 6.4 Session Key (SK) â€” New
+### 6.4 Session Key (SK) — New
 
 Ephemeral Ed25519 keypair generated fresh each launch. Never persisted.
 
@@ -386,13 +386,13 @@ Generation (every app launch):
 ```
 
 **Session Key purpose in content protection:**
-Multiplayer relay servers verify cosmetic entitlements via the SKâ†’DKâ†’IK certificate chain (see Â§ 8). The relay never sees the IK private key â€” only the public chain:
+Multiplayer relay servers verify cosmetic entitlements via the SK→DK→IK certificate chain (see § 8). The relay never sees the IK private key — only the public chain:
 
 ```
-SK.public â†’ session_cert (signed by DK) â†’ device_cert (signed by IK) â†’ IK.public
+SK.public → session_cert (signed by DK) → device_cert (signed by IK) → IK.public
 ```
 
-A relay verifies the chain by checking two Ed25519 signatures â€” O(1), ~30Âµs total on modern hardware.
+A relay verifies the chain by checking two Ed25519 signatures — O(1), ~30µs total on modern hardware.
 
 ### 6.5 Key Hierarchy in BIP-39 Recovery
 
@@ -400,7 +400,7 @@ When a player recovers their identity from a 24-word mnemonic (D061):
 
 ```
 Recovery flow:
-  1. 24 words â†’ PBKDF2-HMAC-SHA512 â†’ Ed25519 seed â†’ IK keypair (D061)
+  1. 24 words → PBKDF2-HMAC-SHA512 → Ed25519 seed → IK keypair (D061)
   2. IK.public key matches stored PurchaseRecords (player_key field in SCR envelope)
   3. All PurchaseRecords are re-verifiable (Ed25519 signature check)
   4. New Device Key generated for new machine
@@ -416,9 +416,9 @@ All purchases survive device loss. The mnemonic IS the backup.
 
 ### 7.1 Why Fingerprinting
 
-Layers 1â€“4 prevent unauthorized access. Layer 5 addresses a different threat: **what happens when an authorized buyer decrypts content and redistributes the plaintext?**
+Layers 1–4 prevent unauthorized access. Layer 5 addresses a different threat: **what happens when an authorized buyer decrypts content and redistributes the plaintext?**
 
-Tardos fingerprinting codes embed an imperceptible, per-buyer watermark in the decrypted content. If the content leaks, forensic analysis of the leaked copy identifies which buyer(s) were the source â€” even if multiple buyers collude by combining their copies.
+Tardos fingerprinting codes embed an imperceptible, per-buyer watermark in the decrypted content. If the content leaks, forensic analysis of the leaked copy identifies which buyer(s) were the source — even if multiple buyers collude by combining their copies.
 
 ### 7.2 Tardos Code Construction
 
@@ -427,22 +427,22 @@ Tardos codes (2003) are the information-theoretically optimal collusion-resistan
 ```
 Setup (by creator, once per content):
   1. Choose code length L (number of marking positions)
-  2. For each position i âˆˆ [1..L]:
+  2. For each position i ∈ [1..L]:
      p_i = sample from arcsine distribution on (0, 1)
-     (Beta(0.5, 0.5) â€” biased toward 0 and 1)
+     (Beta(0.5, 0.5) — biased toward 0 and 1)
   3. Store p_vector = [p_1, ..., p_L] as the master fingerprint config
 
 Per-buyer fingerprint generation:
-  1. For each position i âˆˆ [1..L]:
+  1. For each position i ∈ [1..L]:
      c_i = Bernoulli(p_i)  // 1 with probability p_i, 0 otherwise
   2. buyer_fingerprint = [c_1, ..., c_L]
   3. Seed the PRNG with watermark_seed from PurchaseRecord
-     (deterministic â€” same seed always produces same fingerprint)
+     (deterministic — same seed always produces same fingerprint)
 
 Accusation (when leaked copy found):
-  1. Extract marking values from leaked copy â†’ observed = [o_1, ..., o_L]
+  1. Extract marking values from leaked copy → observed = [o_1, ..., o_L]
   2. For each suspect buyer with fingerprint [c_1, ..., c_L]:
-     score = Î£_i  g(o_i, c_i, p_i)
+     score = Σ_i  g(o_i, c_i, p_i)
      where g(o, c, p) = {
        if o == c == 1: sqrt((1-p)/p)      // evidence for guilt
        if o == c == 0: sqrt(p/(1-p))      // evidence for guilt
@@ -452,7 +452,7 @@ Accusation (when leaked copy found):
      Z = c_0 * sqrt(L)  where c_0 is the desired false-positive rate
 ```
 
-**Collusion resistance:** With L marking positions, the scheme resists coalitions of up to ~âˆšL colluders with negligible false positive rate. Specifically:
+**Collusion resistance:** With L marking positions, the scheme resists coalitions of up to ~√L colluders with negligible false positive rate. Specifically:
 
 | Marking Positions (L) | Max Colluders (c) | Sufficient for |
 |----------------------|-------------------|----------------|
@@ -464,25 +464,25 @@ Accusation (when leaked copy found):
 
 ### 7.3 Marking Positions in C&C Assets
 
-C&C pixel art provides abundant natural marking positions â€” pixel-level changes that are imperceptible to human players:
+C&C pixel art provides abundant natural marking positions — pixel-level changes that are imperceptible to human players:
 
 | Technique | Description | Positions per Asset |
 |-----------|-------------|-------------------|
-| **Unused palette slots** | Assign similar colors to unused palette entries; swap which entry is used | 20â€“60 per sprite |
-| **Shadow color aliasing** | Multiple near-identical shadow tones (e.g., #1a1a1a vs #1b1a1a) | 10â€“30 per frame |
-| **Transparent boundary pixels** | Semi-transparent edge pixels can vary Â±1 in alpha or color | 30â€“80 per frame |
-| **Symmetry micro-breaks** | Vehicle sprites with axis symmetry: introduce Â±1px asymmetry | 5â€“15 per facing |
-| **Dithering pattern variation** | Multiple valid dithering patterns produce identical visual impression | 10â€“40 per frame |
-| **Color channel LSB** | Flip least-significant bit of color channels in non-conspicuous areas | 50â€“200 per frame |
+| **Unused palette slots** | Assign similar colors to unused palette entries; swap which entry is used | 20–60 per sprite |
+| **Shadow color aliasing** | Multiple near-identical shadow tones (e.g., #1a1a1a vs #1b1a1a) | 10–30 per frame |
+| **Transparent boundary pixels** | Semi-transparent edge pixels can vary ±1 in alpha or color | 30–80 per frame |
+| **Symmetry micro-breaks** | Vehicle sprites with axis symmetry: introduce ±1px asymmetry | 5–15 per facing |
+| **Dithering pattern variation** | Multiple valid dithering patterns produce identical visual impression | 10–40 per frame |
+| **Color channel LSB** | Flip least-significant bit of color channels in non-conspicuous areas | 50–200 per frame |
 
-**Example â€” 32-facing vehicle sprite set:**
-- 32 facings Ã— ~8 frames each = ~256 frames
-- ~5â€“6 positions per frame (conservative) = ~1,400 marking positions
+**Example — 32-facing vehicle sprite set:**
+- 32 facings × ~8 frames each = ~256 frames
+- ~5–6 positions per frame (conservative) = ~1,400 marking positions
 - Resists ~37 colluders
 
 ### 7.4 Application at Decryption Time
 
-Fingerprinting is applied during client-side decryption â€” the community server never sees the watermarked content (it only provides the `watermark_seed`):
+Fingerprinting is applied during client-side decryption — the community server never sees the watermarked content (it only provides the `watermark_seed`):
 
 ```
 Decryption + fingerprinting:
@@ -494,7 +494,7 @@ Decryption + fingerprinting:
   3. Re-encrypt to Device Key cache
 ```
 
-The watermarked version is what gets cached and used â€” the original decrypted content is never written to disk.
+The watermarked version is what gets cached and used — the original decrypted content is never written to disk.
 
 ### 7.5 Forensic Analysis Tooling
 
@@ -508,12 +508,12 @@ ic workshop fingerprint analyze leaked-art-pack/
 # Output:
 # Analyzing 256 frames, 1,387 marking positions...
 # Suspect analysis:
-#   player_3f7a2b91: score=+47.3 (threshold=32.1) â†’ ACCUSED
-#   player_e4d08c56: score=-12.8                    â†’ cleared
-#   player_91a2c3d4: score=+3.2                     â†’ inconclusive
+#   player_3f7a2b91: score=+47.3 (threshold=32.1) → ACCUSED
+#   player_e4d08c56: score=-12.8                    → cleared
+#   player_91a2c3d4: score=+3.2                     → inconclusive
 ```
 
-This tooling is forensic (after-the-fact) â€” it does not prevent redistribution, only identifies the source.
+This tooling is forensic (after-the-fact) — it does not prevent redistribution, only identifies the source.
 
 ---
 
@@ -524,27 +524,27 @@ This tooling is forensic (after-the-fact) â€” it does not prevent redistrib
 When a player uses premium cosmetics in multiplayer, the relay server needs to verify entitlement without accessing the player's private keys or the decrypted content.
 
 ```
-Client â†’ Relay handshake (extended from D052 auth):
+Client → Relay handshake (extended from D052 auth):
   1. Client sends: SK.public + session_cert + device_cert + IK.public
   2. Relay verifies chain:
-     a. Verify session_cert: Ed25519_verify(DK.public, session_cert) âœ“
-     b. Verify device_cert: Ed25519_verify(IK.public, device_cert) âœ“
+     a. Verify session_cert: Ed25519_verify(DK.public, session_cert) ✓
+     b. Verify device_cert: Ed25519_verify(IK.public, device_cert) ✓
      c. IK.public matches the player's known identity
   3. Client sends: list of premium content_ids in use
   4. For each content_id:
      Client sends PurchaseRecord SCR (full blob from local SQLite)
-     Relay verifies: Ed25519_verify(community_server_key, scr_blob) âœ“
+     Relay verifies: Ed25519_verify(community_server_key, scr_blob) ✓
   5. Relay marks player's cosmetic entitlements for this session
 ```
 
-**Non-owners:** The relay knows which cosmetics each player is entitled to. For non-owners, the relay instructs all clients to render default fallback assets â€” no premium data is ever transmitted to unauthorized peers.
+**Non-owners:** The relay knows which cosmetics each player is entitled to. For non-owners, the relay instructs all clients to render default fallback assets — no premium data is ever transmitted to unauthorized peers.
 
 ### 8.2 Performance
 
 The entire attestation chain requires:
-- 2 Ed25519 signature verifications (session_cert + device_cert): ~30Âµs
-- N Ed25519 signature verifications (one per active PurchaseRecord): ~15Âµs each
-- Typical case (1â€“3 cosmetic packs): <100Âµs total
+- 2 Ed25519 signature verifications (session_cert + device_cert): ~30µs
+- N Ed25519 signature verifications (one per active PurchaseRecord): ~15µs each
+- Typical case (1–3 cosmetic packs): <100µs total
 
 This runs once during lobby join, not per-tick.
 
@@ -554,7 +554,7 @@ This runs once during lobby join, not per-tick.
 
 ### 9.1 Encrypted Content in P2P Swarms
 
-Encrypted `.icpkg` files implement D049 Â§ P2P distribution:
+Encrypted `.icpkg` files implement D049 § P2P distribution:
 
 | Aspect | Free Content | Premium Content |
 |--------|-------------|-----------------|
@@ -564,7 +564,7 @@ Encrypted `.icpkg` files implement D049 Â§ P2P distribution:
 | Seeding | All peers | **All peers** (including non-buyers) |
 | Access control | None | Client-side decryption (content_key via PurchaseRecord) |
 
-Non-buyers can download and seed encrypted premium content â€” maximizing swarm health. They simply cannot decrypt it. This is the same model used by encrypted BitTorrent (BEP 40) and commercial P2P CDNs.
+Non-buyers can download and seed encrypted premium content — maximizing swarm health. They simply cannot decrypt it. This is the same model used by encrypted BitTorrent (BEP 40) and commercial P2P CDNs.
 
 ### 9.2 `.icpkg` Manifest Extension
 
@@ -579,7 +579,7 @@ encryption_meta: {
 }
 ```
 
-The `content_id` in the manifest matches the `content_id` in PurchaseRecords â€” this is how the client locates the correct PurchaseRecord for decryption.
+The `content_id` in the manifest matches the `content_id` in PurchaseRecords — this is how the client locates the correct PurchaseRecord for decryption.
 
 ---
 
@@ -591,12 +591,12 @@ A player may buy content from a creator on Community Server A, then join a game 
 
 **Verification is self-contained in the SCR:**
 - The PurchaseRecord contains `community_key` (the issuing server's SK public key)
-- Any verifier can check the Ed25519 signature directly â€” no need to contact Community A
+- Any verifier can check the Ed25519 signature directly — no need to contact Community A
 - Trust question: does Community B trust Community A's signing authority?
 
 **Trust model (extends D052 federation):**
 - Each community server maintains a list of trusted community keys (same as the existing cross-community key exchange in D052)
-- A PurchaseRecord from an untrusted community is treated as absent â€” player sees default fallback assets
+- A PurchaseRecord from an untrusted community is treated as absent — player sees default fallback assets
 - Community operators decide trust policy (accept-all, allowlist, reputation-based)
 
 ### 10.2 Revocation
@@ -620,7 +620,7 @@ Soft revocation (optional, for stolen accounts):
     reason: "refund" | "chargeback" | "account_compromise"
 ```
 
-Revocation is eventual â€” an offline buyer retains access until their client syncs. This is a conscious trade-off: offline-first means no phone-home requirement, which means revocation is best-effort for offline clients.
+Revocation is eventual — an offline buyer retains access until their client syncs. This is a conscious trade-off: offline-first means no phone-home requirement, which means revocation is best-effort for offline clients.
 
 ---
 
@@ -633,19 +633,19 @@ Revocation is eventual â€” an offline buyer retains access until their clie
 | **Buyer shares decrypted files** | 5 | Tardos fingerprint identifies source | Forensic (after-the-fact, not preventive) |
 | **Buyer copies cache to another machine** | 4 | DK-bound re-encryption; wrong DK = undecryptable | Buyer could clone DK if they have OS keyring access on both machines |
 | **Attacker forges PurchaseRecord** | 1 | Ed25519 signature verification; requires server's SK private key | SK compromise = full breach (mitigated by RK rotation) |
-| **Colluding buyers combine watermarks** | 5 | Tardos codes resist âˆšL colluders | Above the collusion threshold, identification degrades (probabilistic) |
-| **Relay cosmetic spoofing** | 4 | SKâ†’DKâ†’IK chain verification | Relay must be trusted (compromised relay could lie) |
-| **Memory dump during decryption** | â€” | `zeroize` crate clears keys from memory; short window | Kernel-level attacker can still capture (out of scope) |
-| **Reverse-engineer decryption code** | â€” | Code is open-source; security is in the keys, not the algorithm | By design â€” no security through obscurity |
+| **Colluding buyers combine watermarks** | 5 | Tardos codes resist √L colluders | Above the collusion threshold, identification degrades (probabilistic) |
+| **Relay cosmetic spoofing** | 4 | SK→DK→IK chain verification | Relay must be trusted (compromised relay could lie) |
+| **Memory dump during decryption** | — | `zeroize` crate clears keys from memory; short window | Kernel-level attacker can still capture (out of scope) |
+| **Reverse-engineer decryption code** | — | Code is open-source; security is in the keys, not the algorithm | By design — no security through obscurity |
 | **Server compromise (SK stolen)** | 1 | RK rotation (D052); newly issued PurchaseRecords with rotated SK; existing PurchaseRecords still valid under grace period | Time window between compromise and detection |
 
 ### 11.1 What This System Does NOT Prevent
 
-**Honest limitations â€” be explicit:**
+**Honest limitations — be explicit:**
 
-1. **DRM-free after decryption.** Once a buyer decrypts content, the plaintext exists in their local cache (DK-encrypted, but the DK is on the same machine). A technically sophisticated buyer with admin access to their own machine can extract the plaintext. This is a fundamental property of client-side decryption â€” it's the digital equivalent of "you can photocopy a book you bought." The Tardos fingerprint provides forensic tracing, not prevention.
+1. **DRM-free after decryption.** Once a buyer decrypts content, the plaintext exists in their local cache (DK-encrypted, but the DK is on the same machine). A technically sophisticated buyer with admin access to their own machine can extract the plaintext. This is a fundamental property of client-side decryption — it's the digital equivalent of "you can photocopy a book you bought." The Tardos fingerprint provides forensic tracing, not prevention.
 
-2. **No phone-home.** An offline buyer retains access to all purchased content indefinitely. Revocation only takes effect on next sync. This is by design â€” offline-first is a non-negotiable constraint.
+2. **No phone-home.** An offline buyer retains access to all purchased content indefinitely. Revocation only takes effect on next sync. This is by design — offline-first is a non-negotiable constraint.
 
 3. **Community server as trust anchor.** The community server's Signing Key is the root of trust for PurchaseRecords. A compromised server can issue fraudulent PurchaseRecords. Mitigation: Recovery Key rotation (D052), Content Advisory Records for cross-community warnings (D074).
 
@@ -688,16 +688,16 @@ All MIT/Apache-2.0, compatible with GPL v3:
 
 ### 12.3 Phasing
 
-**Phase 5 (M7) â€” Core Protection:**
+**Phase 5 (M7) — Core Protection:**
 - PurchaseRecord SCR type (Layer 1)
 - AES-256-GCM content encryption (Layer 2)
 - X25519+HKDF per-buyer key wrapping (Layer 3)
-- Device Key + key hierarchy (Layer 4, partial â€” IK+DK)
+- Device Key + key hierarchy (Layer 4, partial — IK+DK)
 - Session Key + relay attestation (Layer 4, complete)
 - Basic purchase verification in Workshop client
 - `ic workshop verify-purchase` CLI
 
-**Phase 6a (M9) â€” Forensics & Hardening:**
+**Phase 6a (M9) — Forensics & Hardening:**
 - Tardos fingerprinting (Layer 5)
 - Forensic analysis CLI
 - Creator tools for fingerprint config generation
@@ -708,44 +708,44 @@ All MIT/Apache-2.0, compatible with GPL v3:
 
 ## 13. D035 Reconciliation
 
-D035 states: "Monetization is never mandatory â€” **all Workshop resources are freely downloadable.**"
+D035 states: "Monetization is never mandatory — **all Workshop resources are freely downloadable.**"
 
 This statement requires clarification, not contradiction. The reconciled position:
 
 1. **The free tier is fully functional.** All gameplay-affecting content (units, weapons, balance, maps) is freely available. A player who pays nothing can play every game mode, every multiplayer match, every mission. This is unchanged.
 
-2. **"Freely downloadable" refers to the P2P distribution mechanism.** Anyone can download (and seed!) encrypted premium content via P2P. They cannot decrypt it without a PurchaseRecord. The content is freely *distributable* â€” but not freely *usable* in its premium form.
+2. **"Freely downloadable" refers to the P2P distribution mechanism.** Anyone can download (and seed!) encrypted premium content via P2P. They cannot decrypt it without a PurchaseRecord. The content is freely *distributable* — but not freely *usable* in its premium form.
 
 3. **Default fallback is always available.** Non-owners of premium cosmetics see default assets in multiplayer. The game never breaks, never requires purchase, never excludes anyone from gameplay. Premium is an opt-in visual upgrade.
 
 4. **"Premium" means cosmetic-only** (D046 constraint). Art packs, soundtracks, campaigns (story content). Never: units, weapons, factions, balance-affecting gameplay.
 
-5. **Tipping remains for non-premium content.** D035's tipping infrastructure is orthogonal to premium content. A creator can publish free content with a tip jar AND premium cosmetic packs â€” they serve different purposes.
+5. **Tipping remains for non-premium content.** D035's tipping infrastructure is orthogonal to premium content. A creator can publish free content with a tip jar AND premium cosmetic packs — they serve different purposes.
 
 ---
 
 ## 14. Creator Payment Flow
 
-IC never processes payments. The creatorâ†’buyerâ†’server flow:
+IC never processes payments. The creator→buyer→server flow:
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”          â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”         â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚  Buyer   â”‚  $$$     â”‚   Creator    â”‚  webhook â”‚  Community       â”‚
-â”‚          â”‚â”€â”€â”€â”€â”€â”€â”€â”€â†’ â”‚  (Stripe/    â”‚â”€â”€â”€â”€â”€â”€â”€â”€â†’ â”‚  Server          â”‚
-â”‚          â”‚          â”‚   PayPal/    â”‚          â”‚                  â”‚
-â”‚          â”‚          â”‚   Ko-fi)     â”‚          â”‚  Generates       â”‚
-â”‚          â”‚          â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜          â”‚  PurchaseRecord  â”‚
-â”‚          â”‚                                    â”‚  SCR + wrapped   â”‚
-â”‚          â”‚â—„â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”‚  key             â”‚
-â”‚          â”‚          PurchaseRecord delivery   â”‚                  â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜          (HTTPS or in-app)         â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌──────────┐          ┌──────────────┐         ┌──────────────────┐
+│  Buyer   │  $$$     │   Creator    │  webhook │  Community       │
+│          │────────→ │  (Stripe/    │────────→ │  Server          │
+│          │          │   PayPal/    │          │                  │
+│          │          │   Ko-fi)     │          │  Generates       │
+│          │          └──────────────┘          │  PurchaseRecord  │
+│          │                                    │  SCR + wrapped   │
+│          │◄───────────────────────────────────│  key             │
+│          │          PurchaseRecord delivery   │                  │
+└──────────┘          (HTTPS or in-app)         └──────────────────┘
 ```
 
-**Webhook integration:** Creator configures their payment processor to POST a webhook to their community server's purchase API endpoint. The webhook includes the buyer's player key (communicated during checkout â€” e.g., buyer copies their IC fingerprint into the checkout form, or IC generates a purchase link with an embedded player key).
+**Webhook integration:** Creator configures their payment processor to POST a webhook to their community server's purchase API endpoint. The webhook includes the buyer's player key (communicated during checkout — e.g., buyer copies their IC fingerprint into the checkout form, or IC generates a purchase link with an embedded player key).
 
-**Manual fulfillment alternative:** For creators without webhook capability, a simple web form: creator enters buyer's IC fingerprint â†’ server generates and delivers PurchaseRecord. This is the "Humble Store" model â€” manual but workable.
+**Manual fulfillment alternative:** For creators without webhook capability, a simple web form: creator enters buyer's IC fingerprint → server generates and delivers PurchaseRecord. This is the "Humble Store" model — manual but workable.
 
-**IC's role:** Provide the cryptographic infrastructure (SCR generation, key wrapping, content encryption, verification). IC never sees money, never handles refunds, never takes a payment-processing cut. The `ic_project: 10` revenue split in D046's YAML schema is a *voluntary* contribution â€” not enforced by the platform.
+**IC's role:** Provide the cryptographic infrastructure (SCR generation, key wrapping, content encryption, verification). IC never sees money, never handles refunds, never takes a payment-processing cut. The `ic_project: 10` revenue split in D046's YAML schema is a *voluntary* contribution — not enforced by the platform.
 
 ---
 
@@ -755,10 +755,10 @@ On WASM targets (browser builds):
 
 - **No OS keyring:** Device Key stored in IndexedDB with WebCrypto `CryptoKey { extractable: false }`. This provides browser-sandbox-level protection (JavaScript on the same origin can still access it, but other origins cannot).
 - **No hardware keystore:** WASM has no access to TPM or secure enclave. Device Key binding is weaker on browser than native.
-- **AES-256-GCM:** Available via SubtleCrypto API â€” no need for a Rust WASM implementation.
+- **AES-256-GCM:** Available via SubtleCrypto API — no need for a Rust WASM implementation.
 - **X25519:** Available via SubtleCrypto on modern browsers. Fallback to `x25519-dalek` compiled to WASM.
 - **Ed25519:** SubtleCrypto support is recent (Chrome 113+, Firefox 128+). Fallback to `ed25519-dalek` compiled to WASM.
-- **Tardos fingerprinting:** Runs client-side in WASM â€” same code, same fingerprints.
+- **Tardos fingerprinting:** Runs client-side in WASM — same code, same fingerprints.
 
 ---
 
@@ -770,17 +770,17 @@ On WASM targets (browser builds):
 | **Signal Protocol (X3DH)** | X25519+HKDF+AES-GCM key agreement | Key wrapping construction (Layer 3) |
 | **Bandcamp** | Creator-set pricing, direct payment, DRM-free download | Creator independence philosophy; IC adds fingerprinting Bandcamp doesn't have |
 | **Tardos (2003)** | Information-theoretically optimal fingerprinting codes | Layer 5 fingerprinting scheme |
-| **Steam DRM** | Platform manages keys, always-online verification | Anti-pattern â€” IC avoids platform lock-in and always-online |
-| **LBRY/Odysee** | Blockchain-based content access | Anti-pattern â€” UX disaster, LBRY bankrupt by 2024, blockchain unnecessary for this problem |
+| **Steam DRM** | Platform manages keys, always-online verification | Anti-pattern — IC avoids platform lock-in and always-online |
+| **LBRY/Odysee** | Blockchain-based content access | Anti-pattern — UX disaster, LBRY bankrupt by 2024, blockchain unnecessary for this problem |
 
 ---
 
 ## 17. Open Questions
 
-1. **Revenue split enforcement.** D046 specifies `ic_project: 10` â€” but if IC never processes payments, how is this enforced? Current answer: it's voluntary (honor system). Community servers could track sales volume via PurchaseRecord issuance counts and display it publicly for transparency, but cannot enforce the split. This matches the FOSS project donation model (voluntary, not mandatory).
+1. **Revenue split enforcement.** D046 specifies `ic_project: 10` — but if IC never processes payments, how is this enforced? Current answer: it's voluntary (honor system). Community servers could track sales volume via PurchaseRecord issuance counts and display it publicly for transparency, but cannot enforce the split. This matches the FOSS project donation model (voluntary, not mandatory).
 
-2. **Refund flow.** Who handles refunds â€” the creator or the community server? Creator handles the money side (refund via Stripe/PayPal). Community server handles the cryptographic side (issue revocation SCR). These should be coupled via webhook but the failure mode (refund issued, revocation not) needs documented policy.
+2. **Refund flow.** Who handles refunds — the creator or the community server? Creator handles the money side (refund via Stripe/PayPal). Community server handles the cryptographic side (issue revocation SCR). These should be coupled via webhook but the failure mode (refund issued, revocation not) needs documented policy.
 
-3. **Bulk licensing.** Game cafes, tournament organizers, educational institutions â€” do they get volume PurchaseRecords? Probably yes, via a `grant_type: bulk` flag, but the details are not designed here.
+3. **Bulk licensing.** Game cafes, tournament organizers, educational institutions — do they get volume PurchaseRecords? Probably yes, via a `grant_type: bulk` flag, but the details are not designed here.
 
 4. **Content versioning.** When a creator updates premium content (new version), do existing PurchaseRecords cover the update? The `content_version` field in the PurchaseRecord payload suggests version-specific purchases. Policy question: auto-grant updates (common) vs. require re-purchase (rare, for major overhauls).

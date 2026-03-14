@@ -4,12 +4,12 @@
 
 ## Keyframe Index & Snapshots
 
-The keyframe section stores periodic `SimSnapshot` or `DeltaSnapshot` captures that enable fast seeking without re-simulating from tick 0. Keyframes are **mandatory** â€” the recorder writes one every 300 ticks (~20 seconds at the Slower default of ~15 tps). A 60-minute replay at Slower speed contains ~180 keyframes.
+The keyframe section stores periodic `SimSnapshot` or `DeltaSnapshot` captures that enable fast seeking without re-simulating from tick 0. Keyframes are **mandatory** — the recorder writes one every 300 ticks (~20 seconds at the Slower default of ~15 tps). A 60-minute replay at Slower speed contains ~180 keyframes.
 
 The section begins with a fixed-length index (for O(1) seek-to-tick), followed by the snapshot data blobs:
 
 ```rust
-/// Keyframe index entry â€” one per keyframe, stored as a flat array
+/// Keyframe index entry — one per keyframe, stored as a flat array
 /// at the start of the keyframe section for fast lookup.
 pub struct KeyframeIndexEntry {
     pub tick: u64,                    // Tick this keyframe was captured at
@@ -19,7 +19,7 @@ pub struct KeyframeIndexEntry {
     pub is_full: bool,                // true = Full SimSnapshot, false = DeltaSnapshot
 }
 
-/// DeltaSnapshot â€” encodes only components that changed since a baseline.
+/// DeltaSnapshot — encodes only components that changed since a baseline.
 /// See state-recording.md for the TrackChanges derive macro and ChangeMask
 /// that make delta encoding efficient.
 ///
@@ -29,15 +29,15 @@ pub struct KeyframeIndexEntry {
 /// since the recorder's respective baselines (see state-recording.md).
 pub struct DeltaSnapshot {
     pub core: SimCoreDelta,                     // Sim-internal delta (produced by ic-sim)
-    pub campaign_state: Option<CampaignState>,  // Full campaign state if changed since baseline (D021 â€” typically small: flags + mission ID)
+    pub campaign_state: Option<CampaignState>,  // Full campaign state if changed since baseline (D021 — typically small: flags + mission ID)
     pub script_state: Option<ScriptState>,      // Full script state if changed since baseline (collected by ic-game via ic-script)
 }
 
-/// Sim-internal delta â€” what `Simulation::delta_snapshot(baseline)` returns.
+/// Sim-internal delta — what `Simulation::delta_snapshot(baseline)` returns.
 /// Contains only changes to state owned by `ic-sim`.
 pub struct SimCoreDelta {
     pub baseline_tick: SimTick,       // Tick of the baseline this delta is relative to
-    pub baseline_hash: StateHash,     // Full SHA-256 of the baseline (for branch-safety AND reconnection integrity â€” see api-misuse-defense.md S10, N3)
+    pub baseline_hash: StateHash,     // Full SHA-256 of the baseline (for branch-safety AND reconnection integrity — see api-misuse-defense.md S10, N3)
     pub tick: SimTick,                // Tick this delta represents
     pub intern_table_delta: Option<StringInternerDelta>, // New interned strings since baseline (if any)
     pub changed_entities: Vec<EntityDelta>,  // Only entities with changed components
@@ -53,7 +53,7 @@ pub struct StringInternerSnapshot {
     pub entries: Vec<String>,
 }
 
-/// Delta of the string intern table â€” only new entries added since
+/// Delta of the string intern table — only new entries added since
 /// the baseline snapshot. Previous entries are immutable (interning
 /// is append-only within a game session).
 pub struct StringInternerDelta {
@@ -63,9 +63,9 @@ pub struct StringInternerDelta {
     pub new_entries: Vec<String>,
 }
 
-/// Per-entity delta â€” identifies one entity and which of its components
+/// Per-entity delta — identifies one entity and which of its components
 /// changed since the baseline. Uses the `ChangeMask` bitfield from
-/// `state-recording.md` Â§ TrackChanges to encode which components are
+/// `state-recording.md` § TrackChanges to encode which components are
 /// present in `changed_components`.
 pub struct EntityDelta {
     pub entity: UnitTag,
@@ -83,7 +83,7 @@ pub struct EntityDelta {
     pub is_removed: bool,
 }
 
-/// Per-player state delta â€” credits, power, tech tree changes since baseline.
+/// Per-player state delta — credits, power, tech tree changes since baseline.
 pub struct PlayerStateDelta {
     pub player: PlayerId,
     /// Bitfield of which PlayerState fields changed.
@@ -92,7 +92,7 @@ pub struct PlayerStateDelta {
     pub changed_fields: Vec<u8>,
 }
 
-/// Map state delta â€” terrain and resource cell changes since baseline.
+/// Map state delta — terrain and resource cell changes since baseline.
 /// Only cells that changed are included.
 pub struct MapStateDelta {
     /// Changed cells, identified by CellPos. Each entry contains
@@ -103,21 +103,21 @@ pub struct MapStateDelta {
 
 The first keyframe (tick 0) is always a full `SimSnapshot`. Subsequent keyframes alternate between full snapshots (every Nth keyframe, default N=10, i.e., every 3000 ticks) and delta snapshots relative to the previous full keyframe. This bounds worst-case seek cost: restoring to any tick requires loading at most one full snapshot + 9 deltas.
 
-**Seeking algorithm:** To seek to tick T: (1) binary search the keyframe index for the largest keyframe tick â‰¤ T, (2) if that keyframe is a full `SimSnapshot` (`is_full == true`), decompress and restore it via `GameRunner::restore_full()` (see `02-ARCHITECTURE.md` Â§ ic-game Integration); if it is a `DeltaSnapshot` (`is_full == false`), scan backward through the index to find the preceding full keyframe, restore that full snapshot via `restore_full()`, then apply each intervening delta in order via `GameRunner::apply_full_delta()` up to and including the selected keyframe, (3) re-simulate forward from the keyframe tick to T using the order stream. Worst case: one full snapshot + up to 9 delta applications (since full keyframes occur every 10th keyframe, i.e., every 3000 ticks at default cadence).
+**Seeking algorithm:** To seek to tick T: (1) binary search the keyframe index for the largest keyframe tick ≤ T, (2) if that keyframe is a full `SimSnapshot` (`is_full == true`), decompress and restore it via `GameRunner::restore_full()` (see `02-ARCHITECTURE.md` § ic-game Integration); if it is a `DeltaSnapshot` (`is_full == false`), scan backward through the index to find the preceding full keyframe, restore that full snapshot via `restore_full()`, then apply each intervening delta in order via `GameRunner::apply_full_delta()` up to and including the selected keyframe, (3) re-simulate forward from the keyframe tick to T using the order stream. Worst case: one full snapshot + up to 9 delta applications (since full keyframes occur every 10th keyframe, i.e., every 3000 ticks at default cadence).
 
 ## Analysis Event Stream
 
-Alongside the order stream (which enables deterministic replay), IC replays include a separate **analysis event stream** â€” derived events sampled from the simulation state during recording. This stream enables replay analysis tools (stats sites, tournament review, community analytics) to extract rich data **without re-simulating the entire game**.
+Alongside the order stream (which enables deterministic replay), IC replays include a separate **analysis event stream** — derived events sampled from the simulation state during recording. This stream enables replay analysis tools (stats sites, tournament review, community analytics) to extract rich data **without re-simulating the entire game**.
 
-This design follows SC2's separation of `replay.game.events` (orders for playback) from `replay.tracker.events` (analytical data for post-game tools). See `research/blizzard-github-analysis.md` Â§ 5.2â€“5.3.
+This design follows SC2's separation of `replay.game.events` (orders for playback) from `replay.tracker.events` (analytical data for post-game tools). See `research/blizzard-github-analysis.md` § 5.2–5.3.
 
 **Event taxonomy:**
 
 ```rust
 /// Analysis events derived from simulation state during recording.
-/// These are NOT inputs â€” they are sampled observations for tooling.
-/// Entity references use UnitTag â€” the stable generational identity
-/// defined in 02-ARCHITECTURE.md Â§ External Entity Identity.
+/// These are NOT inputs — they are sampled observations for tooling.
+/// Entity references use UnitTag — the stable generational identity
+/// defined in 02-ARCHITECTURE.md § External Entity Identity.
 pub enum AnalysisEvent {
     /// Unit fully created (spawned or construction completed).
     UnitCreated { tick: u64, tag: UnitTag, unit_type: UnitTypeId, owner: PlayerId, pos: WorldPos },
@@ -138,12 +138,12 @@ pub enum AnalysisEvent {
 
     // --- Competitive analysis events (Phase 5+) ---
 
-    /// Periodic camera position sample â€” where each player is looking.
+    /// Periodic camera position sample — where each player is looking.
     /// Sampled at 2 Hz (~8 bytes per player per sample). Enables coaching
     /// tools ("you weren't watching your base during the drop"), replay
-    /// heatmaps, and attention analysis. See D059 Â§ Integration.
+    /// heatmaps, and attention analysis. See D059 § Integration.
     CameraPositionSample { tick: u64, player: PlayerId, viewport_center: WorldPos, zoom_level: u16 },
-    /// Player selection changed â€” what the player is controlling.
+    /// Player selection changed — what the player is controlling.
     /// Delta-encoded: only records additions/removals from the previous selection.
     /// Enables micro/macro analysis and attention tracking.
     SelectionChanged { tick: u64, player: PlayerId, added: Vec<UnitTag>, removed: Vec<UnitTag> },
@@ -153,30 +153,30 @@ pub enum AnalysisEvent {
     AbilityUsed { tick: u64, player: PlayerId, ability_id: AbilityId, target: Option<WorldPos> },
     /// Game pause/unpause event.
     PauseEvent { tick: u64, player: PlayerId, paused: bool },
-    /// Match ended â€” captures the end reason for analysis tools.
+    /// Match ended — captures the end reason for analysis tools.
     MatchEnded { tick: u64, outcome: MatchOutcome },
-    /// Vote lifecycle event â€” proposal, ballot, and resolution.
-    /// See `03-NETCODE.md` Â§ "In-Match Vote Framework" for the full vote system.
+    /// Vote lifecycle event — proposal, ballot, and resolution.
+    /// See `03-NETCODE.md` § "In-Match Vote Framework" for the full vote system.
     VoteEvent { tick: u64, event: VoteAnalysisEvent },
 
     // --- Highlight detection events (D077) ---
 
-    /// Engagement started â€” units from opposing players entered weapon range.
+    /// Engagement started — units from opposing players entered weapon range.
     /// Provides a bounding snapshot for highlight scoring window alignment.
     EngagementStarted { tick: u64, center_pos: WorldPos, friendly_units: Vec<UnitTag>, enemy_units: Vec<UnitTag>, value_friendly: i64, value_enemy: i64 },
-    /// Engagement ended â€” all combat ceased or one side retreated/died.
+    /// Engagement ended — all combat ceased or one side retreated/died.
     /// Duration + losses enable engagement-level scoring.
     EngagementEnded { tick: u64, center_pos: WorldPos, friendly_losses: u32, enemy_losses: u32, friendly_survivors: u32, enemy_survivors: u32, duration_ticks: u64 },
-    /// Superweapon fired â€” Iron Curtain, Nuke, Chronosphere, etc.
+    /// Superweapon fired — Iron Curtain, Nuke, Chronosphere, etc.
     /// Flat rarity bonus (0.9) in the highlight scoring pipeline.
     SuperweaponFired { tick: u64, weapon_type: AbilityId, target_pos: WorldPos, player: PlayerId, units_affected: u32, buildings_affected: u32 },
-    /// Base destroyed â€” primary base or expansion fully wiped.
+    /// Base destroyed — primary base or expansion fully wiped.
     /// Rarity bonus (0.85) and strong momentum signal.
     BaseDestroyed { tick: u64, player: PlayerId, pos: WorldPos, buildings_lost: Vec<UnitTag> },
-    /// Army wipe â€” >70% of a player's army destroyed in a single engagement.
+    /// Army wipe — >70% of a player's army destroyed in a single engagement.
     /// Rarity bonus (0.8) and high engagement density signal.
     ArmyWipe { tick: u64, player: PlayerId, units_lost: u32, total_value_lost: i64, percentage_of_army: u16 },
-    /// Comeback moment â€” player transitions from losing to winning position.
+    /// Comeback moment — player transitions from losing to winning position.
     /// Detected from `PlayerStatSnapshot` deltas; rarity bonus (0.75), strong momentum signal.
     ComebackMoment { tick: u64, player: PlayerId, deficit_before: i64, advantage_after: i64, swing_value: i64 },
 }
@@ -190,12 +190,12 @@ pub enum ControlGroupAction {
 ```
 
 **Competitive analysis rationale:**
-- **CameraPositionSample:** SC2 and AoE2 replays both include camera tracking. Coaches review where a player was looking ("you weren't watching your expansion when the attack came"). At 2 Hz with 8 bytes per player, a 20-minute 2-player game adds ~19 KB â€” negligible. Combines powerfully with voice-in-replay (D059): hearing what a player said while seeing what they were looking at.
+- **CameraPositionSample:** SC2 and AoE2 replays both include camera tracking. Coaches review where a player was looking ("you weren't watching your expansion when the attack came"). At 2 Hz with 8 bytes per player, a 20-minute 2-player game adds ~19 KB — negligible. Combines powerfully with voice-in-replay (D059): hearing what a player said while seeing what they were looking at.
 - **SelectionChanged / ControlGroupEvent:** SC2's `replay.game.events` includes selection deltas. Control group usage frequency and response time are key skill metrics that distinguish player brackets. Delta-encoded selections are compact (~12 bytes per change).
 - **AbilityUsed:** Superweapon timing, chronosphere accuracy, iron curtain placement decisions. Critical for tournament review.
-- **PauseEvent / MatchEnded:** Structural events that analysis tools need without re-simulating. See `03-NETCODE.md` Â§ Match Lifecycle for the full pause and surrender specifications.
-- **VoteEvent:** Records vote proposals, individual ballots, and resolutions for post-match review and behavioral analysis. Tournament admins can audit vote patterns (e.g., excessive failed kick votes). See `03-NETCODE.md` Â§ "In-Match Vote Framework."
-- **Not required for playback** â€” the order stream alone is sufficient for deterministic replay. Analysis events are a convenience cache.
-- **Compact position sampling** â€” `UnitPositionSample` uses delta-encoded unit indices and includes only units that have inflicted or taken damage recently (following SC2's tracker event model). This keeps the stream compact even in large battles.
-- **Fixed-point stat values** â€” `PlayerStatSnapshot` uses fixed-point integers (matching the sim), not floats.
-- **Independent compression** â€” the analysis stream is LZ4-compressed in its own block, separate from the order stream. Tools that only need orders skip it; tools that only need stats skip the orders.
+- **PauseEvent / MatchEnded:** Structural events that analysis tools need without re-simulating. See `03-NETCODE.md` § Match Lifecycle for the full pause and surrender specifications.
+- **VoteEvent:** Records vote proposals, individual ballots, and resolutions for post-match review and behavioral analysis. Tournament admins can audit vote patterns (e.g., excessive failed kick votes). See `03-NETCODE.md` § "In-Match Vote Framework."
+- **Not required for playback** — the order stream alone is sufficient for deterministic replay. Analysis events are a convenience cache.
+- **Compact position sampling** — `UnitPositionSample` uses delta-encoded unit indices and includes only units that have inflicted or taken damage recently (following SC2's tracker event model). This keeps the stream compact even in large battles.
+- **Fixed-point stat values** — `PlayerStatSnapshot` uses fixed-point integers (matching the sim), not floats.
+- **Independent compression** — the analysis stream is LZ4-compressed in its own block, separate from the order stream. Tools that only need orders skip it; tools that only need stats skip the orders.

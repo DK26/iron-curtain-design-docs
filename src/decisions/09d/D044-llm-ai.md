@@ -370,6 +370,7 @@ All three paths receive the same `FogFilteredView` and produce the same `Vec<Pla
 - **D031 (telemetry):** The `GameplayEvent` stream (D031) feeds the fog-filtered callback pipeline that populates `AiEventLog`. D031 is the raw data source; D041 callbacks are the filtered AI-facing interface; `AiEventLog` is the accumulated narrative.
 - **D034 (SQLite):** LLM consultation history (prompts sent, plans received, execution outcomes) stored in SQLite for debugging and quality analysis. No new tables required — uses the existing `gameplay_events` schema with LLM-specific event types.
 - **D057 (Skill Library):** The orchestrator is the primary producer and consumer of AI strategy skills. Proven `StrategicPlan` outputs are stored in the skill library; future consultations retrieve relevant skills as few-shot prompt context. See D057 for the full verification→storage→retrieval loop.
+- **D043 (Puppet Master architecture):** `LlmOrchestratorAi` is reconceptualized as `GuidedAi<LlmPuppetMaster>` under D043's Puppet Master architecture. The LLM-specific guidance logic (prompt construction, `LlmProvider` calls, `StrategicPlan` parsing) constitutes the `LlmPuppetMaster` implementation of the `PuppetMaster` trait, while the generic wrapper mechanics (consultation scheduling, parameter bridging, event forwarding) live in `GuidedAi`. See [AI Commanders & Puppet Masters](D043/commanders-and-puppet-masters.md) for the full trait design and tier taxonomy.
 
 ---
 

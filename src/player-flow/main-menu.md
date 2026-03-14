@@ -5,31 +5,31 @@ The main menu is the hub. Everything is reachable from here. The shellmap plays 
 ### Layout
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚                                                                  â”‚
-â”‚                    [ IRON CURTAIN ]                               â”‚
-â”‚                    Red Alert                                     â”‚
-â”‚                                                                  â”‚
-â”‚              â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”                         â”‚
-â”‚              â”‚  â–º Continue Campaign     â”‚ (if save exists)       â”‚
-â”‚              â”‚  â–º Campaign              â”‚                         â”‚
-â”‚              â”‚  â–º Skirmish              â”‚                         â”‚
-â”‚              â”‚  â–º Multiplayer           â”‚                         â”‚
-â”‚              â”‚                          â”‚                         â”‚
-â”‚              â”‚  â–º Replays               â”‚                         â”‚
-â”‚              â”‚  â–º Workshop              â”‚                         â”‚
-â”‚              â”‚  â–º Settings              â”‚                         â”‚
-â”‚              â”‚                          â”‚                         â”‚
-â”‚              â”‚  â–º Profile               â”‚ (bottom group)         â”‚
-â”‚              â”‚  â–º Encyclopedia          â”‚                         â”‚
-â”‚              â”‚  â–º Credits               â”‚                         â”‚
-â”‚              â”‚  â–º Quit                  â”‚                         â”‚
-â”‚              â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜                         â”‚
-â”‚                                                                  â”‚
-â”‚  [shellmap: live AI battle playing in background]                â”‚
-â”‚                                                                  â”‚
-â”‚  Iron Curtain v0.1.0        community.ironcurtain.dev    RA 1.0 â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌──────────────────────────────────────────────────────────────────┐
+│                                                                  │
+│                    [ IRON CURTAIN ]                               │
+│                    Red Alert                                     │
+│                                                                  │
+│              ┌─────────────────────────┐                         │
+│              │  ► Continue Campaign     │ (if save exists)       │
+│              │  ► Campaign              │                         │
+│              │  ► Skirmish              │                         │
+│              │  ► Multiplayer           │                         │
+│              │                          │                         │
+│              │  ► Replays               │                         │
+│              │  ► Workshop              │                         │
+│              │  ► Settings              │                         │
+│              │                          │                         │
+│              │  ► Profile               │ (bottom group)         │
+│              │  ► Encyclopedia          │                         │
+│              │  ► Credits               │                         │
+│              │  ► Quit                  │                         │
+│              └─────────────────────────┘                         │
+│                                                                  │
+│  [shellmap: live AI battle playing in background]                │
+│                                                                  │
+│  Iron Curtain v0.1.0        community.ironcurtain.dev    RA 1.0 │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ### Button Descriptions
@@ -46,13 +46,13 @@ The main menu is the hub. Everything is reachable from here. The shellmap plays 
 | **Profile**           | Opens Player Profile                                              | View/edit identity, achievements, stats, friends, community memberships.                                    |
 | **Encyclopedia**      | Opens in-game Encyclopedia                                        | Auto-generated unit/building reference from YAML rules.                                                     |
 | **Credits**           | Shows credits sequence                                            | Scrolling credits, skippable.                                                                               |
-| **Quit**              | Exits to desktop                                                  | Immediate â€” no "are you sure?" dialog (following the principle that the game respects the player's intent). |
+| **Quit**              | Exits to desktop                                                  | Immediate — no "are you sure?" dialog (following the principle that the game respects the player's intent). |
 
 ### Contextual Elements
 
-- **Version info** â€” Bottom-left: engine version, game module version
-- **Community link** â€” Bottom-center: link to community site/Discord
-- **Mod indicator** â€” If a non-default mod profile is active, a small indicator badge shows which profile (e.g., "Combined Arms v2.1")
-- **News ticker** (optional, Modern theme) â€” Community announcements from the configured tracking server(s)
-- **Tutorial hint** â€” For new players: a non-intrusive callout near Campaign or Skirmish saying "New? Try the tutorial â†’ Commander School" (D065, dismissible, appears once)
-- **Background selection** â€” Configurable via Settings â†’ Video. Options: static theme image, shellmap AI battle (default for Remastered/Modern themes), personal highlights cycling from the player's highlight library (D077), or community/tournament highlight packs from Workshop (D077). Falls back to shellmap AI if the player has fewer than 3 valid highlights. Highlight playback re-simulates from nearest keyframe at reduced priority behind menu UI
+- **Version info** — Bottom-left: engine version, game module version
+- **Community link** — Bottom-center: link to community site/Discord
+- **Mod indicator** — If a non-default mod profile is active, a small indicator badge shows which profile (e.g., "Combined Arms v2.1")
+- **News ticker** (optional, Modern theme) — Community announcements from the configured tracking server(s)
+- **Tutorial hint** — For new players: a non-intrusive callout near Campaign or Skirmish saying "New? Try the tutorial → Commander School" (D065, dismissible, appears once)
+- **Background selection** — Configurable via Settings → Video. Options: static theme image, shellmap AI battle (default for Remastered/Modern themes), personal highlights cycling from the player's highlight library (D077), or community/tournament highlight packs from Workshop (D077). Falls back to shellmap AI if the player has fewer than 3 valid highlights. Highlight playback re-simulates from nearest keyframe at reduced priority behind menu UI

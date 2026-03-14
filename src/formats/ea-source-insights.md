@@ -17,15 +17,15 @@ The original uses `OutList` (local player commands) and `DoList` (confirmed orde
 OutList.Add(EventClass(EventClass::IDLE, TargetClass(tech)));
 ```
 
-Player actions â†’ events â†’ queue â†’ deterministic processing each tick. This is the same pattern as our `PlayerOrder â†’ TickOrders â†’ Simulation::apply_tick()` pipeline. Westwood validated this in 1996.
+Player actions → events → queue → deterministic processing each tick. This is the same pattern as our `PlayerOrder → TickOrders → Simulation::apply_tick()` pipeline. Westwood validated this in 1996.
 
 ### Keep: Integer Math for Determinism
 
-The original uses integer math everywhere for game logic â€” positions, damage, timing. No floats in the simulation. This is why multiplayer worked. Our `FixedPoint` / `SimCoord` approach mirrors this.
+The original uses integer math everywhere for game logic — positions, damage, timing. No floats in the simulation. This is why multiplayer worked. Our `FixedPoint` / `SimCoord` approach mirrors this.
 
-### Keep: Data-Driven Rules (INI â†’ MiniYAML â†’ YAML)
+### Keep: Data-Driven Rules (INI → MiniYAML → YAML)
 
-Original reads unit stats and game rules from `.ini` files at runtime. This data-driven philosophy is what made C&C so moddable. The lineage: `INI â†’ MiniYAML â†’ YAML` â€” each step more expressive, same philosophy.
+Original reads unit stats and game rules from `.ini` files at runtime. This data-driven philosophy is what made C&C so moddable. The lineage: `INI → MiniYAML → YAML` — each step more expressive, same philosophy.
 
 ### Keep: MIX Archive Concept
 
@@ -48,7 +48,7 @@ Original code is riddled with network-type checks embedded in game logic:
 if (Session.Type == GAME_IPX || Session.Type == GAME_INTERNET) { ... }
 ```
 
-This is the anti-pattern our `NetworkModel` trait eliminates. Separate code paths for IPX, Westwood Online, MPlayer, TEN, modem â€” all interleaved with `#ifdef`. The developer disliked the Westwood Online API enough to write a complete wrapper around it.
+This is the anti-pattern our `NetworkModel` trait eliminates. Separate code paths for IPX, Westwood Online, MPlayer, TEN, modem — all interleaved with `#ifdef`. The developer disliked the Westwood Online API enough to write a complete wrapper around it.
 
 ### Leave Behind: Platform-Specific Rendering
 
@@ -61,7 +61,7 @@ The game allocates 13MB and checks if it succeeds. Checks that `sleep(1000)` act
 ### Interesting Historical Details
 
 - Code path for 640x400 display mode with special VGA fallback
-- `#ifdef FIXIT_CSII` for Aftermath expansion â€” comment explains they broke the ability to build vanilla Red Alert executables and had to fix it later
+- `#ifdef FIXIT_CSII` for Aftermath expansion — comment explains they broke the ability to build vanilla Red Alert executables and had to fix it later
 - Developer comments reference "Counterstrike" in VCS headers (`$Header: /CounterStrike/...`)
 - MPEG movie playback code exists but is disabled
 - Game refuses to start if launched from `f:\projects\c&c0` (the network share)
