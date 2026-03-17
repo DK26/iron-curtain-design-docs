@@ -225,7 +225,7 @@ By default, D021 campaign choices are normal save/load state. IC does **not** tr
 Recommended first-party policy:
 
 - **Normal mode:** free saving/reloading before or after decisions
-- **Ironman / commit modes:** autosave immediately after a timed-choice selection or other branch-committing decision, and treat that branch as locked
+- **Ironman / commit modes:** autosave immediately after a tactical dilemma selection or other branch-committing decision, and treat that branch as locked
 
 The "world moves without you" rule is about authored consequences and opportunity cost, not an anti-save-scum guarantee by itself.
 
@@ -236,7 +236,7 @@ Branching campaigns create a large state space. D021 content therefore needs mor
 `ic campaign validate` should cover three layers:
 
 1. **Graph validation** — no orphan nodes, no missing outcome targets, no impossible joins
-2. **State-coverage validation** — traverse authored outcomes, timed-choice branches, pending-rescue states, and fallback edges to confirm every consumer mission still has a legal playable state
+2. **State-coverage validation** — traverse authored outcomes, expiring opportunity branches, pending-rescue states, and fallback edges to confirm every consumer mission still has a legal playable state
 3. **Presentation validation** — snapshot world-screen cards and briefings so `On Success`, `On Failure`, `If Skipped`, `Time Window`, and `CRITICAL` text do not silently disappear under specific flag combinations
 
 Large campaigns should validate endgame consumers by **asset bundle** rather than brute-forcing every raw flag permutation. For example:
@@ -646,7 +646,7 @@ missions:
                   air_strike_window_missed: true
 ```
 
-Choices may optionally define `unchosen_effects` on individual entries. When the player picks one branch, the engine applies the `unchosen_effects` from every branch not taken. This lets authors build XCOM-style "the world moved without you" decision points using the same D021 `decision` primitive instead of inventing a separate timed-choice node.
+Choices may optionally define `unchosen_effects` on individual entries. When the player picks one branch, the engine applies the `unchosen_effects` from every branch not taken. This lets authors build mutually-exclusive decision points using the same D021 `decision` primitive without inventing a new node type (though expiring open-world opportunities prefer the `mission` node's `expires_in_phases` timer).
 
 **4. Expansion mission enhancements**
 
@@ -778,7 +778,7 @@ campaign_world_screen:
       failure_consequence: "Tanya captured or M6 infiltration runs blind"
       if_ignored: "M6 runs blind; the spy-network follow-up closes"
       if_ignored_detail: "Tanya stays safe, but the Soviet site hardens before Act 2"
-      time_window: "Choose now or the raid window closes"
+      time_window: "Expires in 2 operation phases"
       reveals_operations:
         - ic_spy_network
       consumed_by:
@@ -792,7 +792,7 @@ campaign_world_screen:
       failure_consequence: "Facility not neutralized in time; M8 uses chemical attacks"
       if_ignored: "Sarin active in Chronosphere defense"
       if_ignored_detail: "M8 gains two gas-shell barrages and one contaminated approach lane"
-      time_window: "Available until the Act 1 timed-choice window closes"
+      time_window: "Expires in 2 operation phases"
       consumed_by:
         - allied_08
     - mission: am_poland_1
@@ -860,7 +860,7 @@ Every optional operation should answer five concrete questions:
 4. **Cumulative assets.** Spy network + radar sabotage = full battlefield intel. Resistance favor + harbor secured = naval insertion route plus reinforcements.
 5. **Exclusive content.** Some branches, units, and final approaches should exist only if specific operations were completed.
 6. **Quantify anything that changes difficulty.** Prefer "first reinforcement wave delayed 180 seconds," "2 Super Tanks added to M14," or "40% of the map revealed at mission start" over "better intel" or "harder defense."
-7. **Differentiate attempt-failure from non-selection.** A failed SpecOps raid and a skipped timed-choice branch are not always the same state; the authored card and briefing should say which consequence belongs to which.
+7. **Differentiate attempt-failure from expiration.** A failed SpecOps raid and an ignored operation that expired are not always the same state; the authored card and briefing should say which consequence belongs to which.
 8. **Let SpecOps reveal commander work.** An intel raid, sabotage, or defector extraction can reveal a new commander operation card such as an interception, assault window, convoy ambush, or theater branch.
 
 #### Commander Alternatives Must Quantify Their Trade-Offs
@@ -1192,6 +1192,7 @@ pub struct RosterUnit {
 - Units gain experience from kills and surviving missions
 - A veteran tank from mission 1 is still veteran in mission 5
 - Losing a veteran unit hurts — they're irreplaceable until you earn new ones
+- **Veterancy Dilution:** If a campaign allows *replenishing* depleted veteran vehicle squads or infantry platoons between missions using Requisition, the influx of green recruits proportionally dilutes the unit's overall veterancy level. Pure preservation is rewarded; brute-force replacement degrades elite status.
 - Veterancy grants stat bonuses (configurable in YAML rules, per balance preset)
 
 **Equipment persistence (OFP: Resistance model):**

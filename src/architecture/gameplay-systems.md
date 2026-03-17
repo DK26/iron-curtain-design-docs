@@ -507,7 +507,7 @@ Campaign progression is **not** part of `ic-sim`. Tactical missions emit `Missio
 D021 now supports two campaign shapes on the same foundation:
 
 - **Graph-only campaigns** — branching mission graph, persistent roster/state, no extra command layer
-- **Strategic-layer campaigns** — the same graph wrapped in a phase-based `War Table` that exposes optional operations, enemy initiatives, operational budgets, and an arms-race ledger between milestone missions
+- **Strategic-layer campaigns** — the same graph wrapped in a phase-based `War Table` that exposes optional operations, enemy initiatives, Command Authority, and an arms-race ledger between milestone missions
 
 The important architecture rule is that the **graph remains authoritative**. The War Table is an organizer and presenter over graph nodes; it does not replace mission outcomes with a separate progression system.
 

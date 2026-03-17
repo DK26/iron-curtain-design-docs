@@ -211,7 +211,7 @@ Units moving, shooting, dying — headless sim + rendered. Record replay file. P
 - **Campaign select, mission map, and War Table UI:** visualize campaign graph, show current position, replay completed missions, surface operation cards, enemy initiatives, urgency, and arms-race readouts
 - **Operations as a distinct campaign content tier:** main missions, SpecOps, theater branches, and generated operations share one graph / state model
 - **Enemy Initiatives system:** authored strategic threats that advance between operations and resolve with concrete downstream effects if uncountered
-- **Timed strategic choice nodes:** `decision` windows plus `unchosen_effects` so the world moves without the player
+- **Expiring opportunity nodes:** optional missions with `expires_in_phases` timers, `on_expire` consequences, and map beacons so the world moves without the player
 - **Arms race / tech acquisition-denial tracking:** campaign-visible ledger that determines which prototypes, support powers, and enemy programs reach later missions
 - **Adaptive difficulty via campaign state:** designer-authored conditional bonuses/penalties based on cumulative performance
 - **Subfaction system — campaign theater bonuses (proposed — contingent on subfaction adoption):** Allied campaign operations grant temporary theater bonuses echoing country passives (Greece → partisans, North Sea → UK naval bonus); Soviet missions carry institutional flavor (NKVD suppression → conscripts, GRU intelligence → recon assets). Uses the same YAML bonus definitions as multiplayer subfactions. See `research/subfaction-country-system-study.md`

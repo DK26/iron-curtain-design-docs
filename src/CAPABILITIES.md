@@ -8,7 +8,7 @@
 
 | Mode                           | What You Get                                                                                                                                                                                                                                                  |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Campaign (Allied + Soviet)** | All original Red Alert missions fully playable in classic and Enhanced modes: branching outcomes, unit roster persistence, veterancy carry-over, optional hero progression, and an optional War Table with operations, enemy initiatives, timed choices, and a dynamic arms race (D021) |
+| **Campaign (Allied + Soviet)** | All original Red Alert missions fully playable in classic and Enhanced modes: branching outcomes, unit roster persistence, veterancy carry-over, optional hero progression, and an optional War Table with operations, enemy initiatives, expiring opportunities, and a dynamic arms race (D021) |
 | **Skirmish vs AI**             | Up to 8 players/AI on any map; named AI Commanders with portraits, agendas, and taunts (D043); AI difficulty (Easy–Brutal); mix different commander personalities in the same match                                                                           |
 | **Ranked Multiplayer**         | Glicko-2 rating with seasonal tiers (Conscript → Supreme Commander), per-queue ratings (1v1, 2v2, FFA), map veto system, placement matches, escalating cooldowns (D055)                                                                                       |
 | **Casual Multiplayer**         | Game browser, Among Us-style room codes (IRON-XXXX), QR join for LAN/streaming, Discord/Steam deep links, auto-download missing mods on join (D030)                                                                                                           |
@@ -195,9 +195,9 @@ XCC Mixer replacement with visual editing — no command-line tools needed:
 - **Branching graph backbone** — missions linked by named outcomes, not linear lists
 - **Optional strategic layer / War Table** — phase-based campaign wrapper that presents operations, enemy initiatives, and urgency between milestone missions
 - **Operations as a distinct campaign tier** — main missions, SpecOps, theater branches, generated operations, and follow-up reveals all use the same campaign graph foundation
-- **Timed strategic choices** — `decision` nodes plus `unchosen_effects` let the world move without you
+- **Expiring opportunities** — optional mission nodes with `expires_in_phases` timers and `on_expire` consequences let the world move without you
 - **Arms race / tech ledger** — campaign-visible acquisition / denial state that changes later missions and endgame composition
-- **Operational budgets and phase pressure** — players cannot run every operation before the main mission becomes urgent
+- **Command Authority and phase pressure** — players cannot run every operation before the main mission becomes urgent
 - **Multiple outcomes per mission** — win/loss/partial each branch differently
 - **No mandatory game-over** — designer controls what happens on defeat (retry, fallback, consequences)
 - **Unit roster persistence** — surviving units carry forward with veterancy, kills, equipment

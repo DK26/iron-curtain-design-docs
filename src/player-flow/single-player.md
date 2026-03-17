@@ -165,7 +165,7 @@ The mission briefing is where the player commits. It should not just restate sto
 
 - **Critical missions** must show a prominent `CRITICAL` badge plus a plain-language failure line such as `Campaign ends on defeat`.
 - **Recoverable missions** should show the fallback expectation explicitly: `Defeat branches to a harder continuation` or `Rescue branch opens`.
-- **Timed-choice save policy** should be explicit. First-party campaigns allow normal saving/reloading by default; `Ironman` or other commit modes autosave immediately after the choice and warn that the branch is now locked.
+- **Expiring-opportunity save policy** should be explicit. First-party campaigns allow normal saving/reloading by default; `Ironman` or other commit modes autosave immediately after the choice and warn that the branch is now locked.
 - **SpecOps missions** should show `On Success`, `On Failure`, `If Skipped`, and `Time Window` sections whenever those states differ.
 - **SpecOps intel missions** should also show if success reveals or unlocks a new commander-facing operation on the strategic map.
 - **Generated SpecOps missions** should also show their theater / site context (`Generated from: Polish rail yard`, `Generated from: Soviet prison compound`) so the operation reads as a deliberate war target, not a random skirmish.
