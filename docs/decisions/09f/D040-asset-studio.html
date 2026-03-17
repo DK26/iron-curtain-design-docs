@@ -36,10 +36,10 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-9b234216.js";
+            window.path_to_searchindex_js = "../../searchindex-672774ae.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-a18c07f4.js"></script>
+        <script src="../../toc-ebf5f7ca.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -288,6 +288,14 @@
 </table>
 </div>
 <p><strong>Minimal reverse engineering required.</strong> RA1/TD and Generals/ZH are fully open-sourced by EA (GPL). RA2/TS formats are not open-sourced but have been community-documented for 20+ years — .vxl, .hva, .csf are thoroughly understood by the XCC, Ares, and Phobos projects. The <code>FormatRegistry</code> trait (D018) already anticipates per-module format loaders.</p>
+<p><strong>The table above is media-focused, not exhaustive.</strong> Complete support also includes non-media resource families that the engine and SDK must browse, inspect, and import directly:</p>
+<ul>
+<li>RA1 / TD: <code>.cps</code>, <code>.eng</code>, mission <code>.bin</code>, <code>.mpr</code></li>
+<li>RA2 / TS: <code>.bag</code> / <code>.idx</code>, <code>.csf</code>, <code>.map</code>, plus voxel <code>.vxl</code> / <code>.hva</code></li>
+<li>Generals / ZH: <code>.wnd</code>, <code>.str</code>, original <code>.map</code>, and the <code>.apt</code> + <code>.const</code> + <code>.dat</code> + <code>.ru</code> GUI bundle family</li>
+<li>Remastered: <code>.xml</code>, <code>.dat</code> / <code>.loc</code>, <code>.mtd</code></li>
+</ul>
+<p>Asset Studio is the canonical viewer/import surface for those families even when a specific row in the media table above does not show them.</p>
 <h4 id="layer-2--asset-editor"><a class="header" href="#layer-2--asset-editor">Layer 2 — Asset Editor</a></h4>
 <p>Scoped asset editing operations. Not pixel painting — structured operations on game asset types.</p>
 <div class="table-wrapper">

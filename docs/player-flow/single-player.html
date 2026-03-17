@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-9b234216.js";
+            window.path_to_searchindex_js = "../searchindex-672774ae.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-a18c07f4.js"></script>
+        <script src="../toc-ebf5f7ca.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -242,6 +242,15 @@
 <pre><code>Campaign Selection → [New Game] or [Continue]
 </code></pre>
 <p>The campaign graph is a visual world map (or node-and-edge graph for community campaigns) showing mission progression. Completed missions are solid, available missions pulse, locked missions are dimmed. If multiple branches are currently available, or an urgent pending mission such as a rescue remains open for a bounded window, the map/intermission view shows all available nodes and highlights the urgent one rather than auto-selecting for the player.</p>
+<p>For first-party campaigns, this screen is also the <strong>strategic layer</strong> of the campaign, not just a mission picker. It should tell the player:</p>
+<ul>
+<li>which fronts are active</li>
+<li>which operations are available now</li>
+<li>which ones are urgent or expiring</li>
+<li>which ones are recoverable versus truly critical</li>
+<li>what concrete assets have already been earned</li>
+<li>what happens if the player ignores an available operation</li>
+</ul>
 <pre><code>┌──────────────────────────────────────────────────────────┐
 │  ALLIED CAMPAIGN                             [← Back]    │
 │  Operation: Allies Reunited                              │
@@ -269,6 +278,68 @@
 └──────────────────────────────────────────────────────────┘
 </code></pre>
 <p><strong>Flow:</strong> Select a node → Mission Briefing screen → click “Begin Mission” → Loading → InGame. After mission: Debrief → next node unlocks on graph.</p>
+<p><strong>Strategic-layer surfaces for authored campaigns:</strong></p>
+<ul>
+<li><strong>Role tags</strong> on mission nodes or operation cards: <code>MAIN</code>, <code>SPECOPS</code>, <code>THEATER</code></li>
+<li><strong>Criticality tags</strong>: <code>RECOVERABLE</code>, <code>CRITICAL</code>, <code>RESCUE</code>, <code>TIMED</code></li>
+<li><strong>Source tag</strong>: <code>AUTHORED</code> or <code>GENERATED</code> for campaigns that mix handcrafted set pieces with generated SpecOps</li>
+<li><strong>Reward preview</strong>: concrete outputs such as <code>2 Super Tanks added in M14</code>, <code>No Sarin shelling in M8</code>, <code>M6 east service entrance unlocked</code></li>
+<li><strong>Reveal / unlock preview</strong>: concrete follow-up cards such as <code>Reveals Spy Network</code>, <code>Unlocks Chrono Convoy Intercept</code>, <code>Opens Poland follow-up chain</code></li>
+<li><strong>Fail preview</strong>: concrete attempt-failure results such as <code>Tanya captured</code>, <code>M6 infiltration runs blind</code>, <code>Campaign ends if Moscow holds</code></li>
+<li><strong>Ignore preview</strong>: concrete non-selection losses such as <code>Siberian window closes</code>, <code>M5 rescue branch does not open in time</code>, <code>Enemy air-fuel bombs remain active in M14</code></li>
+<li><strong>Front status panel</strong>: Greece, Siberia, Poland, Italy, England, or other authored theaters</li>
+<li><strong>Asset ledger</strong>: prototypes, resistance favor, rescued heroes, denied enemy tech, air/naval packages</li>
+<li><strong>Urgency markers</strong>: rescue pending, enemy project nearing completion, expiring operation windows</li>
+</ul>
+<p><strong>Failure-forward expectation:</strong></p>
+<ul>
+<li>Most campaign missions are <strong>recoverable</strong>. Defeat branches to a fallback state or harder continuation instead of hard-failing the run.</li>
+<li>Missions that can truly end the campaign must be explicitly marked <strong>CRITICAL</strong> on both the graph and the briefing screen.</li>
+<li>Optional SpecOps should show whether failure is recoverable, whether the mission can be postponed, and what is lost by skipping it.</li>
+</ul>
+<h3 id="mission-briefing"><a class="header" href="#mission-briefing">Mission Briefing</a></h3>
+<pre><code>Campaign Graph → select mission → Mission Briefing
+</code></pre>
+<p>The mission briefing is where the player commits. It should not just restate story context; it should answer whether the mission is critical, what success gives, and what failure costs.</p>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│  BEHIND ENEMY LINES                        [← Back]      │
+│  Tags: [SPECOPS] [TIMED] [RECOVERABLE] [GENERATED]      │
+│                                                          │
+│  Objective Summary                                       │
+│  Tanya infiltrates a Soviet research site and steals     │
+│  Iron Curtain access codes before the evacuation window  │
+│  closes.                                                 │
+│                                                          │
+│  On Success                                              │
+│  • M6 east service entrance unlocked                     │
+│  • First alarm delayed by 90 seconds                     │
+│  • Spy Network operation revealed on the world screen    │
+│                                                          │
+│  On Failure                                              │
+│  • Tanya may be captured                                 │
+│  • M6 loses the service-entrance route                   │
+│                                                          │
+│  If Skipped                                              │
+│  • Soviet site hardens and the raid window closes        │
+│  • M6 loses the service-entrance route                   │
+│                                                          │
+│  Time Window                                             │
+│  • Must be chosen during the current Act 1 decision      │
+│    window                                                │
+│                                                          │
+│                 [Begin Mission] [Compare Other Ops]      │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Briefing disclosure rules:</strong></p>
+<ul>
+<li><strong>Critical missions</strong> must show a prominent <code>CRITICAL</code> badge plus a plain-language failure line such as <code>Campaign ends on defeat</code>.</li>
+<li><strong>Recoverable missions</strong> should show the fallback expectation explicitly: <code>Defeat branches to a harder continuation</code> or <code>Rescue branch opens</code>.</li>
+<li><strong>Timed-choice save policy</strong> should be explicit. First-party campaigns allow normal saving/reloading by default; <code>Ironman</code> or other commit modes autosave immediately after the choice and warn that the branch is now locked.</li>
+<li><strong>SpecOps missions</strong> should show <code>On Success</code>, <code>On Failure</code>, <code>If Skipped</code>, and <code>Time Window</code> sections whenever those states differ.</li>
+<li><strong>SpecOps intel missions</strong> should also show if success reveals or unlocks a new commander-facing operation on the strategic map.</li>
+<li><strong>Generated SpecOps missions</strong> should also show their theater / site context (<code>Generated from: Polish rail yard</code>, <code>Generated from: Soviet prison compound</code>) so the operation reads as a deliberate war target, not a random skirmish.</li>
+<li>If multiple operations are available, the player should be able to back out and compare them without losing context or triggering the timer simply by opening a briefing.</li>
+</ul>
 <p><strong>Branching-safe progress display (D021):</strong></p>
 <ul>
 <li><code>Progress</code> defaults to <strong>unique missions completed / total missions in graph</strong>.</li>

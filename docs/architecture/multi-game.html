@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-9b234216.js";
+            window.path_to_searchindex_js = "../searchindex-672774ae.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-a18c07f4.js"></script>
+        <script src="../toc-ebf5f7ca.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -295,7 +295,7 @@ fn main() {
 <tr><td><strong>Networking</strong></td><td><code>NetworkModel</code> trait, <code>RelayCore</code> library, relay server binary, lockstep, replays</td><td><code>PlayerOrder</code> variants (game-specific commands)</td></tr>
 <tr><td><strong>Rendering</strong></td><td>Camera, sprite batching, UI framework; post-FX pipeline available to modders</td><td>Sprite renderer (RA1), voxel renderer (RA2), mesh renderer (3D mod/future)</td></tr>
 <tr><td><strong>Modding</strong></td><td>YAML loader, Lua runtime, WASM sandbox, workshop</td><td>Rule schemas, API surface exposed to scripts</td></tr>
-<tr><td><strong>Formats</strong></td><td>Archive loading, format registry</td><td><code>.mix</code>/<code>.shp</code> (RA1), <code>.vxl</code>/<code>.hva</code> (RA2), <code>.big</code>/<code>.w3d</code> (future), map format</td></tr>
+<tr><td><strong>Formats</strong></td><td>Archive loading, format registry</td><td>classic Westwood 2D family (<code>.mix</code>, <code>.shp</code>, <code>.tmp</code>, <code>.pal</code>, <code>.aud</code>, <code>.vqa</code>, <code>.vqp</code>, <code>.wsa</code>, <code>.fnt</code>, <code>.cps</code>, <code>.eng</code>, mission <code>.bin</code> / <code>.mpr</code>), RA2 families (<code>.vxl</code>, <code>.hva</code>, <code>.bag</code> / <code>.idx</code>, <code>.csf</code>, <code>.map</code>), and SAGE families (<code>.big</code>, <code>.w3d</code>, <code>.wnd</code>, <code>.str</code>, <code>.apt</code> bundle family, texture formats)</td></tr>
 </tbody>
 </table>
 </div>
@@ -346,7 +346,7 @@ fn main() {
 <tr><td>Camera</td><td>Implementation</td><td>Yes (<code>ScreenToWorld</code> trait)</td><td>A perspective camera impl. Already documented.</td></tr>
 <tr><td>Input</td><td>No (<code>InputSource</code>)</td><td>Yes</td><td>Nothing. Orders are orders.</td></tr>
 <tr><td>Networking</td><td>No</td><td>Yes (<code>NetworkModel</code> trait)</td><td>Nothing. Lockstep works regardless of spatial model.</td></tr>
-<tr><td>Format loaders</td><td>Implementation</td><td>Yes (<code>FormatRegistry</code>)</td><td>New parsers for <code>.big</code>, <code>.w3d</code>, etc. Additive.</td></tr>
+<tr><td>Format loaders</td><td>Implementation</td><td>Yes (<code>FormatRegistry</code>)</td><td>New parsers for <code>.cps</code>, <code>.eng</code>, <code>.vxl</code>, <code>.hva</code>, <code>.bag</code> / <code>.idx</code>, <code>.big</code>, <code>.w3d</code>, <code>.wnd</code>, <code>.str</code>, <code>.apt</code>, and other game-family formats are additive.</td></tr>
 <tr><td>Building placement</td><td>Data-driven</td><td>N/A — YAML rules + components</td><td>Different components (no <code>RequiresBuildableArea</code>). YAML change.</td></tr>
 </tbody>
 </table>

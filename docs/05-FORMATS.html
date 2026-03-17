@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-9b234216.js";
+            window.path_to_searchindex_js = "searchindex-672774ae.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a18c07f4.js"></script>
+        <script src="toc-ebf5f7ca.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -182,6 +182,16 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="05--file-formats--original-source-insights"><a class="header" href="#05--file-formats--original-source-insights">05 — File Formats &amp; Original Source Insights</a></h1>
+<p>For the broader engine-completeness inventory across Dune II, Tiberian Dawn, Red Alert 1, Red Alert 2 / Yuri’s Revenge, the Remastered Collection, and Generals / Zero Hour, see <a href="../research/complete-resource-format-support-map.html">Complete Resource Format Support Map</a>. This page remains the narrower canonical scope for the current <code>cnc-formats</code> / <code>ra-formats</code> split.</p>
+<h2 id="canonical-completeness-bar"><a class="header" href="#canonical-completeness-bar">Canonical Completeness Bar</a></h2>
+<p>At the engine level, Iron Curtain’s resource-support bar is broader than the current <code>cnc-formats</code> crate surface: the engine must be able to directly load the original resource families of Dune II, Tiberian Dawn, Red Alert 1, Red Alert 2 / Yuri’s Revenge, the Remastered Collection, and Generals / Zero Hour.</p>
+<p>This is a <strong>support requirement</strong>, not a requirement that a single parser crate owns every family. The split is:</p>
+<ol>
+<li><code>cnc-formats</code> is canonical for the clean-room classic Westwood / Petroglyph 2D family and closely related standalone tooling formats.</li>
+<li><code>ra-formats</code> and game-module-specific loaders own game-specific families that depend on EA-derived details or exceed the classic Westwood 2D scope.</li>
+<li>Additional sibling parser crates are allowed when a game family is structurally distinct enough that forcing it into <code>cnc-formats</code> would reduce clarity. The current obvious candidates are Dune II-specific resource families and SAGE-family formats for Generals / Zero Hour.</li>
+</ol>
+<p>So the completeness question is always: “can IC load the original resource directly?” not “did <code>cnc-formats</code> personally absorb every format?”</p>
 <h2 id="formats-to-support-cnc-formats--ra-formats"><a class="header" href="#formats-to-support-cnc-formats--ra-formats">Formats to Support (cnc-formats + ra-formats)</a></h2>
 <h3 id="binary-formats-from-original-game--openra"><a class="header" href="#binary-formats-from-original-game--openra">Binary Formats (from original game / OpenRA)</a></h3>
 <div class="table-wrapper">

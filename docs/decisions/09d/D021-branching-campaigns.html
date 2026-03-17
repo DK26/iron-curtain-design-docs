@@ -36,10 +36,10 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-9b234216.js";
+            window.path_to_searchindex_js = "../../searchindex-672774ae.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-a18c07f4.js"></script>
+        <script src="../../toc-ebf5f7ca.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -181,7 +181,7 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h2 id="d021-branching-campaign-system"><a class="header" href="#d021-branching-campaign-system">D021: Branching Campaign System</a></h2>
+                        <h2 id="d021-branching-campaign-system--strategic-layer"><a class="header" href="#d021-branching-campaign-system--strategic-layer">D021: Branching Campaign System &amp; Strategic Layer</a></h2>
 <h3 id="decision-capsule-llmrag-summary"><a class="header" href="#decision-capsule-llmrag-summary">Decision Capsule (LLM/RAG Summary)</a></h3>
 <ul>
 <li><strong>Status:</strong> Accepted</li>
@@ -189,9 +189,9 @@
 <li><strong>Execution overlay mapping:</strong> <code>M4.SCRIPT.LUA_RUNTIME</code> (P-Core); campaign state machine is part of the Lua scripting layer</li>
 <li><strong>Deferred features / extensions:</strong> Visual campaign editor (Phase 6a, D038), LLM-generated missions (Phase 7, D016)</li>
 <li><strong>Deferral trigger:</strong> Respective milestone start</li>
-<li><strong>Canonical for:</strong> Campaign graph structure, mission outcomes, persistent state carryover, unit roster, <code>Campaign</code> Lua global</li>
+<li><strong>Canonical for:</strong> Campaign graph structure, optional phase-based strategic layer (<code>War Table</code>), mission outcomes, persistent state carryover, unit roster, campaign strategic-layer state, <code>Campaign</code> Lua global</li>
 <li><strong>Scope:</strong> <code>ic-script</code> (campaign runtime), <code>modding/campaigns.md</code> (full specification)</li>
-<li><strong>Decision:</strong> IC campaigns are continuous, branching, and stateful — a directed graph of missions with persistent state, multiple outcomes per mission, and no mandatory game-over screen. Inspired by Operation Flashpoint: Cold War Crisis / Resistance. The full specification lives in <a href="../modding/campaigns.html"><code>modding/campaigns.md</code></a> (~2600 lines).</li>
+<li><strong>Decision:</strong> IC campaigns are continuous, branching, and stateful. The base model is a directed graph of missions with persistent state, multiple outcomes per mission, and no mandatory game-over screen. Campaigns may also organize that graph into a phase-based strategic layer (<code>War Table</code>) between authored milestone missions. Operations, enemy initiatives, Requisition, Command Authority, and tech / arms-race ledgers are accepted D021 extensions, not separate experimental systems. Inspired by Operation Flashpoint: Cold War Crisis / Resistance and XCOM’s strategy layer. The full specification lives in <a href="../../modding/campaigns.html"><code>modding/campaigns.md</code></a>.</li>
 <li><strong>Why:</strong>
 <ul>
 <li>OpenRA’s campaigns are disconnected standalone missions with no flow — a critical gap</li>
@@ -200,11 +200,11 @@
 <li>“No game over” design eliminates frustrating mandatory restarts while preserving tension</li>
 </ul>
 </li>
-<li><strong>Non-goals:</strong> Replacing Lua mission scripting. Campaigns define the <em>graph</em> (which missions, what order, what carries forward); individual missions are still scripted in Lua (D024).</li>
+<li><strong>Non-goals:</strong> Replacing Lua mission scripting or forcing every campaign into a War Table model. Campaigns define the <em>graph</em> (which missions, what order, what carries forward); individual missions are still scripted in Lua (D024). The strategic layer is an accepted extension for campaigns that want phase-based operation planning, not a requirement for compact graph-only campaigns.</li>
 <li><strong>Invariants preserved:</strong> Deterministic sim (campaign state is serializable, carried between missions as data). Replay-safe (campaign state snapshot included in replay metadata).</li>
-<li><strong>Public interfaces / types / commands:</strong> <code>Campaign</code> (Lua global — D024), campaign YAML schema, <code>CampaignState</code>, <code>MissionOutcome</code></li>
-<li><strong>Affected docs:</strong> <code>modding/campaigns.md</code> (full specification), <code>04-MODDING.md</code> § Campaigns</li>
-<li><strong>Keywords:</strong> campaign, branching, mission graph, outcome, persistent state, unit roster, veterancy, carryover, Operation Flashpoint, Campaign global</li>
+<li><strong>Public interfaces / types / commands:</strong> <code>Campaign</code> (Lua global — D024), campaign YAML schema, <code>CampaignState</code>, <code>CampaignFocusState</code>, <code>MissionOutcome</code>, <code>CampaignPhaseState</code>, <code>CampaignOperationState</code>, <code>GeneratedOperationState</code>, <code>EnemyInitiativeState</code>, <code>CampaignAssetLedgerState</code></li>
+<li><strong>Affected docs:</strong> <a href="../../modding/campaigns.html"><code>modding/campaigns.md</code></a> (full specification), <a href="../../04-MODDING.html"><code>04-MODDING.md</code></a> § Campaigns, <code>player-flow/single-player.md</code>, <code>research/strategic-campaign-layer-study.md</code></li>
+<li><strong>Keywords:</strong> campaign, branching, mission graph, strategic layer, War Table, operation, enemy initiative, Command Authority, Requisition, arms race, outcome, persistent state, unit roster, veterancy, carryover, Operation Flashpoint, Campaign global</li>
 </ul>
 <hr>
 <h3 id="core-principles"><a class="header" href="#core-principles">Core Principles</a></h3>
@@ -214,6 +214,8 @@
 <li><strong>Failure doesn’t end the campaign.</strong> A defeat outcome is another edge in the graph — branch to fallback, retry with fewer resources, or skip ahead with consequences.</li>
 <li><strong>State persists across missions.</strong> Surviving units, veterancy, captured equipment, story flags, resources carry forward per designer-configured carryover rules.</li>
 <li><strong>Continuous flow.</strong> Briefing → mission → debrief → next mission. No exit to menu between levels.</li>
+<li><strong>The graph remains authoritative.</strong> Even when a campaign uses a phase-based War Table, authored missions and operations still resolve through graph nodes and named outcomes.</li>
+<li><strong>Strategic-layer state is first-class.</strong> Campaign phases, Requisition, Command Authority, enemy initiatives, and arms-race ledgers are stored as structured campaign state, not just ad-hoc flags.</li>
 </ol>
 <h3 id="campaign-graph-yaml-excerpt"><a class="header" href="#campaign-graph-yaml-excerpt">Campaign Graph (YAML excerpt)</a></h3>
 <pre><code class="language-yaml">campaign:
@@ -243,6 +245,8 @@
 <pre><code class="language-lua">-- Query campaign state
 local roster = Campaign.get_roster()
 local bridge = Campaign.get_flag("bridge_status")
+local phase = Campaign.get_phase()
+local chrono = Campaign.get_asset_state("chrono_tank")
 
 -- Complete mission with a named outcome
 Campaign.complete("victory_bridge_intact")
@@ -250,9 +254,20 @@ Campaign.complete("victory_bridge_intact")
 -- Modify persistent state
 Campaign.set_flag("found_secret", true)
 Campaign.add_to_roster(Actor.Create("tanya", pos))
+Campaign.reveal_operation("ic_spy_network")
+Campaign.mark_initiative_countered("chemical_weapons_deployment")
 </code></pre>
+<h3 id="strategic-layer-extension"><a class="header" href="#strategic-layer-extension">Strategic Layer Extension</a></h3>
+<p>For campaigns that want a between-mission command layer, D021 allows a phase-based strategic wrapper over the same graph:</p>
+<ul>
+<li><strong>Campaign phases</strong> group operations and milestone missions into authored windows of opportunity</li>
+<li><strong>Command Authority</strong> limits how many optional missions the player can run before the main mission becomes urgent, and <strong>Requisition</strong> funds them</li>
+<li><strong>Enemy initiatives</strong> advance independently and resolve if not countered</li>
+<li><strong>Asset / arms-race ledgers</strong> track what the player has acquired, what the enemy has deployed, and what has been denied, including quality/quantity variants</li>
+</ul>
+<p>This is an extension of the graph model, not a replacement for it. A classic campaign can remain graph-only. An Enhanced Edition campaign can add a War Table without changing the deterministic mission / outcome foundation.</p>
 <h3 id="full-specification"><a class="header" href="#full-specification">Full Specification</a></h3>
-<p>The complete campaign system design — including carryover rules, roster management, hero progression, briefing/debrief flow, save integration, and the visual graph structure — is documented in <a href="../modding/campaigns.html"><code>modding/campaigns.md</code></a>. That document is the canonical reference; this capsule provides the index entry and rationale summary.</p>
+<p>The complete campaign system design — including carryover rules, strategic-layer state, operation cards, hero progression, briefing/debrief flow, save integration, and the visual graph structure — is documented in <a href="../../modding/campaigns.html"><code>modding/campaigns.md</code></a>. That document is the canonical reference; this capsule provides the index entry and rationale summary.</p>
 <h3 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives Considered</a></h3>
 <div class="table-wrapper">
 <table>
@@ -263,6 +278,7 @@ Campaign.add_to_roster(Actor.Create("tanya", pos))
 <tr><td>Linear mission sequence (OpenRA model)</td><td>Rejected</td><td>No branching, no persistence, no emergent storytelling</td></tr>
 <tr><td>Full scripted campaign (Lua only, no YAML graph)</td><td>Rejected</td><td>YAML graph is declarative and toolable; Lua handles per-mission logic, not campaign flow</td></tr>
 <tr><td>Automatic state carryover (everything persists)</td><td>Rejected</td><td>Designers must control what carries forward — unlimited carryover creates balance problems</td></tr>
+<tr><td>Separate War Table subsystem unrelated to the graph</td><td>Rejected</td><td>Operations and phases organize the campaign graph; they do not replace the graph as the authoritative flow model</td></tr>
 </tbody>
 </table>
 </div>

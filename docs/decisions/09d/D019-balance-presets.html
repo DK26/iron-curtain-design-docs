@@ -36,10 +36,10 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-9b234216.js";
+            window.path_to_searchindex_js = "../../searchindex-672774ae.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-a18c07f4.js"></script>
+        <script src="../../toc-ebf5f7ca.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -246,6 +246,9 @@
 <li>The unique capabilities should address a gap created by the removals, but not perfectly — the faction should have a real weakness</li>
 </ol>
 <p>This pattern is achievable purely in YAML (Tier 1 modding) through inheritance: the subfaction definition inherits the faction base and overrides <code>prerequisites</code> to gate or remove units, then defines new units.</p>
+<blockquote>
+<p><strong>Concrete candidate implementation proposal:</strong> The subfaction system in <code>research/subfaction-country-system-study.md</code> applies this exact pattern. Allied nations (England, France, Germany, Greece) and Soviet institutions (Red Army, NKVD, GRU, Science Bureau) each get one thematic passive + one tech tree modification via YAML inheritance. The Classic preset maps to RA1’s original 5-country 10% passives; IC Default uses the expanded 4×4 system. See also <code>research/subfaction-country-system-study.md</code> § “Campaign Integration” for War Table theater bonuses.</p>
+</blockquote>
 <h4 id="principle-6-patch-sparingly-observe-patiently"><a class="header" href="#principle-6-patch-sparingly-observe-patiently">Principle 6: Patch Sparingly, Observe Patiently</a></h4>
 <p>SC:BW received minimal balance patches after 1999 — and it’s the most balanced RTS ever made. The meta evolved through player innovation, not developer intervention. AoE2: Definitive Edition patches more frequently but exercises restraint — small numerical changes (±5%), never removing or redesigning units. In contrast, games that patch aggressively based on short-term win rate data (the “nerf/buff treadmill”) chase balance without ever achieving it, and players never develop deep mastery because the ground keeps shifting.</p>
 <p><strong>The lesson IC applies:</strong> The “Classic” preset is conservative — values come from the EA source code and don’t change. The “OpenRA” preset tracks OpenRA’s competitive balance decisions. The “IC Default” preset follows its own balance philosophy:</p>

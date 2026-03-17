@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-9b234216.js";
+            window.path_to_searchindex_js = "../searchindex-672774ae.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-a18c07f4.js"></script>
+        <script src="../toc-ebf5f7ca.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -646,6 +646,115 @@ pub enum VeterancyLevel { Rookie, Veteran, Elite, Heroic }
 <span class="boring">}</span></code></pre>
 <p><strong><code>veterancy_system()</code> logic:</strong> When <code>death_system()</code> removes an entity with <code>GivesExperience</code>, the killer (if it has <code>GainsExperience</code>) receives <code>value</code> XP. Check <code>thresholds</code>: if XP crosses a boundary, advance <code>level</code> and grant the corresponding condition. Conditions trigger multipliers: veteran = +25% firepower/+25% armor; elite = +50%/+50% + self-heal; heroic = +75%/+75% + faster fire rate (all values from YAML, not hardcoded).</p>
 <p><strong>Campaign carry-over (D021):</strong> <code>GainsExperience.current_xp</code> and <code>level</code> are part of the roster snapshot saved between campaign missions.</p>
+<h3 id="campaign-strategic-layer-d021"><a class="header" href="#campaign-strategic-layer-d021">Campaign Strategic Layer (D021)</a></h3>
+<p>Campaign progression is <strong>not</strong> part of <code>ic-sim</code>. Tactical missions emit <code>MissionOutcome</code> data, and the campaign runtime in <code>ic-script</code> / <code>ic-game</code> advances the save-authoritative <code>CampaignState</code> between missions.</p>
+<p>D021 now supports two campaign shapes on the same foundation:</p>
+<ul>
+<li><strong>Graph-only campaigns</strong> — branching mission graph, persistent roster/state, no extra command layer</li>
+<li><strong>Strategic-layer campaigns</strong> — the same graph wrapped in a phase-based <code>War Table</code> that exposes optional operations, enemy initiatives, operational budgets, and an arms-race ledger between milestone missions</li>
+</ul>
+<p>The important architecture rule is that the <strong>graph remains authoritative</strong>. The War Table is an organizer and presenter over graph nodes; it does not replace mission outcomes with a separate progression system.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Serialize, Deserialize, Clone)]
+pub struct StrategicLayerState {
+    pub current_phase: Option&lt;CampaignPhaseState&gt;,
+    pub completed_phases: Vec&lt;String&gt;,
+    pub war_momentum: i32,
+    pub operations: Vec&lt;CampaignOperationState&gt;,
+    pub active_enemy_initiatives: Vec&lt;EnemyInitiativeState&gt;,
+    pub asset_ledger: CampaignAssetLedgerState,
+}
+
+pub enum CampaignFocusState {
+    StrategicLayer,
+    Intermission,
+    Briefing,
+    Mission,
+    Debrief,
+}
+
+pub struct CampaignPhaseState {
+    pub phase_id: String,
+    pub operational_budget_total: u32,
+    pub operational_budget_remaining: u32,
+    pub main_mission_urgent: bool,
+}
+
+pub struct CampaignOperationState {
+    pub mission_id: MissionId,
+    pub source: OperationSource,
+    pub status: OperationStatus,
+    pub expires_after_phase: Option&lt;String&gt;,
+    pub generated_instance: Option&lt;GeneratedOperationState&gt;,
+    pub generation_fallback: Option&lt;GenerationFallbackMode&gt;,
+}
+
+pub enum OperationSource { Authored, Generated }
+
+pub enum OperationStatus {
+    Revealed,
+    Available,
+    Completed,
+    Failed,
+    Skipped,
+    Expired,
+}
+
+pub struct GeneratedOperationState {
+    pub profile_id: String,
+    pub seed: u64,
+    pub site_kit: String,
+    pub security_tier: u8,
+    pub resolved_modules: Vec&lt;ResolvedModulePick&gt;,
+}
+
+pub struct ResolvedModulePick {
+    pub slot: String,
+    pub module_id: String,
+}
+
+pub enum GenerationFallbackMode {
+    AuthoredBackup { mission_id: MissionId },
+    ResolveAsSkipped,
+}
+
+pub struct EnemyInitiativeState {
+    pub initiative_id: String,
+    pub status: EnemyInitiativeStatus,
+    pub ticks_remaining: u32,
+    pub counter_operation: Option&lt;MissionId&gt;,
+}
+
+pub enum EnemyInitiativeStatus {
+    Revealed,
+    Countered,
+    Activated,
+    Expired,
+}
+
+pub struct CampaignAssetLedgerState {
+    pub entries: Vec&lt;CampaignAssetLedgerEntry&gt;,
+}
+
+pub struct CampaignAssetLedgerEntry {
+    pub asset_id: String,
+    pub owner: AssetOwner,
+    pub state: AssetState,
+    pub quantity: u32,
+    pub quality: Option&lt;String&gt;,
+    pub consumed_by: Vec&lt;MissionId&gt;,
+}
+
+pub enum AssetOwner { Player, Enemy }
+
+pub enum AssetState {
+    Acquired,
+    Partial,
+    Denied,
+}
+<span class="boring">}</span></code></pre>
+<p><code>CampaignState.flags</code> remains the extension surface for authored story state, but first-party strategic-layer data should not be buried in generic flags. Focus state, generated-operation payloads, phase/budget state, initiative state, and asset-ledger state need first-class fields so save/load, UI, replay metadata, and campaign validation can reason about them directly.</p>
 <h3 id="guard-command"><a class="header" href="#guard-command">Guard Command</a></h3>
 <pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
