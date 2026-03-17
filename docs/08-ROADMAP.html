@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-672774ae.js";
+            window.path_to_searchindex_js = "searchindex-709f880f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-ebf5f7ca.js"></script>
@@ -400,7 +400,7 @@
 <li><strong>Campaign select, mission map, and War Table UI:</strong> visualize campaign graph, show current position, replay completed missions, surface operation cards, enemy initiatives, urgency, and arms-race readouts</li>
 <li><strong>Operations as a distinct campaign content tier:</strong> main missions, SpecOps, theater branches, and generated operations share one graph / state model</li>
 <li><strong>Enemy Initiatives system:</strong> authored strategic threats that advance between operations and resolve with concrete downstream effects if uncountered</li>
-<li><strong>Timed strategic choice nodes:</strong> <code>decision</code> windows plus <code>unchosen_effects</code> so the world moves without the player</li>
+<li><strong>Expiring opportunity nodes:</strong> optional missions with <code>expires_in_phases</code> timers, <code>on_expire</code> consequences, and map beacons so the world moves without the player</li>
 <li><strong>Arms race / tech acquisition-denial tracking:</strong> campaign-visible ledger that determines which prototypes, support powers, and enemy programs reach later missions</li>
 <li><strong>Adaptive difficulty via campaign state:</strong> designer-authored conditional bonuses/penalties based on cumulative performance</li>
 <li><strong>Subfaction system — campaign theater bonuses (proposed — contingent on subfaction adoption):</strong> Allied campaign operations grant temporary theater bonuses echoing country passives (Greece → partisans, North Sea → UK naval bonus); Soviet missions carry institutional flavor (NKVD suppression → conscripts, GRU intelligence → recon assets). Uses the same YAML bonus definitions as multiplayer subfactions. See <code>research/subfaction-country-system-study.md</code></li>

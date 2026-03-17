@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-672774ae.js";
+            window.path_to_searchindex_js = "../searchindex-709f880f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-ebf5f7ca.js"></script>
@@ -235,59 +235,53 @@
 <li><strong>Dynamic weather:</strong> First appears in M8 (Chronosphere defense storm at minute 30). The storm is progressive — starts mild, gets worse — giving the player time to adapt before it’s severe</li>
 <li><strong>Embedded task force:</strong> First appears as an optional alternative in M10B (“Evidence: Enhanced”). Players who choose the classic M10B path never encounter it until M14: Enhanced (also optional)</li>
 </ul>
-<h3 id="rule-3-the-world-moves-without-you-xcom-style-timed-choices"><a class="header" href="#rule-3-the-world-moves-without-you-xcom-style-timed-choices">Rule 3: The World Moves Without You (XCOM-Style Timed Choices)</a></h3>
-<p>Between certain main missions, the Enhanced Edition presents <strong>timed strategic choices</strong> — multiple operations happening simultaneously, and the player can only address one before the window closes. The others resolve without the player, with consequences.</p>
-<p>This is the XCOM: Enemy Unknown model: three abduction sites appear, you pick one, the other two have consequences. Applied to RA1:</p>
-<p><strong>How it works:</strong> Timed choices are implemented as <strong>standard D021 decision nodes</strong> with <code>state_effects</code> that set flags for the unchosen options. No new campaign primitive needed — the existing <code>decision</code> mechanism (D021 § Campaign Graph) handles the branching, and Lua <code>Events.on("mission_start")</code> reads the flags to apply consequences.</p>
-<pre><code class="language-yaml"># Between M4 and M5: a D021 decision node with 3 options
-# Unchosen options have their flags set automatically by the decision node
-missions:
-  act1_strategic_choice:
-    type: decision                            # standard D021 decision node
-    prompt: "Command has identified three urgent situations. We can only respond to one."
-    choices:
-      - label: "Iron Curtain Raid — Tanya"
-        description: "Authorize Tanya's raid on a Soviet facility before the window closes."
-        next: ic_behind_enemy_lines
-        unchosen_effects:                     # applied if NOT chosen
-          set_flag:
-            iron_curtain_window_missed: true # site hardens; no raid, no rescue branch
-      - label: "Chemical Threat — Greece"
-        description: "Soviet Sarin gas facilities detected. Neutralize before they go active."
-        next: cs_sarin_gas_1
-        unchosen_effects:
-          set_flag:
-            sarin_active: true               # chemical weapons in M8
-      - label: "Flanking Opportunity — Siberia"
-        description: "A window to establish a second front. It won't last."
-        next: cs_siberian_1
-        unchosen_effects:
-          set_flag:
-            siberian_window_closed: true    # arc permanently closed
-</code></pre>
-<p>The <code>unchosen_effects</code> field is the one extension to D021’s existing decision node: when the player picks one option, all other options’ <code>unchosen_effects</code> are applied automatically. This is a small addition to the campaign YAML schema (a few lines in the decision node handler), not a new primitive. The flags are read by subsequent mission Lua scripts via <code>Campaign.get_flag()</code> as documented in <code>modding/campaigns.md</code> § Optional Operations — Concrete Assets, Not Abstract Bonuses.</p>
-<p><strong>Design rules for timed choices:</strong></p>
+<h3 id="rule-3-the-world-moves-without-you-expiring-opportunities"><a class="header" href="#rule-3-the-world-moves-without-you-expiring-opportunities">Rule 3: The World Moves Without You (Expiring Opportunities)</a></h3>
+<p>Between certain main missions, the Enhanced Edition presents <strong>expiring opportunities</strong> — multiple optional operations that are only available for a limited time. You use <strong>Command Authority</strong> to launch them, but you rarely have enough Command Authority to do all of them before the phase advances. When the phase advances, unselected operations expire with consequences.</p>
+<p>Unlike XCOM’s generic “you don’t have enough time” model, IC’s expiring opportunities are framed by Red Alert command realities:</p>
 <ol>
-<li><strong>Never more than 3 live options.</strong> The player can process three choices; more creates decision paralysis</li>
-<li><strong>All options are good; the loss is opportunity cost.</strong> No “trap” choice. Each has clear value. The tension is what you DON’T get</li>
-<li><strong>Consequences are visible and referenced.</strong> If Behind Enemy Lines fails and Tanya is captured, the M5 briefing says so. If Sarin goes active because you chose Tanya, M8 is harder and the briefing explains why</li>
-<li><strong>Main campaign is never blocked.</strong> The timed choice affects difficulty and available content, never whether the player can continue</li>
-<li><strong>Placed between acts, not mid-mission.</strong> Timed choices appear in the campaign map/intermission screen, not during gameplay. The player has time to think</li>
-<li><strong>2-3 per campaign maximum.</strong> Too many and the mechanic loses weight. Each timed choice should feel momentous</li>
-<li><strong>2 live options are acceptable if one slot was already resolved earlier.</strong> The world screen should show that slot as <code>ALREADY SECURED</code> or <code>WINDOW CLOSED</code>, not invent filler content just to keep the count at three</li>
+<li><strong>Intelligence Perishability:</strong> Striking Target A puts the theater on high alert. Within hours, Target B will purge its databanks or heavily fortify. You only get one surprise attack.</li>
+<li><strong>Unique Asset Commitment:</strong> You need a singular, specialized asset to succeed (e.g., the only stealth transport in the sector) that can only be deployed to one location.</li>
+<li><strong>Political Capital:</strong> High Command only authorizes one unsanctioned diversion from the main front.</li>
 </ol>
-<p><strong>Briefing rule for timed SpecOps:</strong> Before mission launch, the player should see four separate disclosures on the operation card or mission briefing: <code>On Success</code>, <code>On Failure</code>, <code>If Skipped</code>, and <code>Time Window</code>. The player is weighing operations, not guessing hidden consequences.</p>
-<p><strong>Save/load policy:</strong> Normal first-party campaigns allow free saving and reloading around timed choices; the “world moves without you” rule is a campaign-fiction / consequence model, not an anti-save-scum guarantee. <code>Ironman</code> or other commit modes should autosave immediately after a timed-choice selection and treat that branch as locked.</p>
-<p><strong>Timed choice placement in Allied Enhanced Edition:</strong></p>
+<p><strong>How it works:</strong> Expiring opportunities are not static multiple-choice menus. They are implemented as <strong>standard optional mission nodes</strong> that appear dynamically on the campaign map and have an <code>expires_in_phases</code> duration.</p>
+<p>When an expiring opportunity appears, a visual <strong>beacon</strong> is drawn over its location on the globe/Europe map so the player cannot miss it. Clicking the beacon opens the operation card with full details.</p>
+<p>If the player launches a main mission, the campaign phase advances, and the opportunity’s timer ticks down. If it reaches 0 without being launched, the opportunity locks and its <code>on_expire</code> consequences fire. Launching an optional operation <em>does not</em> advance the phase—it just costs 1 <strong>Command Authority</strong> from your War Table budget.</p>
+<pre><code class="language-yaml"># A rolling opportunity on the map. Starts active, expires after 2 phase advances.
+missions:
+  ic_behind_enemy_lines:
+    type: mission
+    role: SPECOPS
+    prompt: "Iron Curtain Raid — Tanya"
+    description: "Authorize Tanya's raid on a Soviet facility before the window closes."
+    expires_in_phases: 2                  # ticks down each time a main mission launches
+    on_expire:
+      set_flag:
+        iron_curtain_window_missed: true # site hardens; no raid, no rescue branch
+      notify: "Tanya's insertion window has closed. The target is heavily fortified."
+</code></pre>
+<p>This represents a shift from D021’s static <code>decision</code> nodes (which pause the map, forcing an immediate pick) to a <strong>living map board</strong>. The player manages a shifting board of expiring opportunities. The Lua event <code>Events.on("mission_start")</code> can still read these flags to apply consequences exactly as documented in <code>modding/campaigns.md</code>.</p>
+<p><strong>Design rules for expiring opportunities:</strong></p>
+<ol>
+<li><strong>No more than 2-4 live options.</strong> The player can process a few active beacons; more creates map clutter and decision paralysis.</li>
+<li><strong>The tension is Command Authority vs Phase Management.</strong> Launching an operation costs Command Authority. You might have 3 expiring opportunities but only 1 Command Authority this phase, forcing a hard choice. Or you might have 2 Command Authority, letting you secure two before the phase advances.</li>
+<li><strong>Beacons demand attention.</strong> Opportunities must have visual beacons on the globe/Europe map. Clicking them reveals the prompt and consequences.</li>
+<li><strong>Consequences are visible and referenced.</strong> If Behind Enemy Lines reaches 0 and Tanya’s window is missed, the M5 briefing says so.</li>
+<li><strong>Main campaign is never blocked.</strong> The expiring opportunity affects difficulty and available content, never whether the player can continue.</li>
+<li><strong>2-3 per campaign maximum.</strong> Too many and the mechanic loses weight. Each expiring opportunity window should feel momentous.</li>
+<li><strong>Hero Deployment Cooldowns.</strong> To prevent players from snowballing by exclusively using their best units (the “A-Team” problem), deploying named heroes (e.g., Tanya, Volkov) or unique persistent assets on an optional SpecOps mission incurs a recovery phase. They cannot be deployed on the immediate subsequent optional operation.</li>
+</ol>
+<p><strong>Briefing rule for expiring SpecOps:</strong> Before mission launch, the player should see four separate disclosures on the operation card or mission briefing: <code>On Success</code>, <code>On Failure</code>, <code>If Skipped</code>, and <code>Time Window</code>. The player is weighing operations, not guessing hidden consequences.</p>
+<p><strong>Save/load policy:</strong> Normal first-party campaigns allow free saving and reloading around expiring choices; the “world moves without you” rule is a campaign-fiction / consequence model, not an anti-save-scum guarantee. <code>Ironman</code> or other commit modes should autosave immediately after a branch-committing selection and treat that path as locked.</p>
+<p><strong>Expiring opportunity placement in Allied Enhanced Edition:</strong></p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Between</th><th>Options</th><th>Theme</th></tr>
+<tr><th>Between</th><th>Options</th><th>Theme (Lore Constraint)</th></tr>
 </thead>
 <tbody>
-<tr><td>M4 → M5</td><td>Rescue Tanya / Sarin Gas / Siberia</td><td>“Three fires burning — which one do you fight?”</td></tr>
-<tr><td>M9 → M10</td><td>Poland liberation / Aftermath Italy / IC air campaign</td><td>“Where do we push next?”</td></tr>
-<tr><td>M12 → M14</td><td>Final prep choice — one last operation before Moscow</td><td>“One more shot before the endgame”</td></tr>
+<tr><td>M4 → M5</td><td>Behind Enemy Lines / Sarin Gas / Siberia / Gold Reserve</td><td><strong>OpSec:</strong> “Striking one target puts the others on high alert.”</td></tr>
+<tr><td>M9 → M10</td><td>Poland liberation / Siberian / Air campaign</td><td><strong>Unique Asset:</strong> “We can only deploy our Vanguard reserve to one theater.”</td></tr>
+<tr><td>M12 → M14</td><td>Final prep choice — one last operation before Moscow</td><td><strong>Political Capital:</strong> “High Command only authorizes one diversion.”</td></tr>
 </tbody>
 </table>
 </div>
@@ -301,14 +295,14 @@ missions:
 <li>it shows what assets the player already owns</li>
 <li>it shows what enemy project is advancing if ignored</li>
 </ul>
-<p>If a timed choice, rescue branch, theater front, or prototype race matters, the player should see that <strong>on the world screen before launching the next mission</strong>.</p>
+<p>If an expiring opportunity, rescue branch, theater front, or prototype race matters, the player should see that <strong>on the world screen before launching the next mission</strong>.</p>
 <p><strong>What the world screen should surface in the Enhanced Edition:</strong></p>
 <ol>
 <li><strong>Strategic Resources</strong> — Requisition (War Funds), Intel, and Command Authority (gates operation slots)</li>
 <li><strong>The Doomsday Clock</strong> — A single visual indicator of Soviet momentum, crossing threshold rings (Green/Yellow/Orange/Red) that alter briefing tones, income, and M14 difficulty</li>
 <li><strong>Front status</strong> — The map visually updates front lines based on choices. Greece under chemical threat, Siberian window open, Poland resistance active</li>
-<li><strong>Operation cards</strong> — each available node shows a role tag (<code>MAIN</code>, <code>SPECOPS</code>, <code>THEATER</code>, <code>RESOURCE</code>, <code>DEFECTOR</code>), a one-line reward preview, and a one-line consequence</li>
-<li><strong>Urgency markers</strong> — rescue pending, enemy initiative advancing if ignored, expiring theater window</li>
+<li><strong>Operation cards &amp; Beacons</strong> — each available node is marked with a noticeable map beacon. Clicking it shows a role tag (<code>MAIN</code>, <code>SPECOPS</code>, <code>THEATER</code>, <code>RESOURCE</code>, <code>DEFECTOR</code>), a one-line reward preview, and a one-line consequence</li>
+<li><strong>Urgency markers</strong> — rescue pending, enemy initiative advancing if ignored, ticking countdowns on expiring opportunities</li>
 <li><strong>Investment &amp; Infrastructure</strong> — The player’s chosen Command Doctrine, active Research Lab projects (funded with Requisition), and Forward Operating Base (FOB) upgrades</li>
 <li><strong>Asset ledger</strong> — captured prototypes, partisan favor, spy network, air package, denied enemy tech, rescued hero status</li>
 <li><strong>Downstream consumers</strong> — the card should tell the player which later mission or act uses the asset</li>
@@ -507,7 +501,7 @@ end
 <p><strong>Briefing integration:</strong> The dynamic briefing system (§ Optional Operations — Concrete Assets, Not Abstract Bonuses) assembles conditional lines based on the current compromise level. Immediate rescue, delayed rescue, and abandoned rescue each get distinct lines in the next briefing.</p>
 <p><strong>Cross-campaign echo:</strong> The Soviet M7 briefing always includes a line about an Allied commando operating in the facility — regardless of Allied campaign state. <em>“Our interrogators have extracted valuable information from the captured Allied commando. Use it well.”</em> This is always-present authored flavor text, not conditional on cross-campaign data (see § Cross-Campaign Continuity).</p>
 <h3 id="rule-7-teach-every-mechanic-at-the-right-moment"><a class="header" href="#rule-7-teach-every-mechanic-at-the-right-moment">Rule 7: Teach Every Mechanic at the Right Moment</a></h3>
-<p>Campaign mechanics (capture consequences, optional-operation assets, timed choices, spectrum outcomes, hero progression, and commander-compatible commando paths) are powerful but only if the player understands them. The Enhanced Edition uses <strong>progressive disclosure</strong> — each mechanic is explained exactly when the player first encounters it, never before, never after. No front-loaded tutorials, no walls of text, no unexplained mechanics.</p>
+<p>Campaign mechanics (capture consequences, optional-operation assets, expiring opportunities, spectrum outcomes, hero progression, and commander-compatible commando paths) are powerful but only if the player understands them. The Enhanced Edition uses <strong>progressive disclosure</strong> — each mechanic is explained exactly when the player first encounters it, never before, never after. No front-loaded tutorials, no walls of text, no unexplained mechanics.</p>
 <p>This follows D065 (Tutorial &amp; New Player Experience) § progressive disclosure and hint systems.</p>
 <p><strong>When each mechanic is explained:</strong></p>
 <div class="table-wrapper">
@@ -520,7 +514,7 @@ end
 <tr><td><strong>Roster carryover</strong></td><td>M1 → M2 transition — surviving prologue units appear</td><td>Briefing note: <em>“Troops from your previous operation have been reassigned to this front.”</em> A tooltip highlights the carried-over units on the map</td><td>Player sees familiar faces from the prologue. The connection is obvious</td></tr>
 <tr><td><strong>Spectrum outcomes</strong></td><td>M3 (Destroy Bridges) — first mission with partial success</td><td>Debrief screen shows which bridges were destroyed and explicitly states the consequence: <em>“2 of 4 bridges destroyed. Enemy reinforcements will be partially reduced next mission.”</em></td><td>Not hidden — the debrief tells the player exactly what their performance means</td></tr>
 <tr><td><strong>Optional-operation assets</strong></td><td>First optional mission completed — reward shown in next briefing</td><td>Briefing line highlighted: <em>“Thanks to your sabotage, Soviet air defenses are offline.”</em> Tooltip: <em>“Optional operations grant concrete assets such as intel, tech, faction support, or denial effects.”</em></td><td>The cause-and-effect is spelled out the first time. After that, the player understands the pattern</td></tr>
-<tr><td><strong>Timed choices</strong></td><td>First timed choice (between M4 and M5)</td><td>A dedicated intermission screen explains: <em>“Multiple operations require your attention. You can only commit forces to one before the window closes. The others will resolve without you — with consequences.”</em> Each option shows its reward AND the consequence of not choosing it</td><td>The stakes are visible before the player commits. No hidden information</td></tr>
+<tr><td><strong>Expiring opportunities</strong></td><td>First expiring opportunity (between M4 and M5)</td><td>Map beacons appear. A tooltip explains: <em>“These operations expire if ignored. Launching an operation costs Command Authority. Unselected operations will eventually expire — with consequences.”</em> Each option shows its reward AND the consequence of expiration</td><td>The stakes are visible on the map board. No hidden information</td></tr>
 <tr><td><strong>Mission roles</strong></td><td>First time a SpecOps operation appears alongside a main operation</td><td>Campaign map shows role tags visually. Tooltip on the commando node: <em>“Optional SpecOps operation. This mission can gain intel, deny tech, or rescue a hero. Skipping it is valid — but the campaign state may change.”</em></td><td>The word “optional” is explicit. The downstream effect is explicit. No guessing</td></tr>
 <tr><td><strong>Capture consequences</strong></td><td>First time a hero is captured (Behind Enemy Lines fails)</td><td>Immediate notification: <em>“Tanya has been captured. The longer she is held, the more intel the enemy may extract. Rescue her when possible.”</em> A priority marker / urgency indicator appears on the campaign map or intermission mission list next to M5</td><td>The escalation mechanic is explained at the moment it becomes relevant — not in a tutorial before it happens</td></tr>
 <tr><td><strong>Dynamic weather</strong></td><td>First mission with weather (M8 storm or an optional branch)</td><td>Brief in-mission tooltip when weather changes: <em>“A storm is approaching. Visibility will decrease and vehicle movement will slow.”</em> Gameplay effect is immediate and visible</td><td>Learn by experiencing. The tooltip explains what’s happening; the gameplay proves it</td></tr>
@@ -530,12 +524,12 @@ end
 </div>
 <p><strong>Explanation principles:</strong></p>
 <ol>
-<li><strong>Explain at the moment of encounter, not before.</strong> Don’t explain timed choices in the prologue. Explain them when the first timed choice appears</li>
+<li><strong>Explain at the moment of encounter, not before.</strong> Don’t explain expiring opportunities in the prologue. Explain them when the first expiring opportunity appears</li>
 <li><strong>Show, don’t tell.</strong> The first spectrum outcome isn’t explained in a tutorial — the debrief screen SHOWS the player what their partial success means for the next mission</li>
-<li><strong>Make consequences visible before they happen.</strong> Timed choices show both the reward of choosing AND the consequence of not choosing. No hidden penalties</li>
+<li><strong>Make consequences visible before they happen.</strong> Expiring opportunities show both the reward of choosing AND the consequence of expiration. No hidden penalties</li>
 <li><strong>Explain once, then trust the player.</strong> The first optional-operation asset gets a highlighted briefing line and tooltip. The second one just gets the briefing line. By the third, the player understands the pattern</li>
 <li><strong>Never interrupt gameplay to explain.</strong> All explanations happen in briefings, debriefs, intermission screens, or small in-game tooltips — never a pause-the-game tutorial popup during combat</li>
-<li><strong>Use the briefing officer’s voice.</strong> Von Esling (Allied) and Nadia (Soviet) explain mechanics in character. <em>“Commander, we can only commit to one operation”</em> is both a narrative moment and a mechanics explanation. The UI reinforces with tooltips, but the character delivers the message</li>
+<li><strong>Use the briefing officer’s voice.</strong> Von Esling (Allied) and Nadia (Soviet) explain mechanics in character. <em>“Commander, these operations won’t wait forever — and we don’t have the authority to launch them all”</em> is both a narrative moment and a mechanics explanation. The UI reinforces with tooltips, but the character delivers the message</li>
 </ol>
 <p><strong>D065 integration:</strong> These explanations use the existing <code>feature_discovery</code> hint category from D065 § Feature Smart Tips. Each mechanic has a hint entry in <code>hints/campaign-mechanics.yaml</code> that triggers on first encounter and is dismissible. Players who’ve already learned the mechanic (from a previous playthrough or the tutorial) never see the hint again.</p>
 <h3 id="specops-mission-families"><a class="header" href="#specops-mission-families">SpecOps Mission Families</a></h3>
@@ -904,10 +898,9 @@ ACT 1: LIBERATION OF EUROPE ─────────────────�
 │  │  experience by now. Difficulty scales with M3 bridge results.
 │  │  If Greek resistance contacted: partial shroud reveal.
 │  │
-│  ═══ TIMED CHOICE 1 ═══════════════════════════════════════════
+│  ═══ EXPIRING OPPORTUNITIES (ACT 1 TO ACT 2) ══════════════════
 │  │  "Multiple fires burning — which one do you fight?"
-│  │  The world moves without you. Pick ONE. The others
-│  │  resolve with consequences.
+│  │  Command Authority is limited. Operations expire if ignored.
 │  │
 │  │  OPTION A: [SPECOPS] [IC] "Behind Enemy Lines" ★ HARD
 │  │  │  Tanya infiltrates Soviet facility for Iron Curtain intel.
@@ -939,8 +932,8 @@ ACT 1: LIBERATION OF EUROPE ─────────────────�
 │  │     IF NOT CHOSEN → Siberian window closes permanently.
 │  │     Briefing: "The Siberian opportunity has passed."
 │  │     If already completed earlier, this slot shows
-│  │     `[RESOLVED] Siberian front already open` and the timed
-│  │     choice proceeds with the remaining live options.
+│  │     `[RESOLVED] Siberian front already open` and the
+│  │     remaining live opportunities continue their timers.
 │  │
 │  │  OPTION D: [RESOURCE] [IC] "Gold Reserve" ★ MEDIUM
 │  │     Liberate a Swiss bank vault holding Allied war funds.
@@ -1061,8 +1054,8 @@ ACT 2: THE IRON CURTAIN ──────────────────�
 │  │  Asset: Kosygin intelligence package.
 │  │  Exact effect: M10B gains the west service tunnel and 2 pre-marked patrol routes if Kosygin's debrief is intact.
 │  │
-│  ═══ TIMED CHOICE 2 ═══════════════════════════════════════════
-│  │  "Where do we push next? Pick one front."
+│  ═══ EXPIRING OPPORTUNITIES (ACT 2 TO ACT 3) ══════════════════
+│  │  "Multiple theaters need reinforcement. Command Authority is limited."
 │  │
 │  │  OPTION A: [THEATER] [AM] "Monster Tank Madness" (Poland 1) ★ HARD
 │  │  │  Rescue Dr. Demitri + Super Tanks.
@@ -1121,8 +1114,8 @@ ACT 3: ENDGAME ─────────────────────�
 │  │  If Italy done → no southern naval threat.
 │  │  If air superiority → bombing runs available.
 │  │
-│  ═══ TIMED CHOICE 3 ═══════════════════════════════════════════
-│  │  "One last operation before Moscow. Make it count."
+│  ═══ EXPIRING OPPORTUNITIES (FINAL PREPARATIONS) ═══════════════
+│  │  "The Moscow assault is imminent. Command Authority is limited."
 │  │
 │  │  OPTION A: [SPECOPS] [M13] "Focused Blast" ★ VERY HARD
 │  │  │  Interior commando. Plant charges in underground facility.
@@ -1308,8 +1301,8 @@ ACT 1: THE IRON FIST ───────────────────�
 │  │  lost → M7 starts with minimal forces.
 │  │  Teaches: escort + defend with limited resources.
 │  │
-│  ═══ TIMED CHOICE 1 ═══════════════════════════════════════════
-│  │  "The front is wide. Where do we strike? Pick ONE."
+│  ═══ EXPIRING OPPORTUNITIES (ACT 1 TO ACT 2) ══════════════════
+│  │  "The front is wide. Command Authority is limited."
 │  │
 │  │  OPTION A: [SPECOPS] [CS] "Soldier Volkov &amp; Chitzkoi" ★ HARD
 │  │  │  Volkov commando mission behind Allied lines.
@@ -1345,7 +1338,7 @@ ACT 2: SUPERWEAPONS ────────────────────
 │  │  Teaches: facility defense + counter-commando operations.
 │  │
 │  └─ [THEATER] [AM] "Brothers in Arms" (Spain 2) ★ HARD — OPTIONAL
-│     Soviet traitors. Only if Spain arc opened in timed choice.
+│     Soviet traitors. Only if Spain arc opened in Act 1 expiring opportunities.
 │     Asset: loyal tank-crew favor.
 │     Exact effect: heavy armor veterancy bonus in Act 3.
 │
@@ -1409,8 +1402,8 @@ ACT 3: CONQUEST ─────────────────────�
 ├─ [MAIN] [M12] "Capture the Tech Centers" ★ VERY HARD — Capture 3 centers.
 │  │  Compound rewards from all optional operations affect difficulty.
 │  │
-│  ═══ TIMED CHOICE 2 ═══════════════════════════════════════════
-│  │  "The invasion of England approaches. One final preparation."
+│  ═══ EXPIRING OPPORTUNITIES (FINAL PREPARATIONS) ═══════════════
+│  │  "The invasion of England approaches. Command Authority is limited."
 │  │
 │  │  OPTION A: [THEATER] [IC] "Operation Tempest" ★ VERY HARD
 │  │  │  Air/naval pre-invasion bombardment.
