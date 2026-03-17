@@ -217,12 +217,13 @@ channel = "beta"             # publish to beta channel
 - `ic mod install` pulls from release channel unless `--include-beta` is specified
 - Promotion: `ic mod promote 1.3.0-beta.1 release` → moves resource to release channel without re-upload
 
-### Replication & Mirroring
+### Replication, Federation & Mirroring
 
-Community Workshop servers can replicate from the official server (pull replication, Artifactory-style):
+Community Workshop servers can federate with the official server or form their own data-center meshes:
 
-- **Pull replication:** Community server periodically syncs popular resources from official. Reduces latency for regional players, provides redundancy.
-- **Selective sync:** Community servers choose which categories/publishers to replicate (e.g., replicate all Maps but not Mods)
+- **Pull replication:** Community server periodically syncs resources from upstream servers. Reduces latency for regional players, provides redundancy.
+- **Push-Sync (Mesh / Swarm Replication):** Trusted servers within a data-center or trusted mesh can use a gossip protocol. When a package is uploaded to Node A, it instantly notifies Nodes B, C, and D. Instead of traditional sequential HTTP transfers, the replica nodes concurrently pull pieces via the built-in P2P swarm *and* HTTP Web Seeding (BEP 17/19). This natively aggregates BitTorrent pieces and HTTP range requests, providing out-of-the-box enterprise CDN behavior for community hosts.
+- **Topic/Tag Subscriptions (Selective Sync):** Nodes can be configured to automatically pull data of a *specific nature or label*. For example, configuring a node with the "Iron Curtain Workshop Server" tag naturally forces it to sync with the rest of the nodes sharing that label, automatically creating a unified data-center group. Subscriptions can target specific categories (e.g., "all Maps"), publishers (e.g., "community-hd-project"), or custom arbitrary tags. The node automatically downloads and seeds all data that matches its subscribed labels.
 - **Offline bundles:** `ic workshop export-bundle` creates a portable archive of selected resources for LAN parties or airgapped environments. `ic workshop import-bundle` loads them into a local repository.
 
 ### Dependency Resolution
