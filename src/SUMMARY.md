@@ -105,6 +105,7 @@
     - [Gates & Mappings](tracking/milestone-deps/gates-and-mappings.md)
   - [Project Tracker Automation Companion (Optional Schema/YAML Reference)](tracking/project-tracker-schema.md)
   - [Implementation Ticket Template (G-Step Aligned)](tracking/implementation-ticket-template.md)
+  - [Feature, Screen & Scenario Spec Template (LLM-Proof)](tracking/feature-scenario-spec-template.md)
   - [Future / Deferral Language Audit](tracking/future-language-audit.md)
   - [Deferral Wording Patterns](tracking/deferral-wording-patterns.md)
   - [External Code Project Bootstrap (Design-Aligned)](tracking/external-code-project-bootstrap.md)

@@ -21,7 +21,7 @@ Before a feature is treated as "planned" (beyond brainstorming), do all of the f
 1. **Classify priority** (`P-Core`, `P-Differentiator`, `P-Creator`, `P-Scale`, `P-Optional`).
 2. **Assign primary milestone** (`M0–M11`) using dependency-first sequencing (not novelty/recency).
 3. **Record dependency edges** in `tracking/milestone-dependency-map.md` (`hard`, `soft`, `validation`, `policy`, `integration`).
-4. **Map canonical docs** (decision(s), roadmap phase, UX/security/community docs if affected).
+4. **Map canonical docs** (decision(s), roadmap phase, UX/security/community docs if affected). If the feature changes a player-facing screen or dialog, also add or update the relevant `player-flow/*.md` page and its `Feature Spec` / `Screen Spec` / `Scenario Spec` blocks per `tracking/feature-scenario-spec-template.md` when that surface is being defined or revised.
 5. **Update tracker representation**:
    - Dxxx row (if decisioned), and/or
    - feature-cluster row (if non-decision feature/deliverable)
@@ -35,6 +35,7 @@ Before a feature is treated as "planned" (beyond brainstorming), do all of the f
 - [`08-ROADMAP.md`](../08-ROADMAP.md) — canonical phase roadmap
 - [`tracking/milestone-dependency-map.md`](../tracking/milestone-dependency-map.md) — detailed milestone DAG and feature cluster dependencies
 - [`tracking/project-tracker-schema.md`](../tracking/project-tracker-schema.md) — optional automation companion (tracker field meanings + schema/YAML reference)
+- [`tracking/feature-scenario-spec-template.md`](../tracking/feature-scenario-spec-template.md) — three-layer UI/spec format for player-facing screens and interaction contracts
 - [`tracking/future-language-audit.md`](../tracking/future-language-audit.md) — canonical-doc future/deferred wording classification and remediation queue
 - [`tracking/deferral-wording-patterns.md`](../tracking/deferral-wording-patterns.md) — replacement wording patterns for planned deferrals / North Star claims / proposal-only notes
 - [`tracking/external-code-project-bootstrap.md`](../tracking/external-code-project-bootstrap.md) — bootstrap procedure for external implementation repos (design alignment + escalation workflow)

@@ -41,7 +41,7 @@ No feature should be more than three clicks from the main menu. The most common 
 
 ### 3. No Dead-End Buttons
 
-Every button is always clickable (D033). If a feature requires a download, configuration, or prerequisite, the button opens a guidance panel explaining what's needed and offering a direct path to resolve it — never a greyed-out icon with no explanation. Examples:
+Every rendered button is always clickable (D033). If a feature requires a download, configuration, or prerequisite, the button opens a guidance panel explaining what's needed and offering a direct path to resolve it — never a greyed-out icon with no explanation. Context-dependent actions with no meaningful target (for example, Continue Campaign when no active campaign save exists) may be hidden rather than shown disabled; what we never ship is a visible dead-end control. Examples:
 
 - "New Generative Campaign" without an LLM configured → guidance panel with [Configure LLM Provider →] and [Browse Workshop →] links
 - "Campaign" without campaign content installed → guidance panel with [Install Campaign Core (Recommended) →] and [Install Full Campaign (Music + Cutscenes) →] and [Manage Content →]
@@ -85,6 +85,17 @@ Westwood's greatest UI contribution was the context-sensitive cursor — move on
 ### 8. Platform-Responsive Layout
 
 The UI adapts to the device, not the other way around. `ScreenClass` (Phone / Tablet / Desktop / TV) drives layout decisions. `InputCapabilities` (touch, mouse+keyboard, gamepad) drives interaction patterns. The flow chart in this document describes the Desktop experience; platform adaptations are noted where they diverge.
+
+### Specification Language for UI Screens
+
+These principles are enforced through a **three-layer specification format** that eliminates ambiguity when describing screens to human developers and AI agents:
+
+- **Feature Spec** — what a feature does (guards, behavior, non-goals as anti-hallucination anchors)
+- **Screen Spec** — typed widget tree (IDs, types, guards, actions, platform variants)
+- **Scenario Spec** — testable Given/When/Then interaction contracts
+
+See [`tracking/feature-scenario-spec-template.md`](tracking/feature-scenario-spec-template.md) for the full schema, widget type catalog, and annotated examples.
+When a page contains these YAML blocks, they are the canonical implementation contract for that screen; the surrounding prose and ASCII wireframe remain the human-readable explanation.
 
 ---
 

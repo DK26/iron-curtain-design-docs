@@ -37,6 +37,7 @@ Every ticket created from this template must include:
 - a **milestone** (`M0–M11`)
 - a **priority** (`P-Core`, `P-Differentiator`, `P-Creator`, `P-Scale`, `P-Optional`)
 - dependency references (`G*`, `Dxxx`, `Pxxx`, cluster IDs)
+- related **Feature / Screen / Scenario spec refs** for UI or player-facing work (`F-*`, `SCR-*`, `SCEN-*`) or `—` when not applicable
 - a verification/evidence plan
 
 If the work is not mapped in the overlay yet, it is a **proposal** and should not be tracked as scheduled implementation work.
@@ -52,6 +53,9 @@ If the work is not mapped in the overlay yet, it is a **proposal** and should no
 - `Primary Ladder Step:` `G#` (or `—` if not yet decomposed)
 - `Priority:` `P-*`
 - `Feature Cluster(s):` `M#.X.*`
+- `Feature Spec Refs:` `F-*` (or `—`)
+- `Screen Spec Refs:` `SCR-*` (or `—`)
+- `Scenario Refs:` `SCEN-*` (or `—`)
 - `Related Decisions:` `Dxxx`, `Dyyy`
 - `Pending Decision Gates:` `Pxxx` (or `—`)
 
@@ -122,6 +126,9 @@ One paragraph: what this ticket implements and what milestone progress it unlock
 - `Primary Ladder Step:` `G7`
 - `Priority:` `P-Core`
 - `Feature Cluster(s):` `M2.CORE.PATH_SPATIAL`
+- `Feature Spec Refs:` `—`
+- `Screen Spec Refs:` `—`
+- `Scenario Refs:` `—`
 - `Related Decisions:` `D013`, `D045`, `D015`, `D041`
 - `Pending Decision Gates:` `P002`
 
@@ -202,6 +209,7 @@ When a ticket reaches done:
 ## Common Failure Modes (Avoid)
 
 - Ticket title says “implement X” but does not name a `G*` step or milestone
+- UI/player-flow ticket references a screen page but not the specific `F-*` / `SCR-*` / `SCEN-*` contracts it implements
 - No non-goals, so the ticket silently expands into later-milestone work
 - “Done” marked without evidence artifact
 - Implementing a later-milestone feature because it was “nearby” in code

@@ -56,6 +56,9 @@ Required in implementation issues/PRs:
 - `Milestone:` `M0–M11`
 - `Execution Step:` `G*`
 - `Priority:` `P-*`
+- `Feature Spec Refs:` `F-*` (or `—`)
+- `Screen Spec Refs:` `SCR-*` (or `—`)
+- `Scenario Refs:` `SCEN-*` (or `—`)
 - `Dependencies:` relevant `Dxxx`, cluster IDs, `Pxxx` blockers
 - `Evidence planned:` tests/demo/replay/profile/ops notes
 

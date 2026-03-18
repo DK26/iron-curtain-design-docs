@@ -386,6 +386,7 @@ The project's commit history shows this pattern repeatedly: a single concept (LL
 - No work unit requires more than 2-3 design doc sections to understand
 - Dependencies between work units are explicit
 - Cross-cutting changes have a propagation checklist before any edits begin
+- UI/UX work units include Feature Spec, Screen Spec, and Scenario Spec blocks per [`tracking/feature-scenario-spec-template.md`](tracking/feature-scenario-spec-template.md) — these provide typed widget trees, guard conditions, and Given/When/Then acceptance criteria that make feature descriptions unambiguous for both human developers and AI agents
 
 ---
 

@@ -138,6 +138,9 @@ Required in implementation PRs/issues (recommended fields):
 - `Milestone:` `M#`
 - `Execution Step:` `G#` / `G#.x`
 - `Priority:` `P-*`
+- `Feature Spec Refs:` `F-*` (or `—`)
+- `Screen Spec Refs:` `SCR-*` (or `—`)
+- `Scenario Refs:` `SCEN-*` (or `—`)
 - `Dependencies:` `Dxxx`, cluster IDs, pending decisions (`Pxxx`)
 - `Evidence planned:` tests/demo/replay/profile/ops notes
 
