@@ -36,10 +36,10 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-5e4d7c2c.js";
+            window.path_to_searchindex_js = "../../searchindex-783862f3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-97c3ad2d.js"></script>
+        <script src="../../toc-7193b699.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -188,7 +188,7 @@
 <li><strong>Phase:</strong> Multi-phase (Workshop foundation + distribution + package tooling)</li>
 <li><strong>Canonical for:</strong> Workshop canonical asset format recommendations and P2P package distribution strategy</li>
 <li><strong>Scope:</strong> Workshop package format/distribution, client download/install pipeline, format recommendations for IC modules, HTTP fallback behavior</li>
-<li><strong>Decision:</strong> The Workshop recommends <strong>modern Bevy-native formats</strong> (OGG/PNG/WAV/WebM/KTX2/GLTF) as canonical for new content while fully supporting legacy C&amp;C formats for compatibility; package delivery uses <strong>P2P (BitTorrent/WebTorrent) with HTTP fallback</strong>.</li>
+<li><strong>Decision:</strong> The Workshop recommends <strong>modern Bevy-native formats</strong> (OGG/PNG/WAV/WebM/KTX2/GLTF) as canonical payload formats for new content while fully supporting legacy C&amp;C formats for compatibility; package delivery uses <strong>P2P (BitTorrent/WebTorrent) with HTTP fallback</strong>, and IC-owned package/manifest metadata remains the canonical layer for installability, language capability, variant grouping, and fallback behavior.</li>
 <li><strong>Why:</strong> Lower hosting cost, better Bevy integration/tooling, safer/more mature parsers for untrusted content, and lower friction for new creators using standard tools.</li>
 <li><strong>Non-goals:</strong> Dropping legacy C&amp;C format support; making Workshop format choices universal for all future engines/projects consuming the Workshop core library.</li>
 <li><strong>Invariants preserved:</strong> Full resource compatibility for existing C&amp;C assets remains intact; Workshop protocol/package concepts are separable from IC-specific format preferences (D050).</li>
@@ -198,12 +198,34 @@
 <li><strong>Performance / Ops impact:</strong> P2P delivery reduces CDN cost and scales community distribution; modern formats integrate better with Bevy runtime loading paths.</li>
 <li><strong>Public interfaces / types / commands:</strong> <code>.icpkg</code> (IC-specific package wrapper), Workshop P2P/HTTP delivery strategy, <code>ic mod build/publish</code> workflow (as referenced across modding docs)</li>
 <li><strong>Affected docs:</strong> <code>src/04-MODDING.md</code>, <code>src/05-FORMATS.md</code>, <code>src/decisions/09c-modding.md</code>, <code>src/decisions/09f-tools.md</code></li>
-<li><strong>Revision note summary:</strong> None</li>
+<li><strong>Revision note summary:</strong> Clarified in March 2026 that raw media containers/codecs are payload-level choices only; IC package/manifest metadata remains canonical for language capability, variant groups, translation trust labels, and fallback behavior. Explicitly rejects designing a custom low-level AV container for IC.</li>
 <li><strong>Keywords:</strong> workshop formats, p2p delivery, bittorrent, webtorrent, bevy-native assets, png ogg webm, legacy c&amp;c compatibility, icpkg</li>
 </ul>
 <p><strong>Decision:</strong> The Workshop’s canonical asset formats are <strong>Bevy-native modern formats</strong> (OGG, PNG, WAV, WebM, KTX2, GLTF). C&amp;C legacy formats (.aud, .shp, .pal, .vqa, .mix) are fully supported for backward compatibility but are not the recommended distribution format for new content. Workshop delivery uses <strong>peer-to-peer distribution</strong> (BitTorrent/WebTorrent protocol) with HTTP fallback, reducing hosting costs from CDN-level to a lightweight tracker.</p>
+<p><strong>Clarification (March 2026):</strong> These format recommendations apply to the
+<strong>payload files</strong> carried by Workshop packages. They do <strong>not</strong> replace IC’s
+own package/manifest layer as the canonical authority for:</p>
+<ul>
+<li>installability and profile selection</li>
+<li>variant groups</li>
+<li>language capability matrices</li>
+<li>translation source/trust labels</li>
+<li>completeness/coverage labels</li>
+<li>deterministic fallback behavior</li>
+</ul>
+<p>IC therefore does <strong>not</strong> design a new low-level general-purpose AV container.
+It uses standard containers/codecs for payloads and keeps IC-specific product
+behavior in package metadata and local import indexes.</p>
 <blockquote>
 <p><strong>Note (D050):</strong> The format recommendations in this section are <strong>IC-specific</strong> — they reflect Bevy’s built-in asset pipeline. The Workshop’s P2P distribution protocol and package format are engine-agnostic (see D050). Future projects consuming the Workshop core library will define their own format recommendations based on their engine’s capabilities. The <code>.icpkg</code> extension, <code>ic mod</code> CLI commands, and <code>game_module</code> manifest fields are likewise IC-specific — the Workshop core library uses configurable equivalents.</p>
+</blockquote>
+<blockquote>
+<p><strong>Container boundary note:</strong> Embedded track metadata inside WebM/Matroska,
+Ogg Skeleton, or similar containers may inform import and validation, but it
+is not the canonical policy layer for IC. A single package may be composed of
+multiple payload files (for example, separate cutscene, subtitle, and voice
+resources), so package metadata remains the source of truth for what is
+installed, which variants exist, and how the client chooses fallbacks.</p>
 </blockquote>
 <h3 id="the-format-problem"><a class="header" href="#the-format-problem">The Format Problem</a></h3>
 <p>The engine serves two audiences with conflicting format needs:</p>

@@ -36,10 +36,10 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-5e4d7c2c.js";
+            window.path_to_searchindex_js = "../../searchindex-783862f3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-97c3ad2d.js"></script>
+        <script src="../../toc-7193b699.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -197,7 +197,7 @@
 <li><strong>AI remaster media policy:</strong> AI-enhanced cutscene packs are optional presentation variants (Original / Clean / AI-Enhanced), clearly labeled, provenance-aware, and never replacements for the canonical originals.</li>
 <li><strong>Public interfaces / types / commands:</strong> manifest <code>install</code> metadata + optional dependencies/fallbacks, <code>ic content list</code>, <code>ic content apply-profile</code>, <code>ic content install/remove</code>, <code>ic mod gc</code></li>
 <li><strong>Affected docs:</strong> <code>src/17-PLAYER-FLOW.md</code>, <code>src/decisions/09e-community.md</code>, <code>src/decisions/09g-interaction.md</code>, <code>src/04-MODDING.md</code>, <code>src/decisions/09f-tools.md</code></li>
-<li><strong>Revision note summary:</strong> None</li>
+<li><strong>Revision note summary:</strong> Clarified in March 2026 that media language capability and fallback policy are canonical package/import-index metadata, not merely properties of an individual media container. Explicitly rejects creating a custom low-level AV container for this purpose.</li>
 <li><strong>Keywords:</strong> selective install, install profiles, campaign core, optional media, cutscene variants, presentation fingerprint, installed content manager</li>
 </ul>
 <p><strong>Decision:</strong> Support <strong>selective installation</strong> of game content through <strong>content install profiles</strong> and <strong>optional content packs</strong>, while preserving a complete playable experience for installed features. Campaign gameplay content is separable from campaign media (music, voice, cutscenes). Missing optional media must degrade to designer-authored fallbacks (text, subtitles, static imagery, or silence/ambient), never a hard failure.</p>
@@ -361,6 +361,33 @@ fallbacks:
 <li>optional machine-translated subtitle/CC fallback toggle (see phased rollout below)</li>
 </ul>
 <p>This prevents the common failure mode where a cutscene pack exists but does not support the player’s preferred language, and the client has no deterministic fallback behavior.</p>
+<h3 id="canonical-ownership-of-media-language-metadata"><a class="header" href="#canonical-ownership-of-media-language-metadata">Canonical Ownership Of Media Language Metadata</a></h3>
+<p>The language capability matrix above is <strong>canonical package-level metadata</strong>.</p>
+<p>That metadata may be populated from multiple sources:</p>
+<ul>
+<li>Workshop manifests / D049 package indexes</li>
+<li>local import indexes</li>
+<li>embedded track metadata discovered during import from formats such as
+Matroska/WebM or Ogg Skeleton</li>
+</ul>
+<p>But the canonical authority for IC behavior remains the package/import-index
+layer, not the raw container alone.</p>
+<p>Why:</p>
+<ul>
+<li>a player may install separate subtitle, dub, or voice packs</li>
+<li>one campaign may expose multiple cutscene variants with different coverage</li>
+<li>translation trust labels and coverage are IC product metadata, not generic
+container concepts</li>
+<li>fallback decisions must remain deterministic even when media is split across
+multiple files/resources</li>
+</ul>
+<p>Therefore:</p>
+<ul>
+<li>embedded container metadata is <strong>advisory import input</strong></li>
+<li>package/import-index metadata is <strong>authoritative runtime policy</strong></li>
+<li>IC does <strong>not</strong> introduce a custom low-level AV container to solve this;
+composability lives at the package/resource layer instead</li>
+</ul>
 <h3 id="optional-media-must-not-break-campaign-flow"><a class="header" href="#optional-media-must-not-break-campaign-flow">Optional Media Must Not Break Campaign Flow</a></h3>
 <p>This is the central rule.</p>
 <p>If a player installs “Campaign Core” but not media packs:</p>

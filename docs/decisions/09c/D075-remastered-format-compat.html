@@ -36,10 +36,10 @@
             const path_to_root = "../../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-5e4d7c2c.js";
+            window.path_to_searchindex_js = "../../searchindex-783862f3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-97c3ad2d.js"></script>
+        <script src="../../toc-7193b699.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -187,8 +187,8 @@
 <li><strong>Status:</strong> Accepted</li>
 <li><strong>Phase:</strong> Phase 2 (format parsers), Phase 6a (Asset Studio import wizard)</li>
 <li><strong>Canonical for:</strong> Loading and converting assets from the C&amp;C Remastered Collection (EA, 2020) into IC’s native pipeline</li>
-<li><strong>Scope:</strong> <code>cnc-formats</code> (MEG/PGM archive parser, clean-room, <code>meg</code> feature flag), <code>ic-cnc-content</code> (TGA+META, DDS, MTD, BK2 parsers + Bevy integration), <code>ic-editor</code> (Asset Studio import wizard), <code>05-FORMATS.md</code></li>
-<li><strong>Decision:</strong> IC reads all Remastered Collection asset formats natively — MEG archives, TGA+META sprite sheets, BK2 video, WAV audio, XML config — enabling users who own the Remastered Collection to use those assets directly. HD sprite import splits megasheets into IC’s per-frame sprite representation using the META JSON geometry. No Remastered assets are redistributed.</li>
+<li><strong>Scope:</strong> <code>cnc-formats</code> (MEG/PGM archive parser, clean-room, <code>meg</code> feature flag), <code>ic-cnc-content</code> (TGA+META, DDS, MTD, WAV, config/import-index integration), <code>ic-editor</code> (Asset Studio import wizard and BK2→WebM import pipeline), <code>05-FORMATS.md</code></li>
+<li><strong>Decision:</strong> IC imports and reads the Remastered Collection’s asset families into IC’s native pipeline — MEG archives, TGA+META sprite sheets, WAV audio, XML config, and BK2 cutscenes normalized to WebM at import time — enabling users who own the Remastered Collection to use those assets directly without redistributing them.</li>
 <li><strong>Why:</strong> (1) The Remastered Collection’s C++ DLL source is GPL v3 — format definitions are legally referenceable. (2) Players who own the Remastered Collection expect their HD assets to work. (3) The Remastered formats are well-documented by the modding community (PPM, CnCNet). (4) IC already supports the classic formats these are derived from — HD support is an incremental extension.</li>
 <li><strong>Non-goals:</strong> Binary compatibility with Petroglyph’s C# GlyphX layer; redistributing EA’s proprietary HD art, music, or video; running Remastered mods that depend on GlyphX-specific APIs; replacing the Remastered Collection as a product.</li>
 <li><strong>Invariants preserved:</strong> <code>ic-cnc-content</code> remains a pure parsing library with no I/O side effects. All imported assets convert to IC-native representations (PNG sprites, OGG/WAV audio, WebM video). Sim determinism unaffected — asset formats are presentation-only.</li>
@@ -197,12 +197,19 @@
 <li><strong>Security / Trust impact:</strong> MEG archive parser in <code>cnc-formats</code> must handle malformed archives safely (fuzzing required). MEG entry extraction uses <code>strict-path</code> <code>PathBoundary</code> to sandbox output to the mod directory — same Zip Slip defense as <code>.oramap</code> and <code>.icpkg</code> (see <code>06-SECURITY.md</code> § Path Security Infrastructure). TGA/DDS parsers use established Rust crates (<code>image</code>, <code>ddsfile</code>) — no custom decoder needed.</li>
 <li><strong>Public interfaces / types / commands:</strong> <code>MegArchive</code>, <code>MegEntry</code>, <code>RemasteredSpriteSheet</code>, <code>MetaFrame</code>, <code>RemasteredImportManifest</code>, <code>ic asset import-remastered</code></li>
 <li><strong>Affected docs:</strong> <code>src/05-FORMATS.md</code>, <code>src/decisions/09f/D040-asset-studio.md</code>, <code>src/architecture/ra-experience.md</code>, <code>src/decisions/09c-modding.md</code></li>
+<li><strong>Revision note summary:</strong> Clarified in March 2026 that BK2 is not part of the baseline runtime decoder set; Remastered cutscenes are normalized to WebM at import time, and IC package/import metadata remains the canonical layer for language/variant/fallback behavior above the raw media container.</li>
 <li><strong>Keywords:</strong> remastered, remaster, MEG, TGA, META, BK2, Bink2, HD sprites, megasheet, GlyphX, Petroglyph, EA GPL, import wizard</li>
 </ul>
 <hr>
 <h3 id="context"><a class="header" href="#context">Context</a></h3>
 <p>The C&amp;C Remastered Collection (EA / Petroglyph, 2020) modernized Red Alert and Tiberian Dawn with HD assets while preserving the original gameplay via a C++ DLL (released under GPL v3). The DLL source gives us legal access to format definitions. The HD assets themselves are proprietary EA content — IC never redistributes them, but players who own the Remastered Collection should be able to use their purchased assets in IC.</p>
 <p>IC already reads every <strong>classic</strong> C&amp;C format (<code>.mix</code>, <code>.shp</code>, <code>.pal</code>, <code>.aud</code>, <code>.vqa</code>). The Remastered Collection introduced a parallel set of <strong>HD formats</strong> that wrap or replace the classics. This decision covers reading those HD formats and converting them into IC’s native pipeline.</p>
+<p><strong>Clarification (March 2026):</strong> For video, the canonical runtime target stays
+normalized WebM rather than native BK2 playback. Any track/language metadata
+discovered during BK2 import can inform IC’s import index, but cutscene
+variant selection, language capability, and fallback behavior remain governed
+by IC package/import metadata as defined by <code>D068</code>/<code>D049</code>, not by the raw
+container alone.</p>
 <h3 id="remastered-format-inventory"><a class="header" href="#remastered-format-inventory">Remastered Format Inventory</a></h3>
 <p>The Remastered Collection uses Petroglyph’s format family (from Empire at War / Grey Goo lineage), not Westwood’s original formats. The C++ DLL still reads classic formats internally, but the C# GlyphX layer loads HD replacements from Petroglyph containers.</p>
 <h4 id="archives"><a class="header" href="#archives">Archives</a></h4>

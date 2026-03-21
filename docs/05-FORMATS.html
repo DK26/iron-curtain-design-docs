@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5e4d7c2c.js";
+            window.path_to_searchindex_js = "searchindex-783862f3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-97c3ad2d.js"></script>
+        <script src="toc-7193b699.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -213,6 +213,38 @@
 <tr><td><code>.adl</code></td><td>AdLib music</td><td>Dune II (1992) soundtrack format — sequential OPL2 register writes driving Yamaha YM3812 FM synthesis. Not a C&amp;C format, but direct Westwood lineage (Dune II is the predecessor to C&amp;C). Behind <code>adl</code> feature flag in <code>cnc-formats</code>. Read-only parser: reads register write sequences into <code>AdlFile</code> struct. <code>validate</code> and <code>inspect</code> report register count, estimated duration, and detected instrument patches. ADL→WAV rendering requires OPL2 chip emulation — the only viable pure Rust emulator (<code>opl-emu</code>) is GPL-3.0, so rendering lives in <code>ic-cnc-content</code>, not <code>cnc-formats</code>. Community documentation: DOSBox source, AdPlug project</td></tr>
 <tr><td><code>.xmi</code></td><td>XMIDI music</td><td>Extended MIDI for the Miles Sound System (Miles AIL). IFF FORM:XMID container wrapping standard MIDI events with Miles-specific extensions: IFTHEN-based absolute timing (vs. standard MIDI delta-time), for-loop markers, multi-sequence files. Used by Kyrandia series and other Miles-licensed Westwood titles — not standard <code>.mid</code>. Behind <code>xmi</code> feature flag in <code>cnc-formats</code> (implies <code>midi</code>). XMI→MID conversion is clean-room (~300 lines): strip IFF wrapper, convert IFTHEN timing to delta-time, merge multi-sequence files. Once converted to MID, the existing MIDI pipeline handles SoundFont rendering to WAV/AUD. <code>validate</code> and <code>inspect</code> report sequence count, timing mode, and embedded SysEx data</td></tr>
 <tr><td><code>.avi</code></td><td>Interchange video</td><td><strong>Tool-level interchange format</strong> for VQA ↔ video conversion (<code>cnc-formats convert</code>, behind <code>convert</code> feature). Uncompressed BGR24 video + 16-bit PCM audio. Clean-room AVI container codec with no external dependencies. This does NOT conflict with D049’s WebM recommendation — D049 targets the engine’s runtime format; AVI is the tool-level interchange format. Pipeline: <code>.vqa</code> → AVI (<code>cnc-formats</code>) → WebM (ffmpeg/user tooling). Not a game asset format — never loaded at runtime</td></tr>
+<tr><td><code>.cps</code></td><td>Screen pictures</td><td>Compressed Screen Picture — 320×200 palette-indexed fullscreen still images for title screens, loading screens, and menu backgrounds. Optional LCW compression, optional embedded 256-color palette. Used in TD and RA1 (e.g., <code>ALIPAPER.CPS</code>, <code>SOVPAPER.CPS</code>). Read-only — IC loads for Classic render mode (D048) and Asset Studio (D040) preview</td></tr>
+<tr><td><code>.eng</code>/<code>.ger</code>/<code>.fre</code></td><td>String tables</td><td>Language-specific string tables for TD/RA1 (e.g., <code>CONQUER.ENG</code>, <code>CONQUER.GER</code>). Indexed null-terminated string arrays. Used for in-game text, mission briefings, UI labels. Read-only — IC uses its own localization system; parsed for Classic compatibility, cross-engine export (D066), and Asset Studio (D040) text preview</td></tr>
+<tr><td><code>.lut</code></td><td>Lookup tables</td><td>4096-entry color lookup table for the Chrono Vortex visual effect in Red Alert. Maps source→destination palette indices for real-time color transformation. Read-only — parsed for Classic render mode (D048) fidelity</td></tr>
+<tr><td><code>.dip</code></td><td>Installer data</td><td>Segmented control stream data from the original Westwood installer. Read-only — parsed for completeness and Asset Studio (D040) archive inspection</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="tiberian-sun--red-alert-2-formats"><a class="header" href="#tiberian-sun--red-alert-2-formats">Tiberian Sun / Red Alert 2 Formats</a></h3>
+<p>Binary format parsers for the TS/RA2 game family. All clean-room implementations in <code>cnc-formats</code> from community documentation (XCC Utilities, Ares, Phobos projects). These are additive to the <code>FormatRegistry</code> (D018) — loaded by TS/RA2 game modules, not the core engine.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Format</th><th>Purpose</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>.shp</code> (TS/RA2)</td><td>Sprite sheets (v2)</td><td>Distinct from TD/RA1 <code>.shp</code> — uses scanline RLE compression (types 1–3: scanline skip, scanline RLE, LCW fallback) with independent per-frame crop rectangles. Separate <code>ShpTsFile</code> parser in <code>cnc-formats</code> (auto-detected by format sniffing). Read-only</td></tr>
+<tr><td><code>.vxl</code></td><td>Voxel models</td><td>3D voxel geometry for TS/RA2 vehicles and units. Multi-limb structure with per-limb bounding boxes, span data, and transformation metadata. Community-documented by XCC Utilities project. Read-only</td></tr>
+<tr><td><code>.hva</code></td><td>Voxel animation</td><td>Hierarchical Voxel Animation — 3×4 affine transformation matrices per section per frame, driving <code>.vxl</code> model articulation (turret rotation, barrel recoil, walking animation). Companion sidecar to <code>.vxl</code> files. Read-only</td></tr>
+<tr><td><code>.csf</code></td><td>String tables</td><td>Compiled String Format — TS/RA2/Generals localized string tables. UTF-16LE with XOR-encoded label strings (<code>0xA7D1A7D1...</code> key) and optional extra value field (audio filename or macro reference). Read-only — IC uses its own localization system; parsed for import pipeline and Asset Studio (D040) preview</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="generals--zero-hour-formats-sage-engine"><a class="header" href="#generals--zero-hour-formats-sage-engine">Generals / Zero Hour Formats (SAGE Engine)</a></h3>
+<p>Binary format parsers for the Generals/ZH SAGE-era game family. Clean-room implementations in <code>cnc-formats</code> from EA’s GPL-released source code and community documentation (OpenSAGE project). These are additive to the <code>FormatRegistry</code> — loaded by Generals game modules.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Format</th><th>Purpose</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>.big</code></td><td>Archive container</td><td>EA’s BIG archive format used by Generals, Zero Hour, Battle for Middle-earth, and other SAGE-engine games. Header + file table + packed data. Streaming API for zero-copy member access. Clean-room parser from EA GPL source and OpenSAGE community docs. Read-only</td></tr>
+<tr><td><code>.w3d</code></td><td>3D models</td><td>Westwood 3D mesh format — recursive IFF-style chunk structure containing meshes, hierarchies, animations, and collision data. Used for all 3D assets in Generals/ZH. Parser handles nested chunk traversal with stack depth safety limits (fuzz-hardened). Read-only</td></tr>
 </tbody>
 </table>
 </div>
@@ -278,7 +310,16 @@
 <p><strong>cnc-formats</strong> (MIT OR Apache-2.0, separate repo — Tier 1, Phase 0):</p>
 <ol>
 <li>
-<p>Clean-room parsers for all C&amp;C binary formats (<code>.mix</code>, <code>.shp</code>, <code>.tmp</code>, <code>.pal</code>, <code>.aud</code>, <code>.vqa</code>, <code>.vqp</code>, <code>.wsa</code>, <code>.fnt</code>) and Petroglyph <code>.meg</code>/<code>.pgm</code> archives (Phase 2, behind <code>meg</code> feature flag — clean-room from OS Big Editor/OpenSage community docs). Standard MIDI <code>.mid</code> parsing, writing, SoundFont rendering, and real-time playback behind <code>midi</code> feature flag (via <code>midly</code>/<code>nodi</code>/<code>rustysynth</code> — pure Rust; <code>midly</code> is Unlicense, <code>nodi</code> and <code>rustysynth</code> are MIT). Westwood-lineage audio formats: AdLib <code>.adl</code> (Dune II) parsing behind <code>adl</code> feature flag; XMIDI <code>.xmi</code> (Kyrandia / Miles Sound System) parsing and XMI→MID conversion behind <code>xmi</code> feature flag (implies <code>midi</code>). WAV→MID transcription behind <code>transcribe</code> + <code>convert</code> feature flags (implies <code>midi</code>; WAV decoding via <code>hound</code> requires <code>convert</code>); ML-enhanced via <code>transcribe-ml</code> feature</p>
+<p>Clean-room parsers for C&amp;C binary formats across three game families:</p>
+<ul>
+<li><strong>Classic Westwood 2D (TD/RA1):</strong> <code>.mix</code>, <code>.shp</code>, <code>.tmp</code>, <code>.pal</code>, <code>.aud</code>, <code>.vqa</code>, <code>.vqp</code>, <code>.wsa</code>, <code>.fnt</code>, <code>.cps</code> (screen pictures), <code>.eng</code>/<code>.ger</code>/<code>.fre</code> (string tables), <code>.lut</code> (color lookup tables), <code>.dip</code> (installer data)</li>
+<li><strong>Tiberian Sun / Red Alert 2:</strong> <code>.shp</code> TS variant (scanline RLE, separate <code>ShpTsFile</code> parser), <code>.vxl</code> (voxel models), <code>.hva</code> (voxel animation transforms), <code>.csf</code> (compiled string format)</li>
+<li><strong>Generals / Zero Hour (SAGE):</strong> <code>.big</code> (BIG archives), <code>.w3d</code> (Westwood 3D mesh — recursive IFF chunk parser)</li>
+<li><strong>Petroglyph (Remastered):</strong> <code>.meg</code>/<code>.pgm</code> archives (Phase 2, behind <code>meg</code> feature flag — clean-room from OS Big Editor/OpenSAGE community docs)</li>
+<li><strong>Audio/music:</strong> Standard MIDI <code>.mid</code> parsing, writing, SoundFont rendering, and real-time playback behind <code>midi</code> feature flag (via <code>midly</code>/<code>nodi</code>/<code>rustysynth</code> — pure Rust; <code>midly</code> is Unlicense, <code>nodi</code> and <code>rustysynth</code> are MIT). Westwood-lineage audio: AdLib <code>.adl</code> (Dune II) parsing behind <code>adl</code> feature flag; XMIDI <code>.xmi</code> (Kyrandia / Miles Sound System) parsing and XMI→MID conversion behind <code>xmi</code> feature flag (implies <code>midi</code>). WAV→MID transcription behind <code>transcribe</code> + <code>convert</code> feature flags (implies <code>midi</code>; WAV decoding via <code>hound</code> requires <code>convert</code>); ML-enhanced via <code>transcribe-ml</code> feature</li>
+<li><strong>Format detection:</strong> Content-based magic-byte sniffing (<code>identify</code> CLI) auto-detects all supported formats without relying on file extension — covers all families above plus TS/RA2/Generals variants</li>
+<li><strong>Streaming APIs:</strong> Zero-copy <code>Read</code>-based streaming for large files — MIX, BIG, MEG, AUD, and VQA all support range-based member access without loading entire archives into memory</li>
+</ul>
 </li>
 <li>
 <p>Clean-room parsers for C&amp;C text configuration formats: <code>.ini</code> (classic C&amp;C rules, always enabled) and MiniYAML (OpenRA rules, behind <code>miniyaml</code> feature flag)</p>
@@ -308,6 +349,7 @@
 <tr><td>XMI → AUD</td><td>Export</td><td>Via XMI→MID→WAV→AUD pipeline (behind <code>xmi</code> + <code>convert</code> features)</td></tr>
 <tr><td>WAV → MID</td><td>Export</td><td>DSP transcription pipeline (behind <code>transcribe</code> + <code>convert</code> features — WAV decoding requires <code>hound</code> under <code>convert</code>); ML-enhanced via <code>transcribe-ml</code> feature</td></tr>
 <tr><td>VQA ↔ AVI</td><td>Bidirectional</td><td>custom AVI codec</td></tr>
+<tr><td>VQA → MKV</td><td>Export</td><td>custom Matroska encoder (V_UNCOMPRESSED per RFC 9559 or V_MS/VFW/FOURCC legacy codec); optional PCM audio track. Higher fidelity archival than AVI</td></tr>
 <tr><td>FNT → PNG</td><td>Export</td><td><code>png</code> crate</td></tr>
 </tbody>
 </table>
@@ -317,13 +359,16 @@
 <li>
 <p>CLI tool with phased subcommand rollout:</p>
 <ul>
-<li><strong>Phase 0:</strong> <code>validate</code> (structural correctness), <code>inspect</code> (dump contents/metadata, <code>--json</code> for machine-readable output), <code>convert</code> (extensible <code>--format</code>/<code>--to</code> format conversion — <code>--to</code> required, <code>--format</code> overrides auto-detected source format from extension; <strong>text:</strong> <code>--format miniyaml --to yaml</code> behind <code>miniyaml</code> feature; <strong>binary:</strong> SHP↔PNG, SHP↔GIF, AUD↔WAV, VQA↔AVI, WSA↔PNG/GIF, TMP→PNG, PAL→PNG, FNT→PNG behind <code>convert</code> feature; <strong>MIDI:</strong> MID→WAV, MID→AUD behind <code>midi</code> feature; <strong>XMIDI:</strong> XMI→MID, XMI→WAV, XMI→AUD behind <code>xmi</code> feature; <strong>Transcribe:</strong> WAV→MID behind <code>transcribe</code> + <code>convert</code> features — WAV decoding via <code>hound</code> requires <code>convert</code>, ML-enhanced via <code>transcribe-ml</code>)</li>
+<li><strong>Phase 0:</strong> <code>identify</code> (content-based format sniffing via magic bytes — auto-detects format type without relying on file extension; reports detected format and confidence), <code>validate</code> (structural correctness), <code>inspect</code> (dump contents/metadata, <code>--json</code> for machine-readable output), <code>convert</code> (extensible <code>--format</code>/<code>--to</code> format conversion — <code>--to</code> required, <code>--format</code> overrides auto-detected source format from extension; <strong>text:</strong> <code>--format miniyaml --to yaml</code> behind <code>miniyaml</code> feature; <strong>binary:</strong> SHP↔PNG, SHP↔GIF, AUD↔WAV, VQA↔AVI, VQA→MKV, WSA↔PNG/GIF, TMP→PNG, PAL→PNG, FNT→PNG behind <code>convert</code> feature; <strong>MIDI:</strong> MID→WAV, MID→AUD behind <code>midi</code> feature; <strong>XMIDI:</strong> XMI→MID, XMI→WAV, XMI→AUD behind <code>xmi</code> feature; <strong>Transcribe:</strong> WAV→MID behind <code>transcribe</code> + <code>convert</code> features — WAV decoding via <code>hound</code> requires <code>convert</code>, ML-enhanced via <code>transcribe-ml</code>)</li>
 <li><strong>Phase 1:</strong> <code>extract</code> (decompose <code>.mix</code> archives to individual files; <code>.meg</code>/<code>.pgm</code> support added Phase 2 via <code>meg</code> feature), <code>list</code> (quick archive inventory — filenames, sizes, types; <code>.meg</code>/<code>.pgm</code> support added Phase 2)</li>
 <li><strong>Phase 2:</strong> <code>check</code> (deep integrity verification — CRC validation, truncation detection, <code>validate --strict</code> equivalent), <code>diff</code> (format-aware structural comparison of two files of the same type), <code>fingerprint</code> (SHA-256 canonical content hash for integrity/deduplication)</li>
 <li><strong>Phase 6a:</strong> <code>pack</code> (create <code>.mix</code> archives from directory — inverse of <code>extract</code>)</li>
 </ul>
 <p><strong>CLI usage examples:</strong></p>
-<pre><code class="language-bash"># Convert MiniYAML rules to standard YAML (explicit --format because .yaml is ambiguous)
+<pre><code class="language-bash"># Auto-detect format from file content (no extension needed)
+cnc-formats identify mystery_file.dat
+
+# Convert MiniYAML rules to standard YAML (explicit --format because .yaml is ambiguous)
 cnc-formats convert --format miniyaml --to yaml rules.yaml
 
 # Auto-detection works when extension is unambiguous
@@ -386,6 +431,9 @@ cnc-formats convert --format mid --to aud soundtrack.mid --soundfont default.sf2
 # Convert VQA cutscene to AVI (interchange format)
 cnc-formats convert --format vqa --to avi intro.vqa -o intro.avi
 
+# Convert VQA cutscene to MKV (archival quality, RFC 9559 uncompressed video)
+cnc-formats convert --format vqa --to mkv intro.vqa -o intro.mkv
+
 # Convert animated WSA to GIF
 cnc-formats convert --format wsa --to gif menu.wsa --palette temperat.pal -o menu.gif
 
@@ -443,12 +491,13 @@ cnc-formats convert --format tmp --to png tiles.tmp --palette temperat.pal
 /// Each game module defines which sources it supports.
 pub enum ContentSource {
     Steam { app_id: u32 },           // e.g., Steam AppId 2229870 (TD Remastered)
-    Origin { registry_key: String }, // Windows registry path to install dir
+    EaApp { registry_key: String },  // EA App (formerly Origin) — Windows registry path to install dir
     Gog { game_id: String },         // GOG Galaxy game identifier
+    OpenRA { install_path: PathBuf }, // OpenRA installation — mods, maps, community assets
     Directory { path: PathBuf },     // Manual install / disc copy
 }
 <span class="boring">}</span></code></pre>
-<p>TiberianDawnHD detects Steam via AppId, Origin via Windows registry key, and GOG via standard install paths. IC should implement a <code>ContentDetector</code> that probes all known sources for each supported game and presents the user with detected installations at first run. This handles the critical UX question “where are your game assets?” without requiring manual path entry — the same approach used by OpenRA, CorsixTH, and other reimplementation projects.</p>
+<p>TiberianDawnHD detects Steam via AppId, EA App (formerly Origin) via Windows registry key, and GOG via standard install paths. IC should implement a <code>ContentDetector</code> that probes all known sources for each supported game and presents the user with detected installations at first run. The <code>OpenRA</code> source kind detects existing OpenRA installations to access community mods, maps, and assets. This handles the critical UX question “where are your game assets?” without requiring manual path entry — the same approach used by OpenRA, CorsixTH, and other reimplementation projects.</p>
 <p><strong>Phase:</strong> Content detection ships in Phase 0 — format parsing (binary + <code>.ini</code> + MiniYAML) in <code>cnc-formats</code>, IC-specific asset pipeline integration (including content source probing) in <code>ic-cnc-content</code>. Game module content detection in Phase 1.</p>
 <h3 id="browser-asset-storage"><a class="header" href="#browser-asset-storage">Browser Asset Storage</a></h3>
 <p>The <code>ContentDetector</code> pattern above assumes filesystem access — probing Steam, Origin, GOG, and directory paths. None of this works in a browser build (WASM target). Browsers have no access to the user’s real filesystem. IC needs a dedicated browser asset storage strategy.</p>
@@ -496,12 +545,13 @@ pub struct BrowserStore { /* OPFS primary, IndexedDB fallback */ }
 <tr><th>Section</th><th>Topic</th><th>File</th></tr>
 </thead>
 <tbody>
-<tr><td>Binary Codecs</td><td>MIX, SHP, LCW, TMP, PAL, AUD, VQA, VQP, WSA, FNT codec specs</td><td><a href="formats/binary-codecs.html">binary-codecs.md</a></td></tr>
+<tr><td>Binary Codecs</td><td>MIX, SHP, LCW, TMP, PAL, AUD, VQA, VQP, WSA, FNT, CPS, ENG, LUT, DIP codec specs; TS/RA2: SHP(TS), VXL, HVA, CSF; Generals: BIG, W3D</td><td><a href="formats/binary-codecs.html">binary-codecs.md</a></td></tr>
 <tr><td>— EA Source Insights</td><td>Architecture lessons from EA GPL source: keep/leave-behind patterns, code stats, coordinate translation</td><td><a href="formats/ea-source-insights.html">ea-source-insights.md</a></td></tr>
 <tr><td>Save &amp; Replay Formats</td><td>Save game format (.icsave) + replay file format (.icrep)</td><td><a href="formats/save-replay-formats.html">save-replay-formats.md</a></td></tr>
 <tr><td>— Keyframes &amp; Analysis</td><td>Keyframe snapshot types, delta structs, seeking algorithm, analysis event taxonomy</td><td><a href="formats/replay-keyframes-analysis.html">replay-keyframes-analysis.md</a></td></tr>
 <tr><td>Backup, Screenshot &amp; Import</td><td>Backup archive format (D061) + screenshot format + owned-source import/extraction pipeline</td><td><a href="formats/backup-screenshot-import.html">backup-screenshot-import.md</a></td></tr>
 <tr><td>Transcribe Upgrade Roadmap</td><td>WAV/PCM-to-MIDI transcription upgrade: pYIN, SuperFlux, polyphonic, ML-enhanced (Basic Pitch)</td><td><a href="formats/transcribe-upgrade-roadmap.html">transcribe-upgrade-roadmap.md</a></td></tr>
+<tr><td>IronCutscene Container</td><td>Multi-track cutscene format (.icc) — VQA video + multi-language AUD audio + timed subtitles + chapters</td><td><a href="formats/cutscene-container.html">cutscene-container.md</a></td></tr>
 </tbody>
 </table>
 </div>

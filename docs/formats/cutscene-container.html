@@ -1,0 +1,544 @@
+<!DOCTYPE HTML>
+<html lang="en" class="navy sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>IronCutscene Container (.icc) - Iron Curtain — Design Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Design docs for a Rust-native Red Alert RTS engine">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-29075ff1.svg">
+        <link rel="shortcut icon" href="../favicon-96291481.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../css/sidebar-logo-511465a2.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "navy";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-783862f3.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-7193b699.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Iron Curtain — Design Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/iron-curtain-engine/iron-curtain-design-docs" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/iron-curtain-engine/iron-curtain-design-docs/edit/main/src/formats/cutscene-container.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h2 id="ironcutscene-container-icc"><a class="header" href="#ironcutscene-container-icc">IronCutscene Container (.icc)</a></h2>
+<p>A lightweight multi-track cutscene container for in-engine playback with language selection and subtitles. Designed to wrap existing C&amp;C codecs (VQA video, AUD audio) without re-encoding, while adding the multi-language and subtitle capabilities that the original formats lack.</p>
+<h3 id="motivation"><a class="header" href="#motivation">Motivation</a></h3>
+<p>C&amp;C cutscenes ship as single <code>.vqa</code> files with one baked-in audio track and no subtitle support. This is insufficient for Iron Curtain’s goals:</p>
+<ol>
+<li><strong>Language switching</strong> — players should be able to change voice-over language without re-downloading video</li>
+<li><strong>Subtitles</strong> — accessibility, hearing-impaired support, and translation accuracy</li>
+<li><strong>RTL/BiDi text</strong> — Arabic, Hebrew, and Persian subtitle tracks must render correctly</li>
+<li><strong>Chapter markers</strong> — scripting hooks for mission briefings (e.g., “pause here until player clicks Continue”)</li>
+<li><strong>No re-encoding</strong> — the VQA and AUD codecs are already implemented and validated; the container should not require transcoding</li>
+</ol>
+<h3 id="why-not-mkv"><a class="header" href="#why-not-mkv">Why Not MKV?</a></h3>
+<p>MKV solves all of the above and more. But:</p>
+<ul>
+<li><strong>MKV is overkill.</strong> We would need a full EBML demuxer, codec negotiation, and SeekHead parsing at runtime. Our video is palette-indexed VQ at 320x200@15fps — not H.264.</li>
+<li><strong>MKV requires transcoding.</strong> V_UNCOMPRESSED MKV files are enormous. Putting VQA bitstream directly into MKV would require a custom codec ID that no player understands — defeating the “play in VLC” validation benefit.</li>
+<li><strong>MKV export already exists for validation.</strong> The <code>cnc-formats</code> crate exports VQA to MKV (<code>V_UNCOMPRESSED</code> + <code>A_PCM/INT/LIT</code>) for correctness verification in standard players. That purpose is served.</li>
+</ul>
+<p>The IronCutscene container wraps the same bitstreams the engine already decodes, adding only the metadata needed for multi-language playback.</p>
+<h3 id="design-principles"><a class="header" href="#design-principles">Design Principles</a></h3>
+<ol>
+<li><strong>Zero transcoding</strong> — VQA and AUD payloads are stored byte-identical to their standalone files</li>
+<li><strong>Forward-only streaming</strong> — the container can be read start-to-finish with no seeking required (seek is optional, enabled by an index chunk)</li>
+<li><strong>Simple IFF-style chunks</strong> — consistent with VQA’s existing FORM/chunk structure</li>
+<li><strong>UTF-8 throughout</strong> — all text (subtitles, language tags, chapter names) is UTF-8</li>
+<li><strong>BiDi is a rendering concern</strong> — the container stores logical-order UTF-8; the engine’s text renderer applies the Unicode BiDi algorithm (UAX #9) and font shaping (HarfBuzz/rustybuzz) at display time</li>
+</ol>
+<h3 id="file-structure"><a class="header" href="#file-structure">File Structure</a></h3>
+<pre><code>IronCutscene (.icc)
+  ICCF Header
+  ICCM Metadata (JSON)
+  VIDX Video Track (embedded VQA bitstream)
+  AUDX Audio Track 0 (embedded AUD bitstream, language-tagged)
+  AUDX Audio Track 1 (embedded AUD bitstream, language-tagged)
+  …
+  SUBT Subtitle Track 0 (timed text, language-tagged)
+  SUBT Subtitle Track 1 (timed text, language-tagged)
+  …
+  CHAP Chapter Markers (optional)
+  SEEK Seek Index (optional)
+</code></pre>
+<h3 id="header-iccf--32-bytes-fixed"><a class="header" href="#header-iccf--32-bytes-fixed">Header (ICCF — 32 bytes, fixed)</a></h3>
+<p>All fields are <strong>little-endian</strong>, packed with no padding.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct IccHeader {
+    pub magic: [u8; 4],         // b"ICCF" — "Iron Curtain Cutscene Format"
+    pub version: u16,           // Format version (1)
+    pub flags: u16,             // Bit 0: has_seek_index, Bit 1: has_chapters
+    pub video_track_count: u8,  // Always 1 for v1 (reserved for future stereo/VR)
+    pub audio_track_count: u8,  // Number of AUDX chunks (0 = silent cutscene)
+    pub subtitle_track_count: u8, // Number of SUBT chunks
+    pub reserved: u8,           // Padding / future use
+    pub total_duration_ms: u32, // Total playback duration in milliseconds
+    pub metadata_offset: u32,   // Byte offset to ICCM chunk
+    pub metadata_length: u32,   // ICCM chunk length (excluding 8-byte chunk header)
+    pub payload_offset: u32,    // Byte offset to first track chunk (VIDX)
+}
+// Total: 4 + 2 + 2 + 1 + 1 + 1 + 1 + 4 + 4 + 4 + 4 = 28 bytes + 4 reserved = 32 bytes
+<span class="boring">}</span></code></pre>
+<h3 id="chunk-format"><a class="header" href="#chunk-format">Chunk Format</a></h3>
+<p>Every chunk after the header uses a standard 8-byte chunk header:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct ChunkHeader {
+    pub fourcc: [u8; 4],  // Chunk type identifier
+    pub size: u32,        // Payload size in bytes (little-endian, excludes this 8-byte header)
+}
+<span class="boring">}</span></code></pre>
+<p>Chunks are always aligned to 2-byte boundaries (1 zero-pad byte after odd-sized payloads). This matches AVI/RIFF convention and prevents misaligned reads.</p>
+<h3 id="metadata-chunk-iccm"><a class="header" href="#metadata-chunk-iccm">Metadata Chunk (ICCM)</a></h3>
+<p>JSON metadata for the cutscene browser UI and engine integration. Stored uncompressed for easy tooling access.</p>
+<pre><code class="language-json">{
+  "title": "Allied Mission 5 Briefing",
+  "title_localized": {
+    "de": "Alliierte Mission 5 Briefing",
+    "ar": "\u0625\u062D\u0627\u0637\u0629 \u0627\u0644\u0645\u0647\u0645\u0629 5"
+  },
+  "source_vqa": "ALLY05.VQA",
+  "engine_version": "0.5.0",
+  "game_module": "ra1",
+  "audio_tracks": [
+    { "index": 0, "language": "en", "label": "English",  "default": true },
+    { "index": 1, "language": "de", "label": "Deutsch",  "default": false },
+    { "index": 2, "language": "ar", "label": "\u0627\u0644\u0639\u0631\u0628\u064A\u0629", "default": false }
+  ],
+  "subtitle_tracks": [
+    { "index": 0, "language": "en", "label": "English" },
+    { "index": 1, "language": "de", "label": "Deutsch" },
+    { "index": 2, "language": "ar", "label": "\u0627\u0644\u0639\u0631\u0628\u064A\u0629", "direction": "rtl" }
+  ]
+}
+</code></pre>
+<p><strong>Language tags</strong> use IETF BCP 47 (e.g., <code>en</code>, <code>de</code>, <code>ar</code>, <code>he</code>, <code>fa</code>, <code>zh-Hans</code>). The <code>direction</code> field is optional — the engine infers RTL from the language tag’s script when absent (Arabic, Hebrew, Thaana, Syriac scripts are auto-detected as RTL per UAX #9). Explicit <code>"direction": "rtl"</code> overrides auto-detection for edge cases.</p>
+<h3 id="video-track-vidx"><a class="header" href="#video-track-vidx">Video Track (VIDX)</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct VidxChunk {
+    pub header: ChunkHeader,     // fourcc: b"VIDX", size: payload length
+    pub width: u16,              // Frame width in pixels
+    pub height: u16,             // Frame height in pixels
+    pub fps: u8,                 // Frames per second
+    pub codec: u8,               // 0x01 = VQA v2, 0x02 = VQA v3 (reserved)
+    pub reserved: u16,           // Future use
+    pub vqa_data: [u8],          // Raw VQA file bytes (FORM/WVQA…), byte-identical to standalone .vqa
+}
+<span class="boring">}</span></code></pre>
+<p>The VQA data starts at the <code>FORM</code> magic — it is a complete, valid <code>.vqa</code> file embedded verbatim. The engine’s existing <code>VqaDecoder</code> opens a reader positioned at <code>vqa_data</code> and decodes as normal. <strong>No re-encoding, no format translation.</strong></p>
+<p>Audio tracks embedded within the VQA itself (SND0/SND1/SND2 chunks) are ignored during playback — the AUDX tracks take precedence. This allows the original VQA to retain its embedded audio for standalone playback while the container provides the language-switched version.</p>
+<h3 id="audio-tracks-audx"><a class="header" href="#audio-tracks-audx">Audio Tracks (AUDX)</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct AudxChunk {
+    pub header: ChunkHeader,     // fourcc: b"AUDX", size: payload length
+    pub track_index: u8,         // Track index (matches metadata audio_tracks[].index)
+    pub codec: u8,               // 0x01 = AUD (Westwood ADPCM), 0x02 = WAV PCM, 0x03 = OGG Vorbis
+    pub reserved: u16,           // Future use
+    pub aud_data: [u8],          // Raw AUD file bytes (12-byte header + compressed payload)
+}
+<span class="boring">}</span></code></pre>
+<p>Like VIDX, the AUD data is a complete standalone <code>.aud</code> file embedded verbatim. The engine’s existing <code>AudStream</code> opens a reader positioned at <code>aud_data</code>.</p>
+<p><strong>Codec extensibility:</strong> v1 uses <code>0x01</code> (AUD) exclusively. The codec byte reserves space for future Workshop content that ships OGG Vorbis voice-overs (<code>0x03</code>) — Bevy loads OGG natively, so no new decoder is needed.</p>
+<h3 id="subtitle-tracks-subt"><a class="header" href="#subtitle-tracks-subt">Subtitle Tracks (SUBT)</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct SubtChunk {
+    pub header: ChunkHeader,     // fourcc: b"SUBT", size: payload length
+    pub track_index: u8,         // Track index (matches metadata subtitle_tracks[].index)
+    pub flags: u8,               // Bit 0: is_forced (show even when subtitles disabled)
+    pub entry_count: u16,        // Number of subtitle entries (little-endian)
+    pub entries: [SubtEntry],    // Variable-length array of timed text entries
+}
+
+pub struct SubtEntry {
+    pub start_ms: u32,           // Display start time (milliseconds from video start)
+    pub end_ms: u32,             // Display end time (milliseconds from video start)
+    pub text_length: u16,        // UTF-8 text length in bytes
+    pub text: [u8],              // UTF-8 encoded subtitle text (logical order, no formatting)
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Text encoding:</strong> All subtitle text is UTF-8 in <strong>logical order</strong> (the order characters are typed, not the order they appear on screen). For RTL languages like Arabic and Hebrew, logical order means the first byte of the string corresponds to the first logical character — the Unicode BiDi algorithm (UAX #9) handles visual reordering at render time.</p>
+<p><strong>No formatting markup in v1.</strong> Subtitles are plain text. If styled subtitles are needed later (e.g., speaker identification via color), a v2 flag can enable a minimal markup subset (bold, italic, color) without breaking v1 parsers that ignore unknown flags.</p>
+<p><strong>Forced subtitles:</strong> The <code>is_forced</code> flag marks tracks that should display even when the player has subtitles disabled globally. Use case: foreign-language dialogue in an English cutscene (e.g., a Soviet officer speaking Russian with English subtitles).</p>
+<h3 id="chapter-markers-chap-optional"><a class="header" href="#chapter-markers-chap-optional">Chapter Markers (CHAP, optional)</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct ChapChunk {
+    pub header: ChunkHeader,     // fourcc: b"CHAP", size: payload length
+    pub entry_count: u16,        // Number of chapter entries
+    pub reserved: u16,           // Future use
+    pub entries: [ChapEntry],    // Variable-length array
+}
+
+pub struct ChapEntry {
+    pub timestamp_ms: u32,       // Chapter start time (milliseconds)
+    pub trigger_id: u32,         // Engine-defined trigger identifier (0 = no trigger)
+    pub name_length: u16,        // UTF-8 name length in bytes
+    pub name: [u8],              // UTF-8 chapter name (e.g., "Briefing Part 2")
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Trigger IDs</strong> are opaque to the container — the engine’s scripting system interprets them. Common uses:</p>
+<ul>
+<li><code>0x0001</code> — Pause playback until player input (mission briefing “Continue” button)</li>
+<li><code>0x0002</code> — Branch point (player choice affects next cutscene)</li>
+<li><code>0x0003</code> — Sync point for gameplay overlay (e.g., show map ping during briefing)</li>
+</ul>
+<p>Trigger semantics are defined by the game module, not the container format.</p>
+<h3 id="seek-index-seek-optional"><a class="header" href="#seek-index-seek-optional">Seek Index (SEEK, optional)</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct SeekChunk {
+    pub header: ChunkHeader,     // fourcc: b"SEEK", size: payload length
+    pub entry_count: u16,        // Number of seek entries
+    pub interval_ms: u16,        // Seek point interval (e.g., 1000 = one entry per second)
+    pub entries: [SeekEntry],    // Variable-length array
+}
+
+pub struct SeekEntry {
+    pub video_byte_offset: u32,  // Byte offset into VIDX.vqa_data for nearest keyframe
+    pub audio_byte_offsets: [u32], // One offset per audio track into respective AUDX.aud_data
+}
+<span class="boring">}</span></code></pre>
+<p>The SEEK chunk enables random-access playback (skip to chapter, scrub timeline in replay viewer). Without it, the container is forward-only — perfectly fine for standard cutscene playback.</p>
+<p><strong>Why optional:</strong> Most C&amp;C cutscenes are 30–90 seconds. Forward-only streaming is sufficient. SEEK is worth adding for:</p>
+<ul>
+<li>Long briefings (3+ minutes)</li>
+<li>Replay analysis overlays where the user scrubs through cutscene segments</li>
+<li>Accessibility: users who need to re-read a subtitle section</li>
+</ul>
+<h3 id="authoring-pipeline"><a class="header" href="#authoring-pipeline">Authoring Pipeline</a></h3>
+<p>The <code>cncf</code> CLI tool packs IronCutscene files from constituent parts:</p>
+<pre><code class="language-bash"># Pack a cutscene with multiple audio languages and subtitles
+cncf pack-cutscene \
+  --video ALLY05.VQA \
+  --audio en:speech_en.aud \
+  --audio de:speech_de.aud \
+  --audio ar:speech_ar.aud \
+  --subs en:subs_en.srt \
+  --subs de:subs_de.srt \
+  --subs ar:subs_ar.srt \
+  --chapter 0:0:"Introduction" \
+  --chapter 15000:1:"Briefing Part 2" \
+  -o ally05.icc
+
+# Extract tracks from an existing .icc
+cncf extract-cutscene ally05.icc --output ./tracks/
+
+# Convert SRT to the internal subtitle format
+cncf convert subs_en.srt --to icc-subs
+</code></pre>
+<p><strong>SRT import:</strong> The standard SubRip (.srt) format is the input for subtitle tracks. The packer parses SRT timing (<code>HH:MM:SS,mmm --&gt; HH:MM:SS,mmm</code>) and converts to the binary <code>SubtEntry</code> array. SRT is chosen because:</p>
+<ul>
+<li>Near-universal subtitle editor support</li>
+<li>Trivial format (sequential numbered entries with timestamps)</li>
+<li>Community translators already use it</li>
+<li>No complex formatting to parse (ASS/SSA support deferred to v2 if ever needed)</li>
+</ul>
+<h3 id="runtime-playback"><a class="header" href="#runtime-playback">Runtime Playback</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Engine opens an .icc file and selects tracks based on player settings.
+pub struct CutscenePlayer {
+    video: VqaDecoder&lt;BufReader&lt;File&gt;&gt;,     // Existing VQA decoder
+    audio: AudStream&lt;BufReader&lt;File&gt;&gt;,       // Existing AUD decoder (selected language)
+    subtitles: Vec&lt;SubtEntry&gt;,               // Active subtitle track (selected language)
+    chapters: Vec&lt;ChapEntry&gt;,                // Chapter markers
+    current_time_ms: u32,                    // Playback position
+}
+
+impl CutscenePlayer {
+    /// Open a cutscene, selecting audio/subtitle tracks by language preference.
+    pub fn open(path: &amp;Path, audio_lang: &amp;str, subtitle_lang: &amp;str) -&gt; Result&lt;Self&gt;;
+
+    /// Switch audio language mid-playback (seeks AUD stream to current position).
+    pub fn switch_audio(&amp;mut self, language: &amp;str) -&gt; Result&lt;()&gt;;
+
+    /// Switch subtitle language mid-playback (instant — just swaps the entry list).
+    pub fn switch_subtitles(&amp;mut self, language: &amp;str);
+
+    /// Advance playback by one frame. Returns the frame + any active subtitles.
+    pub fn next_frame(&amp;mut self) -&gt; Result&lt;CutsceneFrame&gt;;
+}
+
+pub struct CutsceneFrame {
+    pub pixels: Vec&lt;u8&gt;,                     // Palette-indexed frame (from VqaDecoder)
+    pub palette: [u8; 768],                  // RGB palette
+    pub audio_samples: Vec&lt;i16&gt;,             // PCM samples for this frame's duration
+    pub active_subtitles: Vec&lt;&amp;str&gt;,         // Currently visible subtitle text(s)
+    pub trigger: Option&lt;u32&gt;,                // Chapter trigger ID, if a chapter starts this frame
+}
+<span class="boring">}</span></code></pre>
+<h3 id="rtl--bidi-rendering"><a class="header" href="#rtl--bidi-rendering">RTL / BiDi Rendering</a></h3>
+<p>The container stores text in <strong>logical order</strong> — the same byte sequence regardless of display direction. The rendering pipeline handles visual presentation:</p>
+<ol>
+<li><strong>Container</strong> stores UTF-8 subtitle: <code>"مرحبا بالعالم"</code> (logical order: right-to-left characters stored left-to-right in memory)</li>
+<li><strong>Engine text renderer</strong> applies Unicode BiDi algorithm (UAX #9 via <code>unicode-bidi</code> crate) to determine visual order</li>
+<li><strong>Font shaper</strong> (HarfBuzz via <code>rustybuzz</code> crate) applies Arabic/Hebrew contextual shaping (initial/medial/final letter forms)</li>
+<li><strong>Layout engine</strong> positions glyphs right-to-left for RTL paragraphs, handling mixed-direction text (e.g., Arabic text with embedded English game terms)</li>
+</ol>
+<p>This separation means the container format never needs to know about display direction — it is purely a rendering concern. The same <code>.icc</code> file plays correctly on any platform with a conformant text renderer.</p>
+<p><strong>Testing:</strong> The design docs include an <a href="../tracking/rtl-bidi-qa-corpus.html">RTL/BiDi QA corpus</a> with test vectors for subtitle rendering: mixed LTR/RTL, parentheses mirroring, numeric strings in RTL context, and zero-width joiners in Arabic ligatures.</p>
+<h3 id="mkv-export-for-validation"><a class="header" href="#mkv-export-for-validation">MKV Export for Validation</a></h3>
+<p>The existing <code>cncf convert intro.vqa --to mkv</code> pipeline remains the primary validation tool. To validate an <code>.icc</code> file end-to-end:</p>
+<pre><code class="language-bash"># Extract the VQA and one audio track, then export to MKV for VLC playback
+cncf extract-cutscene ally05.icc --output ./tracks/
+cncf convert ./tracks/video.vqa --to mkv -o ally05_validation.mkv
+
+# Or directly (future CLI enhancement):
+cncf convert ally05.icc --to mkv --audio-lang en -o ally05_en.mkv
+</code></pre>
+<p>The MKV export proves the VQA and AUD decoders produce correct output; the <code>.icc</code> container proves they can be composed into a multi-track playback experience.</p>
+<h3 id="size-comparison"><a class="header" href="#size-comparison">Size Comparison</a></h3>
+<p>For a typical 60-second RA1 briefing cutscene (320x200, 15fps, 22050Hz mono):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>Size</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>VQA video</td><td>~800 KB</td><td>VQ-compressed, palette-indexed</td></tr>
+<tr><td>AUD audio (1 language)</td><td>~130 KB</td><td>IMA ADPCM, mono 22kHz</td></tr>
+<tr><td>AUD audio (3 languages)</td><td>~390 KB</td><td>3 × 130 KB</td></tr>
+<tr><td>Subtitles (3 languages)</td><td>~3 KB</td><td>Plain text, timestamps</td></tr>
+<tr><td>ICC overhead</td><td>~1 KB</td><td>Header + metadata + chunk headers</td></tr>
+<tr><td><strong>Total .icc (3 languages)</strong></td><td><strong>~1.2 MB</strong></td><td>vs. 930 KB for original single-language VQA</td></tr>
+</tbody>
+</table>
+</div>
+<p>The multi-language overhead is almost entirely the additional audio tracks. Subtitles are negligible. The container overhead itself is under 1 KB.</p>
+<h3 id="versioning--forward-compatibility"><a class="header" href="#versioning--forward-compatibility">Versioning &amp; Forward Compatibility</a></h3>
+<ul>
+<li><strong>Version 1</strong> is the initial release described here</li>
+<li>Parsers must ignore unknown chunk FourCCs (skip <code>size</code> bytes + padding) — this allows v2 to add new chunk types without breaking v1 readers</li>
+<li>The <code>flags</code> field in the header and each chunk reserves bits for future features</li>
+<li>Breaking changes (if ever needed) increment the <code>version</code> field; the engine refuses to load versions it doesn’t understand</li>
+</ul>
+<h3 id="phase"><a class="header" href="#phase">Phase</a></h3>
+<ul>
+<li><strong>Container spec:</strong> This document (design phase)</li>
+<li><strong><code>cnc-formats</code> support:</strong> Phase 6a — <code>pack-cutscene</code> / <code>extract-cutscene</code> CLI subcommands, <code>IccFile</code> parser/writer in the library</li>
+<li><strong>Engine playback:</strong> Phase 3 (campaign system) — <code>CutscenePlayer</code> in <code>ic-game</code>, wired to Bevy’s audio and rendering systems</li>
+<li><strong>Community tooling:</strong> Asset Studio (D040) provides a visual cutscene editor for assembling <code>.icc</code> files from VQA + audio + SRT tracks</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../formats/transcribe-upgrade-roadmap.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../06-SECURITY.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../formats/transcribe-upgrade-roadmap.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../06-SECURITY.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

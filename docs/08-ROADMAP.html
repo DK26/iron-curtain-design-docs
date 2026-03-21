@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5e4d7c2c.js";
+            window.path_to_searchindex_js = "searchindex-783862f3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-97c3ad2d.js"></script>
+        <script src="toc-7193b699.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -200,7 +200,7 @@
 <ul>
 <li><code>ic-cnc-content</code> crate: parse <code>.mix</code> archives, SHP/TMP sprites, <code>.aud</code> audio, <code>.pal</code> palettes, <code>.vqa</code> video</li>
 <li>Parse OpenRA YAML manifests, map format, rule definitions</li>
-<li><code>cnc-formats</code> CLI tool — Phase 0 subcommands: <code>validate</code> (structural correctness check), <code>inspect</code> (dump archive contents and format metadata, <code>--json</code> for machine-readable output), <code>convert</code> (extensible <code>--format</code>/<code>--to</code> format conversion; <strong>text:</strong> <code>--format miniyaml --to yaml</code> behind <code>miniyaml</code> feature; <strong>binary:</strong> SHP↔PNG, SHP↔GIF, AUD↔WAV, VQA↔AVI, WSA↔PNG/GIF, TMP→PNG, PAL→PNG, FNT→PNG behind <code>convert</code> feature; <strong>text sprites:</strong> <code>--to ist</code> / <code>--format ist</code> behind <code>ist</code> feature flag)</li>
+<li><code>cnc-formats</code> CLI tool — Phase 0 subcommands: <code>identify</code> (content-based format sniffing via magic bytes), <code>validate</code> (structural correctness check), <code>inspect</code> (dump archive contents and format metadata, <code>--json</code> for machine-readable output), <code>convert</code> (extensible <code>--format</code>/<code>--to</code> format conversion; <strong>text:</strong> <code>--format miniyaml --to yaml</code> behind <code>miniyaml</code> feature; <strong>binary:</strong> SHP↔PNG, SHP↔GIF, AUD↔WAV, VQA↔AVI, VQA→MKV, WSA↔PNG/GIF, TMP→PNG, PAL→PNG, FNT→PNG behind <code>convert</code> feature; <strong>text sprites:</strong> <code>--to ist</code> / <code>--format ist</code> behind <code>ist</code> feature flag)</li>
 <li><strong>Runtime MiniYAML loading (D025):</strong> MiniYAML files load directly at runtime — auto-converts in memory, no pre-conversion required</li>
 <li><strong>OpenRA vocabulary alias registry (D023):</strong> Accept OpenRA trait names (<code>Armament</code>, <code>Valued</code>, etc.) as YAML key aliases alongside IC-native names</li>
 <li><strong>OpenRA mod manifest parser (D026):</strong> Parse OpenRA <code>mod.yaml</code> manifests, map directory layout to IC equivalents</li>
