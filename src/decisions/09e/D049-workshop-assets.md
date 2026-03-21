@@ -6,7 +6,7 @@
 - **Phase:** Multi-phase (Workshop foundation + distribution + package tooling)
 - **Canonical for:** Workshop canonical asset format recommendations and P2P package distribution strategy
 - **Scope:** Workshop package format/distribution, client download/install pipeline, format recommendations for IC modules, HTTP fallback behavior
-- **Decision:** The Workshop recommends **modern Bevy-native formats** (OGG/PNG/WAV/WebM/KTX2/GLTF) as canonical for new content while fully supporting legacy C&C formats for compatibility; package delivery uses **P2P (BitTorrent/WebTorrent) with HTTP fallback**.
+- **Decision:** The Workshop recommends **modern Bevy-native formats** (OGG/PNG/WAV/WebM/KTX2/GLTF) as canonical payload formats for new content while fully supporting legacy C&C formats for compatibility; package delivery uses **P2P (BitTorrent/WebTorrent) with HTTP fallback**, and IC-owned package/manifest metadata remains the canonical layer for installability, language capability, variant grouping, and fallback behavior.
 - **Why:** Lower hosting cost, better Bevy integration/tooling, safer/more mature parsers for untrusted content, and lower friction for new creators using standard tools.
 - **Non-goals:** Dropping legacy C&C format support; making Workshop format choices universal for all future engines/projects consuming the Workshop core library.
 - **Invariants preserved:** Full resource compatibility for existing C&C assets remains intact; Workshop protocol/package concepts are separable from IC-specific format preferences (D050).
@@ -16,12 +16,34 @@
 - **Performance / Ops impact:** P2P delivery reduces CDN cost and scales community distribution; modern formats integrate better with Bevy runtime loading paths.
 - **Public interfaces / types / commands:** `.icpkg` (IC-specific package wrapper), Workshop P2P/HTTP delivery strategy, `ic mod build/publish` workflow (as referenced across modding docs)
 - **Affected docs:** `src/04-MODDING.md`, `src/05-FORMATS.md`, `src/decisions/09c-modding.md`, `src/decisions/09f-tools.md`
-- **Revision note summary:** None
+- **Revision note summary:** Clarified in March 2026 that raw media containers/codecs are payload-level choices only; IC package/manifest metadata remains canonical for language capability, variant groups, translation trust labels, and fallback behavior. Explicitly rejects designing a custom low-level AV container for IC.
 - **Keywords:** workshop formats, p2p delivery, bittorrent, webtorrent, bevy-native assets, png ogg webm, legacy c&c compatibility, icpkg
 
 **Decision:** The Workshop's canonical asset formats are **Bevy-native modern formats** (OGG, PNG, WAV, WebM, KTX2, GLTF). C&C legacy formats (.aud, .shp, .pal, .vqa, .mix) are fully supported for backward compatibility but are not the recommended distribution format for new content. Workshop delivery uses **peer-to-peer distribution** (BitTorrent/WebTorrent protocol) with HTTP fallback, reducing hosting costs from CDN-level to a lightweight tracker.
 
+**Clarification (March 2026):** These format recommendations apply to the
+**payload files** carried by Workshop packages. They do **not** replace IC's
+own package/manifest layer as the canonical authority for:
+
+- installability and profile selection
+- variant groups
+- language capability matrices
+- translation source/trust labels
+- completeness/coverage labels
+- deterministic fallback behavior
+
+IC therefore does **not** design a new low-level general-purpose AV container.
+It uses standard containers/codecs for payloads and keeps IC-specific product
+behavior in package metadata and local import indexes.
+
 > **Note (D050):** The format recommendations in this section are **IC-specific** — they reflect Bevy's built-in asset pipeline. The Workshop's P2P distribution protocol and package format are engine-agnostic (see D050). Future projects consuming the Workshop core library will define their own format recommendations based on their engine's capabilities. The `.icpkg` extension, `ic mod` CLI commands, and `game_module` manifest fields are likewise IC-specific — the Workshop core library uses configurable equivalents.
+
+> **Container boundary note:** Embedded track metadata inside WebM/Matroska,
+> Ogg Skeleton, or similar containers may inform import and validation, but it
+> is not the canonical policy layer for IC. A single package may be composed of
+> multiple payload files (for example, separate cutscene, subtitle, and voice
+> resources), so package metadata remains the source of truth for what is
+> installed, which variants exist, and how the client chooses fallbacks.
 
 ### The Format Problem
 

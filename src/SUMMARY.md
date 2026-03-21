@@ -68,6 +68,7 @@
     - [Replay Keyframes & Analysis Events](formats/replay-keyframes-analysis.md)
   - [Backup, Screenshot & Import](formats/backup-screenshot-import.md)
   - [Transcribe Module Upgrade Roadmap](formats/transcribe-upgrade-roadmap.md)
+  - [IronCutscene Container (.icc)](formats/cutscene-container.md)
 - [Security & Threat Model](06-SECURITY.md)
   - [Threat Model & Core Vulns (V1–V5)](security/threat-model.md)
   - [Mods & Replays (V6–V10)](security/vulns-mods-replays.md)

@@ -5,8 +5,8 @@
 - **Status:** Accepted
 - **Phase:** Phase 2 (format parsers), Phase 6a (Asset Studio import wizard)
 - **Canonical for:** Loading and converting assets from the C&C Remastered Collection (EA, 2020) into IC's native pipeline
-- **Scope:** `cnc-formats` (MEG/PGM archive parser, clean-room, `meg` feature flag), `ic-cnc-content` (TGA+META, DDS, MTD, BK2 parsers + Bevy integration), `ic-editor` (Asset Studio import wizard), `05-FORMATS.md`
-- **Decision:** IC reads all Remastered Collection asset formats natively — MEG archives, TGA+META sprite sheets, BK2 video, WAV audio, XML config — enabling users who own the Remastered Collection to use those assets directly. HD sprite import splits megasheets into IC's per-frame sprite representation using the META JSON geometry. No Remastered assets are redistributed.
+- **Scope:** `cnc-formats` (MEG/PGM archive parser, clean-room, `meg` feature flag), `ic-cnc-content` (TGA+META, DDS, MTD, WAV, config/import-index integration), `ic-editor` (Asset Studio import wizard and BK2→WebM import pipeline), `05-FORMATS.md`
+- **Decision:** IC imports and reads the Remastered Collection's asset families into IC's native pipeline — MEG archives, TGA+META sprite sheets, WAV audio, XML config, and BK2 cutscenes normalized to WebM at import time — enabling users who own the Remastered Collection to use those assets directly without redistributing them.
 - **Why:** (1) The Remastered Collection's C++ DLL source is GPL v3 — format definitions are legally referenceable. (2) Players who own the Remastered Collection expect their HD assets to work. (3) The Remastered formats are well-documented by the modding community (PPM, CnCNet). (4) IC already supports the classic formats these are derived from — HD support is an incremental extension.
 - **Non-goals:** Binary compatibility with Petroglyph's C# GlyphX layer; redistributing EA's proprietary HD art, music, or video; running Remastered mods that depend on GlyphX-specific APIs; replacing the Remastered Collection as a product.
 - **Invariants preserved:** `ic-cnc-content` remains a pure parsing library with no I/O side effects. All imported assets convert to IC-native representations (PNG sprites, OGG/WAV audio, WebM video). Sim determinism unaffected — asset formats are presentation-only.
@@ -15,6 +15,7 @@
 - **Security / Trust impact:** MEG archive parser in `cnc-formats` must handle malformed archives safely (fuzzing required). MEG entry extraction uses `strict-path` `PathBoundary` to sandbox output to the mod directory — same Zip Slip defense as `.oramap` and `.icpkg` (see `06-SECURITY.md` § Path Security Infrastructure). TGA/DDS parsers use established Rust crates (`image`, `ddsfile`) — no custom decoder needed.
 - **Public interfaces / types / commands:** `MegArchive`, `MegEntry`, `RemasteredSpriteSheet`, `MetaFrame`, `RemasteredImportManifest`, `ic asset import-remastered`
 - **Affected docs:** `src/05-FORMATS.md`, `src/decisions/09f/D040-asset-studio.md`, `src/architecture/ra-experience.md`, `src/decisions/09c-modding.md`
+- **Revision note summary:** Clarified in March 2026 that BK2 is not part of the baseline runtime decoder set; Remastered cutscenes are normalized to WebM at import time, and IC package/import metadata remains the canonical layer for language/variant/fallback behavior above the raw media container.
 - **Keywords:** remastered, remaster, MEG, TGA, META, BK2, Bink2, HD sprites, megasheet, GlyphX, Petroglyph, EA GPL, import wizard
 
 ---
@@ -24,6 +25,13 @@
 The C&C Remastered Collection (EA / Petroglyph, 2020) modernized Red Alert and Tiberian Dawn with HD assets while preserving the original gameplay via a C++ DLL (released under GPL v3). The DLL source gives us legal access to format definitions. The HD assets themselves are proprietary EA content — IC never redistributes them, but players who own the Remastered Collection should be able to use their purchased assets in IC.
 
 IC already reads every **classic** C&C format (`.mix`, `.shp`, `.pal`, `.aud`, `.vqa`). The Remastered Collection introduced a parallel set of **HD formats** that wrap or replace the classics. This decision covers reading those HD formats and converting them into IC's native pipeline.
+
+**Clarification (March 2026):** For video, the canonical runtime target stays
+normalized WebM rather than native BK2 playback. Any track/language metadata
+discovered during BK2 import can inform IC's import index, but cutscene
+variant selection, language capability, and fallback behavior remain governed
+by IC package/import metadata as defined by `D068`/`D049`, not by the raw
+container alone.
 
 ### Remastered Format Inventory
 

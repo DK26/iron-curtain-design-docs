@@ -22,7 +22,7 @@ Phase 0 (Foundation)
 ### Deliverables
 - `ic-cnc-content` crate: parse `.mix` archives, SHP/TMP sprites, `.aud` audio, `.pal` palettes, `.vqa` video
 - Parse OpenRA YAML manifests, map format, rule definitions
-- `cnc-formats` CLI tool — Phase 0 subcommands: `validate` (structural correctness check), `inspect` (dump archive contents and format metadata, `--json` for machine-readable output), `convert` (extensible `--format`/`--to` format conversion; **text:** `--format miniyaml --to yaml` behind `miniyaml` feature; **binary:** SHP↔PNG, SHP↔GIF, AUD↔WAV, VQA↔AVI, WSA↔PNG/GIF, TMP→PNG, PAL→PNG, FNT→PNG behind `convert` feature; **text sprites:** `--to ist` / `--format ist` behind `ist` feature flag)
+- `cnc-formats` CLI tool — Phase 0 subcommands: `identify` (content-based format sniffing via magic bytes), `validate` (structural correctness check), `inspect` (dump archive contents and format metadata, `--json` for machine-readable output), `convert` (extensible `--format`/`--to` format conversion; **text:** `--format miniyaml --to yaml` behind `miniyaml` feature; **binary:** SHP↔PNG, SHP↔GIF, AUD↔WAV, VQA↔AVI, VQA→MKV, WSA↔PNG/GIF, TMP→PNG, PAL→PNG, FNT→PNG behind `convert` feature; **text sprites:** `--to ist` / `--format ist` behind `ist` feature flag)
 - **Runtime MiniYAML loading (D025):** MiniYAML files load directly at runtime — auto-converts in memory, no pre-conversion required
 - **OpenRA vocabulary alias registry (D023):** Accept OpenRA trait names (`Armament`, `Valued`, etc.) as YAML key aliases alongside IC-native names
 - **OpenRA mod manifest parser (D026):** Parse OpenRA `mod.yaml` manifests, map directory layout to IC equivalents

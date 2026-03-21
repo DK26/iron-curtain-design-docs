@@ -15,7 +15,7 @@
 - **AI remaster media policy:** AI-enhanced cutscene packs are optional presentation variants (Original / Clean / AI-Enhanced), clearly labeled, provenance-aware, and never replacements for the canonical originals.
 - **Public interfaces / types / commands:** manifest `install` metadata + optional dependencies/fallbacks, `ic content list`, `ic content apply-profile`, `ic content install/remove`, `ic mod gc`
 - **Affected docs:** `src/17-PLAYER-FLOW.md`, `src/decisions/09e-community.md`, `src/decisions/09g-interaction.md`, `src/04-MODDING.md`, `src/decisions/09f-tools.md`
-- **Revision note summary:** None
+- **Revision note summary:** Clarified in March 2026 that media language capability and fallback policy are canonical package/import-index metadata, not merely properties of an individual media container. Explicitly rejects creating a custom low-level AV container for this purpose.
 - **Keywords:** selective install, install profiles, campaign core, optional media, cutscene variants, presentation fingerprint, installed content manager
 
 **Decision:** Support **selective installation** of game content through **content install profiles** and **optional content packs**, while preserving a complete playable experience for installed features. Campaign gameplay content is separable from campaign media (music, voice, cutscenes). Missing optional media must degrade to designer-authored fallbacks (text, subtitles, static imagery, or silence/ambient), never a hard failure.
@@ -183,6 +183,36 @@ Player preference model (minimum):
 - optional machine-translated subtitle/CC fallback toggle (see phased rollout below)
 
 This prevents the common failure mode where a cutscene pack exists but does not support the player's preferred language, and the client has no deterministic fallback behavior.
+
+### Canonical Ownership Of Media Language Metadata
+
+The language capability matrix above is **canonical package-level metadata**.
+
+That metadata may be populated from multiple sources:
+
+- Workshop manifests / D049 package indexes
+- local import indexes
+- embedded track metadata discovered during import from formats such as
+  Matroska/WebM or Ogg Skeleton
+
+But the canonical authority for IC behavior remains the package/import-index
+layer, not the raw container alone.
+
+Why:
+
+- a player may install separate subtitle, dub, or voice packs
+- one campaign may expose multiple cutscene variants with different coverage
+- translation trust labels and coverage are IC product metadata, not generic
+  container concepts
+- fallback decisions must remain deterministic even when media is split across
+  multiple files/resources
+
+Therefore:
+
+- embedded container metadata is **advisory import input**
+- package/import-index metadata is **authoritative runtime policy**
+- IC does **not** introduce a custom low-level AV container to solve this;
+  composability lives at the package/resource layer instead
 
 ### Optional Media Must Not Break Campaign Flow
 
