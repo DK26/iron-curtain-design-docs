@@ -10,7 +10,7 @@ For improved agentic retrieval / RAG summaries, see the reusable **Decision Caps
 
 | Document                                                | Scope                                                                                                                                       | Decisions                                                                         |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| [Foundation & Core](decisions/09a-foundation.md)        | Language, framework, data formats, simulation invariants, core engine identity, crate extraction                                            | D001–D003, D009, D010, D015, D017, D018, D039, D063, D064, D067, D076             |
+| [Foundation & Core](decisions/09a-foundation.md)        | Language, framework, data formats, simulation invariants, core engine identity, crate extraction, sim layering                              | D001–D003, D009, D010, D015, D017, D018, D039, D063, D064, D067, D076, D080       |
 | [Networking & Multiplayer](decisions/09b-networking.md) | Network model, relay server, sub-tick ordering, community servers, ranked play, community server bundle                                     | D006–D008, D011, D012, D052, D055, D060, D074                                     |
 | [Modding & Compatibility](decisions/09c-modding.md)     | Scripting tiers, OpenRA compatibility, UI themes, mod profiles, licensing, export, Remastered format compat                                 | D004, D005, D014, D023–D027, D032, D050, D051, D062, D066, D068, D075             |
 | [Gameplay & AI](decisions/09d-gameplay.md)              | Pathfinding, balance, QoL, AI systems, render modes, trait-abstracted subsystems, asymmetric co-op, LLM exhibition modes, replay highlights, time-machine mechanics | D013, D019, D021, D022, D028, D029, D033, D041–D045, D048, D054, D070, D073, D077, D078 |
@@ -103,6 +103,7 @@ For improved agentic retrieval / RAG summaries, see the reusable **Decision Caps
 | D077 | Replay Highlights & Play-of-the-Game                      | [Gameplay](decisions/09d/D077-replay-highlights.md)         |
 | D078 | Time-Machine Mechanics — Replay Takeover, Temporal Campaigns, Multiplayer Time Modes | [Gameplay](decisions/09d/D078-time-machine.md) |
 | D079 | Voice-Text Bridge — STT Captions, TTS Synthesis, AI Voice Personas | [Interaction](decisions/09g/D079-voice-text-bridge.md) |
+| D080 | Simulation Pure-Function Layering — Minimal Client Portability     | [Foundation](decisions/09a/D080-sim-pure-function-layering.md) |
 
 ---
 

@@ -15,3 +15,4 @@ Language, framework, data formats, simulation invariants, core engine identity, 
 | D039     | Engine Scope — General-Purpose RTS      | [D039](09a/D039-engine-scope.md)             |
 | D067     | Configuration Format Split (TOML/YAML)  | [D067](09a/D067-config-format-split.md)      |
 | D076     | Standalone MIT/Apache Crate Extraction  | [D076](09a/D076-standalone-crates.md)        |
+| D080     | Sim Pure-Function Layering              | [D080](09a/D080-sim-pure-function-layering.md) |

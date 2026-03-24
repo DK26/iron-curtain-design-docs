@@ -164,7 +164,7 @@ All previously identified high-cost files (>40KB) have been split into individua
 
 | Hub Page                       | Individual Decision Files | Directory        |
 | ------------------------------ | ------------------------- | ---------------- |
-| `decisions/09a-foundation.md`  | 11 files                  | `decisions/09a/` |
+| `decisions/09a-foundation.md`  | 12 files                  | `decisions/09a/` |
 | `decisions/09b-networking.md`  | 8 files                   | `decisions/09b/` |
 | `decisions/09c-modding.md`     | 15 files                  | `decisions/09c/` |
 | `decisions/09d-gameplay.md`    | 17 files                  | `decisions/09d/` |
